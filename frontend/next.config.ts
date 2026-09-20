@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    resolveAlias: {
+      canvas: "./lib/shims/canvas.ts",
+    },
+  },
   async headers() {
     return [
       {
