@@ -9,12 +9,30 @@
 
 export type ToolCategory = "pdf" | "image" | "video" | "ai";
 
+export interface ToolParameterBounds {
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
 export interface ToolParameter {
   name: string;
   type: "file" | "string" | "number" | "boolean" | "enum";
   description: string;
   required: boolean;
   options?: string[]; // For enum types
+  default?: string | number | boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+  bounds?: ToolParameterBounds;
+}
+
+export interface ToolOutput {
+  name: string;
+  type: "file" | "string" | "number" | "boolean" | "object";
+  mimeType?: string;
+  description: string;
 }
 
 export interface ToolSchema {
@@ -23,6 +41,7 @@ export interface ToolSchema {
   description: string; // Human and AI readable description of what the tool does
   category: ToolCategory;
   parameters: ToolParameter[];
+  outputs?: ToolOutput[]; // AI agent output schema
   
   // SEO Metadata
   seoTitle: string;
@@ -359,4 +378,299 @@ ToolRegistry.registerTool({
     }
   ]
 });
+
+// ============================================================================
+// Video Suite Registrations (Milestone 2)
+// ============================================================================
+
+ToolRegistry.registerTool({
+  id: "video-trim",
+  name: "Trim Video",
+  description: "Cut and trim video clips instantly with fast lossless stream copy or frame-accurate re-encoding in the browser via FFmpeg WebAssembly.",
+  category: "video",
+  seoTitle: "Trim Video Online Free - Fast Lossless Video Cutter - Botock",
+  seoDescription: "Cut and trim video clips instantly in your browser using client-side FFmpeg WebAssembly. Fast lossless stream copy or frame-accurate cut. 100% private, no server uploads.",
+  endpoint: "/tools/video-trim",
+  isClientSideOnly: true,
+  parameters: [
+    {
+      name: "video",
+      type: "file",
+      description: "The video file to trim (MP4, WebM, MOV, MKV)",
+      required: true,
+    },
+    {
+      name: "startTime",
+      type: "number",
+      description: "Start time offset in seconds for the trimmed segment",
+      required: false,
+      default: 0,
+      min: 0,
+      bounds: { min: 0 },
+    },
+    {
+      name: "endTime",
+      type: "number",
+      description: "End time offset in seconds for the trimmed segment (defaults to video duration if omitted)",
+      required: false,
+      min: 0,
+      bounds: { min: 0 },
+    },
+    {
+      name: "mode",
+      type: "enum",
+      description: "Trimming mode: 'fast' for instant lossless stream copy (-c copy) or 'accurate' for frame-accurate re-encoding",
+      required: false,
+      options: ["fast", "accurate"],
+      default: "fast",
+    },
+  ],
+  outputs: [
+    {
+      name: "trimmedVideo",
+      type: "file",
+      mimeType: "video/mp4",
+      description: "The trimmed video file as an MP4 Blob",
+    },
+  ],
+});
+
+ToolRegistry.registerTool({
+  id: "video-speed",
+  name: "Change Video Speed",
+  description: "Speed up or slow down video playback from 0.25x to 4.0x with pitch-preserved audio synchronization via FFmpeg WebAssembly.",
+  category: "video",
+  seoTitle: "Change Video Speed Online Free - Fast Forward & Slow Motion - Botock",
+  seoDescription: "Speed up or slow down video playback from 0.25x to 4x directly in your browser with pitch-preserved audio. 100% private, client-side WebAssembly video speed controller.",
+  endpoint: "/tools/video-speed",
+  isClientSideOnly: true,
+  parameters: [
+    {
+      name: "video",
+      type: "file",
+      description: "The video file to adjust playback speed for (MP4, WebM, MOV)",
+      required: true,
+    },
+    {
+      name: "speed",
+      type: "number",
+      description: "Playback speed multiplier between 0.25 (slow motion) and 4.0 (fast forward)",
+      required: false,
+      default: 1.5,
+      min: 0.25,
+      max: 4.0,
+      step: 0.25,
+      bounds: { min: 0.25, max: 4.0, step: 0.25 },
+      options: ["0.25", "0.5", "0.75", "1.25", "1.5", "2.0", "3.0", "4.0"],
+    },
+    {
+      name: "muteAudio",
+      type: "boolean",
+      description: "Mute or remove the audio track from the speed-adjusted video",
+      required: false,
+      default: false,
+    },
+    {
+      name: "preservePitch",
+      type: "boolean",
+      description: "Maintain natural audio pitch using chained atempo filters when modifying speed",
+      required: false,
+      default: true,
+    },
+  ],
+  outputs: [
+    {
+      name: "speedAdjustedVideo",
+      type: "file",
+      mimeType: "video/mp4",
+      description: "The speed-adjusted video file as an MP4 Blob",
+    },
+  ],
+});
+
+ToolRegistry.registerTool({
+  id: "video-to-mp3",
+  name: "Convert Video to MP3",
+  description: "Extract crystal-clear MP3 audio streams from video files locally in your browser using client-side FFmpeg WebAssembly.",
+  category: "video",
+  seoTitle: "Convert Video to MP3 Online Free - Audio Extractor - Botock",
+  seoDescription: "Extract high-quality MP3 audio from any video (MP4, WebM, MOV, MKV) directly in your browser. 100% private, client-side WebAssembly audio extractor with zero server uploads.",
+  endpoint: "/tools/video-to-mp3",
+  isClientSideOnly: true,
+  parameters: [
+    {
+      name: "video",
+      type: "file",
+      description: "The video file to extract audio from (MP4, WebM, MOV, MKV)",
+      required: true,
+    },
+    {
+      name: "bitrate",
+      type: "enum",
+      description: "Target MP3 audio encoding bitrate preset",
+      required: false,
+      options: ["320k", "192k", "128k", "vbr"],
+      default: "192k",
+    },
+    {
+      name: "channels",
+      type: "number",
+      description: "Audio channels: 2 for Stereo or 1 for Mono",
+      required: false,
+      min: 1,
+      max: 2,
+      bounds: { min: 1, max: 2 },
+      default: 2,
+    },
+  ],
+  outputs: [
+    {
+      name: "audio",
+      type: "file",
+      mimeType: "audio/mpeg",
+      description: "Extracted high-fidelity MP3 audio track as a downloadable file",
+    },
+  ],
+});
+
+ToolRegistry.registerTool({
+  id: "video-compress",
+  name: "Compress Video",
+  description: "Reduce MP4 and WebM video file sizes using client-side H.264 CRF encoding and resolution downscaling in FFmpeg WebAssembly.",
+  category: "video",
+  seoTitle: "Compress Video Online Free - Reduce Video File Size - Botock",
+  seoDescription: "Reduce MP4 and WebM video file sizes in your browser using client-side H.264 compression without server uploads. 100% private, adjust CRF and resolution with instant savings.",
+  endpoint: "/tools/video-compress",
+  isClientSideOnly: true,
+  parameters: [
+    {
+      name: "video",
+      type: "file",
+      description: "The video file to compress (MP4, WebM, MOV)",
+      required: true,
+    },
+    {
+      name: "preset",
+      type: "enum",
+      description: "Compression quality preset: light (CRF 24), balanced (CRF 28), heavy (CRF 32), or custom",
+      required: false,
+      options: ["light", "balanced", "heavy", "custom"],
+      default: "balanced",
+    },
+    {
+      name: "crf",
+      type: "number",
+      description: "Constant Rate Factor for H.264 video compression (18 to 38, lower is higher quality)",
+      required: false,
+      min: 18,
+      max: 38,
+      bounds: { min: 18, max: 38 },
+      default: 28,
+    },
+    {
+      name: "resolution",
+      type: "enum",
+      description: "Target maximum output resolution downscaling",
+      required: false,
+      options: ["original", "1080p", "720p", "480p"],
+      default: "original",
+    },
+  ],
+  outputs: [
+    {
+      name: "compressedVideo",
+      type: "file",
+      mimeType: "video/mp4",
+      description: "The compressed video file as an MP4 Blob",
+    },
+  ],
+});
+
+// ============================================================================
+// Advanced PDF Tools Registrations (Milestone 3)
+// ============================================================================
+
+ToolRegistry.registerTool({
+  id: "pdf-ocr",
+  name: "OCR PDF (Scanned to Text)",
+  description: "Extract plain, editable text from scanned documents and images within PDF files using PDF.js and Tesseract.js client-side OCR.",
+  category: "pdf",
+  seoTitle: "PDF OCR - Extract Text from Scanned PDFs Online Free - Botock",
+  seoDescription: "Extract editable text and copy text from scanned PDF files directly in your browser. 100% client-side Optical Character Recognition (OCR) with zero server uploads.",
+  endpoint: "/tools/pdf-ocr",
+  isClientSideOnly: true,
+  parameters: [
+    {
+      name: "file",
+      type: "file",
+      description: "The scanned PDF document to perform OCR on",
+      required: true,
+    },
+    {
+      name: "language",
+      type: "enum",
+      description: "Language model for OCR text recognition: eng (English), spa (Spanish), fra (French), deu (German)",
+      required: false,
+      options: ["eng", "spa", "fra", "deu"],
+      default: "eng",
+    },
+    {
+      name: "pageRange",
+      type: "string",
+      description: "Page range specification to process (e.g. 'all', '1-5', '1,3,7')",
+      required: false,
+      default: "all",
+    },
+  ],
+  outputs: [
+    {
+      name: "extractedText",
+      type: "string",
+      mimeType: "text/plain",
+      description: "Recognized plain text extracted from the scanned PDF pages",
+    },
+    {
+      name: "textFile",
+      type: "file",
+      mimeType: "text/plain",
+      description: "Downloadable .txt file containing the full recognized document text",
+    },
+  ],
+});
+
+ToolRegistry.registerTool({
+  id: "pdf-compress",
+  name: "Compress PDF",
+  description: "Reduce PDF file size by intelligent raster image downsampling and object stream compaction locally via pdf-lib and HTML5 Canvas.",
+  category: "pdf",
+  seoTitle: "Compress PDF Online - Reduce PDF File Size Free - Botock",
+  seoDescription: "Shrink and compress PDF file size securely in your browser. Downsample raster images and compact object streams locally with zero server uploads.",
+  endpoint: "/tools/pdf-compress",
+  isClientSideOnly: true,
+  parameters: [
+    {
+      name: "file",
+      type: "file",
+      description: "The PDF document to compress",
+      required: true,
+    },
+    {
+      name: "preset",
+      type: "enum",
+      description: "Compression preset: balanced (65% quality, 1080p max), maximum (45% quality, 720p max), or high_quality (80% quality, 2K max)",
+      required: false,
+      options: ["balanced", "maximum", "high_quality"],
+      default: "balanced",
+    },
+  ],
+  outputs: [
+    {
+      name: "compressedPdf",
+      type: "file",
+      mimeType: "application/pdf",
+      description: "The compressed PDF document as a downloadable file",
+    },
+  ],
+});
+
 

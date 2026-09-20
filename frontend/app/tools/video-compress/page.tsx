@@ -3,7 +3,6 @@ import dynamic from "next/dynamic";
 import { Minimize2, ShieldCheck } from "lucide-react";
 
 const VideoCompressClient = dynamic(() => import("./Client"), {
-  ssr: false,
   loading: () => (
     <div className="w-full border-2 border-dashed border-slate-200 dark:border-white/[0.05] rounded-3xl p-12 flex flex-col items-center justify-center min-h-[400px]">
       <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4" />
