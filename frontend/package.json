@@ -1,0 +1,44 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@imgly/background-removal": "^1.7.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "@types/pica": "^9.0.5",
+    "browser-image-compression": "^2.0.2",
+    "cropperjs": "^1.6.2",
+    "lucide-react": "^1.47.0",
+    "next": "16.3.5",
+    "onnxruntime-web": "^1.21.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^3.11.174",
+    "pica": "^10.0.3",
+    "react": "19.2.8",
+    "react-cropper": "^2.3.3",
+    "react-dom": "19.2.8",
+    "react-dropzone": "^20.1.2",
+    "tesseract.js": "^5.1.1",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

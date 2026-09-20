@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment and sensitive credential files (CRITICAL: NEVER COMMIT)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Google Session and cookies (CRITICAL: NEVER COMMIT)
+session/
+*.session.json
+
+# Generated video outputs and debug logs (contains user data & screenshots)
+generated_videos/
+*.mp4
+*.png
+*.jpg
+*.log

@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+venv/
+backend/venv/
+
+# Next.js build output
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+backend/.env.local
+
+# Session & credentials (CRITICAL: NEVER COMMIT)
+backend/session/
+*.session.json
+
+# Video & debug storage
+backend/generated_videos/
+*.mp4
+*.png
+*.jpg
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
