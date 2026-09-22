@@ -4,16 +4,20 @@ import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { PDFDocument } from "pdf-lib";
 import { FileUp, FileText, X, Loader2, Download } from "lucide-react";
+import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
 export default function PDFMergeClient() {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [mergedPdfUrl, setMergedPdfUrl] = useState<string | null>(null);
+  const { url: mergedPdfUrl, setBlob, reset: resetDownload } = useObjectUrlDownload();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setFiles((prev) => [...prev, ...acceptedFiles]);
-    setMergedPdfUrl(null);
-  }, []);
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      setFiles((prev) => [...prev, ...acceptedFiles]);
+      resetDownload();
+    },
+    [resetDownload]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -24,12 +28,12 @@ export default function PDFMergeClient() {
 
   const removeFile = (index: number) => {
     setFiles(files.filter((_, i) => i !== index));
-    setMergedPdfUrl(null);
+    resetDownload();
   };
 
   const handleMerge = async () => {
     if (files.length < 2) return;
-    
+
     setIsProcessing(true);
     try {
       const mergedPdf = await PDFDocument.create();
@@ -42,18 +46,14 @@ export default function PDFMergeClient() {
       }
 
       const mergedPdfBytes = await mergedPdf.save();
-      const blob = new Blob([mergedPdfBytes as any], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-      setMergedPdfUrl(url);
+      setBlob(mergedPdfBytes);
     } catch (error) {
       console.error("Failed to merge PDFs:", error);
-      // In a real implementation, we would throw here to trigger error.tsx
       throw new Error("Failed to process PDFs. They might be encrypted or corrupted.");
     } finally {
       setIsProcessing(false);
     }
   };
-
   return (
     <div className="w-full">
       {!mergedPdfUrl ? (
@@ -137,7 +137,7 @@ export default function PDFMergeClient() {
             <button
               onClick={() => {
                 setFiles([]);
-                setMergedPdfUrl(null);
+                resetDownload();
               }}
               className="px-6 py-3 rounded-xl border border-slate-300 dark:border-white/[0.1] font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-colors"
             >

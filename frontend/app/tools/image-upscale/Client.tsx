@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Image as ImageIcon,
@@ -16,15 +16,9 @@ import {
   Layers,
 } from "lucide-react";
 import { upscaleImage, UpscaleResult } from "./upscaler";
-
-function formatBytes(bytes: number, decimals = 1): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
+import { formatBytes } from "@/lib/utils/formatters";
+import { useImageDocument } from "@/lib/image/useImageDocument";
+import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
 type SharpnessPreset = {
   label: string;
@@ -38,12 +32,21 @@ const SHARPNESS_PRESETS: SharpnessPreset[] = [
 ];
 
 export default function Client() {
-  const [file, setFile] = useState<File | null>(null);
-  const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [originalDimensions, setOriginalDimensions] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
+  // Shared Image & Object URL Hooks
+  const {
+    file,
+    previewUrl: imageSrc,
+    dimensions: originalDimensions,
+    error: docError,
+    loadImage,
+    reset: resetImage,
+  } = useImageDocument();
+
+  const {
+    url: resultUrl,
+    setBlob,
+    reset: resetDownload,
+  } = useObjectUrlDownload();
 
   const [scaleFactor, setScaleFactor] = useState<2 | 4>(2);
   const [sharpnessEnabled, setSharpnessEnabled] = useState<boolean>(true);
@@ -52,58 +55,23 @@ export default function Client() {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [processStatus, setProcessStatus] = useState<string>("");
   const [result, setResult] = useState<UpscaleResult | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [activePreviewTab, setActivePreviewTab] = useState<"upscaled" | "original">("upscaled");
 
-  const imageRef = useRef<HTMLImageElement | null>(null);
-  const previousResultUrlRef = useRef<string | null>(null);
+  const errorMessage = actionError || docError;
 
-  // Revoke previous object URLs to avoid memory leaks
-  useEffect(() => {
-    return () => {
-      if (previousResultUrlRef.current) {
-        URL.revokeObjectURL(previousResultUrlRef.current);
-      }
-    };
-  }, []);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles && acceptedFiles.length > 0) {
-      const selectedFile = acceptedFiles[0];
-      setFile(selectedFile);
-      setErrorMsg(null);
-
-      // Clean up previous result if any
-      if (previousResultUrlRef.current) {
-        URL.revokeObjectURL(previousResultUrlRef.current);
-        previousResultUrlRef.current = null;
-      }
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (!acceptedFiles || acceptedFiles.length === 0) return;
+      setActionError(null);
+      resetDownload();
       setResult(null);
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        setImageSrc(dataUrl);
-
-        const img = new Image();
-        img.onload = () => {
-          setOriginalDimensions({
-            width: img.naturalWidth || img.width,
-            height: img.naturalHeight || img.height,
-          });
-        };
-        img.onerror = () => {
-          setErrorMsg("Failed to read image dimensions. The file might be damaged.");
-        };
-        img.src = dataUrl;
-      };
-      reader.onerror = () => {
-        setErrorMsg("Failed to read selected image file.");
-      };
-      reader.readAsDataURL(selectedFile);
-    }
-  }, []);
+      await loadImage(acceptedFiles[0]);
+    },
+    [loadImage, resetDownload]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -121,10 +89,9 @@ export default function Client() {
 
     try {
       setIsProcessing(true);
-      setErrorMsg(null);
+      setActionError(null);
       setProcessStatus("Initializing Canvas Engine...");
 
-      // Small async tick to let UI reflect loading state
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       const img = new Image();
@@ -159,17 +126,13 @@ export default function Client() {
         sharpnessAmount,
       });
 
-      // Cleanup prior URL if existing
-      if (previousResultUrlRef.current) {
-        URL.revokeObjectURL(previousResultUrlRef.current);
-      }
-      previousResultUrlRef.current = upscaled.objectUrl;
-
+      // Update via shared download hook (auto-revokes previous URLs)
+      setBlob(upscaled.blob, "image/png");
       setResult(upscaled);
       setActivePreviewTab("upscaled");
     } catch (err) {
       console.error("Upscaling error:", err);
-      setErrorMsg(
+      setActionError(
         err instanceof Error
           ? err.message
           : "An unexpected error occurred while upscaling the image."
@@ -181,15 +144,10 @@ export default function Client() {
   };
 
   const handleReset = () => {
-    if (previousResultUrlRef.current) {
-      URL.revokeObjectURL(previousResultUrlRef.current);
-      previousResultUrlRef.current = null;
-    }
-    setFile(null);
-    setImageSrc(null);
-    setOriginalDimensions(null);
+    resetImage();
+    resetDownload();
     setResult(null);
-    setErrorMsg(null);
+    setActionError(null);
     setScaleFactor(2);
     setSharpnessEnabled(true);
     setSharpnessAmount(0.65);
@@ -268,7 +226,7 @@ export default function Client() {
                 <button
                   type="button"
                   onClick={() => setScaleFactor(2)}
-                  className={`p-4 rounded-2xl border text-left transition-all ${
+                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                     scaleFactor === 2
                       ? "border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500"
                       : "border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.15] bg-slate-50/50 dark:bg-white/[0.02]"
@@ -296,7 +254,7 @@ export default function Client() {
                 <button
                   type="button"
                   onClick={() => setScaleFactor(4)}
-                  className={`p-4 rounded-2xl border text-left transition-all ${
+                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
                     scaleFactor === 4
                       ? "border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500"
                       : "border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.15] bg-slate-50/50 dark:bg-white/[0.02]"
@@ -356,7 +314,7 @@ export default function Client() {
                       key={preset.amount}
                       type="button"
                       onClick={() => setSharpnessAmount(preset.amount)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                         sharpnessAmount === preset.amount
                           ? "bg-emerald-500 text-white"
                           : "bg-slate-100 dark:bg-white/[0.05] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/[0.1]"
@@ -375,9 +333,7 @@ export default function Client() {
                 <Eye className="w-3.5 h-3.5 text-slate-400" /> Source Image Preview
               </span>
               <div className="rounded-2xl overflow-hidden bg-slate-100 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] p-4 flex items-center justify-center min-h-[220px] max-h-[340px]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  ref={imageRef}
                   src={imageSrc}
                   alt="Original preview"
                   className="max-h-[280px] max-w-full object-contain rounded-lg shadow-sm"
@@ -390,7 +346,7 @@ export default function Client() {
               <button
                 type="button"
                 onClick={handleReset}
-                className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-xs flex items-center gap-2 transition-colors active:scale-95"
+                className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-xs flex items-center gap-2 transition-colors active:scale-95 cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" /> Start Over
               </button>
@@ -439,10 +395,10 @@ export default function Client() {
             </div>
 
             {/* Error banner if any */}
-            {errorMsg && (
+            {errorMessage && (
               <div className="p-3 mb-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{errorMsg}</span>
+                <span>{errorMessage}</span>
               </div>
             )}
 
@@ -496,7 +452,7 @@ export default function Client() {
                   <button
                     type="button"
                     onClick={() => setActivePreviewTab("upscaled")}
-                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                       activePreviewTab === "upscaled"
                         ? "bg-white dark:bg-[#121215] text-emerald-600 dark:text-emerald-400 shadow-xs"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -507,7 +463,7 @@ export default function Client() {
                   <button
                     type="button"
                     onClick={() => setActivePreviewTab("original")}
-                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
                       activePreviewTab === "original"
                         ? "bg-white dark:bg-[#121215] text-emerald-600 dark:text-emerald-400 shadow-xs"
                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
@@ -519,9 +475,8 @@ export default function Client() {
 
                 {/* Image Output Card */}
                 <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#09090b] flex items-center justify-center p-3 max-h-[260px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={activePreviewTab === "upscaled" ? result.objectUrl : imageSrc}
+                    src={activePreviewTab === "upscaled" ? (resultUrl || result.objectUrl) : imageSrc}
                     alt={activePreviewTab === "upscaled" ? "Upscaled result" : "Original image"}
                     className="max-w-full max-h-[230px] object-contain rounded-lg shadow-sm"
                   />
@@ -529,9 +484,9 @@ export default function Client() {
 
                 {/* Download Button */}
                 <a
-                  href={result.objectUrl}
+                  href={resultUrl || result.objectUrl}
                   download="Botock-Upscaled-Image.png"
-                  className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md active:scale-95"
+                  className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
                 >
                   <Download className="w-4 h-4" /> Download Result
                 </a>

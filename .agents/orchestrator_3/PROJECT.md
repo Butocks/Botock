@@ -33,10 +33,10 @@
 |---|------|-------|-------------|--------|
 | M1 | Core Dependencies & Shared WASM/PDF Infrastructure | Install packages, build singleton WASM loader, React hook & PDF helpers | none | DONE |
 | E2E| E2E Test Suite Creation | Opaque-box test suite for all 6 tools (Tiers 1-4) -> TEST_READY.md | none | DONE |
-| M2 | Video Tools Suite | Build video-trim, video-speed, video-to-mp3, video-compress (page, Client, error) | M1 | IN_PROGRESS |
-| M3 | PDF Tools Suite | Build pdf-ocr, pdf-compress (page, Client, error) | M1 | IN_PROGRESS |
-| M4 | ToolEngine Registration & UI Consistency | Register in ToolEngine.ts, update tools catalog page, verify npm run build | M2, M3 | PLANNED |
-| M5 | E2E Test Pass & Adversarial Hardening | Pass 100% E2E tests, Tier 5 adversarial testing, Forensic Audit | M4, E2E | PLANNED |
+| M2 | Video Tools Suite | Build video-trim, video-speed, video-to-mp3, video-compress (page, Client, error) | M1 | DONE |
+| M3 | PDF Tools Suite | Build pdf-ocr, pdf-compress (page, Client, error) | M1 | DONE |
+| M4 | ToolEngine Registration & UI Consistency | Register in ToolEngine.ts, update tools catalog page, verify npm run build | M2, M3 | DONE |
+| M5 | E2E Test Pass & Adversarial Hardening | Pass 100% E2E tests, Tier 5 adversarial testing, Forensic Audit | M4, E2E | IN_PROGRESS |
 
 ## Interface Contracts
 ### Video WASM Hook (`lib/ffmpeg/useFFmpeg.ts`)

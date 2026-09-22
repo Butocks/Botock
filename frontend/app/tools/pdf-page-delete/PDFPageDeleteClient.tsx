@@ -1,41 +1,32 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { PDFDocument } from "pdf-lib";
-import { FileUp, FileText, Download, Loader2, RefreshCcw, Trash2, CheckSquare, Square } from "lucide-react";
+import { FileUp, FileText, Download, Loader2, RefreshCcw, Trash2 } from "lucide-react";
+import { usePdfDocument } from "@/lib/pdf/usePdfDocument";
+import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
 export default function PDFPageDeleteClient() {
-  const [file, setFile] = useState<File | null>(null);
-  const [pageCount, setPageCount] = useState<number>(0);
+  const { file, pageCount, error: docError, loadFile, reset: resetDoc } = usePdfDocument();
+  const { url: downloadUrl, setBlob, reset: resetDownload } = useObjectUrlDownload();
+
   const [pagesToDelete, setPagesToDelete] = useState<number[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-    };
-  }, [downloadUrl]);
+  const errorMessage = actionError || docError;
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!acceptedFiles || acceptedFiles.length === 0) return;
-    const selected = acceptedFiles[0];
-    setFile(selected);
-    setErrorMessage(null);
-    setDownloadUrl(null);
-    setPagesToDelete([]);
-
-    try {
-      const buffer = await selected.arrayBuffer();
-      const loadedDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
-      setPageCount(loadedDoc.getPageCount());
-    } catch (err: any) {
-      console.error("Could not inspect PDF:", err);
-      setErrorMessage("Could not load PDF document. Check file permissions or encryption.");
-    }
-  }, []);
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (!acceptedFiles || acceptedFiles.length === 0) return;
+      setActionError(null);
+      resetDownload();
+      setPagesToDelete([]);
+      await loadFile(acceptedFiles[0]);
+    },
+    [loadFile, resetDownload]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -52,16 +43,16 @@ export default function PDFPageDeleteClient() {
   const handleDeletePages = async () => {
     if (!file || pageCount === 0) return;
     if (pagesToDelete.length >= pageCount) {
-      setErrorMessage("You cannot delete every page. At least one page must remain.");
+      setActionError("You cannot delete every page. At least one page must remain.");
       return;
     }
     if (pagesToDelete.length === 0) {
-      setErrorMessage("Please select at least one page to delete.");
+      setActionError("Please select at least one page to delete.");
       return;
     }
 
     setIsProcessing(true);
-    setErrorMessage(null);
+    setActionError(null);
 
     try {
       const buffer = await file.arrayBuffer();
@@ -79,28 +70,21 @@ export default function PDFPageDeleteClient() {
       copiedPages.forEach((p) => newDoc.addPage(p));
 
       const pdfBytes = await newDoc.save();
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-
-      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-      setDownloadUrl(url);
+      setBlob(pdfBytes);
     } catch (err: any) {
       console.error("Deletion failed:", err);
-      setErrorMessage(err.message || "Failed to remove selected pages from PDF.");
+      setActionError(err.message || "Failed to remove selected pages from PDF.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   const resetAll = () => {
-    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-    setFile(null);
-    setPageCount(0);
+    resetDoc();
+    resetDownload();
     setPagesToDelete([]);
-    setDownloadUrl(null);
-    setErrorMessage(null);
+    setActionError(null);
   };
-
   return (
     <div className="w-full bg-white dark:bg-[#121215] p-6 rounded-3xl border border-slate-200 dark:border-white/[0.08] shadow-sm">
       {!file ? (

@@ -1,4 +1,4 @@
-# BRIEFING — 2026-09-20T19:02:35Z
+# BRIEFING — 2026-09-20T19:26:35Z
 
 ## Mission
 Build and thoroughly verify a suite of 6 client-side tools (video-trim, video-speed, video-to-mp3, video-compress, pdf-ocr, pdf-compress) in Next.js (React) using WASM/client libraries with strict SEO, crash isolation, ToolEngine registration, and comprehensive testing.
@@ -17,11 +17,12 @@ Build and thoroughly verify a suite of 6 client-side tools (video-trim, video-sp
    - Survey completed with 3 Explorers.
    - M1 (Shared WASM/PDF infra) completed and verified.
    - E2E Test Suite (Tiers 1-4, 73 tests) completed and verified.
-   - M2 (Video Tools) and M3 (PDF Tools) currently executing concurrently.
-   - M4 (ToolEngine & Catalog) planned next, followed by M5 (E2E Hardening & Audit).
+   - M2 (Video Tools: 4 tools) completed and verified.
+   - M3 (PDF Tools: 2 tools) completed and verified.
+   - M4 (ToolEngine & Catalog) completed and verified.
+   - M5 (E2E Verification, Adversarial Hardening & Forensic Audit) in-progress with 5 verification agents.
 2. **Dispatch & Execute**:
-   - Dispatched M2 Worker for 4 video tools.
-   - Dispatched M3 Worker for 2 PDF tools.
+   - Dispatched Reviewer 1, Reviewer 2, Challenger 1, Challenger 2, and Forensic Auditor.
 3. **On failure**:
    - Retry: nudge stuck agent or re-send task
    - Replace: spawn fresh agent with partial progress
@@ -34,12 +35,12 @@ Build and thoroughly verify a suite of 6 client-side tools (video-trim, video-sp
   1. Survey & Architecture [done]
   2. M1: Core Dependencies & Shared WASM/PDF Infrastructure [done]
   3. E2E: Test Suite Creation (Tiers 1-4) [done]
-  4. M2: Video Tools Suite [in-progress]
-  5. M3: PDF Tools Suite [in-progress]
-  6. M4: ToolEngine Registration & UI Consistency [pending]
-  7. M5: E2E Verification & Hardening [pending]
-- **Current phase**: 2 (Feature Implementation)
-- **Current focus**: Milestone 2 Worker + Milestone 3 Worker concurrent execution
+  4. M2: Video Tools Suite [done]
+  5. M3: PDF Tools Suite [done]
+  6. M4: ToolEngine Registration & UI Consistency [done]
+  7. M5: E2E Verification & Hardening [in-progress]
+- **Current phase**: 4 (Verification & Audit)
+- **Current focus**: Milestone 5 gate verification (2 Reviewers, 2 Challengers, 1 Forensic Auditor)
 
 ## 🔒 Key Constraints
 - Never write source code directly (dispatch-only orchestrator).
@@ -68,13 +69,19 @@ Build and thoroughly verify a suite of 6 client-side tools (video-trim, video-sp
 | explorer_survey_3 | teamwork_preview_explorer | Survey PDF architecture | completed | ef8f8172-2dd4-4038-9289-2979f2c916e6 |
 | worker_m1 | teamwork_preview_worker | Milestone 1: Dependencies & Shared Loaders | completed | f2fd8696-7c0d-4679-bd80-1e9d3970c63f |
 | test_writer_e2e | teamwork_preview_test_writer | E2E Test Suite Creation (Tiers 1-4) | completed | fb78c707-edf6-4df8-96e9-effd062275a1 |
-| worker_m2 | teamwork_preview_worker | Milestone 2: Video Tools Suite | in-progress | cc81978a-55ed-48df-8fad-b7810cad2eb3 |
-| worker_m3 | teamwork_preview_worker | Milestone 3: PDF Tools Suite | in-progress | 73425682-7015-46a4-b10a-67f1407d93e9 |
+| worker_m2 | teamwork_preview_worker | Milestone 2: Video Tools Suite | completed | cc81978a-55ed-48df-8fad-b7810cad2eb3 |
+| worker_m3 | teamwork_preview_worker | Milestone 3: PDF Tools Suite | completed | 73425682-7015-46a4-b10a-67f1407d93e9 |
+| worker_m4 | teamwork_preview_worker | Milestone 4: Platform Registration | completed | c5f40466-7c30-406e-ba73-31398f085f3e |
+| reviewer_1 | teamwork_preview_reviewer | Code Quality & Architecture Review | in-progress | e2e6c659-2de4-4d36-a1a7-c0382d1ff7dd |
+| reviewer_2 | teamwork_preview_reviewer | WASM Memory & Safety Review | in-progress | ac0b143f-8fde-4b7d-a6c6-ee7354f7388a |
+| challenger_1 | teamwork_preview_challenger | Video Adversarial Stress Testing | completed | 5d3c8e5e-3735-405f-9b26-48b9d6caf4aa |
+| challenger_2 | teamwork_preview_challenger | PDF Adversarial Stress Testing | completed | 866a288f-6499-458e-93b8-263f220a09ab |
+| auditor_1 | teamwork_preview_auditor | Forensic Integrity Audit | in-progress | c1ca8588-04c7-4939-b89b-d9cd50a197b6 |
 
 ## Succession Status
 - Succession required: no
-- Spawn count: 7 / 16
-- Pending subagents: cc81978a-55ed-48df-8fad-b7810cad2eb3, 73425682-7015-46a4-b10a-67f1407d93e9
+- Spawn count: 15 / 16
+- Pending subagents: e2e6c659-2de4-4d36-a1a7-c0382d1ff7dd, 060dfa21-19f9-465d-aa3d-21da1908978c, 5d3c8e5e-3735-405f-9b26-48b9d6caf4aa, 866a288f-6499-458e-93b8-263f220a09ab, c1ca8588-04c7-4939-b89b-d9cd50a197b6
 - Predecessor: none
 - Successor: not yet spawned
 
@@ -89,3 +96,4 @@ Build and thoroughly verify a suite of 6 client-side tools (video-trim, video-sp
 - /home/mir/Documents/botock/.agents/orchestrator_3/progress.md — Liveness heartbeat and milestone tracking
 - /home/mir/Documents/botock/.agents/ORIGINAL_REQUEST.md — Authoritative user requirements
 - /home/mir/Documents/botock/TEST_READY.md — E2E Test Suite status & test runner specification
+- /home/mir/Documents/botock/.agents/orchestrator_3/GATE_STATUS.md — Gate verdict tracking

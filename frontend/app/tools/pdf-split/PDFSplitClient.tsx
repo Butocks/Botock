@@ -1,61 +1,51 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { PDFDocument } from "pdf-lib";
 import { FileUp, FileText, Download, Loader2, RefreshCcw, Layers } from "lucide-react";
+import { usePdfDocument } from "@/lib/pdf/usePdfDocument";
+import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
 export default function PDFSplitClient() {
-  const [file, setFile] = useState<File | null>(null);
-  const [pageCount, setPageCount] = useState<number>(0);
+  const { file, pageCount, error: docError, loadFile, reset: resetDoc } = usePdfDocument();
+  const { url: downloadUrl, setBlob, reset: resetDownload } = useObjectUrlDownload();
+
   const [rangeMode, setRangeMode] = useState<"all" | "range">("range");
   const [fromPage, setFromPage] = useState<number>(1);
   const [toPage, setToPage] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [outputFileName, setOutputFileName] = useState<string>("split-pages.pdf");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (downloadUrl) {
-        URL.revokeObjectURL(downloadUrl);
+  const errorMessage = actionError || docError;
+
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (!acceptedFiles || acceptedFiles.length === 0) return;
+      setActionError(null);
+      resetDownload();
+
+      const loadedDoc = await loadFile(acceptedFiles[0]);
+      if (loadedDoc) {
+        const total = loadedDoc.getPageCount();
+        setFromPage(1);
+        setToPage(Math.min(total, 1));
       }
-    };
-  }, [downloadUrl]);
-
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!acceptedFiles || acceptedFiles.length === 0) return;
-    const selected = acceptedFiles[0];
-    setFile(selected);
-    setErrorMessage(null);
-    setDownloadUrl(null);
-
-    try {
-      const buffer = await selected.arrayBuffer();
-      const loadedDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
-      const total = loadedDoc.getPageCount();
-      setPageCount(total);
-      setFromPage(1);
-      setToPage(Math.min(total, 1));
-    } catch (err: any) {
-      console.error("Could not read PDF metadata:", err);
-      setErrorMessage("Could not inspect PDF. It may be password protected or corrupted.");
-    }
-  }, []);
+    },
+    [loadFile, resetDownload]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      "application/pdf": [".pdf"],
-    },
+    accept: { "application/pdf": [".pdf"] },
     maxFiles: 1,
   });
 
   const handleSplit = async () => {
     if (!file || pageCount === 0) return;
     setIsProcessing(true);
-    setErrorMessage(null);
+    setActionError(null);
 
     try {
       const buffer = await file.arrayBuffer();
@@ -81,13 +71,8 @@ export default function PDFSplitClient() {
       copiedPages.forEach((p) => newDoc.addPage(p));
 
       const pdfBytes = await newDoc.save();
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
+      setBlob(pdfBytes);
 
-      if (downloadUrl) {
-        URL.revokeObjectURL(downloadUrl);
-      }
-      setDownloadUrl(url);
       setOutputFileName(
         rangeMode === "all"
           ? `${file.name.replace(/\.pdf$/i, "")}-pages.pdf`
@@ -95,22 +80,18 @@ export default function PDFSplitClient() {
       );
     } catch (err: any) {
       console.error("Error splitting PDF:", err);
-      setErrorMessage(err.message || "Failed to split PDF. Check file security/permissions.");
+      setActionError(err.message || "Failed to split PDF. Check file security/permissions.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   const resetAll = () => {
-    if (downloadUrl) {
-      URL.revokeObjectURL(downloadUrl);
-    }
-    setFile(null);
-    setPageCount(0);
-    setDownloadUrl(null);
-    setErrorMessage(null);
+    resetDoc();
+    resetDownload();
+    setActionError(null);
   };
-
+  
   return (
     <div className="w-full bg-white dark:bg-[#121215] p-6 rounded-3xl border border-slate-200 dark:border-white/[0.08] shadow-sm">
       {!file ? (

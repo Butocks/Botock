@@ -107,7 +107,8 @@ export async function processPdfOcr(
   fileOrBuffer: File | Blob | ArrayBuffer | Uint8Array,
   language: string = "eng",
   onProgress?: (progress: OCRProgress) => void,
-  cancelSignal?: { cancelled: boolean }
+  cancelSignal?: { cancelled: boolean },
+  targetPages?: number[]
 ): Promise<{ pages: OCRPageResult[]; fullText: string }> {
   if (typeof window === "undefined") {
     throw new Error("processPdfOcr can only be executed in a browser environment.");
@@ -164,6 +165,16 @@ export async function processPdfOcr(
     return { pages: [], fullText: "" };
   }
 
+  // BOTOCK-102: Agar targetPages pass kiye gaye hon toh sirf woh process karein, warna saare pages
+  const pagesToProcess =
+    targetPages && targetPages.length > 0
+      ? targetPages.filter((p) => p >= 1 && p <= totalPages)
+      : Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  if (pagesToProcess.length === 0) {
+    return { pages: [], fullText: "" };
+  }
+
   onProgress?.({
     currentPage: 0,
     totalPages,
@@ -171,24 +182,22 @@ export async function processPdfOcr(
     progress: 5,
   });
 
-  // Single worker instance reused for all pages to avoid re-downloading traineddata
+  // Single worker instance reused for all pages
   const worker = await createWorker(language, 1, {
-    logger: (m) => {
-      if (m.status === "recognizing text" && m.progress !== undefined) {
-        // Granular sub-step progress update
-      }
-    },
+    logger: () => {},
   });
 
   const pages: OCRPageResult[] = [];
+  const totalToProcess = pagesToProcess.length;
 
   try {
-    for (let p = 1; p <= totalPages; p++) {
+    for (let i = 0; i < totalToProcess; i++) {
       if (cancelSignal?.cancelled) {
         break;
       }
 
-      const pageBaseProgress = Math.round(((p - 1) / totalPages) * 90) + 5;
+      const p = pagesToProcess[i];
+      const pageBaseProgress = Math.round((i / totalToProcess) * 90) + 5;
       onProgress?.({
         currentPage: p,
         totalPages,
@@ -198,11 +207,17 @@ export async function processPdfOcr(
 
       const canvas = await renderPdfPageToCanvas(pdfDoc, p, 2.0);
 
+      if (cancelSignal?.cancelled) {
+        canvas.width = 0;
+        canvas.height = 0;
+        break;
+      }
+
       onProgress?.({
         currentPage: p,
         totalPages,
         status: `Extracting text from page ${p} of ${totalPages}...`,
-        progress: Math.min(95, pageBaseProgress + Math.round((0.5 / totalPages) * 90)),
+        progress: Math.min(95, pageBaseProgress + Math.round((0.5 / totalToProcess) * 90)),
       });
 
       const pageResult = await extractTextFromPage(canvas, language, undefined, worker);
@@ -213,11 +228,11 @@ export async function processPdfOcr(
         confidence: pageResult.confidence,
       });
 
-      // Crucial: Deallocate canvas backing store immediately to avoid GPU/RAM exhaustion
+      // Deallocate canvas backing store immediately
       canvas.width = 0;
       canvas.height = 0;
 
-      // Yield event loop to allow UI updates and garbage collection
+      // Yield event loop
       await new Promise((resolve) => setTimeout(resolve, 15));
     }
 

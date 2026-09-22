@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
+import { getSiteUrl } from "../../utils/runtime-urls";
 import { ArrowRight, Lock, Mail, AlertCircle, CheckCircle2 } from "lucide-react";
 
 
@@ -28,7 +29,7 @@ function LoginForm() {
     setLoading(true);
     setMessage(null);
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const origin = getSiteUrl();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -72,7 +73,7 @@ function LoginForm() {
       } else {
         setMessage({ type: "success", text: "Login successful! Redirecting..." });
         setTimeout(() => {
-          window.location.href = "/tools/video-generator";
+          window.location.href = `${getSiteUrl()}/tools/video-generator`;
         }, 400);
       }
     } catch (err: any) {

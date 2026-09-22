@@ -673,4 +673,97 @@ ToolRegistry.registerTool({
   ],
 });
 
+// ============================================================================
+// Backend Document Conversion Suite Registrations (Milestone 4)
+// ============================================================================
+
+ToolRegistry.registerTool({
+  id: "pdf-to-word",
+  name: "PDF to Word Converter",
+  description: "Convert PDF documents into editable Microsoft Word (.docx) files with preserved layout, formatting, and fonts.",
+  category: "pdf",
+  seoTitle: "Convert PDF to Word Online Free - DOCX Converter - Botock",
+  seoDescription: "Convert PDF documents to editable Microsoft Word (.docx) files accurately. Fast, secure, and preserves formatting.",
+  endpoint: "/api/convert/pdf-to-docx",
+  isClientSideOnly: false,
+  parameters: [
+    {
+      name: "file",
+      type: "file",
+      description: "The PDF document to convert to Word DOCX format (.pdf, application/pdf)",
+      required: true,
+      options: [".pdf", "application/pdf"],
+    },
+  ],
+  outputs: [
+    {
+      name: "docxFile",
+      type: "file",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      description: "The converted Microsoft Word (.docx) document",
+    },
+  ],
+});
+
+ToolRegistry.registerTool({
+  id: "word-to-pdf",
+  name: "Word to PDF Converter",
+  description: "Convert Microsoft Word documents (.docx, .doc) into high-fidelity, printable PDF files.",
+  category: "pdf",
+  seoTitle: "Convert Word to PDF Online Free - DOCX to PDF - Botock",
+  seoDescription: "Convert Word DOC and DOCX documents into clean, portable PDFs instantly with perfect layout preservation.",
+  endpoint: "/api/convert/docx-to-pdf",
+  isClientSideOnly: false,
+  parameters: [
+    {
+      name: "file",
+      type: "file",
+      description: "The Word document (.docx or .doc) to convert to PDF",
+      required: true,
+      options: [
+        ".docx",
+        ".doc",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/msword",
+      ],
+    },
+  ],
+  outputs: [
+    {
+      name: "pdfFile",
+      type: "file",
+      mimeType: "application/pdf",
+      description: "The converted PDF document",
+    },
+  ],
+});
+
+ToolRegistry.registerTool({
+  id: "pdf-to-excel",
+  name: "PDF to Excel Converter",
+  description: "Extract data tables from PDF documents into structured Microsoft Excel (.xlsx) spreadsheets.",
+  category: "pdf",
+  seoTitle: "Convert PDF to Excel Online Free - Extract Tables to XLSX - Botock",
+  seoDescription: "Extract tables and tabular data from PDF files into editable Excel (.xlsx) spreadsheets automatically.",
+  endpoint: "/api/convert/pdf-to-excel",
+  isClientSideOnly: false,
+  parameters: [
+    {
+      name: "file",
+      type: "file",
+      description: "The PDF document containing tables to extract into an Excel spreadsheet (.pdf, application/pdf)",
+      required: true,
+      options: [".pdf", "application/pdf"],
+    },
+  ],
+  outputs: [
+    {
+      name: "excelFile",
+      type: "file",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      description: "The generated Excel (.xlsx) spreadsheet containing extracted tables across sheets",
+    },
+  ],
+});
+
 

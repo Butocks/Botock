@@ -1,7 +1,7 @@
 fastapi
-uvicorn[standard]
-playwright
-python-dotenv
-aiofiles
-pydantic
-pydantic-settings
+uvicorn
+python-multipart
+pdf2docx
+pdfplumber
+pandas
+openpyxl

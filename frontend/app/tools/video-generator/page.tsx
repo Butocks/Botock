@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../utils/supabase/client";
+import { getBackendUrl } from "../../../utils/runtime-urls";
 import { useMediaStore } from "../../store/useMediaStore";
 import {
   Sparkles,
@@ -133,8 +134,9 @@ export default function VideoGeneratorPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token || "";
+      const backendBaseUrl = getBackendUrl();
 
-      const response = await fetch("http://localhost:8000/api/video/generate", {
+      const response = await fetch(`${backendBaseUrl}/api/video/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -171,7 +173,8 @@ export default function VideoGeneratorPage() {
     if (status === "polling" && generationId) {
       pollInterval = setInterval(async () => {
         try {
-          const response = await fetch(`http://localhost:8000/api/video/status/${generationId}`);
+          const backendBaseUrl = getBackendUrl();
+          const response = await fetch(`${backendBaseUrl}/api/video/status/${generationId}`);
           if (!response.ok) return;
 
           const data = await response.json();
@@ -180,9 +183,10 @@ export default function VideoGeneratorPage() {
           }
 
           if (data.status === "completed") {
+            const backendBaseUrl = getBackendUrl();
             const rawUrl = data.download_url
-              ? `http://localhost:8000${data.download_url}`
-              : `http://localhost:8000/api/video/download/${generationId}`;
+              ? new URL(data.download_url, backendBaseUrl).toString()
+              : `${backendBaseUrl}/api/video/download/${generationId}`;
 
             setVideoUrl(rawUrl);
             setStatus("completed");

@@ -103,3 +103,36 @@ ToolRegistry.registerTool({
 - `frontend/app/tools/page.tsx`
 - `frontend/next.config.ts`
 - `frontend/package.json`
+
+---
+
+# Sub-Project: Backend Document Conversion Suite (orchestrator_4)
+
+## Architecture
+- Framework: Next.js 16.3.5 App Router + React 19.2.8 + TypeScript 5
+- Backend: Python FastAPI (`http://localhost:8000`)
+- Tools: `pdf-to-word`, `word-to-pdf`, `pdf-to-excel`
+
+## Feature Inventory (Document Conversion)
+| # | Feature | Description | Milestone | Source |
+|---|---------|-------------|-----------|--------|
+| 13 | `pdf-to-word` Tool | Server page with SEO, dropzone (.pdf), multipart POST to `/api/convert/pdf-to-docx`, .docx download | M1 | ORIGINAL_REQUEST R1.1 |
+| 14 | `word-to-pdf` Tool | Server page with SEO, dropzone (.docx/.doc), multipart POST to `/api/convert/docx-to-pdf`, .pdf download | M2 | ORIGINAL_REQUEST R1.2 |
+| 15 | `pdf-to-excel` Tool | Server page with SEO, dropzone (.pdf), multipart POST to `/api/convert/pdf-to-excel`, .xlsx download | M3 | ORIGINAL_REQUEST R1.3 |
+| 16 | Crash Isolation (`error.tsx`) | Error Boundary per tool for client crash resilience | M1, M2, M3 | tool_architecture.md §2 |
+| 17 | SEO & JSON-LD Schemas | Metadata + SoftwareApplication JSON-LD schema per tool | M1, M2, M3 | tool_architecture.md §3 |
+| 18 | ToolEngine Registration | AI-Agent-Ready ToolSchema registration in `ToolEngine.ts` | M4 | tool_architecture.md §1 |
+| 19 | Tool Directory Integration | Update status to "active" in `app/tools/page.tsx` | M4 | survey_frontend |
+| 20 | E2E Conversion Test Suite | Opaque-box test suite for document conversion tools | E2E Track | Architecture |
+| 21 | Production Build & Integrity Audit | `npm run build` exits 0, forensic audit verification | M5 | ORIGINAL_REQUEST R3 |
+
+## Milestones
+| # | Name | Scope | Dependencies | Status |
+|---|------|-------|-------------|--------|
+| E2E | E2E Testing Suite Track | Design opaque-box test runner, publish `TEST_READY.md` | Survey | DONE |
+| M1 | Tool `pdf-to-word` | `app/tools/pdf-to-word/` (`page.tsx`, `Client.tsx`, `error.tsx`) | Survey | DONE |
+| M2 | Tool `word-to-pdf` | `app/tools/word-to-pdf/` (`page.tsx`, `Client.tsx`, `error.tsx`) | Survey | DONE |
+| M3 | Tool `pdf-to-excel` | `app/tools/pdf-to-excel/` (`page.tsx`, `Client.tsx`, `error.tsx`) | Survey | DONE |
+| M4 | ToolEngine & Directory Sync | `ToolEngine.ts` & `app/tools/page.tsx` | M1, M2, M3 | DONE |
+| M5 | Build & Integrity Verification | `npm run build`, E2E tests, forensic audit | E2E, M4 | DONE |
+

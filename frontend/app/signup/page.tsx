@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "../../utils/supabase/client";
+import { getSiteUrl } from "../../utils/runtime-urls";
 import {
   User,
   Mail,
@@ -61,7 +62,7 @@ export default function SignUpPage() {
     setLoading(true);
     setMessage(null);
     try {
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const origin = getSiteUrl();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -132,7 +133,7 @@ export default function SignUpPage() {
           text: "Registration successful! Welcome to Botock. Redirecting to creative tools...",
         });
         setTimeout(() => {
-          window.location.href = "/tools/video-generator";
+          window.location.href = `${getSiteUrl()}/tools/video-generator`;
         }, 1000);
       }
     } catch (err: any) {

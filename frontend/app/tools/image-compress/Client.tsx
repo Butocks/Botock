@@ -1,5 +1,5 @@
 "use client";
-
+import { formatBytes } from "@/lib/utils/formatters";
 import { useState, useCallback, useEffect, useId } from "react";
 import { useDropzone } from "react-dropzone";
 import imageCompression from "browser-image-compression";
@@ -22,14 +22,7 @@ interface Dimensions {
   height: number;
 }
 
-function formatBytes(bytes: number, decimals = 2): string {
-  if (!bytes || bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
+
 
 function getImageDimensions(url: string): Promise<Dimensions> {
   return new Promise((resolve) => {
@@ -184,6 +177,30 @@ export default function ImageCompressClient() {
     setErrorMsg(null);
     setProgress(0);
   };
+  
+// BOTOCK-101: Derive correct file extension based on actual compressed file MIME type
+  const getDownloadFilename = useCallback(() => {
+    if (!compressedFile) return "Botock-Compressed-Image.jpg";
+
+    const mimeToExt: Record<string, string> = {
+      "image/jpeg": ".jpg",
+      "image/png": ".png",
+      "image/webp": ".webp",
+      "image/avif": ".avif",
+    };
+
+    // Actual blob MIME type se match karein, fallback original file extension par
+    const ext =
+      mimeToExt[compressedFile.type] ||
+      (originalFile ? `.${originalFile.name.split(".").pop()}` : ".jpg");
+
+    const baseName = originalFile
+      ? originalFile.name.replace(/\.[^/.]+$/, "")
+      : "Image";
+
+    return `Botock-Compressed-${baseName}${ext}`;
+  }, [compressedFile, originalFile]);
+
 
   const reductionPercentage =
     originalFile && compressedFile
@@ -546,14 +563,15 @@ export default function ImageCompressClient() {
                   </div>
                 </div>
 
-                {/* Download Button */}
+                      {/* Download Button (BOTOCK-101: Dynamic extension matching MIME type) */}
                 <a
                   href={compressedUrl}
-                  download="Botock-Compressed-Image.jpg"
+                  download={getDownloadFilename()}
                   className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
                 >
                   <Download className="w-4 h-4" /> Download Result
                 </a>
+
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-200 dark:border-white/[0.05] rounded-2xl text-slate-400 min-h-[220px]">

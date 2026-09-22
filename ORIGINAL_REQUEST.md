@@ -92,3 +92,39 @@ Create the following tools in `app/tools/[tool-name]`:
 - [ ] `npm run build` exits with code 0 (success).
 - [ ] No `Module not found` or `any` type errors in the new tools.
 
+## Follow-up — 2026-09-21T01:13:40Z
+
+# Teamwork Project Prompt — Backend Frontend Integration
+
+> Status: Ready for launch.
+> Goal: Launch multiple agents to build the Next.js UI components for the backend-powered document conversion tools.
+> Requested team: A full team for parallel building and rigorous testing.
+
+Build a suite of 3 client-side tools in Next.js (React) that interact with our new Python FastAPI backend (`http://localhost:8000`).
+
+Working directory: /home/mir/Documents/botock/frontend
+Integrity mode: development
+
+## Requirements
+
+### R1. Implement 3 Conversion Tools
+Create the following tools in `app/tools/[tool-name]`:
+1. `pdf-to-word` (POSTs to `http://localhost:8000/api/convert/pdf-to-docx`)
+2. `word-to-pdf` (POSTs to `http://localhost:8000/api/convert/docx-to-pdf`)
+3. `pdf-to-excel` (POSTs to `http://localhost:8000/api/convert/pdf-to-excel`)
+
+### R2. Adhere to Architecture Guidelines
+- Each tool must have a `page.tsx` (Server Component) with strict SEO tags.
+- Each tool must have a `Client.tsx` (Client Component).
+- Each tool must have an `error.tsx` for crash isolation.
+- Register all 3 tools in `app/tools/ToolEngine.ts`.
+- **UI Logic:** The `Client.tsx` should allow the user to select a file, show a loading spinner, POST the file as `multipart/form-data` using `fetch`, and trigger a file download from the binary response.
+
+### R3. Thorough Local Verification
+- Before finishing, run the Next.js build (`npm run build`).
+- Do not stop until all TypeScript and compilation errors are resolved.
+
+## Acceptance Criteria
+- [ ] Users can upload files and download the converted results.
+- [ ] `npm run build` exits with code 0 (success).
+

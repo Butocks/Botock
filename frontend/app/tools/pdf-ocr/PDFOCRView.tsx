@@ -3,12 +3,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import * as pdfjsLib from "pdfjs-dist";
-import { createWorker, type Worker as TesseractWorker } from "tesseract.js";
 import { PDFDocument } from "pdf-lib";
 import {
-  renderPdfPageToCanvas,
-  extractTextFromPage,
+  processPdfOcr,
   type OCRPageResult,
+  type OCRProgress,
 } from "@/lib/pdf/pdfOcrHelper";
 import {
   FileText,
@@ -107,17 +106,14 @@ export default function PDFOCRView() {
   const [error, setError] = useState<string | null>(null);
 
   const cancelRef = useRef<{ cancelled: boolean }>({ cancelled: false });
-  const activeWorkerRef = useRef<TesseractWorker | null>(null);
-
+  
   // Clean up worker and URLs on unmount
-  useEffect(() => {
-    return () => {
-      cancelRef.current.cancelled = true;
-      if (activeWorkerRef.current) {
-        activeWorkerRef.current.terminate().catch(() => {});
-      }
-    };
-  }, []);
+ // Aise likhein:
+useEffect(() => {
+  return () => {
+    cancelRef.current.cancelled = true;
+  };
+}, []);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (!acceptedFiles || acceptedFiles.length === 0) return;
@@ -158,10 +154,7 @@ export default function PDFOCRView() {
 
   const handleReset = () => {
     cancelRef.current.cancelled = true;
-    if (activeWorkerRef.current) {
-      activeWorkerRef.current.terminate().catch(() => {});
-      activeWorkerRef.current = null;
-    }
+    
     setFile(null);
     setPageCount(null);
     setResults(null);
@@ -173,17 +166,14 @@ export default function PDFOCRView() {
     setCopiedPageIndex(null);
   };
 
-  const handleCancel = () => {
-    cancelRef.current.cancelled = true;
-    setProgressStatus("Cancelling extraction...");
-    if (activeWorkerRef.current) {
-      activeWorkerRef.current.terminate().catch(() => {});
-      activeWorkerRef.current = null;
-    }
-    setIsProcessing(false);
-  };
+  // new handle req by ne:
+const handleCancel = () => {
+  cancelRef.current.cancelled = true;
+  setProgressStatus("Cancelling extraction...");
+  setIsProcessing(false);
+};
 
-  const handleStartOcr = async () => {
+const handleStartOcr = async () => {
     if (!file) return;
 
     setIsProcessing(true);
@@ -192,89 +182,40 @@ export default function PDFOCRView() {
     setProgressStatus("Preparing PDF document...");
     cancelRef.current = { cancelled: false };
 
-    let worker: TesseractWorker | null = null;
-
     try {
-      const arrayBuffer = await file.arrayBuffer();
-
-      // Load with PDF.js
-      const loadingTask = pdfjsLib.getDocument({
-        data: new Uint8Array(arrayBuffer),
-        cMapUrl: "https://unpkg.com/pdfjs-dist@3.11.174/cmaps/",
-        cMapPacked: true,
-      });
-
-      const pdfDoc = await loadingTask.promise;
-      const totalDocPages = pdfDoc.numPages;
-
+      // User ki page selection validate karein (All vs Custom Range)
       const targetPages =
         pageMode === "all"
-          ? Array.from({ length: totalDocPages }, (_, i) => i + 1)
-          : parsePageSelection(pageRange, totalDocPages);
+          ? (pageCount ? Array.from({ length: pageCount }, (_, i) => i + 1) : undefined)
+          : parsePageSelection(pageRange, pageCount || 1);
 
-      if (targetPages.length === 0) {
+      if (targetPages && targetPages.length === 0) {
         throw new Error("No valid pages selected for OCR extraction.");
       }
 
-      setProgressStatus(`Initializing OCR engine (${language})...`);
-      setProgressPercent(5);
-
-      worker = await createWorker(language, 1, {
-        logger: () => {},
-      });
-      activeWorkerRef.current = worker;
-
-      const pageResults: OCRPageResult[] = [];
-      const totalToProcess = targetPages.length;
-
-      for (let i = 0; i < totalToProcess; i++) {
-        if (cancelRef.current.cancelled) {
-          break;
-        }
-
-        const pageNum = targetPages[i];
-        const stepBase = Math.round((i / totalToProcess) * 90) + 5;
-        setProgressPercent(stepBase);
-        setProgressStatus(`Processing page ${pageNum} of ${totalDocPages}... ${stepBase}%`);
-
-        // Render page at 2.0 scale (144 DPI) for high OCR accuracy
-        const canvas = await renderPdfPageToCanvas(pdfDoc, pageNum, 2.0);
-
-        if (cancelRef.current.cancelled) {
-          canvas.width = 0;
-          canvas.height = 0;
-          break;
-        }
-
-        const extracted = await extractTextFromPage(canvas, language, undefined, worker);
-
-        // Immediate memory cleanup
-        canvas.width = 0;
-        canvas.height = 0;
-
-        pageResults.push({
-          pageNumber: pageNum,
-          text: extracted.text,
-          confidence: extracted.confidence,
-        });
-
-        // Yield to browser main thread
-        await new Promise((r) => setTimeout(r, 15));
-      }
+      // BOTOCK-102: Centralized processPdfOcr helper call
+      const { pages, fullText } = await processPdfOcr(
+        file,
+        language,
+        (prog: OCRProgress) => {
+          setProgressPercent(prog.progress);
+          setProgressStatus(prog.status);
+        },
+        cancelRef.current,
+        targetPages
+      );
 
       if (!cancelRef.current.cancelled) {
-        setProgressPercent(100);
-        setProgressStatus("OCR extraction complete!");
+        setResults(pages);
 
-        setResults(pageResults);
-        const fullJoined = pageResults
+        // UI formatting for copy/edit view
+        const formattedFullText = pages
           .map((p) => `--- Page ${p.pageNumber} ---\n${p.text}`)
           .join("\n\n");
-        setEditableText(fullJoined);
+        setEditableText(formattedFullText || fullText);
 
-        // Initially expand first page accordion
-        if (pageResults.length > 0) {
-          setExpandedPages({ [pageResults[0].pageNumber]: true });
+        if (pages.length > 0) {
+          setExpandedPages({ [pages[0].pageNumber]: true });
         }
       }
     } catch (err: unknown) {
@@ -286,10 +227,6 @@ export default function PDFOCRView() {
         setError(msg || "Failed to process PDF text extraction.");
       }
     } finally {
-      if (worker) {
-        await worker.terminate().catch(() => {});
-        activeWorkerRef.current = null;
-      }
       setIsProcessing(false);
     }
   };

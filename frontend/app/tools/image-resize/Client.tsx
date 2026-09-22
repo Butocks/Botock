@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import pica from "pica";
 import {
@@ -18,30 +18,29 @@ import {
   RotateCcw,
   FileDown,
 } from "lucide-react";
-
-interface ImageMeta {
-  file: File;
-  name: string;
-  size: number;
-  width: number;
-  height: number;
-  src: string;
-  aspectRatio: number;
-}
+import { formatBytes } from "@/lib/utils/formatters";
+import { useImageDocument } from "@/lib/image/useImageDocument";
+import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
 const PERCENTAGE_PRESETS = [25, 50, 75, 100, 150, 200];
 
-function formatBytes(bytes: number, decimals = 1): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
-
 export default function ImageResizeClient() {
-  const [imageMeta, setImageMeta] = useState<ImageMeta | null>(null);
+  // Shared Image & Download Hooks
+  const {
+    file,
+    previewUrl,
+    dimensions,
+    error: docError,
+    loadImage,
+    reset: resetImage,
+  } = useImageDocument();
+
+  const {
+    url: resultUrl,
+    setBlob,
+    reset: resetDownload,
+  } = useObjectUrlDownload();
+
   const [targetWidth, setTargetWidth] = useState<number>(0);
   const [targetHeight, setTargetHeight] = useState<number>(0);
   const [lockAspectRatio, setLockAspectRatio] = useState<boolean>(true);
@@ -50,79 +49,40 @@ export default function ImageResizeClient() {
   const [quality, setQuality] = useState<number>(0.92);
 
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultSize, setResultSize] = useState<number | null>(null);
   const [resultDimensions, setResultDimensions] = useState<{ width: number; height: number } | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const prevResultUrlRef = useRef<string | null>(null);
+  const errorMessage = actionError || docError;
 
-  // Clean up object URLs to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      if (prevResultUrlRef.current) {
-        URL.revokeObjectURL(prevResultUrlRef.current);
-      }
-      if (imageMeta?.src && imageMeta.src.startsWith("blob:")) {
-        URL.revokeObjectURL(imageMeta.src);
-      }
-    };
-  }, [imageMeta]);
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (!acceptedFiles || acceptedFiles.length === 0) return;
+      const selectedFile = acceptedFiles[0];
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles && acceptedFiles.length > 0) {
-      const file = acceptedFiles[0];
-      setErrorMessage(null);
+      setActionError(null);
+      resetDownload();
+      setResultSize(null);
+      setResultDimensions(null);
 
-      const objectUrl = URL.createObjectURL(file);
-      const img = new Image();
-
-      img.onload = () => {
-        const width = img.naturalWidth || img.width;
-        const height = img.naturalHeight || img.height;
-        const ratio = width / height;
-
-        setImageMeta({
-          file,
-          name: file.name,
-          size: file.size,
-          width,
-          height,
-          src: objectUrl,
-          aspectRatio: ratio,
-        });
-
-        setTargetWidth(width);
-        setTargetHeight(height);
+      const dims = await loadImage(selectedFile);
+      if (dims) {
+        setTargetWidth(dims.width);
+        setTargetHeight(dims.height);
         setScalePercent(100);
         setLockAspectRatio(true);
 
-        // Determine default format from file type
-        if (file.type === "image/webp") {
+        if (selectedFile.type === "image/webp") {
           setOutputFormat("webp");
-        } else if (file.type === "image/jpeg" || file.type === "image/jpg") {
+        } else if (selectedFile.type === "image/jpeg" || selectedFile.type === "image/jpg") {
           setOutputFormat("jpeg");
         } else {
           setOutputFormat("png");
         }
-
-        if (prevResultUrlRef.current) {
-          URL.revokeObjectURL(prevResultUrlRef.current);
-          prevResultUrlRef.current = null;
-        }
-        setResultUrl(null);
-        setResultSize(null);
-        setResultDimensions(null);
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        setErrorMessage("Failed to load image. The file may be corrupt or in an unsupported format.");
-      };
-
-      img.src = objectUrl;
-    }
-  }, []);
+      }
+    },
+    [loadImage, resetDownload]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -145,13 +105,13 @@ export default function ImageResizeClient() {
     }
     setTargetWidth(num);
 
-    if (imageMeta) {
-      if (lockAspectRatio && imageMeta.aspectRatio > 0) {
-        const newH = Math.max(1, Math.round(num / imageMeta.aspectRatio));
+    if (dimensions) {
+      if (lockAspectRatio && dimensions.aspectRatio > 0) {
+        const newH = Math.max(1, Math.round(num / dimensions.aspectRatio));
         setTargetHeight(newH);
       }
-      if (imageMeta.width > 0) {
-        setScalePercent(Math.round((num / imageMeta.width) * 100));
+      if (dimensions.width > 0) {
+        setScalePercent(Math.round((num / dimensions.width) * 100));
       }
     }
   };
@@ -164,88 +124,77 @@ export default function ImageResizeClient() {
     }
     setTargetHeight(num);
 
-    if (imageMeta) {
-      if (lockAspectRatio && imageMeta.aspectRatio > 0) {
-        const newW = Math.max(1, Math.round(num * imageMeta.aspectRatio));
+    if (dimensions) {
+      if (lockAspectRatio && dimensions.aspectRatio > 0) {
+        const newW = Math.max(1, Math.round(num * dimensions.aspectRatio));
         setTargetWidth(newW);
       }
-      if (imageMeta.height > 0) {
-        setScalePercent(Math.round((num / imageMeta.height) * 100));
+      if (dimensions.height > 0) {
+        setScalePercent(Math.round((num / dimensions.height) * 100));
       }
     }
   };
 
   const handleScalePercentChange = (pct: number) => {
     setScalePercent(pct);
-    if (!imageMeta) return;
+    if (!dimensions) return;
 
-    const newW = Math.max(1, Math.round(imageMeta.width * (pct / 100)));
-    const newH = Math.max(1, Math.round(imageMeta.height * (pct / 100)));
+    const newW = Math.max(1, Math.round(dimensions.width * (pct / 100)));
+    const newH = Math.max(1, Math.round(dimensions.height * (pct / 100)));
     setTargetWidth(newW);
     setTargetHeight(newH);
   };
 
   const resetToOriginal = () => {
-    if (!imageMeta) return;
-    setTargetWidth(imageMeta.width);
-    setTargetHeight(imageMeta.height);
+    if (!dimensions) return;
+    setTargetWidth(dimensions.width);
+    setTargetHeight(dimensions.height);
     setScalePercent(100);
     setLockAspectRatio(true);
   };
 
   const resetAll = () => {
-    if (prevResultUrlRef.current) {
-      URL.revokeObjectURL(prevResultUrlRef.current);
-      prevResultUrlRef.current = null;
-    }
-    if (imageMeta?.src && imageMeta.src.startsWith("blob:")) {
-      URL.revokeObjectURL(imageMeta.src);
-    }
-    setImageMeta(null);
+    resetImage();
+    resetDownload();
     setTargetWidth(0);
     setTargetHeight(0);
     setScalePercent(100);
-    setResultUrl(null);
     setResultSize(null);
     setResultDimensions(null);
-    setErrorMessage(null);
+    setActionError(null);
   };
 
   const handleResize = async () => {
-    if (!imageMeta || targetWidth <= 0 || targetHeight <= 0) {
-      setErrorMessage("Please specify valid width and height values.");
+    if (!dimensions || !previewUrl || targetWidth <= 0 || targetHeight <= 0) {
+      setActionError("Please specify valid width and height values.");
       return;
     }
 
     setIsProcessing(true);
-    setErrorMessage(null);
+    setActionError(null);
 
     try {
-      // 1. Create source image
       const srcImg = new Image();
       srcImg.crossOrigin = "anonymous";
       await new Promise<void>((resolve, reject) => {
         srcImg.onload = () => resolve();
         srcImg.onerror = () => reject(new Error("Failed to render source image for resize."));
-        srcImg.src = imageMeta.src;
+        srcImg.src = previewUrl;
       });
 
-      // 2. Prepare source canvas
       const srcCanvas = document.createElement("canvas");
-      srcCanvas.width = imageMeta.width;
-      srcCanvas.height = imageMeta.height;
+      srcCanvas.width = dimensions.width;
+      srcCanvas.height = dimensions.height;
       const srcCtx = srcCanvas.getContext("2d");
       if (!srcCtx) {
         throw new Error("Unable to obtain 2D canvas context.");
       }
-      srcCtx.drawImage(srcImg, 0, 0, imageMeta.width, imageMeta.height);
+      srcCtx.drawImage(srcImg, 0, 0, dimensions.width, dimensions.height);
 
-      // 3. Prepare destination canvas
       const destCanvas = document.createElement("canvas");
       destCanvas.width = targetWidth;
       destCanvas.height = targetHeight;
 
-      // 4. Client-side high quality resize using Pica (Lanczos3) with Canvas fallback
       let resizeSucceeded = false;
       try {
         const picaRunner = pica({
@@ -259,7 +208,7 @@ export default function ImageResizeClient() {
         });
         resizeSucceeded = true;
       } catch (picaErr) {
-        console.warn("Pica Lanczos3 resize encountered an error, falling back to high-quality Canvas API:", picaErr);
+        console.warn("Pica resize fallback to Canvas API:", picaErr);
       }
 
       if (!resizeSucceeded) {
@@ -272,7 +221,6 @@ export default function ImageResizeClient() {
         destCtx.drawImage(srcImg, 0, 0, targetWidth, targetHeight);
       }
 
-      // 5. Convert destination canvas to Blob
       const mimeType =
         outputFormat === "jpeg" ? "image/jpeg" : outputFormat === "webp" ? "image/webp" : "image/png";
 
@@ -290,28 +238,21 @@ export default function ImageResizeClient() {
         );
       });
 
-      // Revoke old result URL
-      if (prevResultUrlRef.current) {
-        URL.revokeObjectURL(prevResultUrlRef.current);
-      }
-
-      const newResultUrl = URL.createObjectURL(blob);
-      prevResultUrlRef.current = newResultUrl;
-
-      setResultUrl(newResultUrl);
+      // Update download URL via shared hook (automatically cleans up previous URL)
+      setBlob(blob, mimeType);
       setResultSize(blob.size);
       setResultDimensions({ width: targetWidth, height: targetHeight });
     } catch (err: unknown) {
       console.error("Resize failed:", err);
-      setErrorMessage(err instanceof Error ? err.message : "An error occurred while resizing the image.");
+      setActionError(err instanceof Error ? err.message : "An error occurred while resizing the image.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   const getDownloadFilename = () => {
-    if (!imageMeta) return "Botock-Resized-Image.png";
-    const baseName = imageMeta.name.substring(0, imageMeta.name.lastIndexOf(".")) || "image";
+    if (!file) return "Botock-Resized-Image.png";
+    const baseName = file.name.substring(0, file.name.lastIndexOf(".")) || "image";
     const ext = outputFormat === "jpeg" ? "jpg" : outputFormat;
     return `Botock-Resized-${baseName}.${ext}`;
   };
@@ -322,15 +263,15 @@ export default function ImageResizeClient() {
         <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm font-medium flex items-center justify-between">
           <span>{errorMessage}</span>
           <button
-            onClick={() => setErrorMessage(null)}
-            className="text-xs underline hover:opacity-80 ml-4 font-semibold"
+            onClick={() => setActionError(null)}
+            className="text-xs underline hover:opacity-80 ml-4 font-semibold cursor-pointer"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {!imageMeta ? (
+      {!dimensions || !previewUrl ? (
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-2xl p-16 text-center cursor-pointer transition-all ${
@@ -361,10 +302,12 @@ export default function ImageResizeClient() {
                   Original Dimensions
                 </span>
                 <span className="text-sm font-bold text-slate-900 dark:text-white">
-                  {imageMeta.width} × {imageMeta.height} px
-                  <span className="ml-2 text-xs font-normal text-slate-500">
-                    ({formatBytes(imageMeta.size)})
-                  </span>
+                  {dimensions.width} × {dimensions.height} px
+                  {file && (
+                    <span className="ml-2 text-xs font-normal text-slate-500">
+                      ({formatBytes(file.size)})
+                    </span>
+                  )}
                 </span>
               </div>
 
@@ -394,7 +337,7 @@ export default function ImageResizeClient() {
                     key={pct}
                     type="button"
                     onClick={() => handleScalePercentChange(pct)}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       scalePercent === pct
                         ? "bg-emerald-600 text-white shadow-sm"
                         : "bg-slate-100 dark:bg-white/[0.05] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/[0.1]"
@@ -437,12 +380,12 @@ export default function ImageResizeClient() {
               />
             </div>
 
-            {/* Exact Width & Height Inputs with Aspect Ratio Lock */}
+            {/* Exact Width & Height Inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span>Target Width (px)</span>
-                  <span className="text-[11px] font-normal text-slate-400">Orig: {imageMeta.width}px</span>
+                  <span className="text-[11px] font-normal text-slate-400">Orig: {dimensions.width}px</span>
                 </label>
                 <input
                   type="number"
@@ -458,7 +401,7 @@ export default function ImageResizeClient() {
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
                   <span>Target Height (px)</span>
-                  <span className="text-[11px] font-normal text-slate-400">Orig: {imageMeta.height}px</span>
+                  <span className="text-[11px] font-normal text-slate-400">Orig: {dimensions.height}px</span>
                 </label>
                 <input
                   type="number"
@@ -479,11 +422,11 @@ export default function ImageResizeClient() {
                 onClick={() => {
                   const nextLock = !lockAspectRatio;
                   setLockAspectRatio(nextLock);
-                  if (nextLock && imageMeta.aspectRatio > 0 && targetWidth > 0) {
-                    setTargetHeight(Math.max(1, Math.round(targetWidth / imageMeta.aspectRatio)));
+                  if (nextLock && dimensions.aspectRatio > 0 && targetWidth > 0) {
+                    setTargetHeight(Math.max(1, Math.round(targetWidth / dimensions.aspectRatio)));
                   }
                 }}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                   lockAspectRatio
                     ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                     : "bg-slate-100 dark:bg-white/[0.05] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/[0.1]"
@@ -500,7 +443,7 @@ export default function ImageResizeClient() {
                     key={fmt}
                     type="button"
                     onClick={() => setOutputFormat(fmt)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-colors ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-colors cursor-pointer ${
                       outputFormat === fmt
                         ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900"
                         : "bg-slate-100 dark:bg-white/[0.05] text-slate-600 dark:text-slate-400 hover:bg-slate-200"
@@ -533,12 +476,12 @@ export default function ImageResizeClient() {
             {/* Image Preview Box */}
             <div className="relative rounded-2xl overflow-hidden bg-slate-100 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] p-4 flex flex-col items-center justify-center min-h-[260px]">
               <img
-                src={imageMeta.src}
+                src={previewUrl}
                 alt="Source preview"
                 className="max-w-full max-h-[340px] object-contain rounded-lg shadow-sm"
               />
               <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md text-white text-[11px] font-semibold px-2.5 py-1 rounded-md">
-                {imageMeta.name} ({imageMeta.width} × {imageMeta.height} px)
+                {file?.name} ({dimensions.width} × {dimensions.height} px)
               </div>
             </div>
 
@@ -623,7 +566,6 @@ export default function ImageResizeClient() {
                   <Download className="w-4 h-4" /> Download Result
                 </a>
 
-                {/* Alternative Direct Download link with exact requested default name */}
                 <div className="text-center">
                   <a
                     href={resultUrl}

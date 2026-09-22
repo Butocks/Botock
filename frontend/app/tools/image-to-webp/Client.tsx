@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Image as ImageIcon,
@@ -14,6 +14,9 @@ import {
   Sliders,
   FileText,
 } from "lucide-react";
+import { formatBytes } from "@/lib/utils/formatters";
+import { useImageDocument } from "@/lib/image/useImageDocument";
+import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
 interface Preset {
   label: string;
@@ -28,113 +31,95 @@ const QUALITY_PRESETS: Preset[] = [
   { label: "Low", value: 50, description: "50% - Smallest file size, faster loading" },
 ];
 
-function formatBytes(bytes: number, decimals = 1): string {
-  if (!bytes || bytes === 0) return "0 B";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
-
 export default function ImageToWebPClient() {
-  const [file, setFile] = useState<File | null>(null);
-  const [originalUrl, setOriginalUrl] = useState<string | null>(null);
-  const [originalFormat, setOriginalFormat] = useState<string>("IMAGE");
-  const [originalSize, setOriginalSize] = useState<number>(0);
-  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+  // Shared Image & Object URL Hooks
+  const {
+    file,
+    previewUrl: originalUrl,
+    dimensions,
+    error: docError,
+    loadImage,
+    reset: resetImage,
+  } = useImageDocument();
 
+  const {
+    url: resultUrl,
+    setBlob,
+    reset: resetDownload,
+  } = useObjectUrlDownload();
+
+  const [originalFormat, setOriginalFormat] = useState<string>("IMAGE");
   const [quality, setQuality] = useState<number>(85);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultSize, setResultSize] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  // References to track object URLs for cleanup
-  const originalUrlRef = useRef<string | null>(null);
-  const resultUrlRef = useRef<string | null>(null);
+  const errorMessage = actionError || docError;
 
-  // Cleanup object URLs on unmount
-  useEffect(() => {
-    return () => {
-      if (originalUrlRef.current) URL.revokeObjectURL(originalUrlRef.current);
-      if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
-    };
-  }, []);
+  const convertToWebP = useCallback(
+    (sourceUrl: string, qualityVal: number) => {
+      setIsProcessing(true);
+      setActionError(null);
 
-  const convertToWebP = useCallback((sourceUrl: string, qualityVal: number) => {
-    setIsProcessing(true);
-    setErrorMessage(null);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
 
-    const img = new Image();
-    img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
 
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        setDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            throw new Error("Canvas 2D context is not available.");
+          }
 
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          throw new Error("Canvas 2D context is not available.");
-        }
+          ctx.drawImage(img, 0, 0);
 
-        ctx.drawImage(img, 0, 0);
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                setActionError("Unable to generate WebP image from canvas.");
+                setIsProcessing(false);
+                return;
+              }
 
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              setErrorMessage("Unable to generate WebP image from canvas.");
+              // Set blob via shared hook (auto-revokes previous URL)
+              setBlob(blob, "image/webp");
+              setResultSize(blob.size);
               setIsProcessing(false);
-              return;
-            }
+            },
+            "image/webp",
+            qualityVal / 100
+          );
+        } catch (err: unknown) {
+          console.error("Conversion execution error:", err);
+          setActionError(
+            err instanceof Error ? err.message : "Failed to process image on canvas."
+          );
+          setIsProcessing(false);
+        }
+      };
 
-            // Cleanup previous result URL
-            if (resultUrlRef.current) {
-              URL.revokeObjectURL(resultUrlRef.current);
-            }
-
-            const newResultUrl = URL.createObjectURL(blob);
-            resultUrlRef.current = newResultUrl;
-
-            setResultUrl(newResultUrl);
-            setResultSize(blob.size);
-            setIsProcessing(false);
-          },
-          "image/webp",
-          qualityVal / 100
-        );
-      } catch (err: unknown) {
-        console.error("Conversion execution error:", err);
-        setErrorMessage(
-          err instanceof Error ? err.message : "Failed to process image on canvas."
-        );
+      img.onerror = () => {
+        setActionError("Failed to load source image for WebP conversion.");
         setIsProcessing(false);
-      }
-    };
+      };
 
-    img.onerror = () => {
-      setErrorMessage("Failed to load source image for WebP conversion.");
-      setIsProcessing(false);
-    };
-
-    img.src = sourceUrl;
-  }, []);
+      img.src = sourceUrl;
+    },
+    [setBlob]
+  );
 
   const handleFileDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[]) => {
       if (!acceptedFiles || acceptedFiles.length === 0) return;
-
       const selectedFile = acceptedFiles[0];
 
-      // Cleanup old original and result URLs
-      if (originalUrlRef.current) URL.revokeObjectURL(originalUrlRef.current);
-      if (resultUrlRef.current) URL.revokeObjectURL(resultUrlRef.current);
-
-      const objectUrl = URL.createObjectURL(selectedFile);
-      originalUrlRef.current = objectUrl;
+      resetDownload();
+      setResultSize(null);
+      setActionError(null);
 
       // Detect original format
       let format = "IMAGE";
@@ -144,19 +129,15 @@ export default function ImageToWebPClient() {
         const ext = selectedFile.name.split(".").pop();
         if (ext) format = ext.toUpperCase();
       }
-
-      setFile(selectedFile);
-      setOriginalUrl(objectUrl);
       setOriginalFormat(format);
-      setOriginalSize(selectedFile.size);
-      setResultUrl(null);
-      setResultSize(null);
-      setErrorMessage(null);
 
-      // Perform conversion with current quality
-      convertToWebP(objectUrl, quality);
+      const dims = await loadImage(selectedFile);
+      if (dims) {
+        const tempUrl = URL.createObjectURL(selectedFile);
+        convertToWebP(tempUrl, quality);
+      }
     },
-    [convertToWebP, quality]
+    [loadImage, resetDownload, convertToWebP, quality]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -183,28 +164,16 @@ export default function ImageToWebPClient() {
   };
 
   const handleStartOver = () => {
-    if (originalUrlRef.current) {
-      URL.revokeObjectURL(originalUrlRef.current);
-      originalUrlRef.current = null;
-    }
-    if (resultUrlRef.current) {
-      URL.revokeObjectURL(resultUrlRef.current);
-      resultUrlRef.current = null;
-    }
-
-    setFile(null);
-    setOriginalUrl(null);
+    resetImage();
+    resetDownload();
     setOriginalFormat("IMAGE");
-    setOriginalSize(0);
-    setDimensions(null);
     setQuality(85);
-    setResultUrl(null);
     setResultSize(null);
-    setErrorMessage(null);
+    setActionError(null);
     setIsProcessing(false);
   };
 
-  // Calculations for space saved
+  const originalSize = file?.size || 0;
   const spaceSavedBytes = originalSize && resultSize ? originalSize - resultSize : 0;
   const spaceSavedPercent =
     originalSize && resultSize
@@ -345,7 +314,7 @@ export default function ImageToWebPClient() {
               <button
                 type="button"
                 onClick={handleStartOver}
-                className="px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-xs flex items-center gap-2 transition-colors"
+                className="px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-xs flex items-center gap-2 transition-colors cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" /> Start Over
               </button>
@@ -353,7 +322,7 @@ export default function ImageToWebPClient() {
                 type="button"
                 onClick={() => convertToWebP(originalUrl, quality)}
                 disabled={isProcessing}
-                className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-2 transition-colors"
+                className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-2 transition-colors cursor-pointer"
               >
                 <RefreshCw className={`w-4 h-4 ${isProcessing ? "animate-spin" : ""}`} />
                 Re-apply Quality
@@ -451,7 +420,7 @@ export default function ImageToWebPClient() {
                 <a
                   href={resultUrl}
                   download="Botock-Converted.webp"
-                  className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 mt-auto"
+                  className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 mt-auto cursor-pointer"
                 >
                   <Download className="w-4 h-4" /> Download WebP Image
                 </a>

@@ -1,40 +1,31 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { PDFDocument, degrees } from "pdf-lib";
 import { FileUp, FileText, Download, Loader2, RefreshCcw, RotateCw } from "lucide-react";
+import { usePdfDocument } from "@/lib/pdf/usePdfDocument";
+import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
 export default function PDFRotateClient() {
-  const [file, setFile] = useState<File | null>(null);
-  const [pageCount, setPageCount] = useState<number>(0);
+  const { file, pageCount, error: docError, loadFile, reset: resetDoc } = usePdfDocument();
+  const { url: downloadUrl, setBlob, reset: resetDownload } = useObjectUrlDownload();
+
   const [rotationAngle, setRotationAngle] = useState<number>(90);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-    };
-  }, [downloadUrl]);
+  const errorMessage = actionError || docError;
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!acceptedFiles || acceptedFiles.length === 0) return;
-    const selected = acceptedFiles[0];
-    setFile(selected);
-    setErrorMessage(null);
-    setDownloadUrl(null);
-
-    try {
-      const buffer = await selected.arrayBuffer();
-      const loadedDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
-      setPageCount(loadedDoc.getPageCount());
-    } catch (err: any) {
-      console.error("Could not load PDF:", err);
-      setErrorMessage("Could not inspect PDF. Check file permissions or encryption.");
-    }
-  }, []);
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (!acceptedFiles || acceptedFiles.length === 0) return;
+      setActionError(null);
+      resetDownload();
+      await loadFile(acceptedFiles[0]);
+    },
+    [loadFile, resetDownload]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -45,7 +36,7 @@ export default function PDFRotateClient() {
   const handleRotate = async () => {
     if (!file) return;
     setIsProcessing(true);
-    setErrorMessage(null);
+    setActionError(null);
 
     try {
       const buffer = await file.arrayBuffer();
@@ -58,27 +49,22 @@ export default function PDFRotateClient() {
       }
 
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
-
-      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-      setDownloadUrl(url);
+      setBlob(pdfBytes);
     } catch (err: any) {
       console.error("Rotation failed:", err);
-      setErrorMessage(err.message || "Failed to rotate PDF document.");
+      setActionError(err.message || "Failed to rotate PDF document.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   const resetAll = () => {
-    if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-    setFile(null);
-    setPageCount(0);
-    setDownloadUrl(null);
-    setErrorMessage(null);
+    resetDoc();
+    resetDownload();
+    setActionError(null);
+    setRotationAngle(90);
   };
-
+  
   return (
     <div className="w-full bg-white dark:bg-[#121215] p-6 rounded-3xl border border-slate-200 dark:border-white/[0.08] shadow-sm">
       {!file ? (

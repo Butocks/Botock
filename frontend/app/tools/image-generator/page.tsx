@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../utils/supabase/client";
+import { getBackendUrl } from "../../../utils/runtime-urls";
 import { useMediaStore } from "../../store/useMediaStore";
 import {
   Sparkles,
@@ -140,8 +141,9 @@ export default function ImageGeneratorPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token || "";
+      const backendBaseUrl = getBackendUrl();
 
-      const response = await fetch("http://localhost:8000/api/image/generate", {
+      const response = await fetch(`${backendBaseUrl}/api/image/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -177,7 +179,8 @@ export default function ImageGeneratorPage() {
     if (status === "polling" && generationId) {
       pollInterval = setInterval(async () => {
         try {
-          const response = await fetch(`http://localhost:8000/api/image/status/${generationId}`);
+          const backendBaseUrl = getBackendUrl();
+          const response = await fetch(`${backendBaseUrl}/api/image/status/${generationId}`);
           if (!response.ok) return;
 
           const data = await response.json();
@@ -186,9 +189,10 @@ export default function ImageGeneratorPage() {
           }
 
           if (data.status === "completed") {
+            const backendBaseUrl = getBackendUrl();
             const rawUrl = data.download_url
-              ? `http://localhost:8000${data.download_url}`
-              : `http://localhost:8000/api/image/download/${generationId}`;
+              ? new URL(data.download_url, backendBaseUrl).toString()
+              : `${backendBaseUrl}/api/image/download/${generationId}`;
 
             setImageUrl(rawUrl);
             setStatus("completed");
