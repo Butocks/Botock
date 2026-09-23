@@ -33,6 +33,8 @@ export default function PdfToWordClient() {
   const [result, setResult] = useState<ConversionResult | null>(null);
 
   const activeUrlRef = useRef<string | null>(null);
+  // FIX: AbortController ref added to cancel in-flight requests
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Clean up Blob URLs to prevent memory leaks
   const cleanupBlobUrl = useCallback(() => {
@@ -42,14 +44,21 @@ export default function PdfToWordClient() {
     }
   }, []);
 
+  // Component unmount hone par URL clean karein aur in-flight request ko rokein
   useEffect(() => {
     return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       cleanupBlobUrl();
     };
   }, [cleanupBlobUrl]);
 
   const onDrop = useCallback(
     (acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       cleanupBlobUrl();
       setResult(null);
       setErrorMessage(null);
@@ -83,6 +92,11 @@ export default function PdfToWordClient() {
   });
 
   const handleReset = () => {
+    // FIX: Conversion cancel karne ke liye API request ko fauran abort karein
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     cleanupBlobUrl();
     setFile(null);
     setStatus("idle");
@@ -98,6 +112,9 @@ export default function PdfToWordClient() {
     setStatusText("Converting PDF to DOCX on server...");
     setErrorMessage(null);
 
+    // Naya AbortController initialize karein
+    abortControllerRef.current = new AbortController();
+
     const apiBase = (
       process.env.NEXT_PUBLIC_API_URL ||
       process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -112,6 +129,7 @@ export default function PdfToWordClient() {
       const response = await fetch(`${apiBase}/api/convert/pdf-to-docx`, {
         method: "POST",
         body: formData,
+        signal: abortControllerRef.current.signal, // Request ke sath signal attach kar diya
       });
 
       if (!response.ok) {
@@ -181,6 +199,11 @@ export default function PdfToWordClient() {
         console.warn("Auto-download trigger failed:", dlErr);
       }
     } catch (err: unknown) {
+      // Agar user ne intentional cancel kiya ho toh error throw na karein
+      if (err instanceof Error && err.name === "AbortError") {
+        console.log("Conversion aborted by user.");
+        return; 
+      }
       console.error("PDF to DOCX conversion failed:", err);
       const message =
         err instanceof Error
@@ -268,12 +291,20 @@ export default function PdfToWordClient() {
               </div>
             </div>
 
+            {/* FIX: Changed to allow cancelling during conversion */}
             <button
               onClick={handleReset}
-              disabled={status === "converting"}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 disabled:opacity-50 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5" /> Remove / Change File
+              {status === "converting" ? (
+                <>
+                  <X className="w-3.5 h-3.5" /> Cancel Conversion
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-3.5 h-3.5" /> Remove / Change File
+                </>
+              )}
             </button>
           </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @next/next/no-img-element */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Sparkles,
@@ -14,12 +14,20 @@ import {
   ShieldCheck,
   Cpu,
   Eye,
+  Eraser,
+  Paintbrush,
+  Undo2,
+  Redo2,
+  Save,
+  X,
+  Brush,
 } from "lucide-react";
 import { formatBytes } from "@/lib/utils/formatters";
 import { useImageDocument } from "@/lib/image/useImageDocument";
 import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
 type ModelQuality = "isnet_fp16" | "isnet_quint8" | "isnet";
+type BrushMode = "erase" | "restore";
 
 const MODEL_OPTIONS = [
   {
@@ -62,12 +70,28 @@ export default function ImageRemoveBgClient() {
     reset: resetDownload,
   } = useObjectUrlDownload();
 
-  // ─── Processing state ────────────────────────────────────────────────────
+  // ─── Processing & Main State ─────────────────────────────────────────────
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [actionError, setActionError] = useState<string | null>(null);
   const [modelQuality, setModelQuality] = useState<ModelQuality>("isnet_fp16");
+
+  // ─── Manual Editor State ──────────────────────────────────────────────────
+  const [isManualEditing, setIsManualEditing] = useState(false);
+  const [brushMode, setBrushMode] = useState<BrushMode>("erase");
+  const [brushSize, setBrushSize] = useState<number>(50);
+  
+  // Undo/Redo & Drawing State
+  const [history, setHistory] = useState<ImageData[]>([]);
+  const [historyStep, setHistoryStep] = useState<number>(-1);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
+
+  // Canvas Refs
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const originalImgObjRef = useRef<HTMLImageElement | null>(null);
 
   const error = actionError || docError;
 
@@ -79,6 +103,7 @@ export default function ImageRemoveBgClient() {
       setProgress(0);
       setStatusMessage("");
       resetDownload();
+      setIsManualEditing(false);
       await loadImage(acceptedFiles[0]);
     },
     [loadImage, resetDownload]
@@ -111,8 +136,6 @@ export default function ImageRemoveBgClient() {
         throw new Error("Failed to initialize background removal engine.");
       }
 
-      // Prefer the File object directly (most reliable input for @imgly/background-removal)
-      // imageSrc (object URL) is also valid as a fallback
       const inputSource: File | string = imageFile || imageSrc!;
 
       const blob = await removeBackground(inputSource, {
@@ -147,7 +170,6 @@ export default function ImageRemoveBgClient() {
         },
       });
 
-      // Shared hook handles revoke of previous URL automatically
       setResultBlob(blob, "image/png");
       setProgress(100);
       setStatusMessage("Background removed successfully!");
@@ -169,16 +191,316 @@ export default function ImageRemoveBgClient() {
     setProgress(0);
     setStatusMessage("");
     setActionError(null);
+    setIsManualEditing(false);
+  };
+
+  // ─── Manual Editing Engine (Erase/Restore) ──────────────────────────────
+  const startManualEditing = () => {
+    setIsManualEditing(true);
+  };
+
+  const cancelManualEditing = () => {
+    setIsManualEditing(false);
+  };
+
+  // Initialize Canvas when entering edit mode
+  useEffect(() => {
+    if (isManualEditing && canvasRef.current && resultUrl && imageSrc) {
+      const initCanvas = async () => {
+        const canvas = canvasRef.current!;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return;
+
+        // Load AI Result (Transparent Image)
+        const resImg = new Image();
+        resImg.crossOrigin = "anonymous";
+        resImg.src = resultUrl;
+        await new Promise((r) => (resImg.onload = r));
+
+        canvas.width = resImg.width;
+        canvas.height = resImg.height;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(resImg, 0, 0);
+
+        // Setup Offscreen Canvas for Restore Masking trick
+        if (!offscreenCanvasRef.current) {
+          offscreenCanvasRef.current = document.createElement("canvas");
+        }
+        offscreenCanvasRef.current.width = resImg.width;
+        offscreenCanvasRef.current.height = resImg.height;
+
+        // Load Original Image
+        const origImg = new Image();
+        origImg.crossOrigin = "anonymous";
+        origImg.src = imageSrc;
+        await new Promise((r) => (origImg.onload = r));
+        originalImgObjRef.current = origImg;
+
+        // Save initial state to history
+        const initialData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        setHistory([initialData]);
+        setHistoryStep(0);
+      };
+      initCanvas();
+    }
+  }, [isManualEditing, resultUrl, imageSrc]);
+
+  // Coordinate mapper
+  const getCoords = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  // Draw logic
+  const drawStroke = (start: { x: number; y: number }, end: { x: number; y: number }) => {
+    const canvas = canvasRef.current;
+    const offCanvas = offscreenCanvasRef.current;
+    const origImg = originalImgObjRef.current;
+    if (!canvas || !offCanvas || !origImg) return;
+
+    const ctx = canvas.getContext("2d");
+    const offCtx = offCanvas.getContext("2d");
+    if (!ctx || !offCtx) return;
+
+    if (brushMode === "erase") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+      ctx.globalCompositeOperation = "source-over"; // Reset
+    } else {
+      // Restore mode: Extract original pixels using a mask
+      offCtx.clearRect(0, 0, offCanvas.width, offCanvas.height);
+
+      // Draw the brush stroke (mask)
+      offCtx.globalCompositeOperation = "source-over";
+      offCtx.beginPath();
+      offCtx.moveTo(start.x, start.y);
+      offCtx.lineTo(end.x, end.y);
+      offCtx.lineWidth = brushSize;
+      offCtx.lineCap = "round";
+      offCtx.lineJoin = "round";
+      offCtx.strokeStyle = "black";
+      offCtx.stroke();
+
+      // Intersect with original image
+      offCtx.globalCompositeOperation = "source-in";
+      offCtx.drawImage(origImg, 0, 0, offCanvas.width, offCanvas.height);
+
+      // Draw the restored pixels onto the main canvas
+      ctx.globalCompositeOperation = "source-over";
+      ctx.drawImage(offCanvas, 0, 0);
+    }
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsDrawing(true);
+    const pos = getCoords(e);
+    setLastPos(pos);
+    drawStroke(pos, pos); // Draw a dot if just clicked
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !lastPos || !canvasRef.current) return;
+    const currentPos = getCoords(e);
+    drawStroke(lastPos, currentPos);
+    setLastPos(currentPos);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    setLastPos(null);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+
+    // Commit stroke to history
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      if (ctx) {
+        const data = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
+        const newHistory = history.slice(0, historyStep + 1);
+        newHistory.push(data);
+        setHistory(newHistory);
+        setHistoryStep(newHistory.length - 1);
+      }
+    }
+  };
+
+  const handleUndo = () => {
+    if (historyStep > 0 && canvasRef.current) {
+      const prevStep = historyStep - 1;
+      setHistoryStep(prevStep);
+      const ctx = canvasRef.current.getContext("2d");
+      ctx?.putImageData(history[prevStep], 0, 0);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyStep < history.length - 1 && canvasRef.current) {
+      const nextStep = historyStep + 1;
+      setHistoryStep(nextStep);
+      const ctx = canvasRef.current.getContext("2d");
+      ctx?.putImageData(history[nextStep], 0, 0);
+    }
+  };
+
+  const applyEdits = () => {
+    if (!canvasRef.current) return;
+    canvasRef.current.toBlob((blob) => {
+      if (blob) {
+        setResultBlob(blob, "image/png");
+        setIsManualEditing(false); // Return to main view
+      }
+    }, "image/png");
   };
 
   const downloadFileName = imageFile
     ? `${imageFile.name.replace(/\.[^/.]+$/, "")}-no-bg.png`
     : "Botock-No-Background.png";
 
+  // ─── Manual Editor UI Render ──────────────────────────────────────────────
+  if (isManualEditing) {
+    return (
+      <div className="w-full bg-white dark:bg-[#121215] p-6 rounded-3xl border border-slate-200 dark:border-white/[0.08] shadow-sm">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Editor Canvas Area */}
+          <div className="flex-1 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-lg">
+                <Paintbrush className="w-5 h-5 text-violet-500" /> Manual Touch-up
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleUndo}
+                  disabled={historyStep <= 0}
+                  className="p-2 rounded-lg bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.1] disabled:opacity-30 transition-colors"
+                >
+                  <Undo2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleRedo}
+                  disabled={historyStep >= history.length - 1}
+                  className="p-2 rounded-lg bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.1] disabled:opacity-30 transition-colors"
+                >
+                  <Redo2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="rounded-2xl overflow-hidden border border-slate-200 dark:border-white/[0.1] flex items-center justify-center p-2 min-h-[400px] shadow-inner"
+              style={{
+                backgroundImage:
+                  "repeating-conic-gradient(rgba(148, 163, 184, 0.2) 0% 25%, transparent 0% 50%)",
+                backgroundSize: "20px 20px",
+                backgroundColor: "rgb(241 245 249)",
+              }}
+            >
+              <canvas
+                ref={canvasRef}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerUp}
+                className="max-w-full max-h-[600px] object-contain touch-none cursor-crosshair rounded-lg"
+              />
+            </div>
+          </div>
+
+          {/* Tools Sidebar */}
+          <div className="w-full lg:w-72 flex flex-col gap-6">
+            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] space-y-5">
+              
+              <div>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 block">
+                  Tool Mode
+                </label>
+                <div className="flex bg-slate-200 dark:bg-white/[0.05] rounded-xl p-1">
+                  <button
+                    onClick={() => setBrushMode("erase")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                      brushMode === "erase"
+                        ? "bg-white dark:bg-[#121215] text-slate-900 dark:text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                    }`}
+                  >
+                    <Eraser className="w-4 h-4" /> Erase
+                  </button>
+                  <button
+                    onClick={() => setBrushMode("restore")}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                      brushMode === "restore"
+                        ? "bg-white dark:bg-[#121215] text-violet-600 dark:text-violet-400 shadow-sm"
+                        : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                    }`}
+                  >
+                    <Brush className="w-4 h-4" /> Restore
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2">
+                  {brushMode === "erase" 
+                    ? "Drag over areas to remove them." 
+                    : "Drag over areas to bring back the original image."}
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                    Brush Size
+                  </label>
+                  <span className="text-xs font-mono font-bold text-violet-600 dark:text-violet-400">
+                    {brushSize}px
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="200"
+                  value={brushSize}
+                  onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                  className="w-full accent-violet-500 h-2 bg-slate-200 dark:bg-white/[0.1] rounded-lg cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="mt-auto space-y-3">
+              <button
+                onClick={applyEdits}
+                className="w-full py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Save className="w-4 h-4" /> Apply Edits
+              </button>
+              <button
+                onClick={cancelManualEditing}
+                className="w-full py-3.5 rounded-xl border border-slate-300 dark:border-white/[0.1] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/[0.05] font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <X className="w-4 h-4" /> Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Main AI View Render ──────────────────────────────────────────────────
   return (
     <div className="w-full bg-white dark:bg-[#121215] p-6 rounded-3xl border border-slate-200 dark:border-white/[0.08] shadow-sm">
       {!imageSrc ? (
-        /* ─── Drop Zone ────────────────────────────────────────────────── */
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-2xl p-16 text-center cursor-pointer transition-all ${
@@ -210,11 +532,8 @@ export default function ImageRemoveBgClient() {
           </div>
         </div>
       ) : (
-        /* ─── Main Layout ──────────────────────────────────────────────── */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* ── Left: Source + Model ───────────────────────────────────── */}
           <div className="lg:col-span-2 flex flex-col gap-6">
-            {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <span className="font-bold text-slate-900 dark:text-white text-base">
@@ -239,7 +558,6 @@ export default function ImageRemoveBgClient() {
               </button>
             </div>
 
-            {/* Input Preview */}
             <div className="rounded-2xl overflow-hidden bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] p-4 flex items-center justify-center min-h-[300px] max-h-[400px]">
               <img
                 src={imageSrc}
@@ -248,7 +566,6 @@ export default function ImageRemoveBgClient() {
               />
             </div>
 
-            {/* Model & AI Settings */}
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] space-y-3">
               <div className="flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-emerald-500" />
@@ -285,13 +602,11 @@ export default function ImageRemoveBgClient() {
             </div>
           </div>
 
-          {/* ── Right: Actions + Output ────────────────────────────────── */}
           <div className="flex flex-col border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-white/[0.08] pt-6 lg:pt-0 lg:pl-8 gap-4">
             <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-500" /> AI Background Removal
             </h3>
 
-            {/* Main Action Button */}
             {!resultUrl ? (
               <button
                 onClick={handleProcess}
@@ -313,24 +628,25 @@ export default function ImageRemoveBgClient() {
                 )}
               </button>
             ) : (
-              <button
-                onClick={handleProcess}
-                disabled={isProcessing}
-                className="w-full py-3 rounded-xl bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" /> Re-processing...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 text-emerald-500" /> Re-run with {MODEL_OPTIONS.find(m => m.id === modelQuality)?.name}
-                  </>
-                )}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={startManualEditing}
+                  disabled={isProcessing}
+                  className="py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                >
+                  <Paintbrush className="w-3.5 h-3.5" /> Manual Edit
+                </button>
+                <button
+                  onClick={handleProcess}
+                  disabled={isProcessing}
+                  className="py-3 rounded-xl bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 ${isProcessing ? "animate-spin" : ""}`} /> 
+                  Re-run AI
+                </button>
+              </div>
             )}
 
-            {/* Error Banner */}
             {error && (
               <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-700 dark:text-rose-400 flex items-start gap-3 text-xs">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -341,7 +657,6 @@ export default function ImageRemoveBgClient() {
               </div>
             )}
 
-            {/* Loading / Progress State */}
             {isProcessing && (
               <div className="flex flex-col gap-3 p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 animate-in fade-in duration-300">
                 <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-400">
@@ -358,12 +673,11 @@ export default function ImageRemoveBgClient() {
                   />
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  First run downloads model weights (~40MB) into browser cache. Subsequent runs are near-instant.
+                  First run downloads model weights into browser cache.
                 </p>
               </div>
             )}
 
-            {/* Result Preview with Checkerboard Grid */}
             {resultUrl ? (
               <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-300 flex-1">
                 <div className="flex items-center justify-between">
@@ -375,7 +689,6 @@ export default function ImageRemoveBgClient() {
                   </span>
                 </div>
 
-                {/* Checkerboard background container */}
                 <div
                   className="rounded-2xl overflow-hidden border border-slate-200 dark:border-white/[0.1] flex items-center justify-center p-6 min-h-[220px]"
                   style={{
@@ -392,7 +705,6 @@ export default function ImageRemoveBgClient() {
                   />
                 </div>
 
-                {/* Download CTA */}
                 <a
                   href={resultUrl}
                   download={downloadFileName}
@@ -400,9 +712,6 @@ export default function ImageRemoveBgClient() {
                 >
                   <Download className="w-4 h-4" /> Download Result
                 </a>
-                <p className="text-[11px] text-center text-slate-500 dark:text-slate-400">
-                  Ready to use with clean alpha transparency in designs &amp; websites.
-                </p>
               </div>
             ) : !isProcessing ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-200 dark:border-white/[0.05] rounded-2xl text-slate-400">
