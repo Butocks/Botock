@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
+import { formatBytes, formatTime } from "@/lib/utils/formatters";
 import {
   Film,
   Scissors,
@@ -18,25 +19,6 @@ import {
   Sliders,
   Sparkles,
 } from "lucide-react";
-
-function formatBytes(bytes: number, decimals = 1): string {
-  if (!bytes || bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
-
-function formatTime(seconds: number): string {
-  if (isNaN(seconds) || seconds < 0) return "00:00.000";
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  const ms = Math.floor((seconds % 1) * 1000);
-  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}.${ms
-    .toString()
-    .padStart(3, "0")}`;
-}
 
 export default function VideoTrimClient() {
   const [originalFile, setOriginalFile] = useState<File | null>(null);
@@ -269,7 +251,7 @@ export default function VideoTrimClient() {
                   {originalFile.name}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {formatBytes(originalFile.size)} • Duration: {duration > 0 ? formatTime(duration) : "Loading..."}
+                  {formatBytes(originalFile.size)} • Duration: {duration > 0 ? formatTime(duration, true) : "Loading..."}
                 </p>
               </div>
             </div>
@@ -313,8 +295,8 @@ export default function VideoTrimClient() {
               {/* Video Timeline & Helper Actions */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.06] space-y-3">
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400">
-                  <span>Current: {formatTime(currentTime)}</span>
-                  <span>Total: {formatTime(duration)}</span>
+                  <span>Current: {formatTime(currentTime, true)}</span>
+                  <span>Total: {formatTime(duration, true)}</span>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -394,7 +376,7 @@ export default function VideoTrimClient() {
                       Start Time
                     </span>
                     <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                      {formatTime(startTime)} ({startTime.toFixed(2)}s)
+                      {formatTime(startTime, true)} ({startTime.toFixed(2)}s)
                     </span>
                   </div>
                   <input
@@ -435,7 +417,7 @@ export default function VideoTrimClient() {
                       End Time
                     </span>
                     <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
-                      {formatTime(endTime)} ({endTime.toFixed(2)}s)
+                      {formatTime(endTime, true)} ({endTime.toFixed(2)}s)
                     </span>
                   </div>
                   <input
@@ -473,7 +455,7 @@ export default function VideoTrimClient() {
                 <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20 flex items-center justify-between text-xs">
                   <span className="text-slate-600 dark:text-slate-400">Selected Clip Duration:</span>
                   <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {trimDuration.toFixed(2)}s ({formatTime(trimDuration)})
+                    {trimDuration.toFixed(2)}s ({formatTime(trimDuration, true)})
                   </span>
                 </div>
 

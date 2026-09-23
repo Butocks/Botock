@@ -1,10 +1,9 @@
 "use client";
-import { formatBytes } from "@/lib/utils/formatters";
-import { useState, useCallback, useEffect, useId } from "react";
+
+import { useState, useCallback, useId } from "react";
 import { useDropzone } from "react-dropzone";
 import imageCompression from "browser-image-compression";
 import {
-  Image as ImageIcon,
   Download,
   Trash2,
   Sliders,
@@ -15,66 +14,99 @@ import {
   HardDrive,
   FileCheck,
   CheckCircle2,
+  RefreshCw,
 } from "lucide-react";
+import { formatBytes } from "@/lib/utils/formatters";
+import { useImageDocument } from "@/lib/image/useImageDocument";
+import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
-interface Dimensions {
-  width: number;
-  height: number;
-}
+// ─── Size target presets ──────────────────────────────────────────────────────
+const SIZE_PRESETS = [
+  { label: "250 KB", unit: "KB" as const, val: "250" },
+  { label: "500 KB", unit: "KB" as const, val: "500" },
+  { label: "1 MB", unit: "MB" as const, val: "1.0" },
+  { label: "2 MB", unit: "MB" as const, val: "2.0" },
+];
 
+const DIM_PRESETS = [
+  { label: "Full HD (1920px)", val: "1920" },
+  { label: "HD (1280px)", val: "1280" },
+  { label: "Web (800px)", val: "800" },
+];
 
+// ─── Derive file extension from MIME type ─────────────────────────────────────
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/avif": ".avif",
+};
 
-function getImageDimensions(url: string): Promise<Dimensions> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    };
-    img.onerror = () => {
-      resolve({ width: 0, height: 0 });
-    };
-    img.src = url;
-  });
+function getDownloadFilename(
+  compressedFile: File | null,
+  originalFile: File | null
+): string {
+  if (!compressedFile) return "Botock-Compressed-Image.jpg";
+  const ext =
+    MIME_TO_EXT[compressedFile.type] ||
+    (originalFile ? `.${originalFile.name.split(".").pop()}` : ".jpg");
+  const baseName = originalFile
+    ? originalFile.name.replace(/\.[^/.]+$/, "")
+    : "Image";
+  return `Botock-Compressed-${baseName}${ext}`;
 }
 
 export default function ImageCompressClient() {
-  const [originalFile, setOriginalFile] = useState<File | null>(null);
-  const [originalUrl, setOriginalUrl] = useState<string | null>(null);
-  const [originalDimensions, setOriginalDimensions] = useState<Dimensions | null>(null);
+  // ─── Shared Image hook (file metadata + preview URL) ─────────────────────────
+  const {
+    file: originalFile,
+    previewUrl: originalUrl,
+    dimensions: originalDimensions,
+    error: docError,
+    loadImage,
+    reset: resetImage,
+  } = useImageDocument();
 
-  // Settings
+  // ─── Shared download URL hook (auto-revokes on replace/unmount) ──────────────
+  const {
+    url: compressedUrl,
+    setBlob: setCompressedBlob,
+    reset: resetDownload,
+  } = useObjectUrlDownload();
+
+  // ─── Settings state ──────────────────────────────────────────────────────────
   const [sizeUnit, setSizeUnit] = useState<"MB" | "KB">("MB");
   const [maxSizeInput, setMaxSizeInput] = useState<string>("1.0");
   const [quality, setQuality] = useState<number>(80);
   const [enableDimensionConstraint, setEnableDimensionConstraint] = useState<boolean>(false);
   const [maxDimensionInput, setMaxDimensionInput] = useState<string>("1920");
 
-  // Output
+  // ─── Output state ────────────────────────────────────────────────────────────
   const [isCompressing, setIsCompressing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [compressedFile, setCompressedFile] = useState<File | null>(null);
-  const [compressedUrl, setCompressedUrl] = useState<string | null>(null);
-  const [compressedDimensions, setCompressedDimensions] = useState<Dimensions | null>(null);
+  const [compressedDimensions, setCompressedDimensions] = useState<{ width: number; height: number } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const errorMessage = errorMsg || docError;
 
   const qualityInputId = useId();
   const targetSizeInputId = useId();
   const maxDimInputId = useId();
 
-  // Cleanup object URLs on unmount or reset
-  useEffect(() => {
-    return () => {
-      if (originalUrl) URL.revokeObjectURL(originalUrl);
-      if (compressedUrl) URL.revokeObjectURL(compressedUrl);
-    };
-  }, [originalUrl, compressedUrl]);
-
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (acceptedFiles && acceptedFiles.length > 0) {
+  // ─── Drop handler ────────────────────────────────────────────────────────────
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (!acceptedFiles || acceptedFiles.length === 0) return;
       const file = acceptedFiles[0];
-      const url = URL.createObjectURL(file);
-      const dims = await getImageDimensions(url);
 
+      setErrorMsg(null);
+      resetDownload();
+      setCompressedFile(null);
+      setCompressedDimensions(null);
+      setProgress(0);
+
+      // Auto-suggest reasonable target size
       const sizeMb = file.size / (1024 * 1024);
       if (sizeMb >= 1) {
         setSizeUnit("MB");
@@ -84,15 +116,10 @@ export default function ImageCompressClient() {
         setMaxSizeInput(Math.max(50, Math.round((file.size / 1024) * 0.5)).toString());
       }
 
-      setOriginalFile(file);
-      setOriginalUrl(url);
-      setOriginalDimensions(dims);
-      setCompressedFile(null);
-      setCompressedUrl(null);
-      setCompressedDimensions(null);
-      setErrorMsg(null);
-    }
-  }, []);
+      await loadImage(file);
+    },
+    [loadImage, resetDownload]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -105,6 +132,7 @@ export default function ImageCompressClient() {
     maxFiles: 1,
   });
 
+  // ─── Compress ────────────────────────────────────────────────────────────────
   const handleCompress = async () => {
     if (!originalFile) return;
 
@@ -121,9 +149,10 @@ export default function ImageCompressClient() {
           ? parsedSize
           : parsedSize / 1024;
 
-      const parsedDim = enableDimensionConstraint && maxDimensionInput
-        ? parseInt(maxDimensionInput, 10)
-        : undefined;
+      const parsedDim =
+        enableDimensionConstraint && maxDimensionInput
+          ? parseInt(maxDimensionInput, 10)
+          : undefined;
 
       const qualityRatio = Math.max(0.01, Math.min(1, quality / 100));
 
@@ -141,66 +170,44 @@ export default function ImageCompressClient() {
       try {
         result = await imageCompression(originalFile, options);
       } catch (workerErr) {
-        console.warn("Web worker compression encountered an issue, falling back to main thread:", workerErr);
+        console.warn("Web worker compression fallback to main thread:", workerErr);
         result = await imageCompression(originalFile, { ...options, useWebWorker: false });
       }
 
-      const resultUrl = URL.createObjectURL(result);
-      const dims = await getImageDimensions(resultUrl);
+      // Get compressed image dimensions
+      const compressedObjectUrl = URL.createObjectURL(result);
+      const dims = await new Promise<{ width: number; height: number }>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = () => resolve({ width: 0, height: 0 });
+        img.src = compressedObjectUrl;
+      });
+      URL.revokeObjectURL(compressedObjectUrl);
 
-      if (compressedUrl) {
-        URL.revokeObjectURL(compressedUrl);
-      }
-
+      // Set via shared hook — auto-revokes old URL, tracks lifecycle
+      setCompressedBlob(result, result.type || "image/jpeg");
       setCompressedFile(result);
-      setCompressedUrl(resultUrl);
       setCompressedDimensions(dims);
       setProgress(100);
     } catch (err: unknown) {
       console.error("Compression failed:", err);
-      const message = err instanceof Error ? err.message : "Failed to compress image. Try adjusting parameters.";
-      setErrorMsg(message);
+      setErrorMsg(
+        err instanceof Error ? err.message : "Failed to compress image. Try adjusting parameters."
+      );
     } finally {
       setIsCompressing(false);
     }
   };
 
+  // ─── Reset ───────────────────────────────────────────────────────────────────
   const resetAll = () => {
-    if (originalUrl) URL.revokeObjectURL(originalUrl);
-    if (compressedUrl) URL.revokeObjectURL(compressedUrl);
-    setOriginalFile(null);
-    setOriginalUrl(null);
-    setOriginalDimensions(null);
+    resetImage();
+    resetDownload();
     setCompressedFile(null);
-    setCompressedUrl(null);
     setCompressedDimensions(null);
     setErrorMsg(null);
     setProgress(0);
   };
-  
-// BOTOCK-101: Derive correct file extension based on actual compressed file MIME type
-  const getDownloadFilename = useCallback(() => {
-    if (!compressedFile) return "Botock-Compressed-Image.jpg";
-
-    const mimeToExt: Record<string, string> = {
-      "image/jpeg": ".jpg",
-      "image/png": ".png",
-      "image/webp": ".webp",
-      "image/avif": ".avif",
-    };
-
-    // Actual blob MIME type se match karein, fallback original file extension par
-    const ext =
-      mimeToExt[compressedFile.type] ||
-      (originalFile ? `.${originalFile.name.split(".").pop()}` : ".jpg");
-
-    const baseName = originalFile
-      ? originalFile.name.replace(/\.[^/.]+$/, "")
-      : "Image";
-
-    return `Botock-Compressed-${baseName}${ext}`;
-  }, [compressedFile, originalFile]);
-
 
   const reductionPercentage =
     originalFile && compressedFile
@@ -210,6 +217,7 @@ export default function ImageCompressClient() {
   return (
     <div className="w-full bg-white dark:bg-[#121215] p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-white/[0.08] shadow-sm">
       {!originalFile ? (
+        /* ─── Drop Zone ────────────────────────────────────────────────── */
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-2xl p-12 sm:p-16 text-center cursor-pointer transition-all ${
@@ -220,7 +228,7 @@ export default function ImageCompressClient() {
         >
           <input {...getInputProps()} />
           <div className="w-16 h-16 bg-slate-100 dark:bg-white/[0.05] rounded-full flex items-center justify-center mx-auto mb-4">
-            <ImageIcon className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+            <HardDrive className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
           </div>
           <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">
             Drop an Image here or click to browse
@@ -231,7 +239,7 @@ export default function ImageCompressClient() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Controls Column (2 Cols) */}
+          {/* ── Left: Controls ─────────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-6">
             {/* File Info Bar */}
             <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08]">
@@ -245,11 +253,11 @@ export default function ImageCompressClient() {
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Original: {formatBytes(originalFile.size)}
-                    {originalDimensions && ` • ${originalDimensions.width}×${originalDimensions.height}px`}
+                    {originalDimensions &&
+                      ` • ${originalDimensions.width}×${originalDimensions.height}px`}
                   </p>
                 </div>
               </div>
-
               <button
                 onClick={resetAll}
                 className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -288,7 +296,10 @@ export default function ImageCompressClient() {
               {/* Target Max Size */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor={targetSizeInputId} className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label
+                    htmlFor={targetSizeInputId}
+                    className="text-xs font-bold text-slate-700 dark:text-slate-300"
+                  >
                     Target Max Size
                   </label>
                   <div className="flex rounded-lg bg-slate-200 dark:bg-white/[0.1] p-0.5 text-xs font-semibold">
@@ -337,12 +348,7 @@ export default function ImageCompressClient() {
                   <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 self-center mr-1">
                     Presets:
                   </span>
-                  {[
-                    { label: "250 KB", unit: "KB" as const, val: "250" },
-                    { label: "500 KB", unit: "KB" as const, val: "500" },
-                    { label: "1 MB", unit: "MB" as const, val: "1.0" },
-                    { label: "2 MB", unit: "MB" as const, val: "2.0" },
-                  ].map((preset) => (
+                  {SIZE_PRESETS.map((preset) => (
                     <button
                       key={preset.label}
                       type="button"
@@ -361,7 +367,10 @@ export default function ImageCompressClient() {
               {/* Quality Slider */}
               <div className="pt-2">
                 <div className="flex items-center justify-between mb-2">
-                  <label htmlFor={qualityInputId} className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label
+                    htmlFor={qualityInputId}
+                    className="text-xs font-bold text-slate-700 dark:text-slate-300"
+                  >
                     Quality Compression Level
                   </label>
                   <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
@@ -380,7 +389,7 @@ export default function ImageCompressClient() {
                 <div className="flex justify-between text-[11px] text-slate-400 mt-1">
                   <span>Smallest Size (1%)</span>
                   <span>Balanced (80%)</span>
-                  <span>Maximum Quality (100%)</span>
+                  <span>Max Quality (100%)</span>
                 </div>
               </div>
 
@@ -424,11 +433,7 @@ export default function ImageCompressClient() {
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-2 pt-1">
-                      {[
-                        { label: "Full HD (1920px)", val: "1920" },
-                        { label: "HD (1280px)", val: "1280" },
-                        { label: "Web Banner (800px)", val: "800" },
-                      ].map((dim) => (
+                      {DIM_PRESETS.map((dim) => (
                         <button
                           key={dim.label}
                           type="button"
@@ -445,19 +450,19 @@ export default function ImageCompressClient() {
             </div>
 
             {/* Error Message */}
-            {errorMsg && (
+            {errorMessage && (
               <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
+                <span>{errorMessage}</span>
               </div>
             )}
           </div>
 
-          {/* Output & Processing Column (1 Col) */}
+          {/* ── Right: Output Column ────────────────────────────────────── */}
           <div className="flex flex-col border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-white/[0.08] pt-6 lg:pt-0 lg:pl-8">
             <h2 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-500" />
-              Compress & Output
+              Compress &amp; Output
             </h2>
 
             {/* CTA Button */}
@@ -474,6 +479,11 @@ export default function ImageCompressClient() {
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Compressing ({progress}%)...
+                </>
+              ) : compressedUrl ? (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  Re-compress
                 </>
               ) : (
                 <>
@@ -563,15 +573,14 @@ export default function ImageCompressClient() {
                   </div>
                 </div>
 
-                      {/* Download Button (BOTOCK-101: Dynamic extension matching MIME type) */}
+                {/* Download Button — BOTOCK-101: Dynamic extension matching MIME type */}
                 <a
                   href={compressedUrl}
-                  download={getDownloadFilename()}
+                  download={getDownloadFilename(compressedFile, originalFile)}
                   className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md active:scale-95 cursor-pointer"
                 >
                   <Download className="w-4 h-4" /> Download Result
                 </a>
-
               </div>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-200 dark:border-white/[0.05] rounded-2xl text-slate-400 min-h-[220px]">
@@ -582,7 +591,7 @@ export default function ImageCompressClient() {
                   Ready to Compress
                 </p>
                 <p className="text-xs max-w-[200px] leading-relaxed">
-                  Adjust target size or quality settings, then click &quot;Compress Image Now&quot;.
+                  Adjust target size or quality settings, then click &ldquo;Compress Image Now&rdquo;.
                 </p>
               </div>
             )}
