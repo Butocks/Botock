@@ -257,8 +257,8 @@ class FlowVideoService:
                 if not formatted_prompt.lower().startswith("generate a video") and not formatted_prompt.lower().startswith("create a video"):
                     formatted_prompt = f"Generate a video: {formatted_prompt}"
 
-                if motionHint:
-                    formatted_prompt += f". Camera motion: {motionHint.strip()}"
+                if motion_hint:
+                    formatted_prompt += f". Camera motion: {motion_hint.strip()}"
 
                 logger.info(f"[{generation_id}] Typing prompt (model={model}, is_pro={is_pro}): {formatted_prompt[:60]}...")
                 await prompt_input.click()
