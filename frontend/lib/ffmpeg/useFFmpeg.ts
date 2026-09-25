@@ -30,10 +30,10 @@ export interface UseFFmpegReturn {
   progress: FFmpegProgress;
   terminate: () => Promise<void>;
   // Additional high-level convenience helpers
-  isProcessing?: boolean;
-  statusMessage?: string;
-  cancel?: () => Promise<void>;
-  run?: (options: RunFFmpegOptions) => Promise<Blob>;
+  isProcessing: boolean;
+  statusMessage: string;
+  cancel: () => Promise<void>;
+  run: (options: RunFFmpegOptions) => Promise<Blob>;
 }
 
 /**
