@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Concurrency & Operational Limits
     MAX_BROWSER_INSTANCES: int = 2
     MAX_FFMPEG_WORKERS: int = 1
+    FREE_DAILY_CREDITS: int = 50
+    VIDEO_CREDIT_COST: int = 15
+    IMAGE_CREDIT_COST: int = 5
     FREE_DAILY_VIDEO_LIMIT: int = 3
     FREE_DAILY_IMAGE_LIMIT: int = 5
     FREE_RETENTION_HOURS: int = 24

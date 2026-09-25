@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Film,
   Scissors,
@@ -129,6 +130,20 @@ const TOP_USED_TOOLS = [
 ];
 
 export default function Home() {
+  const router = useRouter();
+
+  // If Supabase OAuth redirected back to root '/' with ?code=...,
+  // immediately exchange the code via /auth/callback
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      if (code) {
+        window.location.href = `/auth/callback?code=${encodeURIComponent(code)}&next=/tools/video-generator`;
+      }
+    }
+  }, []);
+
   const [cms, setCms] = useState({
     heroHeadline: "Every Online Tool You Need.",
     heroGradient: "PDFs, Media & Generative AI.",

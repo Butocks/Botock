@@ -63,6 +63,7 @@ async def safe_generate_task(
     generation_id: str,
     is_pro: bool = False,
     model: str = "omni-1.1-flash-360p",
+    aspect_ratio: str = "16:9",
     motion_hint: str = None,
 ):
     """Wrapper that enforces the concurrency semaphore."""
@@ -73,6 +74,7 @@ async def safe_generate_task(
             status_dict=video_statuses,
             is_pro=is_pro,
             model=model,
+            aspect_ratio=aspect_ratio,
             motion_hint=motion_hint,
         )
 
@@ -96,6 +98,9 @@ async def generate_video(
     if not is_pro and selected_model != "omni-1.1-flash-360p":
         selected_model = "omni-1.1-flash-360p"
 
+    # Aspect ratio validation (16:9 and 9:16 supported)
+    aspect_ratio = "9:16" if "9:16" in str(request.aspect_ratio) else "16:9"
+
     generation_id = str(uuid.uuid4())
     
     video_statuses[generation_id] = {
@@ -111,6 +116,7 @@ async def generate_video(
         generation_id,
         is_pro,
         selected_model,
+        aspect_ratio,
         request.motion_hint,
     )
     
@@ -119,6 +125,33 @@ async def generate_video(
         status="queued",
         message="Video generation started securely."
     )
+
+
+@router.post("/close-session")
+async def close_session(user: dict = Depends(get_current_user)):
+    """Closes and resets active Flow AI project continuity to conserve server memory."""
+    await flow_service.reset_session()
+    return {"status": "success", "message": "Flow AI session gracefully closed."}
+
+
+@router.get("/credits")
+async def get_credits(user: dict = Depends(get_current_user)):
+    """Returns the user's remaining daily credits and quota details."""
+    from app.middleware.auth import get_user_credit_balance
+    if user.get("is_pro"):
+        return {
+            "credits_remaining": 999999,
+            "daily_quota": 999999,
+            "cost_per_video": settings.VIDEO_CREDIT_COST,
+            "is_pro": True
+        }
+    remaining = get_user_credit_balance(user["user_id"])
+    return {
+        "credits_remaining": remaining,
+        "daily_quota": settings.FREE_DAILY_CREDITS,
+        "cost_per_video": settings.VIDEO_CREDIT_COST,
+        "is_pro": False
+    }
 
 
 @router.get("/status/{generation_id}", response_model=VideoStatusResponse)

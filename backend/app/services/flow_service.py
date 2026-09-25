@@ -60,7 +60,9 @@ class FlowVideoService:
         status_dict: dict,
         is_pro: bool = False,
         model: str = "omni-1.1-flash-360p",
-        motion_hint: str = None
+        aspect_ratio: str = "16:9",
+        motion_hint: str = None,
+        reference_image_path: str = None,
     ):
         """
         Full video generation pipeline with anti-bot stealth & project continuity:
@@ -170,7 +172,69 @@ class FlowVideoService:
                 logger.info(f"[{generation_id}] Studio URL: {page.url}")
 
                 # ============================================
-                # STEP 2: Find ProseMirror Prompt Editor
+                # STEP 2: Configure Settings Popup (Video, Omni 1.1 Flash, 360p, 8s, x1)
+                # ============================================
+                status_dict[generation_id]["message"] = "Configuring Flow AI video engine..."
+                try:
+                    # Look for settings trigger button
+                    settings_btn = page.locator('button[aria-label*="Settings trigger" i], [aria-label="Settings trigger"]')
+                    if not await settings_btn.is_visible(timeout=3000):
+                        settings_btn = page.locator('button:has-text("Banana"), button:has-text("Video"), button:has-text("Omni")').first
+
+                    if await settings_btn.is_visible(timeout=3000):
+                        await settings_btn.click()
+                        await asyncio.sleep(1.5)
+
+                        # 1. Click Video Tab
+                        video_tab = page.locator('[role="dialog"], [data-floating-ui-portal]').locator('button:has-text("Video")').first
+                        if await video_tab.is_visible(timeout=2000):
+                            await video_tab.click()
+                            await asyncio.sleep(1)
+
+                        # 2. Select Aspect Ratio (16:9 or 9:16)
+                        ratio_to_click = "9:16" if "9:16" in str(aspect_ratio) else "16:9"
+                        ratio_btn = page.locator('[role="dialog"], [data-floating-ui-portal]').locator(f'button:has-text("{ratio_to_click}")').first
+                        if await ratio_btn.is_visible(timeout=2000):
+                            await ratio_btn.click()
+                            await asyncio.sleep(0.5)
+
+                        # 3. Model Selection: Omni 1.1 Flash
+                        if not is_pro:
+                            model_dropdown = page.locator('[role="dialog"], [data-floating-ui-portal]').locator('button:has-text("Omni"), button:has-text("Veo"), [aria-haspopup="listbox"]').first
+                            if await model_dropdown.is_visible(timeout=2000):
+                                await model_dropdown.click()
+                                await asyncio.sleep(1)
+                                omni_opt = page.locator('text="Omni 1.1 Flash"').first
+                                if await omni_opt.is_visible(timeout=2000):
+                                    await omni_opt.click()
+                                    await asyncio.sleep(0.5)
+
+                        # 4. Resolution: 360p (Free tier)
+                        res_btn = page.locator('[role="dialog"], [data-floating-ui-portal]').locator('button:has-text("360p")').first
+                        if await res_btn.is_visible(timeout=2000):
+                            await res_btn.click()
+                            await asyncio.sleep(0.5)
+
+                        # 5. Duration: 8s (Strictly 8s for free tier)
+                        dur_btn = page.locator('[role="dialog"], [data-floating-ui-portal]').locator('button:has-text("8s")').first
+                        if await dur_btn.is_visible(timeout=2000):
+                            await dur_btn.click()
+                            await asyncio.sleep(0.5)
+
+                        # 6. Count: strictly x1
+                        count_btn = page.locator('[role="dialog"], [data-floating-ui-portal]').locator('button:has-text("x1")').first
+                        if await count_btn.is_visible(timeout=2000):
+                            await count_btn.click()
+                            await asyncio.sleep(0.5)
+
+                        # Close popup by clicking outside / pressing Escape
+                        await page.keyboard.press("Escape")
+                        await asyncio.sleep(0.5)
+                except Exception as ex:
+                    logger.warning(f"[{generation_id}] Settings popup configuration note: {ex}")
+
+                # ============================================
+                # STEP 3: Find ProseMirror Prompt Editor
                 # ============================================
                 status_dict[generation_id]["message"] = "Preparing your prompt..."
                 logger.info(f"[{generation_id}] Finding prompt editor (.ProseMirror)...")
@@ -413,3 +477,10 @@ class FlowVideoService:
         await download.save_as(file_path)
         logger.info(f"[{generation_id}] 🎉 Video file saved successfully! Size: {os.path.getsize(file_path)} bytes")
         return file_path
+
+    async def reset_session(self):
+        """Resets active project continuity to free resources and start fresh on next request."""
+        self.current_project_url = None
+        self.project_scene_count = 0
+        logger.info("Active Flow AI project continuity session cleared.")
+        return {"status": "success", "message": "Session reset successfully."}

@@ -78,32 +78,39 @@ def get_current_user(
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
 
 
+def get_user_credit_balance(user_id: str) -> int:
+    """Calculates remaining free daily credits out of 50 based on operations in the last 24h."""
+    now = time.time()
+    day_seconds = 86400
+    user_daily_generations[user_id] = [
+        t for t in user_daily_generations[user_id] if now - t < day_seconds
+    ]
+    user_daily_image_generations[user_id] = [
+        t for t in user_daily_image_generations[user_id] if now - t < day_seconds
+    ]
+    used_video_credits = len(user_daily_generations[user_id]) * settings.VIDEO_CREDIT_COST
+    used_image_credits = len(user_daily_image_generations[user_id]) * settings.IMAGE_CREDIT_COST
+    remaining = max(0, settings.FREE_DAILY_CREDITS - (used_video_credits + used_image_credits))
+    return remaining
+
 def check_daily_quota(user: dict = Depends(get_current_user)):
     """
-    Enforces the Free Tier quota: 3 videos / day.
+    Enforces the Free Tier quota: 50 daily credits, 15 credits per video.
     Pro users bypass this limit.
     """
     if user.get("is_pro"):
         return user
 
     user_id = user["user_id"]
-    now = time.time()
-    day_seconds = 86400
-
-    # Purge timestamps older than 24 hours
-    user_daily_generations[user_id] = [
-        t for t in user_daily_generations[user_id] if now - t < day_seconds
-    ]
-
-    used_count = len(user_daily_generations[user_id])
-    if used_count >= settings.FREE_DAILY_VIDEO_LIMIT:
+    remaining = get_user_credit_balance(user_id)
+    if remaining < settings.VIDEO_CREDIT_COST:
         raise HTTPException(
             status_code=429,
-            detail=f"Daily free limit reached ({settings.FREE_DAILY_VIDEO_LIMIT} videos/day). Please upgrade to Botock Pro for unlimited credits."
+            detail=f"Insufficient daily credits. A video generation costs {settings.VIDEO_CREDIT_COST} credits, but you have {remaining} remaining out of {settings.FREE_DAILY_CREDITS} daily credits. Please wait for the 24h reset or upgrade to Botock Pro."
         )
 
-    # Record this generation attempt
-    user_daily_generations[user_id].append(now)
+    # Record this generation attempt timestamp
+    user_daily_generations[user_id].append(time.time())
     return user
 
 

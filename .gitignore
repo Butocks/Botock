@@ -22,10 +22,14 @@ backend/session/
 
 # Video & debug storage
 backend/generated_videos/
-*.mp4
-*.png
-*.jpg
+backend/*.mp4
+backend/*.png
+backend/*.jpg
+backend/*.log
 *.log
+
+# Allow public images in frontend
+!frontend/public/**
 
 # OS files
 .DS_Store

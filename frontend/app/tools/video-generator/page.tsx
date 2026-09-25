@@ -61,7 +61,7 @@ export default function VideoGeneratorPage() {
   const [prompt, setPrompt] = useState("");
   const [motionHint, setMotionHint] = useState("");
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
-  const [durationSeconds, setDurationSeconds] = useState<number>(4);
+  const [durationSeconds, setDurationSeconds] = useState<number>(8);
   const [selectedModel, setSelectedModel] = useState("omni-1.1-flash-360p");
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
   const [referencePreview, setReferencePreview] = useState<string | null>(null);
@@ -73,7 +73,24 @@ export default function VideoGeneratorPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
-  const [dailyGenerationsLeft, setDailyGenerationsLeft] = useState(3);
+  const [creditsRemaining, setCreditsRemaining] = useState<number>(50);
+  const [showGenerateMore, setShowGenerateMore] = useState<boolean>(false);
+
+  const fetchCredits = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) return;
+      const backendBaseUrl = getBackendUrl();
+      const res = await fetch(`${backendBaseUrl}/api/video/credits`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCreditsRemaining(data.credits_remaining);
+      }
+    } catch (e) {}
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -82,6 +99,7 @@ export default function VideoGeneratorPage() {
       if (u) {
         const proStatus = u.app_metadata?.is_pro || u.user_metadata?.is_pro || false;
         setIsPro(Boolean(proStatus));
+        fetchCredits();
       }
       setAuthLoading(false);
     });
@@ -159,11 +177,32 @@ export default function VideoGeneratorPage() {
       const data = await response.json();
       setGenerationId(data.generation_id);
       setStatus("polling");
-      setDailyGenerationsLeft((prev) => Math.max(0, prev - 1));
+      setCreditsRemaining((prev) => Math.max(0, prev - 15));
+      setShowGenerateMore(false);
     } catch (err: any) {
       setStatus("error");
       setErrorMessage(err.message || "An unexpected error occurred.");
     }
+  };
+
+  const handleCloseSession = async () => {
+    setShowGenerateMore(false);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) return;
+      const backendBaseUrl = getBackendUrl();
+      await fetch(`${backendBaseUrl}/api/video/close-session`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (e) {}
+  };
+
+  const handleKeepSessionForMore = () => {
+    setShowGenerateMore(false);
+    setStatus("idle");
+    setPrompt("");
   };
 
   // Status Polling Loop
@@ -202,6 +241,8 @@ export default function VideoGeneratorPage() {
 
             setVideoUrl(authenticatedUrl);
             setStatus("completed");
+            setShowGenerateMore(true);
+            fetchCredits();
             clearInterval(pollInterval);
 
             // Fetch blob for Zero-Network Studio Bridge & caching
@@ -278,7 +319,7 @@ export default function VideoGeneratorPage() {
         <div className="flex items-center gap-3">
           <div className="px-4 py-2 rounded-full bg-[#120e26] border border-violet-500/30 text-violet-300 text-xs font-bold flex items-center gap-2 shadow-inner">
             <Zap className="w-3.5 h-3.5 fill-violet-400 text-violet-400" />
-            <span>Quota: {user ? `${dailyGenerationsLeft} / 3 Free Left` : "3 Free / Day"}</span>
+            <span>Balance: {user ? `${creditsRemaining} / 50 Credits` : "50 Free Credits / Day"}</span>
           </div>
           <Link
             href="/pricing"
@@ -494,7 +535,7 @@ export default function VideoGeneratorPage() {
                       Duration
                     </label>
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-violet-600/20 text-violet-300 border border-violet-500/30">
-                      Costs ~{durationSeconds} Credits
+                      Costs 15 Credits
                     </span>
                   </div>
                   <div className="grid grid-cols-4 gap-2">
@@ -503,14 +544,17 @@ export default function VideoGeneratorPage() {
                         key={sec}
                         type="button"
                         onClick={() => setDurationSeconds(sec)}
-                        disabled={status === "generating" || status === "polling"}
+                        disabled={status === "generating" || status === "polling" || (!isPro && sec !== 8)}
                         className={`py-2.5 rounded-xl border text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
                           durationSeconds === sec
                             ? "border-violet-500 bg-violet-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.35)]"
+                            : (!isPro && sec !== 8)
+                            ? "border-slate-200 dark:border-white/[0.04] bg-slate-100 dark:bg-[#080512]/40 text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-50"
                             : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#080512] hover:border-violet-500/40 text-slate-600 dark:text-slate-400 hover:text-white"
                         }`}
+                        title={!isPro && sec !== 8 ? "Free tier is optimized for 8s videos" : ""}
                       >
-                        {sec}s
+                        {sec}s {!isPro && sec === 8 ? "★" : ""}
                       </button>
                     ))}
                   </div>
@@ -559,7 +603,7 @@ export default function VideoGeneratorPage() {
                   </span>
                 </div>
                 <span className="text-[10px] text-slate-600 dark:text-slate-400">
-                  {isPro ? "Pro Active" : "Free Low-Credit Tier"}
+                  {isPro ? "Pro Active" : "Free Tier (15 Cr / Gen)"}
                 </span>
               </div>
 
@@ -578,10 +622,12 @@ export default function VideoGeneratorPage() {
                 <button
                   type="button"
                   onClick={handleGenerate}
-                  disabled={status === "generating" || status === "polling"}
+                  disabled={status === "generating" || status === "polling" || creditsRemaining < 15}
                   className={`w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2.5 transition-all shadow-xl cursor-pointer ${
                     status === "generating" || status === "polling"
                       ? "bg-violet-600/40 text-white/70 cursor-not-allowed"
+                      : creditsRemaining < 15
+                      ? "bg-slate-700 text-slate-400 cursor-not-allowed"
                       : "bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white shadow-violet-600/40 hover:scale-[1.01] active:scale-[0.99]"
                   }`}
                 >
@@ -589,7 +635,9 @@ export default function VideoGeneratorPage() {
                   <span>
                     {status === "generating" || status === "polling"
                       ? "Rendering Video..."
-                      : `Generate Video (~${durationSeconds} Credits)`}
+                      : creditsRemaining < 15
+                      ? "Insufficient Daily Credits (15 Needed)"
+                      : "Generate Video (15 Credits)"}
                   </span>
                 </button>
               ) : (
@@ -682,6 +730,43 @@ export default function VideoGeneratorPage() {
                     Saved to My Library (24h Retention) →
                   </Link>
                 </div>
+
+                {/* Prompt: Do you want to generate more? */}
+                {showGenerateMore && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-950/60 via-[#120d2a] to-slate-900 border border-violet-500/40 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 flex items-center justify-center flex-shrink-0">
+                        <Sparkles className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">Do you want to generate another video?</h4>
+                        <p className="text-xs text-slate-600 dark:text-slate-400">
+                          {creditsRemaining >= 15
+                            ? `You have ${creditsRemaining} credits remaining. Keep the studio active for instant rendering!`
+                            : "Daily credits used up. Wait 24h or upgrade to Pro."}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {creditsRemaining >= 15 && (
+                        <button
+                          type="button"
+                          onClick={handleKeepSessionForMore}
+                          className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
+                        >
+                          Yes, Generate More
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleCloseSession}
+                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-white/[0.08] transition-all cursor-pointer"
+                      >
+                        No, Close Session
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <ToolSuggestions />
               </div>
