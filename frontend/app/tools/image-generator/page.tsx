@@ -179,8 +179,17 @@ export default function ImageGeneratorPage() {
     if (status === "polling" && generationId) {
       pollInterval = setInterval(async () => {
         try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+          const authHeaders: Record<string, string> = {};
+          if (token) {
+            authHeaders["Authorization"] = `Bearer ${token}`;
+          }
+
           const backendBaseUrl = getBackendUrl();
-          const response = await fetch(`${backendBaseUrl}/api/image/status/${generationId}`);
+          const response = await fetch(`${backendBaseUrl}/api/image/status/${generationId}`, {
+            headers: authHeaders,
+          });
           if (!response.ok) return;
 
           const data = await response.json();
@@ -189,17 +198,20 @@ export default function ImageGeneratorPage() {
           }
 
           if (data.status === "completed") {
-            const backendBaseUrl = getBackendUrl();
             const rawUrl = data.download_url
               ? new URL(data.download_url, backendBaseUrl).toString()
               : `${backendBaseUrl}/api/image/download/${generationId}`;
 
-            setImageUrl(rawUrl);
+            const authenticatedUrl = token
+              ? `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+              : rawUrl;
+
+            setImageUrl(authenticatedUrl);
             setStatus("completed");
             clearInterval(pollInterval);
 
             // Fetch blob for instant memory preview & library
-            fetch(rawUrl)
+            fetch(rawUrl, { headers: authHeaders })
               .then((res) => res.blob())
               .then((blob) => {
                 const bUrl = URL.createObjectURL(blob);
@@ -209,7 +221,7 @@ export default function ImageGeneratorPage() {
                   id: generationId,
                   title: prompt.slice(0, 35) + "...",
                   type: "image" as const,
-                  url: rawUrl,
+                  url: authenticatedUrl,
                   blob,
                   blobUrl: bUrl,
                   createdAt: new Date().toISOString(),
@@ -225,7 +237,7 @@ export default function ImageGeneratorPage() {
                   id: generationId,
                   title: prompt.slice(0, 35) + "...",
                   type: "image" as const,
-                  url: rawUrl,
+                  url: authenticatedUrl,
                   createdAt: new Date().toISOString(),
                   expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
                   prompt,

@@ -37,10 +37,11 @@ export default function Navbar() {
   const supabase = createClient();
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const envAdmins = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "butoameerali@gmail.com,creator@botock.ai,owner@botock.com,admin@botock.com")
+  const envAdmins = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
     .split(",")
-    .map((e) => e.trim().toLowerCase());
-  const isUserAdmin = user && envAdmins.includes(user?.email?.toLowerCase() || "");
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  const isUserAdmin = Boolean(user && envAdmins.length > 0 && envAdmins.includes(user?.email?.toLowerCase() || ""));
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {

@@ -195,9 +195,10 @@ export default function AdminClientView({ initialUserEmail }: { initialUserEmail
   const supabase = createClient();
 
   // Allowed admin emails from environment config
-  const envAdmins = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "butoameerali@gmail.com,creator@botock.ai,owner@botock.com,admin@botock.com")
+  const envAdmins = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
     .split(",")
-    .map((e) => e.trim().toLowerCase());
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
   const correctPin = process.env.NEXT_PUBLIC_ADMIN_PIN || "948201";
 
   // Check auth session
@@ -305,7 +306,7 @@ export default function AdminClientView({ initialUserEmail }: { initialUserEmail
   }, [isEditRestricted, restrictionSecondsLeft]);
 
   const userEmail = user?.email?.toLowerCase() || "";
-  const isAuthorizedAdmin = user && envAdmins.includes(userEmail);
+  const isAuthorizedAdmin = Boolean(user && envAdmins.length > 0 && envAdmins.includes(userEmail));
 
   // Generate dynamic 6-digit cryptographic OTP
   const generateFreshOtp = () => {

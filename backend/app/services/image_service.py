@@ -81,17 +81,21 @@ class NanoBananaImageService:
                         raise Exception(f"Image API returned HTTP {resp.status}")
 
             download_url = f"/api/image/download/{generation_id}"
-            status_dict[generation_id] = {
+            if generation_id not in status_dict:
+                status_dict[generation_id] = {}
+            status_dict[generation_id].update({
                 "status": "completed",
                 "message": "Image generated successfully!",
                 "download_url": download_url,
                 "image_url": download_url,
-            }
+            })
             logger.info(f"[{generation_id}] Image successfully generated and saved to {output_path}")
 
         except Exception as e:
             logger.error(f"[{generation_id}] Image generation failed: {e}")
-            status_dict[generation_id] = {
+            if generation_id not in status_dict:
+                status_dict[generation_id] = {}
+            status_dict[generation_id].update({
                 "status": "failed",
                 "message": f"Image generation failed: {str(e)}",
-            }
+            })

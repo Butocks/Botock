@@ -73,16 +73,20 @@ class FlowVideoService:
         7. Download video & update session state
         """
         if not self.check_session_valid():
-            status_dict[generation_id] = {
+            if generation_id not in status_dict:
+                status_dict[generation_id] = {}
+            status_dict[generation_id].update({
                 "status": "failed",
                 "message": "Session not found. Please run scripts/save_session.py --manual first."
-            }
+            })
             return
 
-        status_dict[generation_id] = {
+        if generation_id not in status_dict:
+            status_dict[generation_id] = {}
+        status_dict[generation_id].update({
             "status": "processing",
             "message": "Connecting to Google Flow AI..."
-        }
+        })
 
         chrome_bin = get_chrome_path()
         launch_args = {
@@ -330,11 +334,13 @@ class FlowVideoService:
 
                 file_path = await self._download_video(page, generation_id, already_opened=already_opened)
 
-                status_dict[generation_id] = {
+                if generation_id not in status_dict:
+                    status_dict[generation_id] = {}
+                status_dict[generation_id].update({
                     "status": "completed",
                     "download_url": f"/api/video/download/{generation_id}",
                     "message": "Video generated successfully!"
-                }
+                })
                 logger.info(f"[{generation_id}] 🎉 Process complete! Saved to {file_path}")
 
                 # Save latest session state
@@ -343,10 +349,12 @@ class FlowVideoService:
 
         except Exception as e:
             logger.error(f"[{generation_id}] Generation failed: {str(e)}")
-            status_dict[generation_id] = {
+            if generation_id not in status_dict:
+                status_dict[generation_id] = {}
+            status_dict[generation_id].update({
                 "status": "failed",
                 "message": str(e)
-            }
+            })
 
     async def _download_video(self, page, generation_id: str, already_opened: bool = False) -> str:
         """

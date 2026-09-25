@@ -8,7 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.responses import FileResponse
 from app.models.schemas import VideoGenerateRequest, VideoGenerateResponse, VideoStatusResponse, VideoListResponse
 from app.services.flow_service import FlowVideoService
-from app.middleware.auth import check_daily_quota
+from app.middleware.auth import check_daily_quota, get_current_user
 from app.config import settings
 
 router = APIRouter(prefix="/api/video", tags=["Video"])
@@ -99,6 +99,7 @@ async def generate_video(
     generation_id = str(uuid.uuid4())
     
     video_statuses[generation_id] = {
+        "user_id": user["user_id"],
         "status": "queued",
         "message": "Video generation queued in secure pipeline."
     }
@@ -121,13 +122,16 @@ async def generate_video(
 
 
 @router.get("/status/{generation_id}", response_model=VideoStatusResponse)
-async def get_status(generation_id: str):
+async def get_status(generation_id: str, user: dict = Depends(get_current_user)):
     validate_uuid(generation_id)
 
     if generation_id not in video_statuses:
         raise HTTPException(status_code=404, detail="Generation ID not found")
         
     data = video_statuses[generation_id]
+    if data.get("user_id") and data.get("user_id") != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
+
     return VideoStatusResponse(
         generation_id=generation_id,
         status=data.get("status", "unknown"),
@@ -137,8 +141,14 @@ async def get_status(generation_id: str):
 
 
 @router.get("/download/{generation_id}")
-async def download_video(generation_id: str):
+async def download_video(generation_id: str, user: dict = Depends(get_current_user)):
     validate_uuid(generation_id)
+
+    # Ownership check
+    if generation_id in video_statuses:
+        data = video_statuses[generation_id]
+        if data.get("user_id") and data.get("user_id") != user["user_id"]:
+            raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
 
     # Resolve safe absolute path
     safe_filename = f"{generation_id}.mp4"
@@ -156,13 +166,15 @@ async def download_video(generation_id: str):
 
 
 @router.get("/list", response_model=VideoListResponse)
-async def list_videos():
+async def list_videos(user: dict = Depends(get_current_user)):
     videos = []
+    user_id = user["user_id"]
     for gen_id, data in video_statuses.items():
-        videos.append(VideoStatusResponse(
-            generation_id=gen_id,
-            status=data.get("status", "unknown"),
-            message=data.get("message"),
-            download_url=data.get("download_url")
-        ))
+        if data.get("user_id") == user_id:
+            videos.append(VideoStatusResponse(
+                generation_id=gen_id,
+                status=data.get("status", "unknown"),
+                message=data.get("message"),
+                download_url=data.get("download_url")
+            ))
     return VideoListResponse(videos=videos)

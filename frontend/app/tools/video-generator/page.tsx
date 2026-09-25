@@ -173,8 +173,17 @@ export default function VideoGeneratorPage() {
     if (status === "polling" && generationId) {
       pollInterval = setInterval(async () => {
         try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData.session?.access_token;
+          const authHeaders: Record<string, string> = {};
+          if (token) {
+            authHeaders["Authorization"] = `Bearer ${token}`;
+          }
+
           const backendBaseUrl = getBackendUrl();
-          const response = await fetch(`${backendBaseUrl}/api/video/status/${generationId}`);
+          const response = await fetch(`${backendBaseUrl}/api/video/status/${generationId}`, {
+            headers: authHeaders,
+          });
           if (!response.ok) return;
 
           const data = await response.json();
@@ -183,17 +192,20 @@ export default function VideoGeneratorPage() {
           }
 
           if (data.status === "completed") {
-            const backendBaseUrl = getBackendUrl();
             const rawUrl = data.download_url
               ? new URL(data.download_url, backendBaseUrl).toString()
               : `${backendBaseUrl}/api/video/download/${generationId}`;
 
-            setVideoUrl(rawUrl);
+            const authenticatedUrl = token
+              ? `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+              : rawUrl;
+
+            setVideoUrl(authenticatedUrl);
             setStatus("completed");
             clearInterval(pollInterval);
 
             // Fetch blob for Zero-Network Studio Bridge & caching
-            fetch(rawUrl)
+            fetch(rawUrl, { headers: authHeaders })
               .then((res) => res.blob())
               .then((blob) => {
                 const bUrl = URL.createObjectURL(blob);
@@ -203,7 +215,7 @@ export default function VideoGeneratorPage() {
                   id: generationId,
                   title: prompt.slice(0, 35) + "...",
                   type: "video" as const,
-                  url: rawUrl,
+                  url: authenticatedUrl,
                   blob,
                   blobUrl: bUrl,
                   createdAt: new Date().toISOString(),
@@ -219,7 +231,7 @@ export default function VideoGeneratorPage() {
                   id: generationId,
                   title: prompt.slice(0, 35) + "...",
                   type: "video" as const,
-                  url: rawUrl,
+                  url: authenticatedUrl,
                   createdAt: new Date().toISOString(),
                   expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
                   prompt,

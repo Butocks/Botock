@@ -1,45 +1,56 @@
 import time
+import logging
+from typing import Optional
 from collections import defaultdict
-from fastapi import Header, HTTPException, Depends
+from fastapi import Header, Query, HTTPException, Depends
 import jwt
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 # In-memory daily quota store: user_id -> [timestamps of generations today]
 user_daily_generations = defaultdict(list)
 
-def get_current_user(authorization: str = Header(None)) -> dict:
+def get_current_user(
+    authorization: Optional[str] = Header(None),
+    token: Optional[str] = Query(None, alias="token"),
+) -> dict:
     """
     FastAPI dependency to verify Supabase JWT token.
-    Enforces strict login — unauthenticated users receive 401.
+    Enforces strict signature verification — unauthenticated or forged tokens receive 401.
+    Accepts token via 'Authorization: Bearer <token>' header or '?token=<token>' query parameter.
     """
-    if not authorization:
+    jwt_token = None
+    if authorization:
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid Authorization header format. Expected 'Bearer <token>'."
+            )
+        jwt_token = authorization.split(" ")[1].strip()
+    elif token:
+        jwt_token = token.strip()
+
+    if not jwt_token:
         raise HTTPException(
             status_code=401,
-            detail="Authentication required. Please sign in to Botock to generate AI videos."
+            detail="Authentication required. Please sign in to Botock to access this resource."
         )
 
-    if not authorization.startswith("Bearer "):
+    if not settings.SUPABASE_JWT_SECRET:
+        logger.error("CRITICAL: SUPABASE_JWT_SECRET is not configured on the server.")
         raise HTTPException(
-            status_code=401,
-            detail="Invalid Authorization header format. Expected 'Bearer <token>'."
+            status_code=500,
+            detail="Authentication failed: SUPABASE_JWT_SECRET is not configured on the server."
         )
-
-    token = authorization.split(" ")[1].strip()
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing auth token.")
 
     try:
-        # Decode without verify if secret is not set, or verify if SUPABASE_JWT_SECRET is configured
-        if settings.SUPABASE_JWT_SECRET:
-            payload = jwt.decode(
-                token,
-                settings.SUPABASE_JWT_SECRET,
-                algorithms=["HS256"],
-                audience="authenticated"
-            )
-        else:
-            # Decode payload safely
-            payload = jwt.decode(token, options={"verify_signature": False})
+        payload = jwt.decode(
+            jwt_token,
+            settings.SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated"
+        )
 
         user_id = payload.get("sub") or payload.get("id")
         email = payload.get("email", "")
@@ -59,7 +70,11 @@ def get_current_user(authorization: str = Header(None)) -> dict:
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Session expired. Please sign in again.")
+    except jwt.PyJWTError as e:
+        logger.warning(f"JWT signature verification failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or forged authentication token.")
     except Exception as e:
+        logger.error(f"Authentication error: {e}")
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
 
 

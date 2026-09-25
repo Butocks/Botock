@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.responses import FileResponse
 from app.models.schemas import ImageGenerateRequest, ImageGenerateResponse, ImageStatusResponse, ImageListResponse
 from app.services.image_service import NanoBananaImageService
-from app.middleware.auth import check_daily_image_quota
+from app.middleware.auth import check_daily_image_quota, get_current_user
 from app.config import settings
 
 router = APIRouter(prefix="/api/image", tags=["Image"])
@@ -60,6 +60,7 @@ async def generate_image(
 
     generation_id = str(uuid.uuid4())
     image_statuses[generation_id] = {
+        "user_id": user["user_id"],
         "status": "queued",
         "message": f"Queued {selected_model.replace('-', ' ').title()} generation ({selected_ratio})...",
     }
@@ -82,13 +83,16 @@ async def generate_image(
 
 
 @router.get("/status/{generation_id}", response_model=ImageStatusResponse)
-async def get_image_status(generation_id: str):
+async def get_image_status(generation_id: str, user: dict = Depends(get_current_user)):
     validate_uuid(generation_id)
 
     if generation_id not in image_statuses:
         raise HTTPException(status_code=404, detail="Image generation ID not found.")
 
     data = image_statuses[generation_id]
+    if data.get("user_id") and data.get("user_id") != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Access denied: You do not own this image generation.")
+
     return ImageStatusResponse(
         generation_id=generation_id,
         status=data.get("status", "unknown"),
@@ -99,8 +103,14 @@ async def get_image_status(generation_id: str):
 
 
 @router.get("/download/{generation_id}")
-async def download_image(generation_id: str):
+async def download_image(generation_id: str, user: dict = Depends(get_current_user)):
     validate_uuid(generation_id)
+
+    # Ownership check
+    if generation_id in image_statuses:
+        data = image_statuses[generation_id]
+        if data.get("user_id") and data.get("user_id") != user["user_id"]:
+            raise HTTPException(status_code=403, detail="Access denied: You do not own this image generation.")
 
     safe_filename = f"{generation_id}.png"
     file_path = os.path.realpath(os.path.join(settings.IMAGES_DIR, safe_filename))

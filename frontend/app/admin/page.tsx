@@ -10,14 +10,13 @@ export default async function AdminPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const allowedAdmins = (
-    process.env.NEXT_PUBLIC_ADMIN_EMAILS ||
-    "butoameerali@gmail.com,creator@botock.ai,owner@botock.com,admin@botock.com"
-  )
+  const adminEmailsEnv = process.env.NEXT_PUBLIC_ADMIN_EMAILS || "";
+  const allowedAdmins = adminEmailsEnv
     .split(",")
-    .map((e) => e.trim().toLowerCase());
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
 
-  if (!user || !user.email || !allowedAdmins.includes(user.email.toLowerCase())) {
+  if (!user || !user.email || allowedAdmins.length === 0 || !allowedAdmins.includes(user.email.toLowerCase())) {
     return <NotFound />;
   }
 

@@ -2,7 +2,6 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from app.routers import video, image
 from app.config import settings
 from app.services.google_auth import ensure_valid_session
@@ -25,6 +24,13 @@ async def lifespan(app: FastAPI):
         logger.info(f"🧹 Startup sweep: cleaned up {purged} expired files.")
     except Exception as e:
         logger.warning(f"⚠️ Startup cleanup sweep failed: {e}")
+
+    # 2. Check JWT Secret configuration
+    if not settings.SUPABASE_JWT_SECRET:
+        logger.warning(
+            "⚠️ CRITICAL SECURITY WARNING: SUPABASE_JWT_SECRET is not set in environment! "
+            "All authenticated routes will fail closed until this secret is configured."
+        )
 
     if settings.GOOGLE_EMAIL and settings.GOOGLE_PASSWORD:
         logger.info(f"Google credentials found for: {settings.GOOGLE_EMAIL}")
@@ -61,10 +67,6 @@ app.add_middleware(
 
 app.include_router(video.router)
 app.include_router(image.router)
-
-# Serve generated videos and images as static files
-app.mount("/videos", StaticFiles(directory=settings.VIDEOS_DIR), name="videos")
-app.mount("/images", StaticFiles(directory=settings.IMAGES_DIR), name="images")
 
 
 @app.get("/")
