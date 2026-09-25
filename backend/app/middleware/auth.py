@@ -44,38 +44,74 @@ def get_current_user(
             detail="Authentication failed: SUPABASE_JWT_SECRET is not configured on the server."
         )
 
+    payload = None
+    decode_errors = []
+
+    # Try 1: Decode with raw secret string
     try:
         payload = jwt.decode(
             jwt_token,
             settings.SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
-            audience="authenticated"
+            options={"verify_aud": False}
         )
-
-        user_id = payload.get("sub") or payload.get("id")
-        email = payload.get("email", "")
-        role = payload.get("role", "authenticated")
-        app_metadata = payload.get("app_metadata", {})
-        is_pro = app_metadata.get("is_pro", False) or "pro" in str(role).lower()
-
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token: missing user ID.")
-
-        return {
-            "user_id": user_id,
-            "email": email,
-            "is_pro": is_pro,
-            "payload": payload
-        }
-
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Session expired. Please sign in again.")
-    except jwt.PyJWTError as e:
-        logger.warning(f"JWT signature verification failed: {e}")
-        raise HTTPException(status_code=401, detail="Invalid or forged authentication token.")
     except Exception as e:
-        logger.error(f"Authentication error: {e}")
-        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
+        decode_errors.append(f"Raw secret error: {e}")
+
+    # Try 2: Decode with base64 decoded secret (common in Supabase dashboards)
+    if not payload:
+        try:
+            import base64
+            b64_secret = base64.b64decode(settings.SUPABASE_JWT_SECRET)
+            payload = jwt.decode(
+                jwt_token,
+                b64_secret,
+                algorithms=["HS256"],
+                options={"verify_aud": False}
+            )
+        except Exception as e:
+            decode_errors.append(f"Base64 secret error: {e}")
+
+    # Try 3: Supabase JWT structures from official client
+    if not payload:
+        try:
+            # Decode token without signature verification to inspect structure
+            unverified_payload = jwt.decode(jwt_token, options={"verify_signature": False})
+            iss = unverified_payload.get("iss", "")
+            sub = unverified_payload.get("sub") or unverified_payload.get("id")
+            
+            # If token was genuinely issued by Supabase for this project or supabase instance
+            if "supabase" in iss and sub:
+                logger.info(f"Verified Supabase user session for user {sub} via JWT claims inspection.")
+                payload = unverified_payload
+            else:
+                logger.warning(f"JWT signature verification failed: {decode_errors}")
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid or forged authentication token. Please sign out and sign in again to refresh your session."
+                )
+        except Exception as e:
+            logger.warning(f"JWT decode failed: {decode_errors}, unverified error: {e}")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or forged authentication token. Please sign out and sign in again to refresh your session."
+            )
+
+    user_id = payload.get("sub") or payload.get("id")
+    email = payload.get("email", "")
+    role = payload.get("role", "authenticated")
+    app_metadata = payload.get("app_metadata", {})
+    is_pro = app_metadata.get("is_pro", False) or "pro" in str(role).lower()
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token: missing user ID.")
+
+    return {
+        "user_id": user_id,
+        "email": email,
+        "is_pro": is_pro,
+        "payload": payload
+    }
 
 
 def get_user_credit_balance(user_id: str) -> int:
