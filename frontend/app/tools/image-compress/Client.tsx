@@ -274,7 +274,7 @@ export default function ImageCompressClient() {
                   <span>{formatBytes(originalFile.size)}</span>
                 </div>
                 <div className="relative max-h-[260px] flex items-center justify-center overflow-hidden rounded-xl bg-black/5 dark:bg-white/[0.02]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  { }
                   <img
                     src={originalUrl}
                     alt="Original source preview"
@@ -564,7 +564,7 @@ export default function ImageCompressClient() {
                     </span>
                   </div>
                   <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#09090b] flex items-center justify-center p-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    { }
                     <img
                       src={compressedUrl}
                       alt="Compressed preview"

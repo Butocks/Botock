@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -129,7 +130,7 @@ export default function PdfAiSummarizerClient() {
   const handleCopy = () => {
     if (!summary) return;
     const text = `EXECUTIVE SUMMARY:\n${summary.executiveSummary}\n\nKEY HIGHLIGHTS:\n${summary.bulletPoints.map((b) => `• ${b}`).join("\n")}`;
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

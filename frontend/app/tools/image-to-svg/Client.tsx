@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useRef, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { formatBytes } from "@/lib/utils/formatters";
@@ -167,7 +168,7 @@ export default function ImageToSvgClient() {
 
   const handleCopyCode = () => {
     if (!svgOutput) return;
-    navigator.clipboard.writeText(svgOutput);
+    copyToClipboard(svgOutput);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

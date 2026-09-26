@@ -300,7 +300,7 @@ export default function ImageToWebPClient() {
                 Source Preview
               </span>
               <div className="rounded-2xl overflow-hidden bg-slate-100 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] p-4 flex items-center justify-center min-h-[300px] max-h-[420px]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                { }
                 <img
                   src={originalUrl}
                   alt="Original upload preview"
@@ -410,7 +410,7 @@ export default function ImageToWebPClient() {
                   Result Preview
                 </div>
                 <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#09090b] flex items-center justify-center p-4 min-h-[220px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  { }
                   <img
                     src={resultUrl}
                     alt="WebP converted preview"

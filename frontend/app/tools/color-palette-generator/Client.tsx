@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState } from "react";
 import {
   Palette,
@@ -54,7 +55,7 @@ export default function ColorPaletteGeneratorClient() {
   };
 
   const handleCopyHex = (hex: string) => {
-    navigator.clipboard.writeText(hex);
+    copyToClipboard(hex);
     setCopiedHex(hex);
     setTimeout(() => setCopiedHex(null), 1500);
   };
@@ -64,7 +65,7 @@ export default function ColorPaletteGeneratorClient() {
     .join("\n")}\n}`;
 
   const handleCopyExport = () => {
-    navigator.clipboard.writeText(cssVariables);
+    copyToClipboard(cssVariables);
     setCopiedExport(true);
     setTimeout(() => setCopiedExport(false), 2000);
   };

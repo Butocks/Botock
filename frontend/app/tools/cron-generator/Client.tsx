@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Clock,
@@ -92,7 +93,7 @@ export default function CronGeneratorClient() {
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(cronExpression);
+    copyToClipboard(cronExpression);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

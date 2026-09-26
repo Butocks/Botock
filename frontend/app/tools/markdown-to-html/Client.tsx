@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   FileCode,
@@ -105,7 +106,7 @@ export default function MarkdownToHtmlClient() {
   }, [markdown]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(htmlOutput);
+    copyToClipboard(htmlOutput);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

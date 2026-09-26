@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Link as LinkIcon,
@@ -64,7 +65,7 @@ export default function SlugGeneratorClient() {
 
   const handleCopy = () => {
     if (!generatedSlug) return;
-    navigator.clipboard.writeText(generatedSlug);
+    copyToClipboard(generatedSlug);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

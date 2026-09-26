@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   FileSpreadsheet,
@@ -98,7 +99,7 @@ export default function CsvToJsonClient() {
 
   const handleCopy = () => {
     if (!jsonOutput) return;
-    navigator.clipboard.writeText(jsonOutput);
+    copyToClipboard(jsonOutput);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

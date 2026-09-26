@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState } from "react";
 import {
   Link2,
@@ -39,7 +40,7 @@ export default function UrlEncoderDecoderClient() {
 
   const handleCopy = () => {
     if (!output) return;
-    navigator.clipboard.writeText(output);
+    copyToClipboard(output);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

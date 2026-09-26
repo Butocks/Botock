@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -124,7 +125,7 @@ export default function TranslatePdfClient() {
 
   const handleCopy = () => {
     if (!translatedText) return;
-    navigator.clipboard.writeText(translatedText);
+    copyToClipboard(translatedText);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

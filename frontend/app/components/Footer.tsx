@@ -59,6 +59,7 @@ export default function Footer() {
                   alt="Botock Logo"
                   width={40}
                   height={40}
+                  style={{ width: "auto", height: "auto" }}
                   className="object-contain group-hover:scale-105 transition-transform"
                 />
               </div>

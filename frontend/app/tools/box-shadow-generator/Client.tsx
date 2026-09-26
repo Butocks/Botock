@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Layers,
@@ -47,7 +48,7 @@ export default function BoxShadowGeneratorClient() {
   const fullCssRule = `box-shadow: ${shadowCss};\n-webkit-box-shadow: ${shadowCss};\n-moz-box-shadow: ${shadowCss};`;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(fullCssRule);
+    copyToClipboard(fullCssRule);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

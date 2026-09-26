@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -151,7 +152,7 @@ export default function PdfToJsonClient() {
 
   const handleCopy = () => {
     if (!jsonString) return;
-    navigator.clipboard.writeText(jsonString);
+    copyToClipboard(jsonString);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

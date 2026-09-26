@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Pipette,
@@ -64,10 +65,10 @@ export default function HexToRgbClient() {
     const lPct = Math.round(l * 100);
 
     // RGB to CMYK
-    let k = 1 - Math.max(rNorm, gNorm, bNorm);
-    let c = (1 - rNorm - k) / (1 - k) || 0;
-    let m = (1 - gNorm - k) / (1 - k) || 0;
-    let y = (1 - bNorm - k) / (1 - k) || 0;
+    const k = 1 - Math.max(rNorm, gNorm, bNorm);
+    const c = (1 - rNorm - k) / (1 - k) || 0;
+    const m = (1 - gNorm - k) / (1 - k) || 0;
+    const y = (1 - bNorm - k) / (1 - k) || 0;
 
     const cPct = Math.round(c * 100);
     const mPct = Math.round(m * 100);
@@ -85,7 +86,7 @@ export default function HexToRgbClient() {
   }, [hex]);
 
   const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopiedKey(id);
     setTimeout(() => setCopiedKey(null), 1500);
   };

@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState } from "react";
 import {
   Ruler,
@@ -46,7 +47,7 @@ export default function PxToRemConverterClient() {
   };
 
   const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopiedKey(id);
     setTimeout(() => setCopiedKey(null), 1800);
   };

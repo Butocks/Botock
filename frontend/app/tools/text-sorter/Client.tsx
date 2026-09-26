@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   ArrowUpDown,
@@ -80,7 +81,7 @@ export default function TextSorterClient() {
 
   const handleCopy = () => {
     if (!sortedOutput) return;
-    navigator.clipboard.writeText(sortedOutput);
+    copyToClipboard(sortedOutput);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

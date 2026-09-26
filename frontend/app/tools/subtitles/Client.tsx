@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import {
@@ -99,7 +100,7 @@ export default function SubtitlesClient() {
 
     const timestampRegex = /(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/;
 
-    for (let line of lines) {
+    for (const line of lines) {
       if (line.includes("WEBVTT") && targetFormat === "srt") {
         continue; // Strip WEBVTT header for SRT
       }
@@ -131,7 +132,7 @@ export default function SubtitlesClient() {
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(getProcessedSubtitles());
+    copyToClipboard(getProcessedSubtitles());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

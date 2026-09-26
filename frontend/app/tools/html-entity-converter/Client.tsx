@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState } from "react";
 import {
   Code,
@@ -64,7 +65,7 @@ export default function HtmlEntityConverterClient() {
 
   const handleCopy = () => {
     if (!output) return;
-    navigator.clipboard.writeText(output);
+    copyToClipboard(output);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

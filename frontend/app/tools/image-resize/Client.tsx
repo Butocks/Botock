@@ -1,5 +1,5 @@
 "use client";
-/* eslint-disable @next/next/no-img-element */
+ 
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";

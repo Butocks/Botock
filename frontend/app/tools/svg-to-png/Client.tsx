@@ -310,7 +310,7 @@ export default function SvgToPngClient() {
 
               {pngDataUrl ? (
                 <div className="p-4 rounded-2xl border border-slate-800/80 max-w-full max-h-[380px] overflow-auto flex items-center justify-center bg-[linear-gradient(45deg,#131822_25%,transparent_25%),linear-gradient(-45deg,#131822_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#131822_75%),linear-gradient(-45deg,transparent_75%,#131822_75%)] bg-[size:16px_16px] bg-[#0c1017]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  { }
                   <img
                     src={pngDataUrl}
                     alt="Converted SVG to PNG"

@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -77,7 +78,7 @@ export default function XmlFormatterClient() {
 
   const handleCopy = () => {
     if (!outputXml) return;
-    navigator.clipboard.writeText(outputXml);
+    copyToClipboard(outputXml);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

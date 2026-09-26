@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState } from "react";
 import {
   Type,
@@ -108,7 +109,7 @@ export default function CaseConverterClient() {
 
   const handleCopy = (id: string, value: string) => {
     if (!value) return;
-    navigator.clipboard.writeText(value);
+    copyToClipboard(value);
     setCopiedKey(id);
     setTimeout(() => setCopiedKey(null), 1800);
   };

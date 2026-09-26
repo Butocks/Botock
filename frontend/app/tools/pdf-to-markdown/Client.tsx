@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -109,7 +110,7 @@ export default function PdfToMarkdownClient() {
 
   const handleCopy = () => {
     if (!markdown) return;
-    navigator.clipboard.writeText(markdown);
+    copyToClipboard(markdown);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

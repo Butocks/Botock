@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import React, { useState, useRef } from "react";
 import Link from "next/link";
 import {
@@ -157,7 +158,7 @@ export default function ImageColorPickerClient() {
   };
 
   const handleCopy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopiedFormat(id);
     setTimeout(() => setCopiedFormat(null), 2000);
   };

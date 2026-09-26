@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -54,7 +55,7 @@ export default function PasswordGeneratorClient() {
 
   const handleCopy = () => {
     if (!password) return;
-    navigator.clipboard.writeText(password);
+    copyToClipboard(password);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

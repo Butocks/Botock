@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   ListFilter,
@@ -60,7 +61,7 @@ export default function DuplicateLineRemoverClient() {
 
   const handleCopy = () => {
     if (!statsAndOutput.output) return;
-    navigator.clipboard.writeText(statsAndOutput.output);
+    copyToClipboard(statsAndOutput.output);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

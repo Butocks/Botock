@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -51,7 +52,7 @@ export default function JsonFormatterClient() {
 
   const handleCopy = () => {
     if (!outputJson) return;
-    navigator.clipboard.writeText(outputJson);
+    copyToClipboard(outputJson);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

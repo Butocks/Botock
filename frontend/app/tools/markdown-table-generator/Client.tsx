@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Table,
@@ -89,7 +90,7 @@ export default function MarkdownTableGeneratorClient() {
   }, [columns, alignments, rows]);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(markdownOutput);
+    copyToClipboard(markdownOutput);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

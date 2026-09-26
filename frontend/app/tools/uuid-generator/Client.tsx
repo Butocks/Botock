@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState } from "react";
 import {
   Fingerprint,
@@ -62,13 +63,13 @@ export default function UuidGeneratorClient() {
   };
 
   const handleCopyAll = () => {
-    navigator.clipboard.writeText(uuids.join("\n"));
+    copyToClipboard(uuids.join("\n"));
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), 2000);
   };
 
   const handleCopySingle = (u: string) => {
-    navigator.clipboard.writeText(u);
+    copyToClipboard(u);
     setCopiedSingle(u);
     setTimeout(() => setCopiedSingle(null), 1500);
   };

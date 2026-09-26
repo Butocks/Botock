@@ -91,6 +91,7 @@ export default function Navbar() {
                   alt="Botock Logo"
                   width={48}
                   height={48}
+                  style={{ width: "auto", height: "auto" }}
                   className="object-contain drop-shadow-[0_0_16px_rgba(59,130,246,0.4)] group-hover:scale-105 transition-transform"
                   priority
                 />

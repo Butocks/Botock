@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Scale,
@@ -111,7 +112,7 @@ export default function UnitConverterClient() {
 
   const handleCopy = () => {
     if (!convertedValue) return;
-    navigator.clipboard.writeText(`${convertedValue} ${toUnit}`);
+    copyToClipboard(`${convertedValue} ${toUnit}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

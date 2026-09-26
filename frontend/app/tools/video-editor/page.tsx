@@ -1,21 +1,59 @@
-"use client";
+import type { Metadata } from "next";
+import VideoEditorComponent from "./VideoEditorComponent";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
-import dynamic from "next/dynamic";
-
-// Dynamic import with SSR disabled to protect Core Web Vitals & prevent heavy canvas on initial chunk
-const VideoEditorComponent = dynamic(
-  () => import("./VideoEditorComponent"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-xs text-muted-foreground">Initializing Botock Video Studio...</p>
-      </div>
-    ),
-  }
-);
+export const metadata: Metadata = {
+  title: "Online Video Editor Free - Cut, Trim, Split & Effects | Botock Tools",
+  description:
+    "Edit videos online directly in your browser with multi-track timeline, trimming, splitting, speed controls, aspect ratio presets, and zero server uploads using WebAssembly.",
+  keywords: [
+    "video editor online",
+    "free video editor browser",
+    "cut video online",
+    "trim video fast",
+    "split video clips",
+    "wasm video editor",
+    "botock tools",
+  ],
+  alternates: {
+    canonical: "https://botock.com/tools/video-editor",
+  },
+  openGraph: {
+    title: "Online Video Editor Free - Botock Tools",
+    description:
+      "Edit videos online directly in your browser with timeline, trimming, splitting, and color presets.",
+    url: "https://botock.com/tools/video-editor",
+    siteName: "Botock",
+    type: "website",
+  },
+};
 
 export default function VideoEditorPage() {
-  return <VideoEditorComponent />;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Online Video Editor - Botock Tools",
+    url: "https://botock.com/tools/video-editor",
+    description:
+      "Edit videos online directly in your browser with timeline, trimming, and effects.",
+    applicationCategory: "MultimediaApplication",
+    operatingSystem: "All",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ToolErrorBoundary toolName="Video Editor">
+        <VideoEditorComponent />
+      </ToolErrorBoundary>
+    </>
+  );
 }

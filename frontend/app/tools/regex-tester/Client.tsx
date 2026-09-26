@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Code2,
@@ -115,7 +116,7 @@ export default function RegexTesterClient() {
   }
 
   const handleCopyRegex = () => {
-    navigator.clipboard.writeText(`/${pattern}/${flagString}`);
+    copyToClipboard(`/${pattern}/${flagString}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

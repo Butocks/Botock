@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   FileCode,
@@ -80,7 +81,7 @@ export default function CssMinifierClient() {
 
   const handleCopy = () => {
     if (!minified) return;
-    navigator.clipboard.writeText(minified);
+    copyToClipboard(minified);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

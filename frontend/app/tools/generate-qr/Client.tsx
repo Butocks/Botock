@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useRef, useEffect } from "react";
 import {
   QrCode,
@@ -96,7 +97,7 @@ export default function QrGeneratorClient() {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(getEncodedValue());
+    copyToClipboard(getEncodedValue());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

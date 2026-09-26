@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import React, { useState } from "react";
 import Link from "next/link";
 import {
@@ -61,7 +62,7 @@ export default function HtmlFormatterClient() {
 
   const handleCopy = () => {
     if (!outputHtml) return;
-    navigator.clipboard.writeText(outputHtml);
+    copyToClipboard(outputHtml);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

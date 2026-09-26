@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState } from "react";
 import {
   Binary,
@@ -55,7 +56,7 @@ export default function Base64FileConverterClient() {
 
   const handleCopy = () => {
     if (!formattedBase64) return;
-    navigator.clipboard.writeText(formattedBase64);
+    copyToClipboard(formattedBase64);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import * as pdfjsLib from "pdfjs-dist";
@@ -228,7 +229,7 @@ const handleStartOcr = async () => {
   const handleCopyAll = async () => {
     if (!editableText) return;
     try {
-      await navigator.clipboard.writeText(editableText);
+      await copyToClipboard(editableText);
       setCopiedAll(true);
       setTimeout(() => setCopiedAll(false), 2000);
     } catch {
@@ -238,7 +239,7 @@ const handleStartOcr = async () => {
 
   const handleCopyPage = async (pageIndex: number, text: string) => {
     try {
-      await navigator.clipboard.writeText(text);
+      await copyToClipboard(text);
       setCopiedPageIndex(pageIndex);
       setTimeout(() => setCopiedPageIndex(null), 2000);
     } catch {

@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   GitCompare,
@@ -106,7 +107,7 @@ export default function DiffCheckerClient() {
       })
       .join("\n");
 
-    navigator.clipboard.writeText(patch);
+    copyToClipboard(patch);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

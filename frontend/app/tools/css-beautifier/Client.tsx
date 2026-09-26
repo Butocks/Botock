@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Code,
@@ -34,8 +35,8 @@ export default function CssBeautifierClient() {
     const result: string[] = [];
     let depth = 0;
 
-    for (let rawLine of lines) {
-      let line = rawLine.trim();
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
       if (!line) continue;
 
       if (line.endsWith("}")) {
@@ -58,7 +59,7 @@ export default function CssBeautifierClient() {
 
   const handleCopy = () => {
     if (!beautified) return;
-    navigator.clipboard.writeText(beautified);
+    copyToClipboard(beautified);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

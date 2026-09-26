@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Palette,
@@ -50,7 +51,7 @@ export default function GradientGeneratorClient() {
   const fullCssRule = `background: ${gradientCssValue};`;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(fullCssRule);
+    copyToClipboard(fullCssRule);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

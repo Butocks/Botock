@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   Database,
@@ -66,7 +67,7 @@ export default function SqlFormatterClient() {
 
   const handleCopy = () => {
     if (!formattedSql) return;
-    navigator.clipboard.writeText(formattedSql);
+    copyToClipboard(formattedSql);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

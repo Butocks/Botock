@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   KeyRound,
@@ -90,7 +91,7 @@ export default function JwtDecoderClient() {
   }, [token]);
 
   const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopiedKey(id);
     setTimeout(() => setCopiedKey(null), 2000);
   };

@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useMemo } from "react";
 import {
   FileCode,
@@ -28,7 +29,7 @@ export default function YamlToJsonClient() {
       { obj: root, indent: -1 },
     ];
 
-    for (let rawLine of lines) {
+    for (const rawLine of lines) {
       if (!rawLine.trim() || rawLine.trim().startsWith("#")) continue;
 
       const indent = rawLine.search(/\S/);
@@ -133,7 +134,7 @@ export default function YamlToJsonClient() {
 
   const handleCopy = () => {
     if (!output) return;
-    navigator.clipboard.writeText(output);
+    copyToClipboard(output);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

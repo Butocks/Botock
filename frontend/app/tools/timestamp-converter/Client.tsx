@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState, useEffect } from "react";
 import {
   Clock,
@@ -39,7 +40,7 @@ export default function TimestampConverterClient() {
   })();
 
   const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
+    copyToClipboard(text);
     setCopiedKey(id);
     setTimeout(() => setCopiedKey(null), 1800);
   };

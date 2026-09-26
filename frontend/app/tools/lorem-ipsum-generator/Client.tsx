@@ -1,5 +1,6 @@
 "use client";
 
+import { copyToClipboard } from "@/lib/utils/clipboard";
 import { useState } from "react";
 import {
   FileText,
@@ -105,7 +106,7 @@ export default function LoremIpsumGeneratorClient() {
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(output);
+    copyToClipboard(output);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
