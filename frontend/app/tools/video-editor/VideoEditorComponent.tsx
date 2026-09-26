@@ -34,7 +34,7 @@ import {
 import AdBanner from "../../components/AdBanner";
 import ToolSuggestions from "../../components/ToolSuggestions";
 import { useMediaStore } from "../../store/useMediaStore";
-import { useFFmpeg } from "../../../lib/ffmpeg/useFFmpeg";
+import { useEditorFFmpeg } from "./editorFFmpeg";
 import {
   AspectRatio,
   EditorClip,
@@ -98,9 +98,23 @@ function pushHistory(history: HistoryState, project: EditorProject): HistoryStat
   };
 }
 
+function detectVideoHasAudio(video: HTMLVideoElement): boolean {
+  const candidate = video as HTMLVideoElement & {
+    mozHasAudio?: boolean;
+    webkitAudioDecodedByteCount?: number;
+    audioTracks?: { length: number };
+  };
+  if (typeof candidate.audioTracks?.length === "number") return candidate.audioTracks.length > 0;
+  if (candidate.mozHasAudio === true) return true;
+  if (typeof candidate.webkitAudioDecodedByteCount === "number") return candidate.webkitAudioDecodedByteCount > 0;
+  // Chromium may not expose an audio-track count before playback. Treat unknown files as
+  // audio-bearing, which is safer than silently dropping sound from a real video.
+  return true;
+}
+
 export default function VideoEditorComponent() {
   const { activeMedia } = useMediaStore();
-  const { run, isProcessing, progress, statusMessage, error: ffmpegError } = useFFmpeg();
+  const { runMulti, isProcessing, progress, statusMessage, error: ffmpegError } = useEditorFFmpeg();
 
   const [project, setProject] = useState<EditorProject>(() => createProject());
   const [history, setHistory] = useState<HistoryState>(() => initialHistory(createProject()));
@@ -297,12 +311,14 @@ export default function VideoEditorComponent() {
       probe.src = url;
       probe.onloadedmetadata = () => {
         const duration = Number.isFinite(probe.duration) && probe.duration > 0 ? probe.duration : 10;
+        const hasAudio = detectVideoHasAudio(probe);
         const clip = createClip({
           src: url,
           name: file.name,
           type: "video",
           sourceFile: file,
           duration,
+          hasAudio,
         });
 
         updateProject((current) => {
@@ -327,6 +343,7 @@ export default function VideoEditorComponent() {
           type: "video",
           sourceFile: file,
           duration: 10,
+          hasAudio: true,
         });
         updateProject((current) => {
           const track = current.tracks.find((t) => t.id === selectedTrackId) ?? current.tracks[0];
@@ -525,7 +542,7 @@ export default function VideoEditorComponent() {
     setShowExport(true);
     setExportUrl(null);
     try {
-      const blob = await exportProject(project, exportPreset, run);
+      const blob = await exportProject(project, exportPreset, runMulti);
       const url = URL.createObjectURL(blob);
       objectUrlsRef.current.push(url);
       setExportUrl(url);

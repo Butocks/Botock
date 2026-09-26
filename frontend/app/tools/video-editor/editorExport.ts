@@ -1,9 +1,9 @@
-
 "use client";
 
-import { EditorProject, FFmpegRunner, FilterPreset } from "./editorTypes";
+import { EditorClip, EditorProject } from "./editorTypes";
+import { EditorInputFile, EditorFFmpegRunOptions } from "./editorFFmpeg";
 
-const FILTERS: Record<string, FilterPreset["ffmpeg"]> = {
+const FILTERS: Record<string, string | null> = {
   none: null,
   cinematic: "eq=contrast=1.12:saturation=1.18:brightness=-0.02",
   bw: "hue=s=0,eq=contrast=1.08",
@@ -15,16 +15,28 @@ const FILTERS: Record<string, FilterPreset["ffmpeg"]> = {
 const escapeFilter = (value: string) =>
   value.replace(/\\/g, "\\\\").replace(/:/g, "\\:").replace(/'/g, "\\'");
 
-function outputSize(
-  aspect: EditorProject["settings"]["aspectRatio"],
-  preset: "1080p" | "720p" | "source"
-) {
+function outputSize(aspect: EditorProject["settings"]["aspectRatio"], preset: "1080p" | "720p" | "source") {
   if (preset === "source") return null;
   const long = preset === "1080p" ? 1080 : 720;
-  if (aspect === "16:9") return `${Math.round(long * 16 / 9 / 2) * 2}:${long}`;
-  if (aspect === "9:16") return `${long}:${Math.round(long * 16 / 9 / 2) * 2}`;
+  if (aspect === "16:9") return `${Math.round((long * 16 / 9) / 2) * 2}:${long}`;
+  if (aspect === "9:16") return `${long}:${Math.round((long * 16 / 9) / 2) * 2}`;
   if (aspect === "1:1") return `${long}:${long}`;
-  return `${Math.round(long * 4 / 5 / 2) * 2}:${long}`;
+  return `${Math.round((long * 4 / 5) / 2) * 2}:${long}`;
+}
+
+function atempoChain(speed: number) {
+  const filters: string[] = [];
+  let remaining = Math.max(0.25, Math.min(4, speed));
+  while (remaining > 2.000001) {
+    filters.push("atempo=2");
+    remaining /= 2;
+  }
+  while (remaining < 0.499999) {
+    filters.push("atempo=0.5");
+    remaining /= 0.5;
+  }
+  filters.push(`atempo=${remaining.toFixed(4)}`);
+  return filters.join(",");
 }
 
 function commonVideoFilters(project: EditorProject, preset: "1080p" | "720p" | "source") {
@@ -38,19 +50,16 @@ function commonVideoFilters(project: EditorProject, preset: "1080p" | "720p" | "
     );
   }
 
-  if (project.settings.rotation === 90) filters.push("transpose=1");
-  if (project.settings.rotation === 180) filters.push("hflip,vflip");
-  if (project.settings.rotation === 270 || project.settings.rotation === -90) filters.push("transpose=2");
+  const rotation = ((project.settings.rotation % 360) + 360) % 360;
+  if (rotation === 90) filters.push("transpose=1");
+  if (rotation === 180) filters.push("hflip,vflip");
+  if (rotation === 270) filters.push("transpose=2");
 
   const size = outputSize(project.settings.aspectRatio, preset);
   if (size) {
     const [w, h] = size.split(":");
-    const ar = project.settings.aspectRatio;
-    const crop = ar === "16:9"
-      ? `${w}:${h}`
-      : `${w}:${h}`;
     filters.push(`scale=${w}:${h}:force_original_aspect_ratio=decrease`);
-    filters.push(`pad=${crop}:(ow-iw)/2:(oh-ih)/2:color=${escapeFilter(project.settings.background)}`);
+    filters.push(`pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=${escapeFilter(project.settings.background)}`);
   }
 
   if (project.settings.zoom !== 1) {
@@ -58,136 +67,104 @@ function commonVideoFilters(project: EditorProject, preset: "1080p" | "720p" | "
     filters.push(`scale=iw*${z}:ih*${z},crop=iw/${z}:ih/${z}`);
   }
 
-  return filters.join(",");
+  return filters;
 }
 
-function isUsableFile(value: unknown): value is Blob {
-  return typeof Blob !== "undefined" && value instanceof Blob;
+function clipInputName(clip: EditorClip, index: number) {
+  const ext = clip.name.match(/\.[a-z0-9]+$/i)?.[0] || ".bin";
+  return `editor_input_${index}${ext}`;
+}
+
+function assertRenderableClip(clip: EditorClip) {
+  if (clip.type !== "video") throw new Error(`"${clip.name}" is not a video clip yet. Image/audio timeline rendering is Phase 2B.`);
+  if (!clip.sourceFile || !(clip.sourceFile instanceof Blob)) {
+    throw new Error(`"${clip.name}" has no local source file. Re-import that clip before exporting.`);
+  }
+  if (clip.sourceEnd <= clip.sourceStart) throw new Error(`"${clip.name}" has an invalid trim range.`);
 }
 
 export async function exportProject(
   project: EditorProject,
   preset: "1080p" | "720p" | "source",
-  run: FFmpegRunner
+  runMulti: (options: EditorFFmpegRunOptions) => Promise<Blob>
 ): Promise<Blob> {
   const clips = project.tracks
     .filter((track) => track.kind === "video" && !track.muted)
     .flatMap((track) => track.clips)
     .sort((a, b) => a.timelineStart - b.timelineStart);
 
-  if (!clips.length) {
-    throw new Error("There are no video clips available to export.");
+  if (!clips.length) throw new Error("There are no video clips available to export.");
+  clips.forEach(assertRenderableClip);
+
+  const audioMode = clips.every((clip) => clip.hasAudio === true)
+    ? "audio"
+    : clips.every((clip) => clip.hasAudio === false)
+      ? "silent"
+      : "unknown";
+
+  if (audioMode === "unknown") {
+    throw new Error("Some clips contain audio and others are silent. Re-import the clips so Botock can detect their audio tracks before exporting this mixed sequence.");
   }
 
-  const files = clips.map((clip, index) => {
-    if (!isUsableFile(clip.sourceFile)) {
-      throw new Error(`"${clip.name}" does not have a local source file. Re-import it before exporting.`);
-    }
-    return { clip, file: clip.sourceFile, input: `input_${index}.mp4` };
-  });
+  const inputs: EditorInputFile[] = clips.map((clip, index) => ({
+    name: clipInputName(clip, index),
+    data: clip.sourceFile!,
+  }));
 
   const args: string[] = ["-y"];
-  for (const item of files) {
+  clips.forEach((clip, index) => {
     args.push(
-      "-ss",
-      String(Math.max(0, item.clip.sourceStart)),
-      "-to",
-      String(Math.max(item.clip.sourceStart + 0.05, item.clip.sourceEnd)),
-      "-i",
-      item.input
+      "-ss", Math.max(0, clip.sourceStart).toFixed(3),
+      "-t", Math.max(0.05, clip.sourceEnd - clip.sourceStart).toFixed(3),
+      "-i", inputs[index].name,
     );
-  }
+  });
 
-  const vf = commonVideoFilters(project, preset);
   const speed = Math.max(0.25, Math.min(4, project.settings.speed));
-  const videoLabels: string[] = [];
-  const audioLabels: string[] = [];
-
-  files.forEach((item, index) => {
-    const videoLabel = `[v${index}]`;
-    const audioLabel = `[a${index}]`;
-    const videoFilters = [
-      "setpts=PTS/" + speed,
-      vf,
-    ].filter(Boolean).join(",");
-    const audioFilters = project.settings.muted
-      ? "anull"
-      : `aresample=async=1,atempo=${speed > 2 ? 2 : speed < 0.5 ? 0.5 : speed}`;
-
-    args.push(
-      "-filter_complex",
-      `${files.map((_, i) => `[${i}:v]${i === index ? videoFilters : "null"}${videoLabel}`).join(";")}`
-    );
-    videoLabels.push(videoLabel);
-    audioLabels.push(audioLabel);
-  });
-
-  // Replace the repeated temporary filter_complex arguments with one deterministic graph.
-  while (args.includes("-filter_complex")) {
-    const index = args.indexOf("-filter_complex");
-    args.splice(index, 2);
-  }
-
+  const videoFilters = commonVideoFilters(project, preset);
   const graph: string[] = [];
-  files.forEach((item, index) => {
-    const videoFilters = [
-      "setpts=PTS/" + speed,
-      vf,
-    ].filter(Boolean).join(",");
-    const audioFilters = project.settings.muted
-      ? "anull"
-      : `aresample=async=1,atempo=${speed}`;
 
-    graph.push(`[${index}:v]${videoFilters || "null"}[v${index}]`);
-    graph.push(`[${index}:a]${audioFilters}[a${index}]`);
+  clips.forEach((clip, index) => {
+    const vf = ["setpts=PTS/" + speed.toFixed(4), ...videoFilters].join(",");
+    graph.push(`[${index}:v]${vf}[v${index}]`);
+
+    if (audioMode === "audio") {
+      const af = [
+        "aresample=async=1",
+        atempoChain(speed),
+        `volume=${project.settings.muted ? 0 : project.settings.volume.toFixed(3)}`,
+      ].join(",");
+      graph.push(`[${index}:a]${af}[a${index}]`);
+    }
   });
 
-  const concatInputs = files.map((_, i) => `[v${i}][a${i}]`).join("");
-  graph.push(`${concatInputs}concat=n=${files.length}:v=1:a=1[vout][aout]`);
+  const concatInputs = clips.map((_, i) => audioMode === "audio" ? `[v${i}][a${i}]` : `[v${i}]`).join("");
+  graph.push(`${concatInputs}concat=n=${clips.length}:v=1:a=${audioMode === "audio" ? 1 : 0}[vout]${audioMode === "audio" ? "[aout]" : ""}`);
+
+  args.push("-filter_complex", graph.join(";"), "-map", "[vout]");
+
+  if (audioMode === "audio" && !project.settings.muted) {
+    args.push("-map", "[aout]");
+  }
 
   args.push(
-    "-filter_complex",
-    graph.join(";"),
-    "-map",
-    "[vout]",
-    "-map",
-    "[aout]",
-    "-r",
-    "30",
-    "-c:v",
-    "libx264",
-    "-preset",
-    "veryfast",
-    "-crf",
-    preset === "1080p" ? "21" : preset === "720p" ? "23" : "20",
-    "-pix_fmt",
-    "yuv420p",
-    "-c:a",
-    "aac",
-    "-b:a",
-    "160k",
-    "-movflags",
-    "+faststart",
-    "-shortest",
-    "-f",
-    "mp4",
-    "output.mp4"
+    "-r", "30",
+    "-c:v", "libx264",
+    "-preset", "veryfast",
+    "-crf", preset === "1080p" ? "21" : preset === "720p" ? "23" : "20",
+    "-pix_fmt", "yuv420p",
   );
 
-  // useFFmpeg.run accepts one input file. To keep the existing singleton wrapper untouched,
-  // concatenate sources into a temporary browser File first when there is more than one clip.
-  // A single clip can be rendered directly and is the memory-efficient path.
-  if (files.length === 1) {
-    return run({
-      inputFile: files[0].file,
-      inputFileName: files[0].input,
-      outputFileName: "output.mp4",
-      outputMimeType: "video/mp4",
-      args,
-    });
+  if (audioMode === "audio" && !project.settings.muted) {
+    args.push("-c:a", "aac", "-b:a", "160k");
   }
 
-  throw new Error(
-    "Multi-clip rendering is staged for the next exporter layer. Phase 1 already supports multi-clip timeline editing; export each selected sequence after re-importing a consolidated source."
-  );
+  args.push("-movflags", "+faststart", "-f", "mp4", "output.mp4");
+
+  return runMulti({
+    inputFiles: inputs,
+    outputFileName: "output.mp4",
+    outputMimeType: "video/mp4",
+    args,
+  });
 }

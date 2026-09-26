@@ -1,4 +1,3 @@
-
 "use client";
 
 export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:5";
@@ -21,6 +20,7 @@ export interface EditorClip {
   sourceEnd: number;
   duration: number;
   timelineStart: number;
+  hasAudio?: boolean;
 }
 
 export interface TimelineTrack {
@@ -93,6 +93,7 @@ export const createClip = (input: {
   type?: MediaKind;
   sourceFile?: Blob;
   duration?: number;
+  hasAudio?: boolean;
 }): EditorClip => {
   const duration = Math.max(0.05, input.duration ?? 10);
   return {
@@ -105,6 +106,7 @@ export const createClip = (input: {
     sourceEnd: duration,
     duration,
     timelineStart: 0,
+    hasAudio: input.hasAudio,
   };
 };
 
@@ -138,8 +140,18 @@ export const createProject = (): EditorProject => ({
   ],
 });
 
-export const cloneProject = (project: EditorProject): EditorProject =>
-  JSON.parse(JSON.stringify(project)) as EditorProject;
+/**
+ * JSON.stringify/parse is deliberately NOT used here. EditorClip.sourceFile is a Blob/File
+ * reference and JSON cloning silently deletes it, which made undo/redo break later exports.
+ */
+export const cloneProject = (project: EditorProject): EditorProject => ({
+  ...project,
+  settings: { ...project.settings },
+  tracks: project.tracks.map((track) => ({
+    ...track,
+    clips: track.clips.map((clip) => ({ ...clip })),
+  })),
+});
 
 export const snapshotProject = cloneProject;
 
