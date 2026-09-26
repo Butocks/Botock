@@ -158,6 +158,7 @@ export default function VideoGeneratorPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Bypass-Tunnel-Reminder": "true",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -170,8 +171,15 @@ export default function VideoGeneratorPage() {
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || "Failed to start generation.");
+        const errText = await response.text().catch(() => "");
+        let errMsg = `Server returned ${response.status}: Failed to start generation.`;
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.detail) errMsg = parsed.detail;
+        } catch (e) {
+          if (errText && errText.length < 200) errMsg = errText;
+        }
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
@@ -214,7 +222,9 @@ export default function VideoGeneratorPage() {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
-          const authHeaders: Record<string, string> = {};
+          const authHeaders: Record<string, string> = {
+            "Bypass-Tunnel-Reminder": "true",
+          };
           if (token) {
             authHeaders["Authorization"] = `Bearer ${token}`;
           }
