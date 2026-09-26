@@ -189,11 +189,6 @@ export default function ImageGeneratorPage() {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
-          const authHeaders: Record<string, string> = {};
-          if (token) {
-            authHeaders["Authorization"] = `Bearer ${token}`;
-          }
-
           const backendBaseUrl = getBackendUrl();
           const authHeaders: Record<string, string> = {
             "Bypass-Tunnel-Reminder": "true",
@@ -343,75 +338,17 @@ export default function ImageGeneratorPage() {
         <div className="w-full lg:w-[35%] flex flex-col gap-6">
           <div className="rounded-2xl p-6 flex-1 flex flex-col justify-between studio-panel shadow-2xl">
             <div className="space-y-5">
-              {/* Model Selection (Nano Banana Lite, 2, Pro) */}
+              {/* Model Selection (Locked to Nano Banana 2) */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">
-                  Nano Banana Engine
+                  AI Image Engine
                 </label>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {/* Nano Banana Lite */}
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect("nano-banana-lite")}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer active:scale-95 ${
-                      selectedModel === "nano-banana-lite"
-                        ? "border-emerald-500 bg-emerald-500/15 text-white shadow-md shadow-emerald-500/20"
-                        : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#080512] hover:border-emerald-500/40 text-slate-600 dark:text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">Lite</span>
-                      <span className="text-[8px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">Free</span>
-                    </div>
-                    <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-1 leading-tight">
-                      Fast 1K render
-                    </p>
-                  </button>
-
-                  {/* Nano Banana 2 */}
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect("nano-banana-2")}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer active:scale-95 ${
-                      selectedModel === "nano-banana-2"
-                        ? "border-amber-500 bg-amber-500/15 text-white shadow-md shadow-amber-500/20"
-                        : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#080512] hover:border-amber-500/40 text-slate-600 dark:text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">Banana 2</span>
-                      <span className="text-[8px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30">Popular</span>
-                    </div>
-                    <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-1 leading-tight">
-                      Photorealism
-                    </p>
-                  </button>
-
-                  {/* Nano Banana Pro */}
-                  <button
-                    type="button"
-                    onClick={() => handleModelSelect("nano-banana-pro")}
-                    className={`p-2.5 rounded-xl border text-left transition-all relative cursor-pointer active:scale-95 ${
-                      selectedModel === "nano-banana-pro"
-                        ? "border-violet-500 bg-violet-600/15 text-white shadow-md shadow-violet-500/20"
-                        : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#080512] hover:border-violet-500/40 text-slate-600 dark:text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">Pro</span>
-                      {isPro ? (
-                        <span className="text-[8px] px-1 py-0.2 rounded bg-violet-500/20 text-violet-300 font-bold">Active</span>
-                      ) : (
-                        <span className="text-[8px] px-1 py-0.2 rounded bg-purple-500/20 text-purple-300 font-bold flex items-center gap-0.5 border border-purple-500/30">
-                          <Crown className="w-2.5 h-2.5" /> PRO
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-1 leading-tight">
-                      8K Hasselblad
-                    </p>
-                  </button>
+                <div className="p-3 rounded-xl border border-amber-500 bg-amber-500/15 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-bold text-white">Nano Banana 2 (Photorealistic AI Engine)</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-black font-extrabold">Active</span>
                 </div>
               </div>
 
@@ -432,7 +369,7 @@ export default function ImageGeneratorPage() {
                 </div>
 
                 <textarea
-                  rows={3}
+                  rows={4}
                   className={`w-full bg-slate-50 dark:bg-[#080512] border rounded-xl p-3.5 text-white text-xs sm:text-sm focus:ring-1 focus:ring-amber-500 focus:border-amber-500 outline-none resize-none transition-all placeholder:text-slate-500 dark:text-slate-400 ${
                     errorMessage && prompt.trim().length < 3 ? "border-red-500/60" : "border-slate-300 dark:border-white/[0.1]"
                   }`}
@@ -456,29 +393,6 @@ export default function ImageGeneratorPage() {
                       className="px-2.5 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-white border border-slate-200 dark:border-white/[0.06] whitespace-nowrap truncate max-w-[180px] transition-all cursor-pointer"
                     >
                       {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Style Presets */}
-              <div>
-                <label className="block text-xs font-bold text-slate-900 dark:text-white mb-1.5">
-                  Artistic Style (Optional)
-                </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {STYLE_PRESETS.map((s) => (
-                    <button
-                      key={s.label}
-                      type="button"
-                      onClick={() => setSelectedStyle((prev) => (prev === s.value ? "" : s.value))}
-                      className={`text-[10px] font-semibold py-1.5 px-2 rounded-lg border transition-all cursor-pointer active:scale-95 truncate ${
-                        selectedStyle === s.value
-                          ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm"
-                          : "bg-slate-50 dark:bg-[#080512] hover:bg-white/[0.05] border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      {s.label}
                     </button>
                   ))}
                 </div>

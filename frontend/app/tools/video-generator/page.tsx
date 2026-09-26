@@ -508,41 +508,9 @@ export default function VideoGeneratorPage() {
                 </div>
               </div>
 
-              {/* Camera Motion Presets */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-900 dark:text-white">
-                    Camera & Motion Direction
-                  </label>
-                  <span className="text-[10px] text-slate-600 dark:text-slate-400">Optional</span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-1.5 mb-2">
-                  {MOTION_PRESETS.map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => applyMotionPreset(p.value)}
-                      className="text-[10px] font-semibold py-1.5 px-2 rounded-lg bg-slate-50 dark:bg-[#080512] hover:bg-violet-600/20 hover:text-violet-300 border border-slate-200 dark:border-white/[0.08] transition-all cursor-pointer text-slate-700 dark:text-slate-300 truncate"
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-
-                <input
-                  type="text"
-                  value={motionHint}
-                  onChange={(e) => setMotionHint(e.target.value)}
-                  placeholder="E.g. Slow cinematic zoom in, 60fps slow motion..."
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-[#080512] border border-slate-300 dark:border-white/[0.1] rounded-xl text-xs text-white focus:ring-1 focus:ring-violet-500 placeholder:text-slate-500 dark:text-slate-400"
-                  disabled={status === "generating" || status === "polling"}
-                />
-              </div>
-
-              {/* Duration Segmented Pills & Aspect Ratio */}
+              {/* Duration & Aspect Ratio */}
               <div className="space-y-4 pt-1">
-                {/* Duration */}
+                {/* Duration Locked to 10s */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-bold text-slate-900 dark:text-white">
@@ -552,25 +520,12 @@ export default function VideoGeneratorPage() {
                       Costs 15 Credits
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[4, 6, 8, 10].map((sec) => (
-                      <button
-                        key={sec}
-                        type="button"
-                        onClick={() => setDurationSeconds(sec)}
-                        disabled={status === "generating" || status === "polling" || (!isPro && sec !== 10)}
-                        className={`py-2.5 rounded-xl border text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
-                          durationSeconds === sec
-                            ? "border-violet-500 bg-violet-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.35)]"
-                            : (!isPro && sec !== 10)
-                            ? "border-slate-200 dark:border-white/[0.04] bg-slate-100 dark:bg-[#080512]/40 text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-50"
-                            : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#080512] hover:border-violet-500/40 text-slate-600 dark:text-slate-400 hover:text-white"
-                        }`}
-                        title={!isPro && sec !== 10 ? "Free tier is set to 10s videos" : ""}
-                      >
-                        {sec}s {!isPro && sec === 10 ? "★" : ""}
-                      </button>
-                    ))}
+                  <div className="p-3 rounded-xl border border-violet-500 bg-violet-600/15 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-violet-400" />
+                      <span className="text-xs font-bold text-white">10 Seconds (Standard Render)</span>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-600 text-white font-extrabold">10s</span>
                   </div>
                 </div>
 

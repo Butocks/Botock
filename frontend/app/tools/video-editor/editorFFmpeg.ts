@@ -90,8 +90,8 @@ export function useEditorFFmpeg() {
       await ffmpeg.exec(args);
 
       const data = await ffmpeg.readFile(output);
-      const bytes = data instanceof Uint8Array ? data : new Uint8Array(data as ArrayBuffer);
-      const blob = new Blob([bytes], { type: outputMimeType });
+      const bytes = data instanceof Uint8Array ? data : new Uint8Array(data as unknown as ArrayBuffer);
+      const blob = new Blob([bytes as unknown as BlobPart], { type: outputMimeType });
       return blob;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
