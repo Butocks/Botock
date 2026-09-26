@@ -23,6 +23,7 @@ def get_current_user(
     jwt_token = None
     if authorization:
         if not authorization.startswith("Bearer "):
+            logger.warning(f"Auth failed: header does not start with Bearer. Value: {authorization[:20]}...")
             raise HTTPException(
                 status_code=401,
                 detail="Invalid Authorization header format. Expected 'Bearer <token>'."
@@ -32,6 +33,7 @@ def get_current_user(
         jwt_token = token.strip()
 
     if not jwt_token:
+        logger.warning(f"Auth failed: no jwt_token found. Authorization header: {authorization}, query token: {token}")
         raise HTTPException(
             status_code=401,
             detail="Authentication required. Please sign in to Botock to access this resource."

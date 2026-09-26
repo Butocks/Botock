@@ -230,7 +230,11 @@ export default function VideoGeneratorPage() {
           }
 
           const backendBaseUrl = getBackendUrl();
-          const response = await fetch(`${backendBaseUrl}/api/video/status/${generationId}`, {
+          const statusUrl = token
+            ? `${backendBaseUrl}/api/video/status/${generationId}?token=${encodeURIComponent(token)}`
+            : `${backendBaseUrl}/api/video/status/${generationId}`;
+
+          const response = await fetch(statusUrl, {
             headers: authHeaders,
           });
           if (!response.ok) return;
