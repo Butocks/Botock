@@ -143,6 +143,16 @@ export default function ImageGeneratorPage() {
       const token = sessionData.session?.access_token || "";
       const backendBaseUrl = getBackendUrl();
 
+      let imageBase64: string | undefined = undefined;
+      if (referenceImage) {
+        imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(referenceImage);
+        });
+      }
+
       const response = await fetch(`${backendBaseUrl}/api/image/generate`, {
         method: "POST",
         headers: {
@@ -155,6 +165,7 @@ export default function ImageGeneratorPage() {
           aspect_ratio: aspectRatio,
           model: selectedModel,
           style: selectedStyle || undefined,
+          image_base64: imageBase64,
         }),
       });
 

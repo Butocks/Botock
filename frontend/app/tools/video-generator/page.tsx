@@ -154,6 +154,16 @@ export default function VideoGeneratorPage() {
       const token = sessionData.session?.access_token || "";
       const backendBaseUrl = getBackendUrl();
 
+      let imageBase64: string | undefined = undefined;
+      if (referenceImage) {
+        imageBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(referenceImage);
+        });
+      }
+
       const response = await fetch(`${backendBaseUrl}/api/video/generate`, {
         method: "POST",
         headers: {
@@ -167,6 +177,7 @@ export default function VideoGeneratorPage() {
           model: isPro ? selectedModel : "omni-1.1-flash-360p",
           duration_seconds: durationSeconds,
           motion_hint: motionHint.trim() || undefined,
+          image_base64: imageBase64,
         }),
       });
 
