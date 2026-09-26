@@ -215,8 +215,10 @@ class FlowVideoService:
                             await res_btn.click()
                             await asyncio.sleep(0.5)
 
-                        # 5. Duration: 8s (Strictly 8s for free tier)
-                        dur_btn = page.locator('[role="dialog"], [data-floating-ui-portal]').locator('button:has-text("8s")').first
+                        # 5. Duration: 10s (Strictly 10s)
+                        dur_btn = page.locator('[role="dialog"], [data-floating-ui-portal]').locator('button:has-text("10s")').first
+                        if not await dur_btn.is_visible(timeout=2000):
+                            dur_btn = page.locator('[role="dialog"], [data-floating-ui-portal]').locator('button:has-text("8s")').first
                         if await dur_btn.is_visible(timeout=2000):
                             await dur_btn.click()
                             await asyncio.sleep(0.5)

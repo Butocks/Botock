@@ -147,6 +147,7 @@ export default function ImageGeneratorPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Bypass-Tunnel-Reminder": "true",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -158,8 +159,15 @@ export default function ImageGeneratorPage() {
       });
 
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.detail || "Failed to start image generation.");
+        const errText = await response.text().catch(() => "");
+        let errMsg = "Failed to start image generation.";
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.detail) errMsg = parsed.detail;
+        } catch (e) {
+          if (errText && errText.length < 200) errMsg = errText;
+        }
+        throw new Error(errMsg);
       }
 
       const data = await response.json();
@@ -187,7 +195,18 @@ export default function ImageGeneratorPage() {
           }
 
           const backendBaseUrl = getBackendUrl();
-          const response = await fetch(`${backendBaseUrl}/api/image/status/${generationId}`, {
+          const authHeaders: Record<string, string> = {
+            "Bypass-Tunnel-Reminder": "true",
+          };
+          if (token) {
+            authHeaders["Authorization"] = `Bearer ${token}`;
+          }
+
+          const statusUrl = token
+            ? `${backendBaseUrl}/api/image/status/${generationId}?token=${encodeURIComponent(token)}`
+            : `${backendBaseUrl}/api/image/status/${generationId}`;
+
+          const response = await fetch(statusUrl, {
             headers: authHeaders,
           });
           if (!response.ok) return;

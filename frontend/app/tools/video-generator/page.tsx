@@ -61,7 +61,7 @@ export default function VideoGeneratorPage() {
   const [prompt, setPrompt] = useState("");
   const [motionHint, setMotionHint] = useState("");
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
-  const [durationSeconds, setDurationSeconds] = useState<number>(8);
+  const [durationSeconds, setDurationSeconds] = useState<number>(10);
   const [selectedModel, setSelectedModel] = useState("omni-1.1-flash-360p");
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
   const [referencePreview, setReferencePreview] = useState<string | null>(null);
@@ -558,17 +558,17 @@ export default function VideoGeneratorPage() {
                         key={sec}
                         type="button"
                         onClick={() => setDurationSeconds(sec)}
-                        disabled={status === "generating" || status === "polling" || (!isPro && sec !== 8)}
+                        disabled={status === "generating" || status === "polling" || (!isPro && sec !== 10)}
                         className={`py-2.5 rounded-xl border text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
                           durationSeconds === sec
                             ? "border-violet-500 bg-violet-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.35)]"
-                            : (!isPro && sec !== 8)
+                            : (!isPro && sec !== 10)
                             ? "border-slate-200 dark:border-white/[0.04] bg-slate-100 dark:bg-[#080512]/40 text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-50"
                             : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#080512] hover:border-violet-500/40 text-slate-600 dark:text-slate-400 hover:text-white"
                         }`}
-                        title={!isPro && sec !== 8 ? "Free tier is optimized for 8s videos" : ""}
+                        title={!isPro && sec !== 10 ? "Free tier is set to 10s videos" : ""}
                       >
-                        {sec}s {!isPro && sec === 8 ? "★" : ""}
+                        {sec}s {!isPro && sec === 10 ? "★" : ""}
                       </button>
                     ))}
                   </div>
