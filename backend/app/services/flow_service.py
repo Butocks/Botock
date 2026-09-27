@@ -143,7 +143,9 @@ class FlowService:
 
     async def _upload_ingredient(self, page, image_base64: str, generation_id: str):
         """
-        Uploads ingredient / reference image into Flow Studio via the '+' button and file chooser.
+        Uploads ingredient / reference image into Flow Studio prompt box via the
+        prompt-box '+' button (button.add-menu-trigger), uploads media, waits for
+        processing, and clicks 'Add to prompt'.
         """
         if not image_base64:
             return
@@ -162,21 +164,48 @@ class FlowService:
             tmp_path = tmp.name
 
         try:
-            logger.info(f"[{generation_id}] Attaching ingredient image...")
-            add_btn = page.locator('button:has-text("+"), button[aria-label*="Add" i]').first
-            if await add_btn.is_visible(timeout=3000):
-                await add_btn.click()
+            logger.info(f"[{generation_id}] Attaching ingredient image to prompt box...")
+            # 1. Click '+' button attached to prompt box
+            prompt_add_btn = page.locator('button.add-menu-trigger, button[aria-label*="Add ingredients" i]').first
+            if not await prompt_add_btn.is_visible(timeout=5000):
+                logger.warning(f"[{generation_id}] Prompt add button not found.")
+                return
+
+            await prompt_add_btn.click()
+            await asyncio.sleep(1)
+
+            # 2. Click 'Upload media'
+            upload_media_btn = page.locator('button:has-text("Upload media"), div:has-text("Upload media"), [role="button"]:has-text("Upload media")').last
+            if not await upload_media_btn.is_visible(timeout=5000):
+                logger.warning(f"[{generation_id}] 'Upload media' button not found.")
+                return
+
+            async with page.expect_file_chooser(timeout=10000) as fc_info:
+                await upload_media_btn.click()
+
+            file_chooser = await fc_info.value
+            await file_chooser.set_files(tmp_path)
+            logger.info(f"[{generation_id}] File uploaded to Flow. Waiting for 'Add to prompt'...")
+
+            # 3. Wait for 'Add to prompt' button to become enabled
+            add_to_prompt_btn = page.locator('button.detail-add-to-prompt-btn, button:has-text("Add to prompt"), div:has-text("Add to prompt")').last
+            await add_to_prompt_btn.wait_for(state="visible", timeout=20000)
+
+            for _ in range(25):
+                is_disabled = await add_to_prompt_btn.get_attribute("disabled")
+                aria_disabled = await add_to_prompt_btn.get_attribute("aria-disabled")
+                classes = await add_to_prompt_btn.get_attribute("class") or ""
+                if not is_disabled and aria_disabled != "true" and "disabled" not in classes.lower():
+                    break
                 await asyncio.sleep(1)
-                upload_opt = page.locator('button:has-text("Upload"), [role="menuitem"]:has-text("Upload"), div:has-text("Upload")').last
-                if await upload_opt.is_visible(timeout=3000):
-                    async with page.expect_file_chooser(timeout=8000) as fc_info:
-                        await upload_opt.click()
-                    file_chooser = await fc_info.value
-                    await file_chooser.set_files(tmp_path)
-                    logger.info(f"[{generation_id}] Ingredient uploaded to Flow successfully.")
-                    await asyncio.sleep(2.5)
+
+            await add_to_prompt_btn.click()
+            logger.info(f"[{generation_id}] Clicked 'Add to prompt'. Ingredient attached successfully!")
+            await asyncio.sleep(1.5)
+
         except Exception as e:
             logger.warning(f"[{generation_id}] Ingredient upload note: {e}")
+            await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_ingredient_error.png"))
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
@@ -227,11 +256,6 @@ class FlowService:
         try:
             prompt_input = await self._ensure_studio_page(page, generation_id, status_dict)
 
-            # Upload ingredient image if provided
-            if image_base64:
-                status_dict[generation_id]["message"] = "Uploading image ingredient..."
-                await self._upload_ingredient(page, image_base64, generation_id)
-
             # Configure Settings Popup for Video
             status_dict[generation_id]["message"] = "Configuring Flow AI video engine..."
             try:
@@ -277,6 +301,11 @@ class FlowService:
                     await asyncio.sleep(0.5)
             except Exception as ex:
                 logger.warning(f"[{generation_id}] Video settings note: {ex}")
+
+            # Upload ingredient image into prompt box if provided
+            if image_base64:
+                status_dict[generation_id]["message"] = "Attaching reference image to video prompt..."
+                await self._upload_ingredient(page, image_base64, generation_id)
 
             # Prompt Construction
             formatted_prompt = prompt.strip()
@@ -439,11 +468,6 @@ class FlowService:
         try:
             prompt_input = await self._ensure_studio_page(page, generation_id, status_dict)
 
-            # Upload ingredient image if provided
-            if image_base64:
-                status_dict[generation_id]["message"] = "Uploading image ingredient..."
-                await self._upload_ingredient(page, image_base64, generation_id)
-
             # Configure Settings Popup for Image
             status_dict[generation_id]["message"] = "Configuring Flow AI Nano Banana 2 engine..."
             try:
@@ -476,6 +500,11 @@ class FlowService:
                     await asyncio.sleep(0.5)
             except Exception as ex:
                 logger.warning(f"[{generation_id}] Image settings note: {ex}")
+
+            # Upload ingredient image if provided
+            if image_base64:
+                status_dict[generation_id]["message"] = "Uploading image ingredient..."
+                await self._upload_ingredient(page, image_base64, generation_id)
 
             # Capture existing images on canvas
             initial_count = await page.evaluate("() => document.querySelectorAll('img[alt*=\"image\"], img.image').length")
