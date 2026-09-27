@@ -146,8 +146,9 @@ class FlowService:
     async def _upload_ingredient(self, page, image_base64: str, generation_id: str):
         """
         Uploads ingredient / reference image into Flow Studio prompt box via the
-        prompt-box '+' button (button.add-menu-trigger), uploads media, waits for
-        processing, and clicks 'Add to prompt'.
+        prompt-box '+' button (button.add-menu-trigger). Captures a pre-upload baseline
+        of the shared media library to explicitly find and click OUR uploaded thumbnail,
+        guaranteeing stale/cross-user images are never attached.
         """
         if not image_base64:
             return
@@ -159,19 +160,19 @@ class FlowService:
             img_bytes = base64.b64decode(image_base64)
         except Exception as e:
             logger.warning(f"[{generation_id}] Invalid base64 image ingredient: {e}")
-            return
+            raise Exception("Invalid image data provided for ingredient.")
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            tmp.write(img_bytes)
-            tmp_path = tmp.name
+        tmp_filename = f"botock_ingr_{generation_id[:8]}.png"
+        tmp_path = os.path.join(tempfile.gettempdir(), tmp_filename)
+        with open(tmp_path, "wb") as f:
+            f.write(img_bytes)
 
         try:
-            logger.info(f"[{generation_id}] Attaching ingredient image to prompt box...")
+            logger.info(f"[{generation_id}] Attaching ingredient image ({tmp_filename}) to prompt box...")
             # 1. Click '+' button attached to prompt box
             prompt_add_btn = page.locator('button.add-menu-trigger, button[aria-label*="Add ingredients" i]').first
             if not await prompt_add_btn.is_visible(timeout=5000):
-                logger.warning(f"[{generation_id}] Prompt add button not found.")
-                return
+                raise Exception("Prompt ingredients (+) button not found in studio.")
 
             await prompt_add_btn.click()
             await asyncio.sleep(1)
@@ -179,17 +180,57 @@ class FlowService:
             # 2. Click 'Upload media'
             upload_media_btn = page.locator('button:has-text("Upload media"), div:has-text("Upload media"), [role="button"]:has-text("Upload media")').last
             if not await upload_media_btn.is_visible(timeout=5000):
-                logger.warning(f"[{generation_id}] 'Upload media' button not found.")
-                return
+                raise Exception("'Upload media' option not visible in assets drawer.")
+
+            # CRITICAL: this Google account's "Recent uploads" media library is
+            # SHARED across every past generation — it is NOT reset per-project.
+            # We capture a baseline of every thumb currently visible BEFORE upload,
+            # so we can explicitly identify and click OUR file after upload.
+            baseline_srcs = await page.evaluate("""() => {
+                return Array.from(document.querySelectorAll('img'))
+                    .map(i => i.src).filter(Boolean);
+            }""")
 
             async with page.expect_file_chooser(timeout=10000) as fc_info:
                 await upload_media_btn.click()
 
             file_chooser = await fc_info.value
             await file_chooser.set_files(tmp_path)
-            logger.info(f"[{generation_id}] File uploaded to Flow. Waiting for 'Add to prompt'...")
+            logger.info(f"[{generation_id}] File uploaded ({tmp_filename}). Waiting for its thumbnail to appear...")
 
-            # 3. Wait for 'Add to prompt' button to become enabled
+            # 3. Explicitly find and click the thumbnail that was NOT there before —
+            # do not trust the picker's own "selected by default" state.
+            new_thumb = None
+            for _ in range(25):  # ~12s max
+                # Try 1: locate by distinct filename in drawer list
+                name_el = page.locator(f'text="{tmp_filename}"').first
+                if await name_el.is_visible():
+                    new_thumb = name_el
+                    break
+
+                # Try 2: look for an img element whose src was not in baseline
+                for c in await page.locator('.cdk-overlay-pane img, mat-bottom-sheet-container img, img').all():
+                    src = await c.get_attribute("src") or ""
+                    if src and src not in baseline_srcs:
+                        new_thumb = c
+                        break
+                if new_thumb:
+                    break
+                await asyncio.sleep(0.5)
+
+            if not new_thumb:
+                logger.warning(
+                    f"[{generation_id}] Could not distinctly identify newly uploaded "
+                    f"thumbnail — aborting to avoid attaching the WRONG image."
+                )
+                await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_ingredient_ambiguous.png"))
+                raise Exception("Could not verify newly uploaded image ingredient in library — aborted to prevent wrong image attachment.")
+
+            await new_thumb.click()
+            logger.info(f"[{generation_id}] Explicitly selected our own uploaded thumbnail.")
+            await asyncio.sleep(0.8)
+
+            # 4. Wait for 'Add to prompt' button to become enabled
             add_to_prompt_btn = page.locator('button.detail-add-to-prompt-btn, button:has-text("Add to prompt"), div:has-text("Add to prompt")').last
             await add_to_prompt_btn.wait_for(state="visible", timeout=20000)
 
@@ -206,8 +247,9 @@ class FlowService:
             await asyncio.sleep(1.5)
 
         except Exception as e:
-            logger.warning(f"[{generation_id}] Ingredient upload note: {e}")
+            logger.error(f"[{generation_id}] Ingredient upload error: {e}")
             await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_ingredient_error.png"))
+            raise e
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
