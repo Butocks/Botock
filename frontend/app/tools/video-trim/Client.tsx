@@ -708,6 +708,7 @@ export default function VideoTrimClient() {
       if (!url || !videoDuration) return;
 
       setIsGeneratingThumbnails(true);
+      setThumbnails([]);
 
       const sourceVideo = document.createElement("video");
 
@@ -727,6 +728,23 @@ export default function VideoTrimClient() {
       canvas.width = 160;
       canvas.height = 90;
 
+      const captureFrame = (time: number): Promise<string> =>
+        new Promise((resolve) => {
+          const onSeeked = () => {
+            sourceVideo.removeEventListener("seeked", onSeeked);
+            context.fillStyle = "#000";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            try {
+              context.drawImage(sourceVideo, 0, 0, canvas.width, canvas.height);
+              resolve(canvas.toDataURL("image/jpeg", 0.65));
+            } catch {
+              resolve("");
+            }
+          };
+          sourceVideo.addEventListener("seeked", onSeeked);
+          sourceVideo.currentTime = time;
+        });
+
       try {
         await new Promise<void>((resolve, reject) => {
           sourceVideo.onloadedmetadata = () => resolve();
@@ -734,66 +752,45 @@ export default function VideoTrimClient() {
             reject(new Error("Could not load video for thumbnails."));
         });
 
+        // ✅ OPTIMIZED: Cap total to 24 (was 48) and show first 8 immediately
+        const INITIAL_BATCH = 8;
         const count = Math.min(
-          THUMBNAIL_COUNT,
-          Math.max(8, Math.ceil(videoDuration / 2))
+          24,
+          Math.max(INITIAL_BATCH, Math.ceil(videoDuration / 2))
         );
 
-        const generated: string[] = [];
+        const timeAt = (i: number) =>
+          count === 1 ? 0 : (i / (count - 1)) * Math.max(0, videoDuration - 0.01);
 
-        for (let index = 0; index < count; index++) {
-          const time =
-            count === 1
-              ? 0
-              : (index / (count - 1)) *
-                Math.max(0, videoDuration - 0.01);
+        // ── Phase 1: First 8 thumbnails — show immediately ──
+        const initialBatch = Math.min(INITIAL_BATCH, count);
+        const initialResults: string[] = [];
 
-          await new Promise<void>((resolve) => {
-            const onSeeked = () => {
-              sourceVideo.removeEventListener(
-                "seeked",
-                onSeeked
-              );
-              resolve();
-            };
-
-            sourceVideo.addEventListener(
-              "seeked",
-              onSeeked
-            );
-
-            sourceVideo.currentTime = time;
-          });
-
-          context.fillStyle = "#000";
-          context.fillRect(0, 0, canvas.width, canvas.height);
-
-          try {
-            context.drawImage(
-              sourceVideo,
-              0,
-              0,
-              canvas.width,
-              canvas.height
-            );
-
-            generated.push(
-              canvas.toDataURL("image/jpeg", 0.65)
-            );
-          } catch {
-            generated.push("");
-          }
+        for (let i = 0; i < initialBatch; i++) {
+          initialResults.push(await captureFrame(timeAt(i)));
         }
 
-        setThumbnails(generated);
+        setThumbnails([...initialResults]);
+        setIsGeneratingThumbnails(count > initialBatch);
+
+        // ── Phase 2: Remaining thumbnails — background, batch updates ──
+        if (count > initialBatch) {
+          const all = [...initialResults];
+          for (let i = initialBatch; i < count; i++) {
+            all.push(await captureFrame(timeAt(i)));
+            if ((i - initialBatch + 1) % 4 === 0 || i === count - 1) {
+              setThumbnails([...all]);
+            }
+          }
+          setIsGeneratingThumbnails(false);
+        }
       } catch {
         setThumbnails([]);
+        setIsGeneratingThumbnails(false);
       } finally {
         sourceVideo.pause();
         sourceVideo.removeAttribute("src");
         sourceVideo.load();
-
-        setIsGeneratingThumbnails(false);
       }
     },
     []
@@ -815,6 +812,7 @@ export default function VideoTrimClient() {
       cancelled = true;
     };
   }, [duration, generateThumbnails, videoUrl]);
+
 const exportVideo = useCallback(async () => {
     if (!originalFile || duration <= 0) {
       setErrorMsg("Please load a valid video first.");

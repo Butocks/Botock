@@ -1,12 +1,23 @@
 import {
   buildAtempoFilter,
   buildColorFilter,
+  buildCropFilter,
   buildDrawtextFilter,
+  buildImageOverlayCompositeFilter,
+  buildImageOverlayScaleFilter,
+  buildKenBurnsFilter,
   buildTransformFilters,
   buildVolumeFilter,
 } from "./ffmpegAdapters";
 import { getEditorFontBytes } from "./fontLoader";
-import { AudioTrack, EditorClip, TextOverlay } from "./types";
+import {
+  AudioTrack,
+  EditorClip,
+  ImageOverlay,
+  MediaBinItem,
+  TextOverlay,
+  clipTimelineDuration,
+} from "./types";
 
 interface FFmpegBridge {
   load: () => Promise<void>;
@@ -18,165 +29,235 @@ interface FFmpegBridge {
 
 export type ExportProgressCallback = (message: string) => void;
 
-const INPUT_NAME = "botock_editor_input.mp4";
 const OUTPUT_NAME = "botock_editor_output.mp4";
-const AUDIO_PROBE_NAME = "botock_editor_probe.m4a";
+const AUDIO_PROBE_PREFIX = "botock_editor_probe_";
 const FONT_NAME = "botock_editor_font.ttf";
+
+const XFADE_MAP: Record<Exclude<EditorClip["transitionOut"], "none">, string> = {
+  fade: "fade",
+  wipeleft: "wipeleft",
+  wiperight: "wiperight",
+  slideup: "slideup",
+};
 
 function buildClipVideoFilter(
   clip: EditorClip,
-  index: number,
+  inputIndex: number,
+  label: string,
   targetW: number,
   targetH: number
-): { filter: string; label: string } {
+): string {
   const speedFactor = (1 / Math.min(4, Math.max(0.25, clip.speed))).toFixed(4);
-
   const parts: string[] = [
-    `trim=start=${clip.start.toFixed(3)}:end=${clip.end.toFixed(3)}`,
+    `trim=start=${clip.sourceStart.toFixed(3)}:end=${clip.sourceEnd.toFixed(3)}`,
     `setpts=(PTS-STARTPTS)*${speedFactor}`,
   ];
 
   if (clip.filters.brightness !== 0 || clip.filters.contrast !== 1 || clip.filters.saturation !== 1) {
     parts.push(buildColorFilter(clip.filters.brightness, clip.filters.contrast, clip.filters.saturation));
   }
-
   parts.push(...buildTransformFilters(clip.rotation, clip.flipH, clip.flipV));
+
+  if (clip.crop) {
+    parts.push(buildCropFilter(clip.crop));
+  }
 
   parts.push(
     `scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease`,
     `pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2:color=black`,
-    `setsar=1`,
-    `fps=30`
+    `setsar=1`
   );
 
-  const label = `v${index}`;
-  return { filter: `[0:v]${parts.join(",")}[${label}]`, label };
+  if (clip.kenBurns.enabled) {
+    parts.push(buildKenBurnsFilter(clip.kenBurns, targetW, targetH, clipTimelineDuration(clip)));
+  }
+
+  parts.push(`fps=30`);
+
+  return `[${inputIndex}:v]${parts.join(",")}[${label}]`;
 }
 
-function buildClipAudioFilter(clip: EditorClip, index: number): { filter: string; label: string } {
+function buildClipAudioFilter(
+  clip: EditorClip,
+  inputIndex: number,
+  label: string,
+  sourceHasAudio: boolean
+): string {
+  const dur = clipTimelineDuration(clip);
+  if (!sourceHasAudio) {
+    // Generate matched silent stereo audio for sources lacking an audio stream
+    return `anullsrc=r=44100:cl=stereo,atrim=duration=${dur.toFixed(3)}[${label}]`;
+  }
+
   const parts: string[] = [
-    `atrim=start=${clip.start.toFixed(3)}:end=${clip.end.toFixed(3)}`,
+    `atrim=start=${clip.sourceStart.toFixed(3)}:end=${clip.sourceEnd.toFixed(3)}`,
     `asetpts=PTS-STARTPTS`,
   ];
-
   const speed = Math.min(4, Math.max(0.25, clip.speed));
   if (speed !== 1) parts.push(buildAtempoFilter(speed));
-
   const effectiveVolume = clip.muted ? 0 : clip.volumePercent;
   if (effectiveVolume !== 100) parts.push(buildVolumeFilter(effectiveVolume));
-
-  const label = `a${index}`;
-  return { filter: `[0:a]${parts.join(",")}[${label}]`, label };
+  return `[${inputIndex}:a]${parts.join(",")}[${label}]`;
 }
 
-/** Builds a filter chain for one extra audio track (music/sfx), from its own input index. */
 function buildExtraAudioFilter(track: AudioTrack, inputIndex: number, label: string): string {
   const parts: string[] = [
     `atrim=start=${track.trimStart.toFixed(3)}:end=${track.trimEnd.toFixed(3)}`,
     `asetpts=PTS-STARTPTS`,
   ];
-
   const effectiveVolume = track.muted ? 0 : track.volumePercent;
   parts.push(buildVolumeFilter(effectiveVolume));
-
   const trackDuration = track.trimEnd - track.trimStart;
-  if (track.fadeInSeconds > 0) {
-    parts.push(`afade=t=in:st=0:d=${track.fadeInSeconds.toFixed(2)}`);
-  }
+  if (track.fadeInSeconds > 0) parts.push(`afade=t=in:st=0:d=${track.fadeInSeconds.toFixed(2)}`);
   if (track.fadeOutSeconds > 0) {
     const fadeStart = Math.max(0, trackDuration - track.fadeOutSeconds);
     parts.push(`afade=t=out:st=${fadeStart.toFixed(2)}:d=${track.fadeOutSeconds.toFixed(2)}`);
   }
-
-  // Delay this track so it starts at the right point on the main timeline.
   const delayMs = Math.round(track.timelineStart * 1000);
   parts.push(`adelay=${delayMs}|${delayMs}`);
-
   return `[${inputIndex}:a]${parts.join(",")}[${label}]`;
 }
 
 export async function exportEditorTimeline(
-  originalFile: File,
   clips: EditorClip[],
+  mediaItems: MediaBinItem[],
   ffmpeg: FFmpegBridge,
   dimensions: { width: number; height: number },
   onProgress?: ExportProgressCallback,
   audioTracks: AudioTrack[] = [],
-  textOverlays: TextOverlay[] = []
+  textOverlays: TextOverlay[] = [],
+  imageOverlays: ImageOverlay[] = []
 ): Promise<Blob> {
   if (clips.length === 0) throw new Error("Timeline is empty.");
 
   await ffmpeg.load();
-  onProgress?.("Loading video into engine...");
+  onProgress?.("Loading video sources into engine...");
 
-  const inputBytes = new Uint8Array(await originalFile.arrayBuffer());
-  await ffmpeg.writeFile(INPUT_NAME, inputBytes);
+  const usedSourceIds = Array.from(new Set(clips.map((c) => c.sourceId)));
+  const sourceInputIndex = new Map<string, number>();
+  const sourceInputNames = new Map<string, string>();
+  const sourceHasAudio = new Map<string, boolean>();
 
-  let hasAudio = false;
-  try {
-    const probeExit = await ffmpeg.exec([
-      "-y", "-i", INPUT_NAME, "-t", "0.1", "-map", "0:a:0", "-c", "copy", AUDIO_PROBE_NAME,
-    ]);
-    hasAudio = probeExit === 0;
-  } catch {
-    hasAudio = false;
+  for (let i = 0; i < usedSourceIds.length; i++) {
+    const sourceId = usedSourceIds[i];
+    const item = mediaItems.find((m) => m.id === sourceId);
+    if (!item) throw new Error(`Missing media source for a clip on the timeline.`);
+    const name = `botock_editor_src_${i}.mp4`;
+    await ffmpeg.writeFile(name, new Uint8Array(await item.file.arrayBuffer()));
+    sourceInputIndex.set(sourceId, i);
+    sourceInputNames.set(sourceId, name);
   }
-  try {
-    await ffmpeg.deleteFile(AUDIO_PROBE_NAME);
-  } catch {}
 
-  // Write extra audio tracks (music/sfx) into the FFmpeg filesystem.
+  // Detect which used sources have an audio stream
+  let hasAnyAudio = false;
+  for (const [sourceId, name] of sourceInputNames) {
+    const probeName = `${AUDIO_PROBE_PREFIX}${sourceId}.m4a`;
+    try {
+      const exit = await ffmpeg.exec(["-y", "-i", name, "-t", "0.1", "-map", "0:a:0", "-c", "copy", probeName]);
+      if (exit === 0) {
+        sourceHasAudio.set(sourceId, true);
+        hasAnyAudio = true;
+      } else {
+        sourceHasAudio.set(sourceId, false);
+      }
+    } catch {
+      sourceHasAudio.set(sourceId, false);
+    }
+    try { await ffmpeg.deleteFile(probeName); } catch {}
+  }
+
   const activeAudioTracks = audioTracks.filter((t) => !t.muted || t.volumePercent > 0);
   const trackInputNames: string[] = [];
   for (let i = 0; i < activeAudioTracks.length; i++) {
     const name = `botock_editor_track_${i}.dat`;
-    const bytes = new Uint8Array(await activeAudioTracks[i].file.arrayBuffer());
-    await ffmpeg.writeFile(name, bytes);
+    await ffmpeg.writeFile(name, new Uint8Array(await activeAudioTracks[i].file.arrayBuffer()));
     trackInputNames.push(name);
   }
 
-  // Write caption font if there are text overlays to burn in.
+  const imageInputNames: string[] = [];
+  for (let i = 0; i < imageOverlays.length; i++) {
+    const name = `botock_editor_img_${i}.png`;
+    await ffmpeg.writeFile(name, new Uint8Array(await imageOverlays[i].file.arrayBuffer()));
+    imageInputNames.push(name);
+  }
+
   let fontLoaded = false;
   if (textOverlays.length > 0) {
-    onProgress?.("Loading caption font...");
     try {
-      const fontBytes = await getEditorFontBytes();
-      await ffmpeg.writeFile(FONT_NAME, fontBytes);
+      await ffmpeg.writeFile(FONT_NAME, await getEditorFontBytes());
       fontLoaded = true;
     } catch {
-      fontLoaded = false; // fall back silently to no captions if font fetch fails
+      fontLoaded = false;
     }
   }
 
-  onProgress?.("Building render graph from clips...");
+  onProgress?.("Building render graph...");
 
   const targetW = Math.max(2, dimensions.width - (dimensions.width % 2));
   const targetH = Math.max(2, dimensions.height - (dimensions.height % 2));
+  const includeAudio = hasAnyAudio || activeAudioTracks.length > 0;
 
   const filterParts: string[] = [];
-  const concatInputs: string[] = [];
 
   clips.forEach((clip, index) => {
-    const { filter: vFilter, label: vLabel } = buildClipVideoFilter(clip, index, targetW, targetH);
-    filterParts.push(vFilter);
-
-    if (hasAudio) {
-      const { filter: aFilter, label: aLabel } = buildClipAudioFilter(clip, index);
-      filterParts.push(aFilter);
-      concatInputs.push(`[${vLabel}][${aLabel}]`);
-    } else {
-      concatInputs.push(`[${vLabel}]`);
+    const inputIdx = sourceInputIndex.get(clip.sourceId)!;
+    const clipHasAudio = sourceHasAudio.get(clip.sourceId) || false;
+    filterParts.push(buildClipVideoFilter(clip, inputIdx, `v${index}`, targetW, targetH));
+    if (includeAudio) {
+      filterParts.push(buildClipAudioFilter(clip, inputIdx, `a${index}`, clipHasAudio));
     }
   });
 
-  filterParts.push(
-    hasAudio
-      ? `${concatInputs.join("")}concat=n=${clips.length}:v=1:a=1[vconcat][aconcat]`
-      : `${concatInputs.join("")}concat=n=${clips.length}:v=1:a=0[vconcat]`
-  );
+  const usesAnyTransition = clips.some((c) => c.transitionOut !== "none");
 
-  // Burn in text overlays sequentially onto [vconcat].
-  let finalVideoLabel = "vconcat";
+  let finalVideoLabel: string;
+  let finalAudioLabel: string | null = null;
+
+  if (!usesAnyTransition || clips.length === 1) {
+    const concatInputs = clips.map((_, i) => (includeAudio ? `[v${i}][a${i}]` : `[v${i}]`)).join("");
+    filterParts.push(
+      includeAudio
+        ? `${concatInputs}concat=n=${clips.length}:v=1:a=1[vconcat][aconcat]`
+        : `${concatInputs}concat=n=${clips.length}:v=1:a=0[vconcat]`
+    );
+    finalVideoLabel = "vconcat";
+    if (includeAudio) finalAudioLabel = "aconcat";
+  } else {
+    let currentVLabel = "v0";
+    let currentALabel = includeAudio ? "a0" : null;
+    let currentDuration = clipTimelineDuration(clips[0]);
+
+    for (let i = 1; i < clips.length; i++) {
+      const prevClip = clips[i - 1];
+      const isRealTransition = prevClip.transitionOut !== "none";
+      const transDur = isRealTransition
+        ? Math.min(prevClip.transitionDuration, currentDuration * 0.9, clipTimelineDuration(clips[i]) * 0.9)
+        : 0.05;
+      const xfadeType = isRealTransition
+        ? XFADE_MAP[prevClip.transitionOut as Exclude<EditorClip["transitionOut"], "none">]
+        : "fade";
+      const offset = Math.max(0, currentDuration - transDur);
+
+      const outV = `vx${i}`;
+      filterParts.push(
+        `[${currentVLabel}][v${i}]xfade=transition=${xfadeType}:duration=${transDur.toFixed(3)}:offset=${offset.toFixed(3)}[${outV}]`
+      );
+      currentVLabel = outV;
+
+      if (includeAudio && currentALabel) {
+        const outA = `ax${i}`;
+        filterParts.push(`[${currentALabel}][a${i}]acrossfade=d=${transDur.toFixed(3)}[${outA}]`);
+        currentALabel = outA;
+      }
+
+      currentDuration = currentDuration + clipTimelineDuration(clips[i]) - transDur;
+    }
+
+    finalVideoLabel = currentVLabel;
+    finalAudioLabel = currentALabel;
+  }
+
+  // Burn in captions
   if (fontLoaded && textOverlays.length > 0) {
     textOverlays.forEach((overlay, i) => {
       const inLabel = finalVideoLabel;
@@ -197,12 +278,27 @@ export async function exportEditorTimeline(
     });
   }
 
-  // Mix extra audio tracks with the main concatenated audio.
-  let finalAudioLabel: string | null = hasAudio ? "aconcat" : null;
+  // Composite image overlays (stickers/logos/watermarks) on top
+  const imageInputBase = usedSourceIds.length + trackInputNames.length;
+  imageOverlays.forEach((overlay, i) => {
+    const inputIdx = imageInputBase + i;
+    const scaledLabel = `img${i}`;
+    const widthPx = Math.max(2, Math.round((overlay.widthPercent / 100) * targetW));
+    filterParts.push(`[${inputIdx}:v]${buildImageOverlayScaleFilter(widthPx, overlay.opacity)}[${scaledLabel}]`);
+
+    const xPx = Math.round((overlay.xPercent / 100) * targetW);
+    const yPx = Math.round((overlay.yPercent / 100) * targetH);
+    const inLabel = finalVideoLabel;
+    const outLabel = `vimg${i}`;
+    filterParts.push(`[${inLabel}][${scaledLabel}]${buildImageOverlayCompositeFilter(xPx, yPx, overlay.start, overlay.end)}[${outLabel}]`);
+    finalVideoLabel = outLabel;
+  });
+
+  // Mix in extra music/sfx tracks
   if (activeAudioTracks.length > 0) {
     const extraLabels: string[] = [];
     activeAudioTracks.forEach((track, i) => {
-      const inputIndex = i + 1; // input 0 is the main video
+      const inputIndex = usedSourceIds.length + i;
       const label = `atrack${i}`;
       filterParts.push(buildExtraAudioFilter(track, inputIndex, label));
       extraLabels.push(`[${label}]`);
@@ -219,9 +315,12 @@ export async function exportEditorTimeline(
 
   const filterComplex = filterParts.join(";");
 
-  const inputArgs: string[] = ["-i", INPUT_NAME];
+  const inputArgs: string[] = [];
+  usedSourceIds.forEach((sourceId) => inputArgs.push("-i", sourceInputNames.get(sourceId)!));
   trackInputNames.forEach((name) => inputArgs.push("-i", name));
+  imageInputNames.forEach((name) => inputArgs.push("-loop", "1", "-framerate", "30", "-i", name));
 
+  // ✅ OPTIMIZED: Use -preset ultrafast for snappy browser WASM render speeds
   const args = [
     "-y",
     ...inputArgs,
@@ -229,29 +328,25 @@ export async function exportEditorTimeline(
     "-map", `[${finalVideoLabel}]`,
     ...(finalAudioLabel ? ["-map", `[${finalAudioLabel}]`, "-c:a", "aac", "-b:a", "128k"] : ["-an"]),
     "-c:v", "libx264",
-    "-preset", "veryfast",
-    "-crf", "20",
+    "-preset", "ultrafast",
+    "-crf", "22",
     "-movflags", "+faststart",
     OUTPUT_NAME,
   ];
 
-  onProgress?.("Rendering final video...");
-  const exitCode = await ffmpeg.exec(args);
-  if (exitCode !== 0) {
-    throw new Error(`Export failed. FFmpeg exit code: ${exitCode}`);
-  }
+  try {
+    onProgress?.("Rendering final video...");
+    const exitCode = await ffmpeg.exec(args);
+    if (exitCode !== 0) throw new Error(`Export failed. FFmpeg exit code: ${exitCode}`);
 
-  const outputBytes = await ffmpeg.readFile(OUTPUT_NAME);
-  const blob = new Blob([outputBytes as unknown as BlobPart], { type: "video/mp4" });
-
-  try { await ffmpeg.deleteFile(INPUT_NAME); } catch {}
-  try { await ffmpeg.deleteFile(OUTPUT_NAME); } catch {}
-  for (const name of trackInputNames) {
-    try { await ffmpeg.deleteFile(name); } catch {}
+    const outputBytes = await ffmpeg.readFile(OUTPUT_NAME);
+    const blob = new Blob([outputBytes as unknown as BlobPart], { type: "video/mp4" });
+    return blob;
+  } finally {
+    for (const name of sourceInputNames.values()) { try { await ffmpeg.deleteFile(name); } catch {} }
+    for (const name of trackInputNames) { try { await ffmpeg.deleteFile(name); } catch {} }
+    for (const name of imageInputNames) { try { await ffmpeg.deleteFile(name); } catch {} }
+    if (fontLoaded) { try { await ffmpeg.deleteFile(FONT_NAME); } catch {} }
+    try { await ffmpeg.deleteFile(OUTPUT_NAME); } catch {}
   }
-  if (fontLoaded) {
-    try { await ffmpeg.deleteFile(FONT_NAME); } catch {}
-  }
-
-  return blob;
 }

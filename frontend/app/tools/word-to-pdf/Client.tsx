@@ -127,16 +127,31 @@ export default function WordToPdfClient() {
       // Form field name must strictly be 'file'
       formData.append("file", file);
 
-      const apiBase =
-        process.env.NEXT_PUBLIC_API_URL ||
-        process.env.NEXT_PUBLIC_BACKEND_URL ||
-        "http://localhost:8000";
-      const endpoint = `${apiBase.replace(/\/$/, "")}/api/convert/docx-to-pdf`;
+      const bypassHeaders = {
+        "Bypass-Tunnel-Reminder": "true",
+        "ngrok-skip-browser-warning": "true",
+      };
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        body: formData,
-      });
+      let response: Response;
+      try {
+        response = await fetch("/api/convert/docx-to-pdf", {
+          method: "POST",
+          body: formData,
+          headers: bypassHeaders,
+        });
+      } catch {
+        const apiBase =
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "http://localhost:8000";
+        const endpoint = `${apiBase.replace(/\/$/, "")}/api/convert/docx-to-pdf`;
+
+        response = await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+          headers: bypassHeaders,
+        });
+      }
 
       if (!response.ok) {
         let detailMessage = `Server error (${response.status}: ${

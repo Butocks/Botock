@@ -134,48 +134,38 @@ export default function VideoCompressClient() {
       return;
     }
 
-    const runFFmpegCommand = async (includeAudio: boolean) => {
+    try {
+      // ✅ FIXED: Single FFmpeg command with optional audio mapping (-map 0:a?)
+      // This handles both videos with AND without audio tracks in one pass.
+      // Previous code ran 2 full encodes when audio was absent (try+catch).
       const args = [
         "-i",
         "input.mp4",
+        "-map", "0:v",
+        "-map", "0:a?",   // "?" = optional — silently skipped if no audio stream
         "-c:v",
         "libx264",
         "-crf",
         String(clampedCrf),
         "-preset",
         "ultrafast",
+        "-c:a", "aac",
+        "-b:a", "128k",
       ];
 
       if (scaleFilter) {
-        args.push("-vf", scaleFilter);
-      }
-
-      if (includeAudio) {
-        args.push("-c:a", "aac", "-b:a", "128k");
-      } else {
-        args.push("-an");
+        args.splice(args.indexOf("-c:v"), 0, "-vf", scaleFilter);
       }
 
       args.push("output.mp4");
 
-      return await runFn({
+      const outputBlob = await runFn({
         inputFile: originalFile,
         inputFileName: "input.mp4",
         outputFileName: "output.mp4",
         outputMimeType: "video/mp4",
         args,
       });
-    };
-
-    try {
-      let outputBlob: Blob;
-      try {
-        outputBlob = await runFFmpegCommand(true);
-      } catch (audioErr: unknown) {
-        // Fallback for silent video
-        console.warn("Retrying compression without audio track:", audioErr);
-        outputBlob = await runFFmpegCommand(false);
-      }
 
       const url = URL.createObjectURL(outputBlob);
       setResultUrl(url);
@@ -185,6 +175,7 @@ export default function VideoCompressClient() {
       setErrorMsg(msg);
     }
   };
+
 
   // Metrics
   const originalBytes = originalFile ? originalFile.size : 0;

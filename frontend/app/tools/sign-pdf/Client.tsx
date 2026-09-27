@@ -58,6 +58,44 @@ export default function SignPdfClient() {
   const pageCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawing = useRef(false);
+  const isDraggingStamp = useRef(false);
+  const previewContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const handlePageClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDraggingStamp.current) return;
+    const canvas = pageCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    if (x >= 0 && x <= 100 && y >= 0 && y <= 100) {
+      setPlacedX(Math.round(x));
+      setPlacedY(Math.round(y));
+    }
+  };
+
+  const handleStampMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    isDraggingStamp.current = true;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDraggingStamp.current || !pageCanvasRef.current) return;
+      const rect = pageCanvasRef.current.getBoundingClientRect();
+      const x = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+      const y = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+      setPlacedX(Math.max(5, Math.min(95, Math.round(x))));
+      setPlacedY(Math.max(5, Math.min(95, Math.round(y))));
+    };
+
+    const onMouseUp = () => {
+      isDraggingStamp.current = false;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
 
   useEffect(() => {
     return () => {
@@ -243,9 +281,9 @@ export default function SignPdfClient() {
       const sigWidth = 160 * sigScale;
       const sigHeight = 65 * sigScale;
 
-      // Convert percentage coordinates to PDF page coordinates (PDF origin is bottom-left)
-      const xPos = (placedX / 100) * (pWidth - sigWidth);
-      const yPos = (1 - placedY / 100) * (pHeight - sigHeight);
+      // Convert percentage coordinates to PDF page coordinates (PDF origin is bottom-left, center-anchored)
+      const xPos = (placedX / 100) * pWidth - sigWidth / 2;
+      const yPos = (1 - placedY / 100) * pHeight - sigHeight / 2;
 
       targetPage.drawImage(signatureImage, {
         x: Math.max(0, xPos),
@@ -363,31 +401,49 @@ export default function SignPdfClient() {
                 </div>
               </div>
 
-              {/* PDF Preview Canvas with Interactive Stamp Overlay */}
-              <div className="relative border border-slate-200 dark:border-white/[0.08] rounded-2xl overflow-hidden bg-slate-100 dark:bg-black/30 flex justify-center p-2">
-                <canvas ref={pageCanvasRef} className="max-w-full shadow-lg rounded" />
+              {/* Placement instruction banner */}
+              <div className="flex items-center justify-between text-xs bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/25 px-4 py-2.5 rounded-xl">
+                <div className="flex items-center gap-2 font-semibold text-violet-700 dark:text-violet-300">
+                  <Sparkles className="w-4 h-4 shrink-0 text-violet-500" />
+                  <span>Click anywhere on the PDF page or drag the signature box to position it exactly where needed</span>
+                </div>
+                <span className="font-mono text-[11px] text-violet-600 dark:text-violet-400 font-bold">
+                  Pos: {placedX}%, {placedY}%
+                </span>
+              </div>
 
-                {/* Live Signature Stamp Overlay when viewing the target page */}
-                {currentPage === targetPageNumber && activeSignatureUrl && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: `${placedX}%`,
-                      top: `${placedY}%`,
-                      transform: `translate(-50%, -50%) scale(${sigScale})`,
-                    }}
-                    className="border-2 border-dashed border-violet-500 rounded p-1 bg-violet-500/10 cursor-move shadow-md"
-                  >
-                    <img
-                      src={activeSignatureUrl}
-                      alt="Signature Stamp"
-                      className="h-12 w-32 object-contain"
-                    />
-                    <div className="absolute -top-3 -right-3 w-5 h-5 bg-violet-600 rounded-full text-white flex items-center justify-center text-[10px]">
-                      <Move className="w-3 h-3" />
+              {/* PDF Preview Canvas with Interactive Stamp Overlay */}
+              <div className="relative border border-slate-200 dark:border-white/[0.08] rounded-2xl overflow-hidden bg-slate-100 dark:bg-black/30 flex justify-center p-3">
+                <div
+                  ref={previewContainerRef}
+                  onClick={handlePageClick}
+                  className="relative inline-block cursor-crosshair select-none shadow-xl rounded overflow-hidden"
+                >
+                  <canvas ref={pageCanvasRef} className="block max-w-full h-auto" />
+
+                  {/* Live Signature Stamp Overlay when viewing the target page */}
+                  {currentPage === targetPageNumber && activeSignatureUrl && (
+                    <div
+                      onMouseDown={handleStampMouseDown}
+                      style={{
+                        position: "absolute",
+                        left: `${placedX}%`,
+                        top: `${placedY}%`,
+                        transform: `translate(-50%, -50%) scale(${sigScale})`,
+                      }}
+                      className="border-2 border-dashed border-violet-500 rounded p-1 bg-violet-500/20 hover:bg-violet-500/30 cursor-grab active:cursor-grabbing shadow-lg select-none touch-none transition-shadow"
+                    >
+                      <img
+                        src={activeSignatureUrl}
+                        alt="Signature Stamp"
+                        className="h-12 w-32 object-contain pointer-events-none select-none"
+                      />
+                      <div className="absolute -top-3 -right-3 w-5 h-5 bg-violet-600 rounded-full text-white flex items-center justify-center text-[10px] shadow">
+                        <Move className="w-3 h-3" />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {resultUrl && (

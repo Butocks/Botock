@@ -156,11 +156,16 @@ user_daily_image_generations = defaultdict(list)
 
 def check_daily_image_quota(user: dict = Depends(get_current_user)):
     """
-    Enforces the Free Tier quota: 5 images / day.
-    Pro users bypass this limit.
+    Enforces the Free Tier photo quota.
+    Subscribers / Pro users get UNLIMITED photo generations without any quota deduction!
     """
     if user.get("is_pro"):
+        # Subscribers have UNLIMITED photo generations!
         return user
+
+    from app.routers.auth_otp import get_platform_settings
+    dynamic_quotas = get_platform_settings().get("quotas", {})
+    daily_limit = int(dynamic_quotas.get("free_daily_photos", settings.FREE_DAILY_IMAGE_LIMIT))
 
     user_id = user["user_id"]
     now = time.time()
@@ -171,10 +176,10 @@ def check_daily_image_quota(user: dict = Depends(get_current_user)):
     ]
 
     used_count = len(user_daily_image_generations[user_id])
-    if used_count >= settings.FREE_DAILY_IMAGE_LIMIT:
+    if used_count >= daily_limit:
         raise HTTPException(
             status_code=429,
-            detail=f"Daily free image limit reached ({settings.FREE_DAILY_IMAGE_LIMIT} images/day). Please upgrade to Botock Pro for unlimited generations."
+            detail=f"Daily free image limit reached ({daily_limit} images/day). Please upgrade to Botock Pro for unlimited generations."
         )
 
     user_daily_image_generations[user_id].append(now)

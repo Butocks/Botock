@@ -89,14 +89,17 @@ export default function VideoMuteClient() {
       // Fast stream copy without audio track
       args = ["-i", "input.mp4", "-c:v", "copy", "-an", "output.mp4"];
     } else {
-      // Reverse video and reverse audio track
+      // Reverse video frames with fast encoding
       args = [
         "-i",
         "input.mp4",
         "-vf",
         "reverse",
-        "-af",
-        "areverse",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-an",
         "output.mp4",
       ];
     }

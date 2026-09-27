@@ -125,12 +125,36 @@ export default function PdfToWordClient() {
     // Backend strictly requires form field name 'file'
     formData.append("file", file);
 
+    const bypassHeaders = {
+      "Bypass-Tunnel-Reminder": "true",
+      "ngrok-skip-browser-warning": "true",
+    };
+
     try {
-      const response = await fetch(`${apiBase}/api/convert/pdf-to-docx`, {
-        method: "POST",
-        body: formData,
-        signal: abortControllerRef.current.signal, // Request ke sath signal attach kar diya
-      });
+      // First attempt via internal Next.js API proxy to eliminate CORS & Tunnel 511 errors
+      let response: Response;
+      try {
+        response = await fetch("/api/convert/pdf-to-docx", {
+          method: "POST",
+          body: formData,
+          headers: bypassHeaders,
+          signal: abortControllerRef.current.signal,
+        });
+      } catch {
+        // Fallback to direct backend URL if internal proxy is unreachable
+        const directBase = (
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "http://localhost:8000"
+        ).replace(/\/$/, "");
+
+        response = await fetch(`${directBase}/api/convert/pdf-to-docx`, {
+          method: "POST",
+          body: formData,
+          headers: bypassHeaders,
+          signal: abortControllerRef.current?.signal,
+        });
+      }
 
       if (!response.ok) {
         let errorDetail = `Server error (${response.status}: ${response.statusText})`;

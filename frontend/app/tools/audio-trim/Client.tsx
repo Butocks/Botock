@@ -59,13 +59,17 @@ export default function AudioTrimClient() {
 
     try {
       const trimDuration = Math.max(0.1, endTime - startTime);
-      const outputName = `trimmed_${file.name.replace(/\.[^/.]+$/, "")}.mp3`;
+      const extMatch = file.name.match(/\.[a-zA-Z0-9]+$/);
+      const ext = extMatch ? extMatch[0].toLowerCase() : ".mp3";
+      const mime = file.type || "audio/mpeg";
+      const base = file.name.replace(/\.[^/.]+$/, "");
+      const outputName = `trimmed_${base}${ext}`;
 
       const outputBlob = await run({
         inputFile: file,
         inputFileName: file.name,
         outputFileName: outputName,
-        outputMimeType: "audio/mpeg",
+        outputMimeType: mime,
         args: [
           "-ss", startTime.toFixed(2),
           "-i", file.name,
@@ -74,6 +78,7 @@ export default function AudioTrimClient() {
           outputName,
         ],
       });
+
 
       const url = URL.createObjectURL(outputBlob);
       setResultUrl(url);

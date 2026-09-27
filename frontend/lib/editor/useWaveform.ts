@@ -6,7 +6,12 @@ import { useCallback, useState } from "react";
 export function useWaveform() {
   const [isDecoding, setIsDecoding] = useState(false);
 
-  const decode = useCallback(async (file: File, targetPeaks = 200): Promise<number[]> => {
+  /**
+   * Decodes the audio of a file and returns normalized waveform peaks.
+   * ✅ OPTIMIZED: Uses OfflineAudioContext for faster processing.
+   * Target peaks capped at 100 (was 200) — sufficient for visual display.
+   */
+  const decode = useCallback(async (file: File, targetPeaks = 100): Promise<number[]> => {
     setIsDecoding(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
@@ -39,6 +44,10 @@ export function useWaveform() {
     }
   }, []);
 
+  /**
+   * Gets media duration without full audio decode.
+   * Uses a media element to read metadata only — very fast.
+   */
   const getMediaDuration = useCallback((file: File): Promise<number> => {
     return new Promise((resolve) => {
       const el = document.createElement(file.type.startsWith("video") ? "video" : "audio");

@@ -98,15 +98,30 @@ export default function Client() {
       // Request body: FormData with field name strictly 'file'
       formData.append("file", file);
 
-      const apiBase =
-        process.env.NEXT_PUBLIC_API_URL ||
-        process.env.NEXT_PUBLIC_BACKEND_URL ||
-        "http://localhost:8000";
+      const bypassHeaders = {
+        "Bypass-Tunnel-Reminder": "true",
+        "ngrok-skip-browser-warning": "true",
+      };
 
-      const res = await fetch(`${apiBase.replace(/\/$/, "")}/api/convert/pdf-to-excel`, {
-        method: "POST",
-        body: formData,
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/convert/pdf-to-excel", {
+          method: "POST",
+          body: formData,
+          headers: bypassHeaders,
+        });
+      } catch {
+        const apiBase =
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "http://localhost:8000";
+
+        res = await fetch(`${apiBase.replace(/\/$/, "")}/api/convert/pdf-to-excel`, {
+          method: "POST",
+          body: formData,
+          headers: bypassHeaders,
+        });
+      }
 
       if (!res.ok) {
         let extractedDetail = "";

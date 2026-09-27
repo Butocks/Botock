@@ -1,11 +1,36 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Check, Zap, Sparkles, Shield, Crown } from "lucide-react";
+import { Check, Zap, Sparkles, Shield, Crown, Gift } from "lucide-react";
 import AdBanner from "../components/AdBanner";
+import { getBackendUrl } from "../../utils/runtime-urls";
 
 export default function PricingPage() {
-  const plans = [
+  const [plansList, setPlansList] = useState<any[]>([]);
+  const [promotion, setPromotion] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const backendUrl = getBackendUrl();
+        const res = await fetch(`${backendUrl}/api/public/platform-config`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.plans && data.plans.length > 0) setPlansList(data.plans);
+          if (data.promotions) setPromotion(data.promotions);
+        }
+      } catch (err) {
+        console.error("Failed to load pricing config:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPricing();
+  }, []);
+
+  const defaultPlans = [
     {
       name: "Free Tier",
       price: "$0",
@@ -14,9 +39,9 @@ export default function PricingPage() {
       badge: "Get Started",
       highlight: false,
       features: [
-        "3 AI Videos / Day (Omni 1.1 Flash 360p)",
+        "3 AI Videos / Day",
         "5 AI Photos / Day",
-        "24-Hour Media Storage (with Google Drive Export)",
+        "24-Hour Media Storage",
         "Access to in-browser Video & Photo Studio",
         "Standard generation queue",
         "Supported by non-intrusive ads",
@@ -40,7 +65,7 @@ export default function PricingPage() {
         "Email support",
       ],
       ctaText: "Upgrade to Tools Pro",
-      ctaHref: "/login?plan=tools",
+      ctaHref: "/signup?plan=tools",
     },
     {
       name: "AI Creator Pro",
@@ -50,9 +75,9 @@ export default function PricingPage() {
       badge: "Most Popular",
       highlight: true,
       features: [
-        "1,000 AI Generation Credits / month",
-        "Unlock Veo Lite, Veo Fast & Veo Quality models",
-        "720p & 1080p Full HD video generations",
+        "1,500 AI Video Generation Tokens / month",
+        "Unlimited AI Photo Generations (Nano Banana 2)",
+        "Unlock 720p & 1080p Full HD video generations",
         "Multi-scene Project Continuation",
         "Photo-to-Video & Image Reference inputs",
         "30-Day Video Retention in Library",
@@ -60,27 +85,11 @@ export default function PricingPage() {
         "100% Ad-Free on all tools & generators",
       ],
       ctaText: "Get Pro ($15/mo)",
-      ctaHref: "/login?plan=pro",
-    },
-    {
-      name: "Annual VIP",
-      price: "$100",
-      period: "per year",
-      desc: "Best value for serious creators. Save $80/year with 12,000 credits.",
-      badge: "Best Value (Save 45%)",
-      highlight: false,
-      features: [
-        "12,000 AI Credits / year",
-        "Everything in AI Creator Pro",
-        "Full commercial usage rights",
-        "Direct Google Drive cloud auto-sync",
-        "Highest priority GPU queue",
-        "24/7 dedicated support",
-      ],
-      ctaText: "Get Annual VIP ($100/yr)",
-      ctaHref: "/login?plan=annual",
+      ctaHref: "/signup?plan=pro",
     },
   ];
+
+  const activePlans = plansList.length > 0 ? plansList : defaultPlans;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
@@ -97,9 +106,34 @@ export default function PricingPage() {
         </p>
       </div>
 
+      {/* Promotion Gift Banner (If enabled by Admin) */}
+      {promotion && promotion.active && (
+        <div className="mb-10 p-5 rounded-2xl bg-gradient-to-r from-purple-900/30 via-indigo-900/30 to-violet-900/30 border border-purple-500/40 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300 shrink-0">
+              <Gift className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">{promotion.title}</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/30 text-purple-300 border border-purple-500/40">
+                  {promotion.badge}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">{promotion.banner_text}</p>
+            </div>
+          </div>
+          {promotion.code && (
+            <div className="px-3 py-1.5 rounded-lg bg-black/40 border border-purple-500/30 font-mono text-xs text-purple-300 font-bold shrink-0">
+              CODE: {promotion.code}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Pricing Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-        {plans.map((p, idx) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+        {activePlans.map((p: any, idx: number) => (
           <div
             key={idx}
             className={`rounded-2xl p-6 flex flex-col justify-between transition-all relative ${
@@ -131,7 +165,7 @@ export default function PricingPage() {
               </div>
 
               <div className="space-y-2.5 mb-8 border-t border-border/40 pt-6">
-                {p.features.map((f, i) => (
+                {p.features.map((f: string, i: number) => (
                   <div key={i} className="flex items-start gap-2.5 text-xs text-foreground/90">
                     <Check className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
                     <span>{f}</span>

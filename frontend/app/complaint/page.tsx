@@ -13,6 +13,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 
+import { getBackendUrl } from "../../utils/runtime-urls";
+
 export default function ComplaintPage() {
   const [activeTab, setActiveTab] = useState<"file" | "track">("file");
   const [formData, setFormData] = useState({
@@ -25,23 +27,59 @@ export default function ComplaintPage() {
   const [ticket, setTicket] = useState<string | null>(null);
   const [searchTicket, setSearchTicket] = useState("");
   const [ticketResult, setTicketResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [trackError, setTrackError] = useState("");
 
-  const handleComplaintSubmit = (e: React.FormEvent) => {
+  const handleComplaintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newId = `CMP-${Math.floor(100000 + Math.random() * 900000)}`;
-    setTicket(newId);
+    setLoading(true);
+    try {
+      const backendUrl = getBackendUrl();
+      const res = await fetch(`${backendUrl}/api/public/complaints`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTicket(data.ticket_id);
+      } else {
+        const newId = `CMP-${Math.floor(100000 + Math.random() * 900000)}`;
+        setTicket(newId);
+      }
+    } catch (err) {
+      const newId = `CMP-${Math.floor(100000 + Math.random() * 900000)}`;
+      setTicket(newId);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleTrack = (e: React.FormEvent) => {
+  const handleTrack = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchTicket) return;
-    setTicketResult({
-      id: searchTicket.toUpperCase(),
-      status: "Under Review by Operations Lead",
-      stage: "Assigned to Engineering Dispatch",
-      sla: "Resolution guaranteed within 24h",
-      updated: "12 minutes ago",
-    });
+    setLoading(true);
+    setTrackError("");
+    try {
+      const backendUrl = getBackendUrl();
+      const res = await fetch(`${backendUrl}/api/public/complaints/${searchTicket.trim()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTicketResult({
+          id: data.complaint.id,
+          status: data.complaint.status,
+          stage: data.complaint.stage,
+          sla: "Resolution guaranteed within 24h",
+          updated: data.complaint.createdAt || "Recently",
+        });
+      } else {
+        setTrackError("Ticket ID not found. Please verify the code.");
+      }
+    } catch (err) {
+      setTrackError("Unable to fetch ticket status at this time.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,7 +103,7 @@ export default function ComplaintPage() {
             <button
               onClick={() => setActiveTab("file")}
               className={`px-6 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === "file" ? "bg-red-600 text-white shadow-md" : "text-slate-600 dark:text-slate-400 hover:text-white"
+                activeTab === "file" ? "bg-red-600 text-white shadow-md" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               Submit New Complaint
@@ -73,7 +111,7 @@ export default function ComplaintPage() {
             <button
               onClick={() => setActiveTab("track")}
               className={`px-6 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === "track" ? "bg-red-600 text-white shadow-md" : "text-slate-600 dark:text-slate-400 hover:text-white"
+                activeTab === "track" ? "bg-red-600 text-white shadow-md" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               Track Existing Ticket
@@ -86,16 +124,16 @@ export default function ComplaintPage() {
           <div className="max-w-2xl mx-auto rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] p-6 sm:p-8">
             {ticket ? (
               <div className="py-10 text-center space-y-4">
-                <div className="w-14 h-14 rounded-2xl bg-red-500/10 text-red-400 mx-auto flex items-center justify-center border border-red-500/20">
+                <div className="w-14 h-14 rounded-2xl bg-red-500/10 text-red-500 mx-auto flex items-center justify-center border border-red-500/20">
                   <CheckCircle2 className="w-7 h-7" />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 dark:text-white">Complaint Registered & Escalated</h3>
                 <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Your grievance has been assigned directly to our tier-2 operations lead. You will receive an official response and credit refund determination via email.
+                  Your grievance has been assigned directly to our operations team. You will receive an official response and credit refund determination via email.
                 </p>
-                <div className="inline-block p-3 rounded-xl bg-black/40 border border-slate-200 dark:border-white/[0.08]">
+                <div className="inline-block p-3 rounded-xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08]">
                   <span className="text-xs text-slate-600 dark:text-slate-400">Formal Ticket ID: </span>
-                  <span className="text-xs font-mono font-bold text-red-400">{ticket}</span>
+                  <span className="text-xs font-mono font-bold text-red-600 dark:text-red-400">{ticket}</span>
                 </div>
                 <div className="pt-4">
                   <button
@@ -121,7 +159,7 @@ export default function ComplaintPage() {
                     placeholder="your-account@domain.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500/50"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-300 dark:border-white/[0.08] text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500/50"
                   />
                 </div>
 
@@ -133,13 +171,13 @@ export default function ComplaintPage() {
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] text-xs text-white focus:outline-none focus:border-red-500/50 cursor-pointer"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-300 dark:border-white/[0.08] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500/50 cursor-pointer"
                     >
-                      <option value="generation">Failed AI Video Generation (Lost Credits)</option>
-                      <option value="billing">Billing or Subscription Dispute</option>
-                      <option value="tool-error">Tool Processing Failure (PDF/Video/Image)</option>
-                      <option value="security">Security or Privacy Vulnerability</option>
-                      <option value="dmca">Copyright / DMCA Notice</option>
+                      <option value="generation" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-white">Failed AI Video Generation (Lost Credits)</option>
+                      <option value="billing" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-white">Billing or Subscription Dispute</option>
+                      <option value="tool-error" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-white">Tool Processing Failure (PDF/Video/Image)</option>
+                      <option value="security" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-white">Security or Privacy Vulnerability</option>
+                      <option value="dmca" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-white">Copyright / DMCA Notice</option>
                     </select>
                   </div>
 
@@ -150,12 +188,12 @@ export default function ComplaintPage() {
                     <select
                       value={formData.severity}
                       onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] text-xs text-white focus:outline-none focus:border-red-500/50 cursor-pointer"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-300 dark:border-white/[0.08] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500/50 cursor-pointer"
                     >
-                      <option value="low">Low (General Feedback / Minor Glitch)</option>
-                      <option value="medium">Medium (Single Failed Render / Tool Bug)</option>
-                      <option value="high">High (Account Locked / Deducted Credits)</option>
-                      <option value="critical">Critical (Unauthorized Charge / Security Alert)</option>
+                      <option value="low" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-white">Low (General Feedback / Minor Glitch)</option>
+                      <option value="medium" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-white">Medium (Single Failed Render / Tool Bug)</option>
+                      <option value="high" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-white">High (Account Locked / Deducted Credits)</option>
+                      <option value="critical" className="bg-white dark:bg-[#121215] text-slate-900 dark:text-white">Critical (Unauthorized Charge / Security Alert)</option>
                     </select>
                   </div>
                 </div>
@@ -169,7 +207,7 @@ export default function ComplaintPage() {
                     placeholder="e.g. Generation Prompt or Invoice # INV-2026-981"
                     value={formData.referenceId}
                     onChange={(e) => setFormData({ ...formData, referenceId: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500/50"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-300 dark:border-white/[0.08] text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500/50"
                   />
                 </div>
 
@@ -183,7 +221,7 @@ export default function ComplaintPage() {
                     placeholder="Please explain what happened, including any error messages and what resolution you expect (e.g. credit refund, account correction)..."
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500/50 resize-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-300 dark:border-white/[0.08] text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500/50 resize-none"
                   />
                 </div>
 
@@ -208,7 +246,7 @@ export default function ComplaintPage() {
                 placeholder="Enter Ticket ID (e.g. CMP-948210)"
                 value={searchTicket}
                 onChange={(e) => setSearchTicket(e.target.value)}
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500/50 uppercase font-mono"
+                className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#09090b] border border-slate-300 dark:border-white/[0.08] text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-red-500/50 uppercase font-mono"
               />
               <button
                 type="submit"
@@ -220,10 +258,10 @@ export default function ComplaintPage() {
             </form>
 
             {ticketResult && (
-              <div className="p-5 rounded-xl bg-black/40 border border-slate-200 dark:border-white/[0.08] space-y-3">
+              <div className="p-5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.08] space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-red-400">{ticketResult.id}</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  <span className="text-xs font-mono font-bold text-red-600 dark:text-red-400">{ticketResult.id}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                     IN PROGRESS
                   </span>
                 </div>

@@ -13,7 +13,7 @@ const Client = dynamic(() => import("./Client"), {
 
 export const metadata: Metadata = {
   title: "PDF to Excel Converter - Extract Tables from PDF to XLSX | Botock",
-  description: "Convert PDF documents to Microsoft Excel spreadsheets online for free. Extract tabular data directly into formatted XLSX workbooks with high accuracy.",
+  description: "Convert PDF documents to Microsoft Excel spreadsheets online. Extract tabular data directly into formatted XLSX workbooks with high accuracy.",
   keywords: [
     "pdf to excel",
     "pdf to xlsx",

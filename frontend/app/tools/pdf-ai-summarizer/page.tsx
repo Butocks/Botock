@@ -3,23 +3,23 @@ import ClientWrapper from "./ClientWrapper";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "AI PDF Summarizer Online Free - Summarize PDF Documents | Botock Tools",
+  title: "AI PDF Document Summarizer & Intelligence Synthesizer | Botock",
   description:
-    "Summarize long PDF documents, research papers, and reports into key bullet points and executive summaries online for free. Works directly in your browser with zero server uploads.",
+    "Extract executive summaries, key directives, actionable obligations, and question-answer pairs from PDF documents directly in your browser with zero server uploads.",
   keywords: [
     "ai pdf summarizer",
-    "summarize pdf online free",
+    "summarize pdf online",
     "pdf summary tool",
-    "condense pdf to bullet points",
-    "free ai pdf reader",
+    "executive pdf summary",
+    "pdf document intelligence",
     "botock tools",
   ],
   alternates: {
     canonical: "https://botock.com/tools/pdf-ai-summarizer",
   },
   openGraph: {
-    title: "AI PDF Summarizer Online Free - Botock Tools",
-    description: "Extract key takeaways and bullet points from PDF documents directly in your browser.",
+    title: "AI PDF Document Summarizer - Botock",
+    description: "Extract executive summaries and key takeaways from PDF documents directly in your browser.",
     url: "https://botock.com/tools/pdf-ai-summarizer",
     siteName: "Botock",
     type: "website",

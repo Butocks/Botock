@@ -16,6 +16,7 @@ import {
   Share2,
   Paperclip,
 } from "lucide-react";
+import { getBackendUrl } from "../../utils/runtime-urls";
 
 interface BlogPost {
   id: string;
@@ -106,11 +107,12 @@ export default function BlogPage() {
   const [posts, setPosts] = useState<BlogPost[]>(POSTS);
 
   useEffect(() => {
-    const loadBlogs = () => {
+    const loadBlogs = async () => {
       try {
-        const stored = localStorage.getItem("botock_custom_blogs");
-        if (stored) {
-          const customPosts: any[] = JSON.parse(stored);
+        const backendUrl = getBackendUrl();
+        const res = await fetch(`${backendUrl}/api/public/blogs`);
+        if (res.ok) {
+          const customPosts: any[] = await res.json();
           const formatted: BlogPost[] = customPosts.map((cp) => ({
             id: cp.id,
             title: cp.title,
@@ -131,16 +133,15 @@ export default function BlogPage() {
             attachmentName: cp.attachmentName,
             attachmentUrl: cp.attachmentUrl,
           }));
-          // Merge unique by ID
           const existingIds = new Set(formatted.map((p) => p.id));
           setPosts([...formatted, ...POSTS.filter((p) => !existingIds.has(p.id))]);
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error("Failed to fetch blogs:", e);
+      }
     };
 
     loadBlogs();
-    window.addEventListener("botock_blogs_updated", loadBlogs);
-    return () => window.removeEventListener("botock_blogs_updated", loadBlogs);
   }, []);
 
   const filteredPosts = posts.filter((post) => {

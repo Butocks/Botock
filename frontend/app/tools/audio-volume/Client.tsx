@@ -58,6 +58,8 @@ export default function AudioVolumeClient() {
         outputMimeType: "audio/mpeg",
         args: [
           "-i", file.name,
+          "-c:a", "libmp3lame",
+          "-b:a", "192k",
           "-filter:a", `volume=${volumeFactor}`,
           outputName,
         ],

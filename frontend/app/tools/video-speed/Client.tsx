@@ -127,71 +127,45 @@ export default function VideoSpeedClient() {
       return;
     }
 
-    const runWithMute = async () => {
-      const muteArgs = [
-        "-i",
-        "input.mp4",
-        "-vf",
-        videoFilter,
-        "-c:v",
-        "libx264",
-        "-preset",
-        "ultrafast",
-        "-an",
-        "output.mp4",
-      ];
-      return await runFn({
+    try {
+      let args: string[];
+
+      if (muteAudio) {
+        // User explicitly wants audio muted — simple video-only path
+        args = [
+          "-i", "input.mp4",
+          "-vf", videoFilter,
+          "-c:v", "libx264",
+          "-preset", "ultrafast",
+          "-an",
+          "output.mp4",
+        ];
+      } else {
+        const afString = buildAtempoFilter(clampedSpeed);
+        // ✅ FIXED: Single FFmpeg command with optional audio mapping (-map 0:a?)
+        // Previously: run with audio → catch → run without audio (2x processing)
+        // Now: one command handles both cases. If no audio stream, FFmpeg skips it.
+        args = [
+          "-i", "input.mp4",
+          "-map", "0:v",
+          "-map", "0:a?",             // optional — no error if no audio stream
+          "-vf", videoFilter,
+          "-c:v", "libx264",
+          "-preset", "ultrafast",
+          "-c:a", "aac",
+          "-b:a", "128k",
+          "-filter:a", afString,
+          "output.mp4",
+        ];
+      }
+
+      const outputBlob = await runFn({
         inputFile: originalFile,
         inputFileName: "input.mp4",
         outputFileName: "output.mp4",
         outputMimeType: "video/mp4",
-        args: muteArgs,
+        args,
       });
-    };
-
-    try {
-      let outputBlob: Blob;
-
-      if (muteAudio) {
-        outputBlob = await runWithMute();
-      } else {
-        const afString = buildAtempoFilter(clampedSpeed);
-        const filterComplex = `[0:v]${videoFilter}[v];[0:a]${afString}[a]`;
-        const audioArgs = [
-          "-i",
-          "input.mp4",
-          "-filter_complex",
-          filterComplex,
-          "-map",
-          "[v]",
-          "-map",
-          "[a]",
-          "-c:v",
-          "libx264",
-          "-preset",
-          "ultrafast",
-          "-c:a",
-          "aac",
-          "-b:a",
-          "128k",
-          "output.mp4",
-        ];
-
-        try {
-          outputBlob = await runFn({
-            inputFile: originalFile,
-            inputFileName: "input.mp4",
-            outputFileName: "output.mp4",
-            outputMimeType: "video/mp4",
-            args: audioArgs,
-          });
-        } catch (audioErr: unknown) {
-          // If video has no audio stream, automatically fall back to mute audio
-          console.warn("Audio processing failed, falling back to video-only:", audioErr);
-          setInfoNotice("No audio stream detected in video. Output video processed with audio muted.");
-          outputBlob = await runWithMute();
-        }
-      }
 
       const url = URL.createObjectURL(outputBlob);
       setResultUrl(url);
@@ -201,6 +175,7 @@ export default function VideoSpeedClient() {
       setErrorMsg(msg);
     }
   };
+
 
   const expectedDuration = duration > 0 ? duration / speed : 0;
   const isLargeFile = originalFile ? originalFile.size > 100 * 1024 * 1024 : false;

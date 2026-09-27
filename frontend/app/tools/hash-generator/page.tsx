@@ -3,22 +3,22 @@ import Client from "./Client";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "Hash Generator Online Free - SHA-256, SHA-512, MD5, SHA-1 | Botock Tools",
+  title: "Cryptographic Hash Generator & File Checksum - SHA-256, SHA-512, MD5 | Botock",
   description:
-    "Generate secure cryptographic hashes (SHA-256, SHA-512, MD5, SHA-1) online for free. Works directly in your browser with zero file or text uploads.",
+    "Generate verified cryptographic hashes (SHA-256, SHA-512, MD5, SHA-1) and file checksums with zero server uploads.",
   keywords: [
     "hash generator",
-    "sha256 generator online free",
+    "sha256 generator online",
     "md5 checksum generator",
     "sha512 hash generator",
-    "hash text online browser",
+    "reverse hash lookup",
     "botock tools",
   ],
   alternates: {
     canonical: "https://botock.com/tools/hash-generator",
   },
   openGraph: {
-    title: "Hash Generator Online Free - Botock Tools",
+    title: "Cryptographic Hash Generator & File Checksum - Botock",
     description: "Generate SHA-256, SHA-512, MD5, and SHA-1 cryptographic hashes directly in your browser.",
     url: "https://botock.com/tools/hash-generator",
     siteName: "Botock",

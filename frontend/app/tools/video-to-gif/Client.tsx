@@ -93,7 +93,7 @@ export default function VideoToGifClient() {
     setResultUrl(null);
 
     const scaleFilter = width === "-1" ? "" : `scale=${width}:-1:flags=lanczos,`;
-    const filter = `fps=${fps},${scaleFilter}split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer`;
+    const filter = `[0:v]fps=${fps},${scaleFilter}split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer`;
 
     const clipDuration = Math.max(0.5, endTime - startTime);
 
@@ -104,12 +104,13 @@ export default function VideoToGifClient() {
       String(clipDuration),
       "-i",
       "input_video.mp4",
-      "-vf",
+      "-filter_complex",
       filter,
       "-loop",
       "0",
       "output.gif",
     ];
+
 
     if (!run) {
       setErrorMsg("FFmpeg engine is initializing. Please try again.");

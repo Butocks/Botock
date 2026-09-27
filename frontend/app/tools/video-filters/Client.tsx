@@ -86,9 +86,12 @@ export default function VideoFiltersClient() {
         outputMimeType: "video/mp4",
         args: [
           "-i", file.name,
+          "-map", "0:v",
+          "-map", "0:a?",         // ✅ optional audio — handles silent videos without error
           "-vf", eqFilter,
-          "-c:a", "copy",
+          "-c:v", "libx264",      // ✅ explicit H.264 encoder
           "-preset", "ultrafast",
+          "-c:a", "copy",         // lossless audio stream copy
           "filtered.mp4",
         ],
       });

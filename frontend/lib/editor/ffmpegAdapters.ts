@@ -3,6 +3,8 @@
 // Extracted here so the Video Editor calls the exact same functions
 // instead of duplicating filter strings.
 
+import { CropRect, KenBurnsConfig } from "./types";
+
 export function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -53,10 +55,6 @@ export function buildVolumeFilter(volumePercent: number) {
   return `volume=${factor.toFixed(2)}`;
 }
 
-
-
-// ── append to existing ffmpegAdapters.ts ──
-
 /** Escapes text for safe use inside an FFmpeg drawtext filter argument. */
 export function escapeDrawtext(text: string): string {
   return text
@@ -100,4 +98,65 @@ export function buildDrawtextFilter(params: {
     `y=${yExpr}`,
     `enable='between(t,${params.start.toFixed(2)},${params.end.toFixed(2)})'`,
   ].join(":");
-} 
+}
+
+/** Static crop using normalized (0..1) rect — expressions reference the live frame size,
+ * so no numeric probing of the clip's actual resolution is needed. */
+export function buildCropFilter(rect: CropRect): string {
+  const w = clamp(rect.width, 0.05, 1);
+  const h = clamp(rect.height, 0.05, 1);
+  const x = clamp(rect.x, 0, 1 - w);
+  const y = clamp(rect.y, 0, 1 - h);
+
+  return [
+    `crop=w='trunc(iw*${w.toFixed(4)}/2)*2'`,
+    `h='trunc(ih*${h.toFixed(4)}/2)*2'`,
+    `x='trunc(iw*${x.toFixed(4)}/2)*2'`,
+    `y='trunc(ih*${y.toFixed(4)}/2)*2'`,
+  ].join(":");
+}
+
+const KEN_BURNS_TARGETS: Record<KenBurnsConfig["direction"], [number, number]> = {
+  center: [0.5, 0.5],
+  "top-left": [0, 0],
+  "top-right": [1, 0],
+  "bottom-left": [0, 1],
+  "bottom-right": [1, 1],
+};
+
+/** Time-varying pan/zoom (Ken Burns) applied on a frame already at the target canvas size.
+ * `duration` is the clip's post-speed timeline duration in seconds. */
+export function buildKenBurnsFilter(config: KenBurnsConfig, targetW: number, targetH: number, duration: number): string {
+  const dur = Math.max(0.1, duration);
+  const [tx, ty] = KEN_BURNS_TARGETS[config.direction];
+  const zStart = clamp(config.startZoom, 1, 3);
+  const zEnd = clamp(config.endZoom, 1, 3);
+
+  const zoomExpr = `(${zStart.toFixed(3)}+(${(zEnd - zStart).toFixed(3)})*min(1\\,t/${dur.toFixed(3)}))`;
+
+  const scale = [
+    `scale=w='trunc(iw*${zoomExpr}/2)*2'`,
+    `h='trunc(ih*${zoomExpr}/2)*2'`,
+    `eval=frame`,
+  ].join(":");
+
+  const xExpr = `max(0\\,min(in_w-out_w\\,trunc((in_w-out_w)*(0.5+(${tx - 0.5})*min(1\\,t/${dur.toFixed(3)})))))`;
+  const yExpr = `max(0\\,min(in_h-out_h\\,trunc((in_h-out_h)*(0.5+(${ty - 0.5})*min(1\\,t/${dur.toFixed(3)})))))`;
+
+  const crop = `crop=w=${targetW}:h=${targetH}:x='${xExpr}':y='${yExpr}'`;
+
+  return `${scale},${crop}`;
+}
+
+/** Scales an overlay image to a fixed width (preserving aspect) and optionally applies opacity. */
+export function buildImageOverlayScaleFilter(widthPx: number, opacity: number): string {
+  const parts = [`scale=${widthPx}:-2`];
+  if (opacity < 1) {
+    parts.push(`format=rgba`, `colorchannelmixer=aa=${clamp(opacity, 0, 1).toFixed(2)}`);
+  }
+  return parts.join(",");
+}
+
+export function buildImageOverlayCompositeFilter(xPx: number, yPx: number, start: number, end: number): string {
+  return `overlay=x=${xPx}:y=${yPx}:enable='between(t,${start.toFixed(2)},${end.toFixed(2)})'`;
+}

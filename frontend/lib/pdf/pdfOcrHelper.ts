@@ -198,6 +198,34 @@ export async function processPdfOcr(
 
       const p = pagesToProcess[i];
       const pageBaseProgress = Math.round((i / totalToProcess) * 90) + 5;
+
+      // ── Fast Path: Check if page already has digital text layer ──
+      const pdfPage = await pdfDoc.getPage(p);
+      const textContent = await pdfPage.getTextContent();
+      const directText = textContent.items
+        .map((item: any) => (item && typeof item.str === "string" ? item.str : ""))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      // If page already has rich digital text (> 30 chars), extract instantly without heavy OCR
+      if (directText.length > 30) {
+        pages.push({
+          pageNumber: p,
+          text: directText,
+          confidence: 100,
+        });
+        onProgress?.({
+          currentPage: p,
+          totalPages,
+          status: `Extracted digital text from page ${p} of ${totalPages}...`,
+          progress: pageBaseProgress + Math.round((0.9 / totalToProcess) * 90),
+        });
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        continue;
+      }
+
+      // ── Scanned Page Fallback: Render canvas and run Tesseract OCR ──
       onProgress?.({
         currentPage: p,
         totalPages,
@@ -205,7 +233,8 @@ export async function processPdfOcr(
         progress: pageBaseProgress,
       });
 
-      const canvas = await renderPdfPageToCanvas(pdfDoc, p, 2.0);
+      // Optimized scale: 1.5 provides high-fidelity OCR with ~44% fewer pixels than 2.0 (1.8x faster)
+      const canvas = await renderPdfPageToCanvas(pdfDoc, p, 1.5);
 
       if (cancelSignal?.cancelled) {
         canvas.width = 0;

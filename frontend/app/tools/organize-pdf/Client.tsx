@@ -70,38 +70,49 @@ export default function OrganizePdfClient() {
         });
 
         const doc = await loadingTask.promise;
-        const pageList: PageCard[] = [];
 
-        for (let i = 1; i <= doc.numPages; i++) {
-          const page = await doc.getPage(i);
-          const viewport = page.getViewport({ scale: 0.35 });
-          const canvas = document.createElement("canvas");
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext("2d");
+        // ✅ PROGRESSIVE: Show page tiles immediately with placeholders
+        const initialPages: PageCard[] = Array.from({ length: doc.numPages }, (_, i) => ({
+          id: `page-${i + 1}-${Date.now()}-${Math.random()}`,
+          originalIndex: i,
+          thumbnailUrl: "",
+          rotation: 0,
+        }));
+        setPages(initialPages);
+        setIsLoading(false);
 
-          if (ctx) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            const thumbUrl = canvas.toDataURL("image/jpeg", 0.7);
+        // Generate visual thumbnails progressively in background
+        (async () => {
+          for (let i = 1; i <= doc.numPages; i++) {
+            try {
+              const page = await doc.getPage(i);
+              const viewport = page.getViewport({ scale: 0.35 });
+              const canvas = document.createElement("canvas");
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              const ctx = canvas.getContext("2d");
 
-            pageList.push({
-              id: `page-${i}-${Date.now()}-${Math.random()}`,
-              originalIndex: i - 1,
-              thumbnailUrl: thumbUrl,
-              rotation: 0,
-            });
+              if (ctx) {
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                const thumbUrl = canvas.toDataURL("image/jpeg", 0.7);
+
+                setPages((prev) =>
+                  prev.map((p, idx) => (idx === i - 1 ? { ...p, thumbnailUrl: thumbUrl } : p))
+                );
+              }
+            } catch (renderErr) {
+              console.warn(`Could not render thumbnail for page ${i}:`, renderErr);
+            }
           }
-        }
-
-        setPages(pageList);
+        })();
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         setErrorMsg(msg || "Failed to load PDF pages.");
-      } finally {
         setIsLoading(false);
       }
+
     }
   }, []);
 
@@ -300,15 +311,19 @@ export default function OrganizePdfClient() {
                   >
                     {/* Page Thumbnail with Rotation */}
                     <div className="aspect-[3/4] w-full bg-white rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center relative p-1">
-                      <img
-                        src={card.thumbnailUrl}
-                        alt={`Page ${idx + 1}`}
-                        style={{
-                          transform: `rotate(${card.rotation}deg)`,
-                          transition: "transform 0.2s ease",
-                        }}
-                        className="max-h-full max-w-full object-contain"
-                      />
+                      {card.thumbnailUrl ? (
+                        <img
+                          src={card.thumbnailUrl}
+                          alt={`Page ${idx + 1}`}
+                          style={{
+                            transform: `rotate(${card.rotation}deg)`,
+                            transition: "transform 0.2s ease",
+                          }}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      ) : (
+                        <Loader2 className="w-5 h-5 text-violet-500 animate-spin opacity-40" />
+                      )}
                       <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/75 text-white font-mono text-[10px]">
                         #{idx + 1}
                       </span>

@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import video, image
+from app.routers import video, image, convert, auth_otp
 from app.config import settings
 from app.services.google_auth import ensure_valid_session
 from app.services.cleanup_service import purge_expired_videos
@@ -67,6 +67,8 @@ app.add_middleware(
 
 app.include_router(video.router)
 app.include_router(image.router)
+app.include_router(convert.router)
+app.include_router(auth_otp.router)
 
 
 @app.get("/")

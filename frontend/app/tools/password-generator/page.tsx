@@ -3,14 +3,14 @@ import Client from "./Client";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "Secure Password Generator Online Free - High Entropy Random Passwords | Botock Tools",
+  title: "Password Generator & Hacker Time-to-Crack Calculator | Botock",
   description:
-    "Generate strong, random, cryptographically secure passwords online for free with custom symbols, numbers, and length directly in your browser.",
+    "Generate strong cryptographically secure passwords and Diceware passphrases with real-time brute force cracking time analysis directly in your browser.",
   keywords: [
     "secure password generator",
-    "random password creator",
-    "password generator free online",
-    "strong password maker",
+    "password strength calculator",
+    "time to crack password",
+    "diceware passphrase generator",
     "crypto password generator browser",
     "botock tools",
   ],
@@ -18,8 +18,8 @@ export const metadata: Metadata = {
     canonical: "https://botock.com/tools/password-generator",
   },
   openGraph: {
-    title: "Secure Password Generator Online Free - Botock Tools",
-    description: "Generate high-entropy secure passwords directly in your browser with zero server storage.",
+    title: "Password Generator & Hacker Time-to-Crack Calculator - Botock",
+    description: "Generate high-entropy secure passwords and calculate brute force crack time.",
     url: "https://botock.com/tools/password-generator",
     siteName: "Botock",
     type: "website",

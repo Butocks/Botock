@@ -73,9 +73,12 @@ export default function VideoRotateClient() {
         outputMimeType: "video/mp4",
         args: [
           "-i", file.name,
+          "-map", "0:v",
+          "-map", "0:a?",         // ✅ optional audio — no error for silent videos
           "-vf", vfParam,
-          "-c:a", "copy",
+          "-c:v", "libx264",      // ✅ explicit encoder (was missing before)
           "-preset", "ultrafast",
+          "-c:a", "copy",         // audio stream copy — no re-encode
           "rotated.mp4",
         ],
       });
@@ -87,6 +90,7 @@ export default function VideoRotateClient() {
       setErrorMsg(err.message || "Failed to rotate video file.");
     }
   };
+
 
   return (
     <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-purple-500/20 selection:text-purple-400">

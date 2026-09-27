@@ -77,14 +77,48 @@ export default function PdfProtectClient() {
     setErrorMsg(null);
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("password", password);
 
-      // pdf-lib document save with permissions or encrypted bytes
-      const pdfBytes = await pdfDoc.save();
+      const bypassHeaders = {
+        "Bypass-Tunnel-Reminder": "true",
+        "ngrok-skip-browser-warning": "true",
+      };
 
-      // Note: pdf-lib pure WASM creates a clean sanitized PDF. To apply standard user password:
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+      let response: Response;
+      try {
+        response = await fetch("/api/convert/pdf-protect", {
+          method: "POST",
+          body: formData,
+          headers: bypassHeaders,
+        });
+      } catch {
+        const directBase = (
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "http://localhost:8000"
+        ).replace(/\/$/, "");
+
+        response = await fetch(`${directBase}/api/convert/pdf-protect`, {
+          method: "POST",
+          body: formData,
+          headers: bypassHeaders,
+        });
+      }
+
+      if (!response.ok) {
+        let errStr = `Encryption failed (HTTP ${response.status})`;
+        try {
+          const errJson = await response.json();
+          if (errJson?.detail) errStr = errJson.detail;
+        } catch {
+          // fallback
+        }
+        throw new Error(errStr);
+      }
+
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
 
       setResultUrl(url);

@@ -3,13 +3,13 @@ import { Lock, ShieldCheck } from "lucide-react";
 import PdfProtectClient from "./Client";
 
 export const metadata: Metadata = {
-  title: "Password Protect PDF Online Free - Encrypt PDF - Botock",
+  title: "Password Protect PDF - 256-Bit AES Encryption | Botock",
   description:
-    "Secure your PDF files with password protection and encryption directly in your browser. 100% private, client-side WASM processing with zero server uploads.",
+    "Secure your PDF files with standard 256-bit AES password protection and encryption compliant with Adobe Acrobat.",
   openGraph: {
-    title: "Password Protect PDF Online Free - Botock",
+    title: "Password Protect PDF - Botock",
     description:
-      "Encrypt and protect PDF documents with password security locally in your browser.",
+      "Encrypt and protect PDF documents with AES password security.",
     type: "website",
   },
   keywords: [

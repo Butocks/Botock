@@ -95,7 +95,8 @@ export default function AudioConverterClient() {
     const config = FORMAT_CONFIG[targetFormat];
     const outName = `output.${config.ext}`;
 
-    const args: string[] = ["-i", "input_audio"];
+    // ✅ -vn ensures video stream is stripped when converting video inputs to audio
+    const args: string[] = ["-i", "input_audio", "-vn"];
 
     if (config.codec !== "copy") {
       args.push("-c:a", config.codec);

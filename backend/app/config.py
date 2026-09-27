@@ -19,6 +19,19 @@ class Settings(BaseSettings):
     SECRET_KEY: str = ""
     SUPABASE_JWT_SECRET: str = ""
 
+    # Admin Security & Auth
+    ADMIN_EMAILS: str = "butoameerali@gmail.com,creator@botock.ai,owner@botock.com,admin@botock.com"
+    ADMIN_LOGIN_SECRET: str = "948201"
+    ADMIN_OTP_EXPIRY_MINUTES: int = 10
+    ADMIN_MAX_OTP_CYCLES: int = 3
+
+    # SMTP / Email Settings (falls back to local terminal OTP delivery)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "security@botock.ai"
+
     # Concurrency & Operational Limits
     MAX_BROWSER_INSTANCES: int = 2
     MAX_FFMPEG_WORKERS: int = 1

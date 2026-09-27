@@ -59,6 +59,8 @@ export default function VideoVolumeClient() {
         args: [
           "-i", file.name,
           "-c:v", "copy", // Lossless video stream copy
+          "-c:a", "aac",  // Robust audio encoding for MP4 output
+          "-b:a", "192k",
           "-filter:a", `volume=${volumeFactor}`,
           "volume_adjusted.mp4",
         ],
@@ -205,7 +207,7 @@ export default function VideoVolumeClient() {
                 <div className="space-y-3">
                   <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span>Volume adjusted! Video stream copied losslessly in 0ms.</span>
+                    <span>Volume adjusted! Video stream copied losslessly without re-encoding.</span>
                   </div>
                   <a
                     href={resultUrl}

@@ -939,41 +939,16 @@ ToolRegistry.registerTool({
   ],
 });
 
-ToolRegistry.registerTool({
-  id: "extract-archive",
-  name: "Archive (ZIP) Extractor",
-  description: "Inspect, browse, preview, and extract files from ZIP archives in-browser with zero server uploads.",
-  category: "pdf",
-  seoTitle: "Extract ZIP Online Free - Unzip Files in Browser - Botock",
-  seoDescription: "Open, preview, and extract ZIP archives directly in your browser with zero server uploads.",
-  endpoint: "/tools/extract-archive",
-  isClientSideOnly: true,
-  parameters: [
-    {
-      name: "file",
-      type: "file",
-      description: "Input ZIP archive",
-      required: true,
-    },
-  ],
-  outputs: [
-    {
-      name: "files",
-      type: "object",
-      description: "Extracted archive file records",
-    },
-  ],
-});
 
 ToolRegistry.registerTool({
   id: "pdf-protect",
   name: "Password Protect PDF",
   description: "Encrypt and password protect PDF documents locally in your browser with custom security keys.",
   category: "pdf",
-  seoTitle: "Password Protect PDF Online Free - Encrypt PDF - Botock",
+  seoTitle: "Password Protect PDF - Encrypt PDF - Botock",
   seoDescription: "Secure your PDF files with password protection and encryption directly in your browser.",
   endpoint: "/tools/pdf-protect",
-  isClientSideOnly: true,
+  isClientSideOnly: false,
   parameters: [
     {
       name: "file",
@@ -1420,33 +1395,6 @@ ToolRegistry.registerTool({
   ]
 });
 
-ToolRegistry.registerTool({
-  id: "image-to-base64",
-  name: "Image to Base64",
-  description: "Convert images to Base64 strings, Data URIs, HTML img tags, and CSS background snippets.",
-  category: "image",
-  seoTitle: "Convert Image to Base64 Online Free - Botock",
-  seoDescription: "Convert images to Base64 code and Data URIs directly in your browser.",
-  endpoint: "/tools/image-to-base64",
-  isClientSideOnly: true,
-  parameters: [
-    { name: "file", type: "file", description: "Image file", required: true }
-  ]
-});
-
-ToolRegistry.registerTool({
-  id: "base64-to-image",
-  name: "Base64 to Image",
-  description: "Decode raw Base64 strings or Data URIs into downloadable JPG, PNG, or WebP image files.",
-  category: "image",
-  seoTitle: "Convert Base64 to Image Online Free - Botock",
-  seoDescription: "Convert Base64 strings to downloadable images directly in your browser.",
-  endpoint: "/tools/base64-to-image",
-  isClientSideOnly: true,
-  parameters: [
-    { name: "base64String", type: "string", description: "Base64 string or Data URI", required: true }
-  ]
-});
 
 ToolRegistry.registerTool({
   id: "image-color-picker",
@@ -1482,7 +1430,7 @@ ToolRegistry.registerTool({
   name: "Cryptographic Hash Generator",
   description: "Generate SHA-256, SHA-512, and MD5 hashes via native hardware WebCrypto API.",
   category: "ai",
-  seoTitle: "Hash Generator Online Free - Botock",
+  seoTitle: "Cryptographic Hash Generator - Botock",
   seoDescription: "Generate SHA-256, SHA-512, MD5, and SHA-1 cryptographic hashes directly in your browser.",
   endpoint: "/tools/hash-generator",
   isClientSideOnly: true,
@@ -1496,7 +1444,7 @@ ToolRegistry.registerTool({
   name: "Secure Password Generator",
   description: "Generate cryptographically secure random passwords using CSPRNG bytes in browser.",
   category: "ai",
-  seoTitle: "Secure Password Generator Online Free - Botock",
+  seoTitle: "Secure Password Generator & Crack Time Calculator - Botock",
   seoDescription: "Generate high-entropy secure passwords directly in your browser with zero server storage.",
   endpoint: "/tools/password-generator",
   isClientSideOnly: true,

@@ -58,11 +58,11 @@ export default function VideoConvertClient() {
 
       const args = [
         "-i", file.name,
-        "-preset", "ultrafast",
       ];
 
       if (selectedOption.vcodec !== "copy") {
-        args.push("-c:v", selectedOption.vcodec);
+        // ✅ -preset only makes sense when actually encoding (not stream copying)
+        args.push("-c:v", selectedOption.vcodec, "-preset", "ultrafast");
       } else {
         args.push("-c:v", "copy");
       }
@@ -88,6 +88,7 @@ export default function VideoConvertClient() {
       setErrorMsg(err.message || "Failed to convert video container format.");
     }
   };
+
 
   return (
     <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-rose-500/20 selection:text-rose-400">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { EditorClip, cloneClips, createClip } from "./types";
+import { EditorClip, cloneClips, createClip, getTimelinePositions } from "./types";
 
 const MIN_CLIP_DURATION = 0.05;
 
@@ -21,30 +21,48 @@ export function useEditorTimeline() {
     setRedoStack([]);
   }, []);
 
-  const initFromDuration = useCallback((duration: number) => {
-    const clip = createClip(0, duration);
+  /** Start a brand-new timeline from a single source's full duration. */
+  const initFromSource = useCallback((sourceId: string, duration: number) => {
+    const clip = createClip(sourceId, 0, duration);
     setClips([clip]);
     setSelectedClipId(clip.id);
     setUndoStack([]);
     setRedoStack([]);
   }, []);
 
+  /** Append a new clip (from any media-bin source) to the end of the timeline. */
+  const appendClipFromSource = useCallback(
+    (sourceId: string, sourceStart: number, sourceEnd: number) => {
+      setClips((prev) => {
+        pushHistory(prev);
+        const clip = createClip(sourceId, sourceStart, sourceEnd);
+        setSelectedClipId(clip.id);
+        return [...prev, clip];
+      });
+    },
+    [pushHistory]
+  );
+
   const selectedClip = clips.find((c) => c.id === selectedClipId) || null;
 
+  /** Split whichever clip contains `virtualTime` (timeline seconds). */
   const splitAt = useCallback(
-    (time: number) => {
+    (virtualTime: number) => {
       setClips((prev) => {
-        const target = prev.find(
-          (c) => time > c.start + MIN_CLIP_DURATION && time < c.end - MIN_CLIP_DURATION
+        const positions = getTimelinePositions(prev);
+        const hit = positions.find(
+          (p) => virtualTime > p.timelineStart + MIN_CLIP_DURATION && virtualTime < p.timelineEnd - MIN_CLIP_DURATION
         );
-        if (!target) return prev;
+        if (!hit) return prev;
 
         pushHistory(prev);
 
-        const first: EditorClip = { ...target, id: `${Date.now()}-a`, end: time, filters: { ...target.filters } };
-        const second: EditorClip = { ...target, id: `${Date.now()}-b`, start: time, filters: { ...target.filters } };
+        const localSplit = hit.clip.sourceStart + (virtualTime - hit.timelineStart) * hit.clip.speed;
 
-        const next = prev.flatMap((c) => (c.id === target.id ? [first, second] : [c]));
+        const first: EditorClip = { ...hit.clip, id: `${Date.now()}-a`, sourceEnd: localSplit, filters: { ...hit.clip.filters }, transitionOut: "none" };
+        const second: EditorClip = { ...hit.clip, id: `${Date.now()}-b`, sourceStart: localSplit, filters: { ...hit.clip.filters } };
+
+        const next = prev.flatMap((c) => (c.id === hit.clip.id ? [first, second] : [c]));
         setSelectedClipId(second.id);
         return next;
       });
@@ -85,13 +103,7 @@ export function useEditorTimeline() {
   const reorderClip = useCallback(
     (fromIndex: number, toIndex: number) => {
       setClips((prev) => {
-        if (
-          fromIndex < 0 ||
-          toIndex < 0 ||
-          fromIndex >= prev.length ||
-          toIndex >= prev.length ||
-          fromIndex === toIndex
-        ) {
+        if (fromIndex < 0 || toIndex < 0 || fromIndex >= prev.length || toIndex >= prev.length || fromIndex === toIndex) {
           return prev;
         }
         pushHistory(prev);
@@ -116,13 +128,13 @@ export function useEditorTimeline() {
     [pushHistory]
   );
 
-  // Live edge-drag: no history spam while dragging.
-  const updateClipEdgeLive = useCallback((id: string, side: "start" | "end", time: number, duration: number) => {
+  /** Live edge-drag in LOCAL source time (since clip may not start the timeline at 0). */
+  const updateClipEdgeLive = useCallback((id: string, side: "start" | "end", localTime: number, sourceDuration: number) => {
     setClips((prev) =>
       prev.map((c) => {
         if (c.id !== id) return c;
-        if (side === "start") return { ...c, start: clampNum(time, 0, c.end - MIN_CLIP_DURATION) };
-        return { ...c, end: clampNum(time, c.start + MIN_CLIP_DURATION, duration) };
+        if (side === "start") return { ...c, sourceStart: clampNum(localTime, 0, c.sourceEnd - MIN_CLIP_DURATION) };
+        return { ...c, sourceEnd: clampNum(localTime, c.sourceStart + MIN_CLIP_DURATION, sourceDuration) };
       })
     );
   }, []);
@@ -174,7 +186,8 @@ export function useEditorTimeline() {
     selectedClipId,
     setSelectedClipId,
     selectedClip,
-    initFromDuration,
+    initFromSource,
+    appendClipFromSource,
     splitAt,
     deleteClip,
     duplicateClip,

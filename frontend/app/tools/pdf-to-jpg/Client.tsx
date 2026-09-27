@@ -79,31 +79,41 @@ export default function PdfToJpgClient() {
         const doc = await loadingTask.promise;
         setPdfDoc(doc);
 
-        const pageList: PageItem[] = [];
+        // ✅ PROGRESSIVE: Show page grid immediately with placeholders
+        const initialPages: PageItem[] = Array.from({ length: doc.numPages }, (_, idx) => ({
+          pageNumber: idx + 1,
+          thumbnailUrl: "",
+          selected: true,
+        }));
+        setPages(initialPages);
+        setIsLoading(false);
 
-        // Generate fast low-res thumbnails for UI grid preview
-        for (let i = 1; i <= doc.numPages; i++) {
-          const page = await doc.getPage(i);
-          const viewport = page.getViewport({ scale: 0.35 });
-          const canvas = document.createElement("canvas");
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext("2d");
+        // Generate fast low-res thumbnails progressively in background
+        (async () => {
+          for (let i = 1; i <= doc.numPages; i++) {
+            try {
+              const page = await doc.getPage(i);
+              const viewport = page.getViewport({ scale: 0.35 });
+              const canvas = document.createElement("canvas");
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              const ctx = canvas.getContext("2d");
 
-          if (ctx) {
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            const thumbUrl = canvas.toDataURL("image/jpeg", 0.7);
-            pageList.push({
-              pageNumber: i,
-              thumbnailUrl: thumbUrl,
-              selected: true,
-            });
+              if (ctx) {
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                const thumbUrl = canvas.toDataURL("image/jpeg", 0.7);
+                setPages((prev) =>
+                  prev.map((p) => (p.pageNumber === i ? { ...p, thumbnailUrl: thumbUrl } : p))
+                );
+              }
+            } catch (renderErr) {
+              console.warn(`Could not render thumbnail for page ${i}:`, renderErr);
+            }
           }
-        }
+        })();
 
-        setPages(pageList);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("password") || msg.includes("Password")) {
@@ -325,11 +335,15 @@ export default function PdfToJpgClient() {
                         }`}
                       >
                         <div className="aspect-[3/4] w-full bg-white rounded-lg overflow-hidden flex items-center justify-center border border-slate-200">
-                          <img
-                            src={item.thumbnailUrl}
-                            alt={`Page ${item.pageNumber}`}
-                            className="w-full h-full object-contain"
-                          />
+                          {item.thumbnailUrl ? (
+                            <img
+                              src={item.thumbnailUrl}
+                              alt={`Page ${item.pageNumber}`}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <Loader2 className="w-5 h-5 text-amber-500 animate-spin opacity-40" />
+                          )}
                         </div>
 
                         <div className="flex items-center justify-between w-full px-2 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300">
