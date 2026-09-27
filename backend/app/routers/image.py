@@ -21,6 +21,14 @@ def validate_uuid(val: str):
         raise HTTPException(status_code=400, detail="Invalid generation ID format.")
 
 
+# ----------------------------------------------------
+# SECURITY LAYER 1: Concurrency Limiter
+# Prevents server crash and cross-session race conditions
+# ----------------------------------------------------
+MAX_CONCURRENT_IMAGE_GENERATIONS = 2
+image_generation_semaphore = asyncio.Semaphore(MAX_CONCURRENT_IMAGE_GENERATIONS)
+
+
 async def safe_image_generate_task(
     prompt: str,
     generation_id: str,
@@ -30,16 +38,17 @@ async def safe_image_generate_task(
     image_base64: str = None,
     is_pro: bool = False,
 ):
-    await image_service.generate_image(
-        prompt=prompt,
-        generation_id=generation_id,
-        status_dict=image_statuses,
-        aspect_ratio=aspect_ratio,
-        model=model,
-        image_base64=image_base64,
-        style=style,
-        is_pro=is_pro,
-    )
+    async with image_generation_semaphore:
+        await image_service.generate_image(
+            prompt=prompt,
+            generation_id=generation_id,
+            status_dict=image_statuses,
+            aspect_ratio=aspect_ratio,
+            model=model,
+            image_base64=image_base64,
+            style=style,
+            is_pro=is_pro,
+        )
 
 
 @router.post("/generate", response_model=ImageGenerateResponse)

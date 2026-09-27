@@ -48,8 +48,6 @@ class FlowService:
         self.videos_dir = settings.VIDEOS_DIR
         self.images_dir = settings.IMAGES_DIR
         self.debug_dir = settings.DEBUG_DIR
-        self.current_project_url = None
-        self.project_scene_count = 0
         os.makedirs(self.videos_dir, exist_ok=True)
         os.makedirs(self.images_dir, exist_ok=True)
         os.makedirs(self.debug_dir, exist_ok=True)
@@ -101,10 +99,12 @@ class FlowService:
 
     async def _ensure_studio_page(self, page, generation_id: str, status_dict: dict):
         """
-        Guarantees that the browser is inside an active Flow Studio project,
+        Guarantees that the browser is inside an active fresh Flow Studio project,
         dismisses any explore/onboarding modals, and returns the ProseMirror prompt editor.
+        CRITICAL: Never falls back to an existing project — this shared account requires
+        strict project isolation to prevent cross-user content or tile leaks.
         """
-        logger.info(f"[{generation_id}] Navigating to Flow for fresh project session...")
+        logger.info(f"[{generation_id}] Navigating to Flow for fresh isolated project...")
         status_dict[generation_id]["message"] = "Connecting to Flow Studio..."
         await page.goto("https://flow.google.com", timeout=settings.PAGE_LOAD_TIMEOUT * 1000, wait_until="domcontentloaded")
         await asyncio.sleep(3)
@@ -114,28 +114,30 @@ class FlowService:
             raise Exception("Google Flow session expired. Please re-run authentication.")
 
         new_btn = page.locator('button:has-text("New project"), button:has-text("Start Creating"), [aria-label*="New project" i]').first
-        if await new_btn.is_visible(timeout=3000):
-            await new_btn.click()
-            await page.wait_for_url("**/project/**", timeout=20000)
-        else:
-            proj_link = page.locator('a[aria-label="Open project"], a[href*="/project/"]').first
-            if await proj_link.is_visible(timeout=3000):
-                await proj_link.click()
-                await page.wait_for_url("**/project/**", timeout=15000)
+        if not await new_btn.is_visible(timeout=8000):
+            # Check for inner span if button tag varies
+            new_btn = page.locator('span:has-text("New project")').first
 
-        self.current_project_url = page.url
-        self.project_scene_count = 0
+        if not await new_btn.is_visible(timeout=4000):
+            await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_no_new_project_btn.png"))
+            raise Exception(
+                "Could not find 'New project' button — refusing to fall back to an "
+                "existing project to guarantee complete generation isolation."
+            )
+
+        await new_btn.click()
+        await page.wait_for_url("**/project/**", timeout=25000)
 
         # Dismiss explore tools / onboarding overlay if open
-        back_btn = page.locator('button[aria-label*="Back button" i], button:has-text("arrow_back")').first
+        back_btn = page.locator('button[aria-label*="Back button" i], button:has-text("arrow_back"), [aria-label*="Back" i]').first
         if await back_btn.is_visible(timeout=2000):
             await back_btn.click()
             await asyncio.sleep(1)
 
-        all_media_btn = page.locator('button:has-text("All media"), div:has-text("All media")').first
-        if await all_media_btn.is_visible(timeout=2000):
+        all_media_btn = page.locator('text="All media"').first
+        if await all_media_btn.is_visible(timeout=3000):
             await all_media_btn.click()
-            await asyncio.sleep(1)
+            await asyncio.sleep(1.5)
 
         prompt_input = page.locator('.ProseMirror, [contenteditable="true"]').first
         await prompt_input.wait_for(state="visible", timeout=25000)
@@ -324,6 +326,13 @@ class FlowService:
             await page.keyboard.type(formatted_prompt, delay=15)
             await asyncio.sleep(0.8)
 
+            # Baseline: record existing video tiles before submitting this prompt
+            existing_video_tiles = await page.evaluate("""() => {
+                return Array.from(document.querySelectorAll('img[alt*="video" i], video'))
+                    .map(el => el.currentSrc || el.src || '')
+                    .filter(Boolean);
+            }""")
+
             # Submit
             status_dict[generation_id]["message"] = "Submitting prompt to Flow AI..."
             generate_btn = page.locator('button[aria-label*="Start generation" i], .generate-icon-button, button[type="submit"]').first
@@ -375,9 +384,22 @@ class FlowService:
                         already_opened = True
                         break
 
-                    logger.info(f"[{generation_id}] Checking if video tile finished rendering...")
-                    await page.mouse.click(350, 250)
-                    await asyncio.sleep(2.5)
+                    # Look specifically for a tile that was NOT in our baseline
+                    new_tile = None
+                    for tile in await page.locator('img[alt*="video" i], video').all():
+                        src = await tile.evaluate("el => el.currentSrc || el.src || ''")
+                        if src and src not in existing_video_tiles:
+                            new_tile = tile
+                            break
+
+                    if new_tile:
+                        logger.info(f"[{generation_id}] Found new video tile! Opening viewer...")
+                        await new_tile.click()
+                        await asyncio.sleep(2)
+                    else:
+                        # Fallback click
+                        await page.mouse.click(350, 250)
+                        await asyncio.sleep(2)
 
                     if await dl_btn.is_visible():
                         video_ready = True
@@ -388,14 +410,13 @@ class FlowService:
 
             # Download MP4
             status_dict[generation_id]["message"] = "Downloading your video..."
-            file_path = await self._download_video(page, generation_id, already_opened=already_opened)
+            file_path = await self._download_video(page, generation_id, already_opened=already_opened, existing_video_tiles=existing_video_tiles)
 
             status_dict[generation_id].update({
                 "status": "completed",
                 "download_url": f"/api/video/download/{generation_id}",
                 "message": "Video generated successfully!"
             })
-            self.project_scene_count += 1
             await context.storage_state(path=self.session_path)
 
         except Exception as e:
@@ -409,12 +430,23 @@ class FlowService:
             await browser.close()
             await p.stop()
 
-    async def _download_video(self, page, generation_id: str, already_opened: bool = False) -> str:
+    async def _download_video(self, page, generation_id: str, already_opened: bool = False, existing_video_tiles: list = None) -> str:
         file_path = os.path.join(self.videos_dir, f"{generation_id}.mp4")
         dl_btn = page.locator('button[aria-label*="Download media" i], button[aria-label*="Download" i]').first
 
         if not already_opened or not await dl_btn.is_visible():
-            await page.mouse.click(350, 250)
+            new_tile = None
+            if existing_video_tiles is not None:
+                for tile in await page.locator('img[alt*="video" i], video').all():
+                    src = await tile.evaluate("el => el.currentSrc || el.src || ''")
+                    if src and src not in existing_video_tiles:
+                        new_tile = tile
+                        break
+
+            if new_tile:
+                await new_tile.click()
+            else:
+                await page.mouse.click(350, 250)
             await asyncio.sleep(2.5)
 
         if not await dl_btn.is_visible(timeout=8000):
@@ -506,14 +538,12 @@ class FlowService:
                 status_dict[generation_id]["message"] = "Uploading image ingredient..."
                 await self._upload_ingredient(page, image_base64, generation_id)
 
-            # Capture existing images on canvas
-            initial_count = await page.evaluate("() => document.querySelectorAll('img[alt*=\"image\"], img.image').length")
-            initial_first_src = await page.evaluate("""() => {
-                const tile = document.querySelector('img[alt*="image"], img.image');
-                return tile ? tile.src : "";
-            }""")
+            # Baseline: record existing image tiles before submitting
             existing_imgs = await page.evaluate("""() => {
-                return Array.from(document.querySelectorAll('img')).map(i => i.src).filter(s => s.includes('asb/') || s.includes('googleusercontent.com'));
+                return Array.from(document.querySelectorAll('img'))
+                    .filter(i => (i.alt || '').toLowerCase().includes('image'))
+                    .map(i => i.src)
+                    .filter(Boolean);
             }""")
 
             # Enter Prompt
@@ -567,10 +597,18 @@ class FlowService:
                     logger.info(f"[{generation_id}] Checking if image finished...")
                     dl_btn = page.locator('button[aria-label*="Download" i]').first
                     if not await dl_btn.is_visible():
-                        tiles = await page.locator('img[alt*="user\'s image"], img[alt*="image"]').all()
-                        if tiles:
-                            await tiles[0].click()
+                        new_tile = None
+                        for img_el in await page.locator('img[alt*="image" i]').all():
+                            src = await img_el.get_attribute("src") or ""
+                            if src and src not in existing_imgs:
+                                new_tile = img_el
+                                break
+
+                        if new_tile:
+                            logger.info(f"[{generation_id}] Found new image tile! Clicking to open viewer...")
+                            await new_tile.click()
                         else:
+                            logger.info(f"[{generation_id}] Waiting for new image tile to appear on canvas...")
                             await page.mouse.click(250, 200)
                         await asyncio.sleep(2)
 
@@ -603,7 +641,6 @@ class FlowService:
                 "download_url": download_url,
                 "image_url": download_url,
             })
-            self.project_scene_count += 1
             await context.storage_state(path=self.session_path)
 
         except Exception as e:
@@ -618,8 +655,6 @@ class FlowService:
             await p.stop()
 
     async def reset_session(self):
-        self.current_project_url = None
-        self.project_scene_count = 0
         return {"status": "success", "message": "Session reset successfully."}
 
 
