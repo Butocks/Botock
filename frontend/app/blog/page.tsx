@@ -32,79 +32,12 @@ interface BlogPost {
   attachmentUrl?: string;
 }
 
-const POSTS: BlogPost[] = [
-  {
-    id: "mastering-ai-video-prompts",
-    title: "Mastering AI Video Prompts: How to Get Cinematic Motion in Google Flow",
-    excerpt: "Learn the exact prompt structures, camera motion hints, and lighting modifiers that transform basic text descriptions into Hollywood-grade 4–10 second footage.",
-    category: "ai",
-    categoryLabel: "Generative AI",
-    categoryColor: "bg-violet-500/20 text-violet-300 border-violet-500/30",
-    readTime: "5 min read",
-    date: "Sep 18, 2026",
-    author: "Botock VFX Lab",
-  },
-  {
-    id: "compress-pdf-without-quality-loss",
-    title: "How to Compress Heavy PDF Files by 80% Without Losing Vector Clarity",
-    excerpt: "Detailed breakdown of JBIG2 vs Flate compression algorithms and how in-browser PDF optimization preserves readable fonts for email and corporate submissions.",
-    category: "pdf",
-    categoryLabel: "PDF Workflows",
-    categoryColor: "bg-rose-500/20 text-rose-300 border-rose-500/30",
-    readTime: "4 min read",
-    date: "Sep 15, 2026",
-    author: "Document Engineering Team",
-  },
-  {
-    id: "webp-vs-png-modern-web-perf",
-    title: "Next-Gen WebP vs PNG: Why High-Traffic Sites Are Upgrading",
-    excerpt: "Comparing lossy and lossless WebP image compression benchmarks against standard PNGs. Save bandwidth and boost Google Core Web Vitals scores effortlessly.",
-    category: "image",
-    categoryLabel: "Image Tech",
-    categoryColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-    readTime: "6 min read",
-    date: "Sep 12, 2026",
-    author: "Performance Lab",
-  },
-  {
-    id: "browser-video-editing-zero-lag",
-    title: "The Zero-Latency Workflow: Trimming & Color Grading in Modern Browsers",
-    excerpt: "How WebCodecs and HTML5 canvas APIs enable real-time video cutting, speed manipulation, and frame filtering without waiting for multi-gigabyte server uploads.",
-    category: "video",
-    categoryLabel: "Video Studio",
-    categoryColor: "bg-sky-500/20 text-sky-300 border-sky-500/30",
-    readTime: "7 min read",
-    date: "Sep 08, 2026",
-    author: "Botock Studio Team",
-  },
-  {
-    id: "nano-banana-pro-aspect-ratios",
-    title: "Choosing the Right Aspect Ratio: 16:9 vs 9:16 for Viral Content",
-    excerpt: "Mastering composition and focal point framing for Instagram Reels, YouTube Shorts, and widescreen desktop cinema when generating images with Nano Banana.",
-    category: "ai",
-    categoryLabel: "Generative AI",
-    categoryColor: "bg-violet-500/20 text-violet-300 border-violet-500/30",
-    readTime: "4 min read",
-    date: "Sep 04, 2026",
-    author: "Creative Operations",
-  },
-  {
-    id: "aes-256-pdf-encryption-guide",
-    title: "Securing Financial Documents: Military-Grade AES-256 PDF Protection",
-    excerpt: "Why standard password locks fail and how Botock's client-side AES-256 cryptographic wrapper protects sensitive legal contracts from unauthorized decryption.",
-    category: "pdf",
-    categoryLabel: "Security & PDF",
-    categoryColor: "bg-rose-500/20 text-rose-300 border-rose-500/30",
-    readTime: "5 min read",
-    date: "Aug 29, 2026",
-    author: "Cybersecurity Desk",
-  },
-];
+const POSTS: BlogPost[] = [];
 
 export default function BlogPage() {
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
-  const [posts, setPosts] = useState<BlogPost[]>(POSTS);
+  const [posts, setPosts] = useState<BlogPost[]>([]);
 
   useEffect(() => {
     const loadBlogs = async () => {
@@ -133,8 +66,7 @@ export default function BlogPage() {
             attachmentName: cp.attachmentName,
             attachmentUrl: cp.attachmentUrl,
           }));
-          const existingIds = new Set(formatted.map((p) => p.id));
-          setPosts([...formatted, ...POSTS.filter((p) => !existingIds.has(p.id))]);
+          setPosts(formatted);
         }
       } catch (e) {
         console.error("Failed to fetch blogs:", e);
@@ -231,19 +163,19 @@ export default function BlogPage() {
                 </span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 hover:text-violet-300 transition-colors cursor-pointer">
-                {POSTS[0].title}
+                {filteredPosts[0].title}
               </h2>
               <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
-                {POSTS[0].excerpt}
+                {filteredPosts[0].excerpt}
               </p>
               <div className="flex items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
-                <span>By {POSTS[0].author}</span>
+                <span>By {filteredPosts[0].author}</span>
                 <span>•</span>
-                <span>{POSTS[0].date}</span>
+                <span>{filteredPosts[0].date}</span>
               </div>
             </div>
             <Link
-              href={`/blog/${POSTS[0].id}`}
+              href={`/blog/${filteredPosts[0].id}`}
               className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition-all shadow-md shadow-violet-600/20 flex items-center gap-2 cursor-pointer flex-shrink-0"
             >
               <span>Read Full Tutorial</span>

@@ -7,7 +7,6 @@ import { getBackendUrl } from "../../../utils/runtime-urls";
 import {
   ShieldAlert,
   ShieldCheck,
-  Lock,
   Mail,
   KeyRound,
   ArrowRight,

@@ -1,22 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getBackendUrl } from "../../utils/runtime-urls";
 import {
   Activity,
-  Server,
-  Users,
   ShieldAlert,
   ShieldCheck,
   Lock,
-  Unlock,
   KeyRound,
   LogOut,
   Terminal,
-  ArrowRight,
-  Eye,
   Sliders,
   FileText,
   Trash2,
@@ -24,8 +18,6 @@ import {
   Globe,
   Zap,
   Sparkles,
-  Paperclip,
-  Clock,
   Search,
   CheckCircle2,
   AlertTriangle,
@@ -35,7 +27,6 @@ import {
   FileCheck,
   Briefcase,
   Layers,
-  ChevronDown,
 } from "lucide-react";
 
 interface BlockItem {

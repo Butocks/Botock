@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 
 interface AdBannerProps {
   slotId?: string;
@@ -30,26 +29,21 @@ export default function AdBanner({
 
   return (
     <div
-      className={`mx-auto flex flex-col items-center justify-center rounded-xl border border-border/40 bg-card/30 p-2 text-center overflow-hidden transition-all ${formatClasses[format]}`}
+      className={`mx-auto flex flex-col items-center justify-center overflow-hidden transition-all ${formatClasses[format]}`}
       aria-label="Advertisement"
     >
-      <span className="text-[10px] tracking-widest text-muted-foreground uppercase mb-1">
-        Sponsored
-      </span>
-
-      {/* AdSense slot placeholder (ready for client ad snippet) */}
-      <div className="w-full flex-1 flex items-center justify-center rounded-lg border border-dashed border-border/50 bg-background/50 p-2">
-        <div className="text-xs text-muted-foreground flex items-center gap-2">
-          <span>Ad Space</span>
-          <span className="text-primary/70">·</span>
-          <Link
-            href="/pricing"
-            className="text-primary hover:underline font-medium text-[11px]"
-          >
-            Go Ad-Free with Botock Pro ($5/mo)
-          </Link>
-        </div>
-      </div>
+      {/* 
+        Google AdSense will inject the ad here once approved.
+        For now, this remains an empty, invisible container to preserve layout.
+      */}
+      <ins
+        className="adsbygoogle"
+        style={{ display: "block", width: "100%", height: "100%" }}
+        data-ad-client="ca-pub-XXXXXXXXXXXXXX" // Replace when AdSense is approved
+        data-ad-slot={slotId}
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      ></ins>
     </div>
   );
 }

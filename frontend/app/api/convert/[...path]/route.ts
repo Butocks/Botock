@@ -15,9 +15,12 @@ export async function POST(
       process.env.BACKEND_INTERNAL_URL ||
       process.env.BACKEND_URL ||
       process.env.NEXT_PUBLIC_BACKEND_URL ||
-      process.env.NEXT_PUBLIC_API_URL ||
-      "http://127.0.0.1:8000"
-    ).replace(/\/$/, "");
+      process.env.NEXT_PUBLIC_API_URL
+    )?.replace(/\/$/, "");
+
+    if (!backendUrl) {
+      throw new Error("Backend URL is not configured. Please set NEXT_PUBLIC_API_URL.");
+    }
 
     const targetUrl = `${backendUrl}/api/convert/${subpath}`;
 

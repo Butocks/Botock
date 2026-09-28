@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     SUPABASE_JWT_SECRET: str = ""
 
     # Admin Security & Auth
-    ADMIN_EMAILS: str = "butoameerali@gmail.com,creator@botock.ai,owner@botock.com,admin@botock.com"
-    ADMIN_LOGIN_SECRET: str = "948201"
+    ADMIN_EMAILS: str = ""
+    ADMIN_LOGIN_SECRET: str = ""
     ADMIN_OTP_EXPIRY_MINUTES: int = 10
     ADMIN_MAX_OTP_CYCLES: int = 3
 

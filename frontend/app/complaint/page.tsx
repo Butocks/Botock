@@ -1,16 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   AlertCircle,
-  ShieldCheck,
-  FileCheck,
   Send,
   Search,
   CheckCircle2,
-  Clock,
-  HelpCircle,
 } from "lucide-react";
 
 import { getBackendUrl } from "../../utils/runtime-urls";

@@ -18,13 +18,6 @@ import {
   User as UserIcon,
   Menu,
   X,
-  ArrowRight,
-  Camera,
-  Layers,
-  FileSpreadsheet,
-  FileArchive,
-  Music,
-  Maximize2,
   Wand2,
   ShieldCheck,
 } from "lucide-react";

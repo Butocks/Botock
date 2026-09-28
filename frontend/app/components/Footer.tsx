@@ -10,8 +10,6 @@ import {
   FileText,
   Video,
   Grid,
-  ShieldCheck,
-  Zap,
   Lock,
   Mail,
   Briefcase,

@@ -74,30 +74,13 @@ def get_current_user(
         except Exception as e:
             decode_errors.append(f"Base64 secret error: {e}")
 
-    # Try 3: Supabase JWT structures from official client
+    # If both Try 1 and Try 2 failed, the token is invalid
     if not payload:
-        try:
-            # Decode token without signature verification to inspect structure
-            unverified_payload = jwt.decode(jwt_token, options={"verify_signature": False})
-            iss = unverified_payload.get("iss", "")
-            sub = unverified_payload.get("sub") or unverified_payload.get("id")
-            
-            # If token was genuinely issued by Supabase for this project or supabase instance
-            if "supabase" in iss and sub:
-                logger.info(f"Verified Supabase user session for user {sub} via JWT claims inspection.")
-                payload = unverified_payload
-            else:
-                logger.warning(f"JWT signature verification failed: {decode_errors}")
-                raise HTTPException(
-                    status_code=401,
-                    detail="Invalid or forged authentication token. Please sign out and sign in again to refresh your session."
-                )
-        except Exception as e:
-            logger.warning(f"JWT decode failed: {decode_errors}, unverified error: {e}")
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid or forged authentication token. Please sign out and sign in again to refresh your session."
-            )
+        logger.warning(f"JWT signature verification failed: {decode_errors}")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or forged authentication token. Please sign out and sign in again to refresh your session."
+        )
 
     user_id = payload.get("sub") or payload.get("id")
     email = payload.get("email", "")
