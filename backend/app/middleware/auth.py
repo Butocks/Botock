@@ -84,6 +84,10 @@ def get_current_user(
             detail="Invalid or forged authentication token. Please sign out and sign in again to refresh your session."
         )
 
+    iss = payload.get("iss", "")
+    if "supabase" not in iss:
+        raise HTTPException(status_code=401, detail="Untrusted JWT issuer.")
+
     user_id = payload.get("sub") or payload.get("id")
     email = payload.get("email", "")
     role = payload.get("role", "authenticated")

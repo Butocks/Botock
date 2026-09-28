@@ -21,9 +21,7 @@ COMPLAINTS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "sessio
 JOBS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "jobs.json")
 BLOGS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "blogs.json")
 SESSION_TOKENS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "admin_tokens.json")
-
-# In-memory OTP storage: email -> { otp, expires_at, attempts_left, purpose }
-otp_store: Dict[str, Dict[str, Any]] = {}
+OTP_STORE_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "otp_store.json")
 
 # ----------------------------------------------------
 # Persistence Helpers
@@ -245,11 +243,14 @@ class BlogPostCreate(BaseModel):
 # ----------------------------------------------------
 # Admin Auth Dependency
 # ----------------------------------------------------
+import hashlib
+
 def verify_admin_token(x_admin_token: Optional[str] = Header(None)) -> str:
     if not x_admin_token:
         raise HTTPException(status_code=401, detail="Admin authorization token missing.")
     tokens = _read_json(SESSION_TOKENS_FILE, {})
-    exp = tokens.get(x_admin_token)
+    hashed_token = hashlib.sha256(x_admin_token.encode()).hexdigest()
+    exp = tokens.get(hashed_token)
     if not exp or time.time() > exp:
         raise HTTPException(status_code=401, detail="Admin session expired. Please re-login.")
     return x_admin_token
@@ -291,12 +292,14 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
     otp_code = "".join(secrets.choice(string.digits) for _ in range(6))
     expires_at = time.time() + (settings.ADMIN_OTP_EXPIRY_MINUTES * 60)
     
-    otp_store[email_clean] = {
+    otps = _read_json(OTP_STORE_FILE, {})
+    otps[email_clean] = {
         "otp": otp_code,
         "expires_at": expires_at,
         "attempts_left": 3,
         "purpose": "Admin Command Center Login",
     }
+    _write_json(OTP_STORE_FILE, otps)
 
     # 5. Dispatch email
     send_otp_email(to_email=email_clean, otp_code=otp_code, purpose="Admin Command Center Login")
@@ -318,13 +321,14 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
     if is_locked:
         raise HTTPException(status_code=423, detail="Account restricted for 24 hours.")
 
-    stored = otp_store.get(email_clean)
+    otps = _read_json(OTP_STORE_FILE, {})
+    stored = otps.get(email_clean)
     if not stored:
         raise HTTPException(status_code=400, detail="No active OTP found. Please request a new code.")
 
     # Check expiration (10 min)
     if time.time() > stored["expires_at"]:
-        del otp_store[email_clean]
+        if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
         record_failed_attempt(client_ip)
         raise HTTPException(status_code=400, detail="OTP expired. The 10-minute window has lapsed.")
 
@@ -332,19 +336,20 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
     if req.otp.strip() != stored["otp"]:
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
-            del otp_store[email_clean]
+            if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
             _, locked_now, secs = record_failed_attempt(client_ip)
             if locked_now:
                 raise HTTPException(status_code=423, detail="Exceeded 3 failed cycles. Account restricted for 24 hours.")
             raise HTTPException(status_code=400, detail="Code expired after 3 failed attempts. Please request a new OTP.")
         
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid verification code. {stored['attempts_left']} attempt(s) remaining."
-        )
+        otps[email_clean] = stored
+        
+        _write_json(OTP_STORE_FILE, otps)
+        
+        raise HTTPException(status_code=400, detail=f"Invalid verification code. {stored['attempts_left']} attempt(s) remaining.")
 
     # Success: Issue admin session token (valid 24 hours)
-    del otp_store[email_clean]
+    if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
     admin_token = "adm_" + secrets.token_hex(32)
     tokens = _read_json(SESSION_TOKENS_FILE, {})
     tokens[admin_token] = time.time() + (24 * 3600)
@@ -687,12 +692,14 @@ async def get_analytics(admin_token: str = Depends(verify_admin_token)):
 async def send_user_signup_otp(req: UserOtpRequest):
     email = req.email.strip().lower()
     otp_code = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
-    otp_store[f"user_signup_{email}"] = {
+    otps = _read_json(OTP_STORE_FILE, {})
+    otps[f"user_signup_{email}"] = {
         "otp": otp_code,
         "expires_at": time.time() + 600,
         "attempts_left": 3,
         "purpose": "Account Registration Verification",
     }
+    _write_json(OTP_STORE_FILE, otps)
     send_otp_email(to_email=email, otp_code=otp_code, purpose="Account Registration Verification")
     return {"success": True, "message": "Verification code dispatched to your email."}
 
@@ -700,20 +707,23 @@ async def send_user_signup_otp(req: UserOtpRequest):
 @router.post("/api/auth/verify-signup-otp")
 async def verify_user_signup_otp(req: UserOtpVerifyRequest):
     email = req.email.strip().lower()
-    stored = otp_store.get(f"user_signup_{email}")
+    otps = _read_json(OTP_STORE_FILE, {})
+    stored = otps.get(f"user_signup_{email}")
     if not stored:
         raise HTTPException(status_code=400, detail="No active verification code found.")
     if time.time() > stored["expires_at"]:
-        del otp_store[f"user_signup_{email}"]
+        if f"user_signup_{email}" in otps: del otps[f"user_signup_{email}"]; _write_json(OTP_STORE_FILE, otps)
         raise HTTPException(status_code=400, detail="Code expired. Please request a new verification code.")
     if req.otp.strip() != stored["otp"]:
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
-            del otp_store[f"user_signup_{email}"]
+            if f"user_signup_{email}" in otps: del otps[f"user_signup_{email}"]; _write_json(OTP_STORE_FILE, otps)
             raise HTTPException(status_code=400, detail="Too many failed attempts. Code invalidated.")
+        otps[f"user_signup_{email}"] = stored
+        _write_json(OTP_STORE_FILE, otps)
         raise HTTPException(status_code=400, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
     
-    del otp_store[f"user_signup_{email}"]
+    if f"user_signup_{email}" in otps: del otps[f"user_signup_{email}"]; _write_json(OTP_STORE_FILE, otps)
     return {"success": True, "message": "Email verified successfully."}
 
 
@@ -721,12 +731,14 @@ async def verify_user_signup_otp(req: UserOtpVerifyRequest):
 async def send_user_forgot_otp(req: UserOtpRequest):
     email = req.email.strip().lower()
     otp_code = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
-    otp_store[f"user_forgot_{email}"] = {
+    otps = _read_json(OTP_STORE_FILE, {})
+    otps[f"user_forgot_{email}"] = {
         "otp": otp_code,
         "expires_at": time.time() + 600,
         "attempts_left": 3,
         "purpose": "Password Recovery",
     }
+    _write_json(OTP_STORE_FILE, otps)
     send_otp_email(to_email=email, otp_code=otp_code, purpose="Password Recovery")
     return {"success": True, "message": "Password reset code dispatched to your email."}
 
@@ -734,18 +746,21 @@ async def send_user_forgot_otp(req: UserOtpRequest):
 @router.post("/api/auth/verify-forgot-otp")
 async def verify_user_forgot_otp(req: UserOtpVerifyRequest):
     email = req.email.strip().lower()
-    stored = otp_store.get(f"user_forgot_{email}")
+    otps = _read_json(OTP_STORE_FILE, {})
+    stored = otps.get(f"user_forgot_{email}")
     if not stored:
         raise HTTPException(status_code=400, detail="No active password reset code found.")
     if time.time() > stored["expires_at"]:
-        del otp_store[f"user_forgot_{email}"]
+        if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
         raise HTTPException(status_code=400, detail="Reset code expired. Please request a new code.")
     if req.otp.strip() != stored["otp"]:
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
-            del otp_store[f"user_forgot_{email}"]
+            if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
             raise HTTPException(status_code=400, detail="Too many failed attempts. Code invalidated.")
+        otps[f"user_forgot_{email}"] = stored
+        _write_json(OTP_STORE_FILE, otps)
         raise HTTPException(status_code=400, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
     
-    del otp_store[f"user_forgot_{email}"]
+    if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
     return {"success": True, "message": "Reset code verified. You may now update your password."}
