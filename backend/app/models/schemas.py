@@ -8,7 +8,7 @@ class VideoGenerateRequest(BaseModel):
     model: Optional[str] = Field(default="omni-1.1-flash-360p")
     duration_seconds: Optional[int] = Field(default=4)  # 4, 6, 8, 10
     motion_hint: Optional[str] = None
-    image_base64: Optional[str] = None
+    image_base64: Optional[str] = Field(default=None, max_length=5000000)
 
 class VideoGenerateResponse(BaseModel):
     generation_id: str
@@ -31,7 +31,7 @@ class ImageGenerateRequest(BaseModel):
     aspect_ratio: str = Field(default="1:1")  # 16:9, 4:3, 1:1, 3:4, 9:16
     model: Optional[str] = Field(default="nano-banana-2")  # nano-banana-lite, nano-banana-2, nano-banana-pro
     style: Optional[str] = None
-    image_base64: Optional[str] = None
+    image_base64: Optional[str] = Field(default=None, max_length=5000000)
 
 class ImageGenerateResponse(BaseModel):
     generation_id: str

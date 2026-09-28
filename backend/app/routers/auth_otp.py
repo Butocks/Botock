@@ -20,10 +20,10 @@ SETTINGS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session"
 COMPLAINTS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "complaints.json")
 JOBS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "jobs.json")
 BLOGS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "blogs.json")
+SESSION_TOKENS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "admin_tokens.json")
 
 # In-memory OTP storage: email -> { otp, expires_at, attempts_left, purpose }
 otp_store: Dict[str, Dict[str, Any]] = {}
-admin_session_tokens: Dict[str, float] = {}  # token -> expires_at
 
 # ----------------------------------------------------
 # Persistence Helpers
@@ -245,11 +245,14 @@ class BlogPostCreate(BaseModel):
 def verify_admin_token(x_admin_token: Optional[str] = Header(None)) -> str:
     if not x_admin_token:
         raise HTTPException(status_code=401, detail="Admin authorization token missing.")
-    exp = admin_session_tokens.get(x_admin_token)
+    tokens = _read_json(SESSION_TOKENS_FILE, {})
+    exp = tokens.get(x_admin_token)
     if not exp or time.time() > exp:
         raise HTTPException(status_code=401, detail="Admin session expired. Please re-login.")
     return x_admin_token
 
+
+import secrets
 
 # ----------------------------------------------------
 # Admin Authentication Routes
@@ -271,14 +274,17 @@ async def verify_admin_secret(req: AdminSecretRequest):
     # 2. Check allowed admins from env
     allowed_admins = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
     if email_clean not in allowed_admins:
+        record_failed_attempt(email_clean)
         raise HTTPException(status_code=403, detail="Access denied. Email not listed in authorized administrators.")
 
     # 3. Check secret code from env
-    if req.secret.strip() != settings.ADMIN_LOGIN_SECRET.strip():
+    server_secret = settings.ADMIN_LOGIN_SECRET.strip()
+    if not server_secret or req.secret.strip() != server_secret:
+        record_failed_attempt(email_clean)
         raise HTTPException(status_code=401, detail="Invalid admin secret authorization code.")
 
     # 4. Generate 6-digit OTP (valid 10 minutes)
-    otp_code = "".join(random.choices(string.digits, k=6))
+    otp_code = "".join(secrets.choice(string.digits) for _ in range(6))
     expires_at = time.time() + (settings.ADMIN_OTP_EXPIRY_MINUTES * 60)
     
     otp_store[email_clean] = {
@@ -334,8 +340,10 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest):
 
     # Success: Issue admin session token (valid 24 hours)
     del otp_store[email_clean]
-    admin_token = "adm_" + "".join(random.choices(string.ascii_letters + string.digits, k=32))
-    admin_session_tokens[admin_token] = time.time() + (24 * 3600)
+    admin_token = "adm_" + secrets.token_hex(32)
+    tokens = _read_json(SESSION_TOKENS_FILE, {})
+    tokens[admin_token] = time.time() + (24 * 3600)
+    _write_json(SESSION_TOKENS_FILE, tokens)
 
     return {
         "success": True,
@@ -351,7 +359,7 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest):
 async def request_two_step(admin_token: str = Depends(verify_admin_token)):
     """Issues a 2-step action verification OTP to the primary admin."""
     primary_admin = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()][0]
-    action_otp = "".join(random.choices(string.digits, k=6))
+    action_otp = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
     
     otp_store[f"2step_{primary_admin}"] = {
         "otp": action_otp,
@@ -373,13 +381,16 @@ def require_2step_verification(two_step_code: Optional[str] = Header(None, alias
     primary_admin = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()][0]
     stored = otp_store.get(f"2step_{primary_admin}")
 
-    # Either matches recent 2-step OTP or matches Master Admin Secret
-    if code == settings.ADMIN_LOGIN_SECRET.strip():
-        return True
-    
-    if stored and time.time() <= stored["expires_at"] and code == stored["otp"]:
-        del otp_store[f"2step_{primary_admin}"]
-        return True
+    if stored and time.time() <= stored["expires_at"]:
+        if code == stored["otp"]:
+            del otp_store[f"2step_{primary_admin}"]
+            return True
+        else:
+            stored["attempts_left"] -= 1
+            if stored["attempts_left"] <= 0:
+                del otp_store[f"2step_{primary_admin}"]
+                raise HTTPException(status_code=403, detail="Too many failed attempts. 2-Step code invalidated.")
+            raise HTTPException(status_code=403, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
 
     raise HTTPException(status_code=403, detail="Invalid or expired 2-Step verification code.")
 
@@ -661,7 +672,7 @@ async def get_analytics(admin_token: str = Depends(verify_admin_token)):
 @router.post("/api/auth/signup-otp")
 async def send_user_signup_otp(req: UserOtpRequest):
     email = req.email.strip().lower()
-    otp_code = "".join(random.choices(string.digits, k=6))
+    otp_code = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
     otp_store[f"user_signup_{email}"] = {
         "otp": otp_code,
         "expires_at": time.time() + 600,
@@ -695,7 +706,7 @@ async def verify_user_signup_otp(req: UserOtpVerifyRequest):
 @router.post("/api/auth/forgot-password-otp")
 async def send_user_forgot_otp(req: UserOtpRequest):
     email = req.email.strip().lower()
-    otp_code = "".join(random.choices(string.digits, k=6))
+    otp_code = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
     otp_store[f"user_forgot_{email}"] = {
         "otp": otp_code,
         "expires_at": time.time() + 600,

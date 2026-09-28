@@ -70,6 +70,7 @@ async def generate_image(
     selected_ratio = request.aspect_ratio if request.aspect_ratio in allowed_aspect_ratios else "1:1"
 
     generation_id = str(uuid.uuid4())
+    save_ownership(generation_id, user["user_id"])
     image_statuses[generation_id] = {
         "user_id": user["user_id"],
         "status": "queued",
@@ -114,15 +115,37 @@ async def get_image_status(generation_id: str, user: dict = Depends(get_current_
     )
 
 
+import json
+
+def get_meta_path(generation_id: str) -> str:
+    return os.path.realpath(os.path.join(settings.IMAGES_DIR, f"{generation_id}.meta.json"))
+
+def save_ownership(generation_id: str, user_id: str):
+    meta_path = get_meta_path(generation_id)
+    with open(meta_path, "w") as f:
+        json.dump({"user_id": user_id}, f)
+
+def check_ownership(generation_id: str, user_id: str):
+    meta_path = get_meta_path(generation_id)
+    if os.path.exists(meta_path):
+        with open(meta_path, "r") as f:
+            data = json.load(f)
+            if data.get("user_id") and data.get("user_id") != user_id:
+                raise HTTPException(status_code=403, detail="Access denied: You do not own this image generation.")
+    else:
+        if generation_id in image_statuses:
+            data = image_statuses[generation_id]
+            if data.get("user_id") and data.get("user_id") != user_id:
+                raise HTTPException(status_code=403, detail="Access denied: You do not own this image generation.")
+        else:
+            raise HTTPException(status_code=403, detail="Access denied: Ownership verification failed.")
+
 @router.get("/download/{generation_id}")
 async def download_image(generation_id: str, user: dict = Depends(get_current_user)):
     validate_uuid(generation_id)
 
-    # Ownership check
-    if generation_id in image_statuses:
-        data = image_statuses[generation_id]
-        if data.get("user_id") and data.get("user_id") != user["user_id"]:
-            raise HTTPException(status_code=403, detail="Access denied: You do not own this image generation.")
+    # Persistent Ownership check
+    check_ownership(generation_id, user["user_id"])
 
     safe_filename = f"{generation_id}.png"
     file_path = os.path.realpath(os.path.join(settings.IMAGES_DIR, safe_filename))

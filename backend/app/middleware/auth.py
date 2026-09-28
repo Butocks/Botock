@@ -23,7 +23,7 @@ def get_current_user(
     jwt_token = None
     if authorization:
         if not authorization.startswith("Bearer "):
-            logger.warning(f"Auth failed: header does not start with Bearer. Value: {authorization[:20]}...")
+            logger.warning("Auth failed: header does not start with Bearer. (Token hidden)")
             raise HTTPException(
                 status_code=401,
                 detail="Invalid Authorization header format. Expected 'Bearer <token>'."
@@ -33,7 +33,7 @@ def get_current_user(
         jwt_token = token.strip()
 
     if not jwt_token:
-        logger.warning(f"Auth failed: no jwt_token found. Authorization header: {authorization}, query token: {token}")
+        logger.warning("Auth failed: no jwt_token found. (Headers hidden)")
         raise HTTPException(
             status_code=401,
             detail="Authentication required. Please sign in to Botock to access this resource."
@@ -55,10 +55,10 @@ def get_current_user(
             jwt_token,
             settings.SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
-            options={"verify_aud": False}
+            audience="authenticated"
         )
     except Exception as e:
-        decode_errors.append(f"Raw secret error: {e}")
+        decode_errors.append(f"Raw secret error: {str(e)}")
 
     # Try 2: Decode with base64 decoded secret (common in Supabase dashboards)
     if not payload:
@@ -69,10 +69,10 @@ def get_current_user(
                 jwt_token,
                 b64_secret,
                 algorithms=["HS256"],
-                options={"verify_aud": False}
+                audience="authenticated"
             )
         except Exception as e:
-            decode_errors.append(f"Base64 secret error: {e}")
+            decode_errors.append(f"Base64 secret error: {str(e)}")
 
     # If both Try 1 and Try 2 failed, the token is invalid
     if not payload:

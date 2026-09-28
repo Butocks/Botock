@@ -105,6 +105,7 @@ async def generate_video(
 
     generation_id = str(uuid.uuid4())
     
+    save_ownership(generation_id, user["user_id"])
     video_statuses[generation_id] = {
         "user_id": user["user_id"],
         "status": "queued",
@@ -176,15 +177,39 @@ async def get_status(generation_id: str, user: dict = Depends(get_current_user))
     )
 
 
+import json
+
+def get_meta_path(generation_id: str) -> str:
+    return os.path.realpath(os.path.join(settings.VIDEOS_DIR, f"{generation_id}.meta.json"))
+
+def save_ownership(generation_id: str, user_id: str):
+    meta_path = get_meta_path(generation_id)
+    with open(meta_path, "w") as f:
+        json.dump({"user_id": user_id}, f)
+
+def check_ownership(generation_id: str, user_id: str):
+    meta_path = get_meta_path(generation_id)
+    if os.path.exists(meta_path):
+        with open(meta_path, "r") as f:
+            data = json.load(f)
+            if data.get("user_id") and data.get("user_id") != user_id:
+                raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
+    else:
+        # Fallback to in-memory check if meta missing
+        if generation_id in video_statuses:
+            data = video_statuses[generation_id]
+            if data.get("user_id") and data.get("user_id") != user_id:
+                raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
+        else:
+            # If no memory and no meta, it's missing or we can't verify. Fail closed.
+            raise HTTPException(status_code=403, detail="Access denied: Ownership verification failed.")
+
 @router.get("/download/{generation_id}")
 async def download_video(generation_id: str, user: dict = Depends(get_current_user)):
     validate_uuid(generation_id)
 
-    # Ownership check
-    if generation_id in video_statuses:
-        data = video_statuses[generation_id]
-        if data.get("user_id") and data.get("user_id") != user["user_id"]:
-            raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
+    # Persistent Ownership check
+    check_ownership(generation_id, user["user_id"])
 
     # Resolve safe absolute path
     safe_filename = f"{generation_id}.mp4"
