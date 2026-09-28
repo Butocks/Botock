@@ -55,7 +55,8 @@ def get_current_user(
             jwt_token,
             settings.SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
-            audience="authenticated"
+            audience="authenticated",
+            options={"verify_exp": True, "verify_iss": False}
         )
     except Exception as e:
         decode_errors.append(f"Raw secret error: {str(e)}")
@@ -69,7 +70,8 @@ def get_current_user(
                 jwt_token,
                 b64_secret,
                 algorithms=["HS256"],
-                audience="authenticated"
+                audience="authenticated",
+                options={"verify_exp": True, "verify_iss": False}
             )
         except Exception as e:
             decode_errors.append(f"Base64 secret error: {str(e)}")

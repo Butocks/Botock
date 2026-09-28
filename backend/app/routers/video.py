@@ -189,20 +189,30 @@ def save_ownership(generation_id: str, user_id: str):
 
 def check_ownership(generation_id: str, user_id: str):
     meta_path = get_meta_path(generation_id)
+    
+    # 1. First try to load from disk (persistent)
     if os.path.exists(meta_path):
-        with open(meta_path, "r") as f:
-            data = json.load(f)
-            if data.get("user_id") and data.get("user_id") != user_id:
-                raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
-    else:
-        # Fallback to in-memory check if meta missing
-        if generation_id in video_statuses:
-            data = video_statuses[generation_id]
-            if data.get("user_id") and data.get("user_id") != user_id:
-                raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
-        else:
-            # If no memory and no meta, it's missing or we can't verify. Fail closed.
-            raise HTTPException(status_code=403, detail="Access denied: Ownership verification failed.")
+        try:
+            with open(meta_path, "r") as f:
+                data = json.load(f)
+        except Exception:
+            raise HTTPException(status_code=403, detail="Access denied: Invalid metadata.")
+            
+        stored_user = data.get("user_id")
+        if not stored_user or stored_user != user_id:
+            raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
+        return # Verification successful
+        
+    # 2. Fallback to memory (if metadata was not written properly, e.g. disk full)
+    if generation_id in video_statuses:
+        data = video_statuses[generation_id]
+        stored_user = data.get("user_id")
+        if not stored_user or stored_user != user_id:
+            raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
+        return # Verification successful
+        
+    # 3. Fail closed
+    raise HTTPException(status_code=403, detail="Access denied: Ownership verification failed.")
 
 @router.get("/download/{generation_id}")
 async def download_video(generation_id: str, user: dict = Depends(get_current_user)):

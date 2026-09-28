@@ -5,7 +5,7 @@ import random
 import string
 import logging
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, Header, Depends
+from fastapi import APIRouter, HTTPException, Header, Depends, Request
 from pydantic import BaseModel, EmailStr
 from app.config import settings
 from app.services.email_service import send_otp_email
@@ -40,8 +40,12 @@ def _read_json(path: str, default: Any) -> Any:
 def _write_json(path: str, data: Any):
     try:
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
+        # Write atomically and set restrictive permissions
+        temp_path = f"{path}.tmp.{os.getpid()}.{time.time()}"
+        with open(temp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+        os.chmod(temp_path, 0o600)
+        os.replace(temp_path, path)
     except Exception as e:
         logger.error(f"Error writing {path}: {e}")
 
@@ -49,10 +53,10 @@ def _write_json(path: str, data: Any):
 # ----------------------------------------------------
 # Zero-Backdoor Lockout Engine
 # ----------------------------------------------------
-def check_lockout(email: str) -> tuple[bool, int]:
+def check_lockout(ip: str) -> tuple[bool, int]:
     """Returns (is_locked, seconds_left). If locked, cannot login."""
     lockouts = _read_json(LOCKOUT_FILE, {})
-    user_lock = lockouts.get(email.lower())
+    user_lock = lockouts.get(ip)
     if not user_lock:
         return False, 0
     
@@ -62,16 +66,15 @@ def check_lockout(email: str) -> tuple[bool, int]:
         return True, int(locked_until - now)
     return False, 0
 
-def record_failed_attempt(email: str) -> tuple[int, bool, int]:
+def record_failed_attempt(ip: str) -> tuple[int, bool, int]:
     """
-    Tracks failed attempts and cycles.
+    Tracks failed attempts and cycles per IP.
     3 failed attempts -> 1 failed cycle.
     3 failed cycles -> 24-hour lockout.
     Returns (attempts_left, is_locked, seconds_left).
     """
     lockouts = _read_json(LOCKOUT_FILE, {})
-    email_key = email.lower()
-    record = lockouts.get(email_key, {"cycles_failed": 0, "locked_until": 0})
+    record = lockouts.get(ip, {"cycles_failed": 0, "locked_until": 0})
     
     # Increment cycle failure
     record["cycles_failed"] = record.get("cycles_failed", 0) + 1
@@ -79,12 +82,12 @@ def record_failed_attempt(email: str) -> tuple[int, bool, int]:
     if record["cycles_failed"] >= settings.ADMIN_MAX_OTP_CYCLES:
         # Lockout for 24 hours
         record["locked_until"] = time.time() + (24 * 3600)
-        lockouts[email_key] = record
+        lockouts[ip] = record
         _write_json(LOCKOUT_FILE, lockouts)
-        logger.warning(f"🚨 ADMIN LOCKED OUT FOR 24 HOURS: {email_key}")
+        logger.warning(f"🚨 IP LOCKED OUT FOR 24 HOURS: {ip}")
         return 0, True, 24 * 3600
     
-    lockouts[email_key] = record
+    lockouts[ip] = record
     _write_json(LOCKOUT_FILE, lockouts)
     return 0, False, 0
 
@@ -258,29 +261,30 @@ import secrets
 # Admin Authentication Routes
 # ----------------------------------------------------
 @router.post("/api/admin/auth/verify-secret")
-async def verify_admin_secret(req: AdminSecretRequest):
+async def verify_admin_secret(req: AdminSecretRequest, request: Request):
     email_clean = req.email.strip().lower()
+    client_ip = request.client.host if request.client else "unknown"
     
     # 1. Check 24-hour lockout
-    is_locked, seconds_left = check_lockout(email_clean)
+    is_locked, seconds_left = check_lockout(client_ip)
     if is_locked:
         hours = seconds_left // 3600
         mins = (seconds_left % 3600) // 60
         raise HTTPException(
             status_code=423,
-            detail=f"Security Lockout Active: This admin account is restricted for {hours}h {mins}m due to repeated authentication failures."
+            detail=f"Security Lockout Active: Too many failed attempts. Try again in {hours}h {mins}m."
         )
 
     # 2. Check allowed admins from env
     allowed_admins = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
     if email_clean not in allowed_admins:
-        record_failed_attempt(email_clean)
+        record_failed_attempt(client_ip)
         raise HTTPException(status_code=403, detail="Access denied. Email not listed in authorized administrators.")
 
     # 3. Check secret code from env
     server_secret = settings.ADMIN_LOGIN_SECRET.strip()
     if not server_secret or req.secret.strip() != server_secret:
-        record_failed_attempt(email_clean)
+        record_failed_attempt(client_ip)
         raise HTTPException(status_code=401, detail="Invalid admin secret authorization code.")
 
     # 4. Generate 6-digit OTP (valid 10 minutes)
@@ -305,11 +309,12 @@ async def verify_admin_secret(req: AdminSecretRequest):
 
 
 @router.post("/api/admin/auth/verify-otp")
-async def verify_admin_otp(req: AdminOtpVerifyRequest):
+async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
     email_clean = req.email.strip().lower()
+    client_ip = request.client.host if request.client else "unknown"
 
     # Check lockout
-    is_locked, seconds_left = check_lockout(email_clean)
+    is_locked, seconds_left = check_lockout(client_ip)
     if is_locked:
         raise HTTPException(status_code=423, detail="Account restricted for 24 hours.")
 
@@ -320,7 +325,7 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest):
     # Check expiration (10 min)
     if time.time() > stored["expires_at"]:
         del otp_store[email_clean]
-        record_failed_attempt(email_clean)
+        record_failed_attempt(client_ip)
         raise HTTPException(status_code=400, detail="OTP expired. The 10-minute window has lapsed.")
 
     # Check OTP match
@@ -328,7 +333,7 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest):
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
             del otp_store[email_clean]
-            _, locked_now, secs = record_failed_attempt(email_clean)
+            _, locked_now, secs = record_failed_attempt(client_ip)
             if locked_now:
                 raise HTTPException(status_code=423, detail="Exceeded 3 failed cycles. Account restricted for 24 hours.")
             raise HTTPException(status_code=400, detail="Code expired after 3 failed attempts. Please request a new OTP.")
@@ -355,41 +360,50 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest):
 # ----------------------------------------------------
 # 2-Step Verification for Critical Admin Actions
 # ----------------------------------------------------
+TWO_STEP_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "2step_tokens.json")
+
 @router.post("/api/admin/auth/request-2step")
 async def request_two_step(admin_token: str = Depends(verify_admin_token)):
     """Issues a 2-step action verification OTP to the primary admin."""
     primary_admin = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()][0]
     action_otp = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
     
-    otp_store[f"2step_{primary_admin}"] = {
+    two_steps = _read_json(TWO_STEP_FILE, {})
+    two_steps[admin_token] = {
         "otp": action_otp,
         "expires_at": time.time() + 600,
         "attempts_left": 3,
         "purpose": "2-Step Critical Action Confirmation",
     }
+    _write_json(TWO_STEP_FILE, two_steps)
     
     send_otp_email(to_email=primary_admin, otp_code=action_otp, purpose="2-Step Critical Action Confirmation")
     return {"success": True, "message": "2-Step action code sent to admin email."}
 
 
-def require_2step_verification(two_step_code: Optional[str] = Header(None, alias="X-Admin-2Step-Code")):
-    """Verifies that the sensitive action has provided the valid 2-step verification code or admin secret."""
+def require_2step_verification(two_step_code: Optional[str] = Header(None, alias="X-Admin-2Step-Code"), admin_token: str = Depends(verify_admin_token)):
+    """Verifies that the sensitive action has provided the valid 2-step verification code bound to the admin session."""
     if not two_step_code:
         raise HTTPException(status_code=403, detail="2-Step Verification required for this critical modification.")
     
     code = two_step_code.strip()
-    primary_admin = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()][0]
-    stored = otp_store.get(f"2step_{primary_admin}")
+    two_steps = _read_json(TWO_STEP_FILE, {})
+    stored = two_steps.get(admin_token)
 
     if stored and time.time() <= stored["expires_at"]:
         if code == stored["otp"]:
-            del otp_store[f"2step_{primary_admin}"]
+            del two_steps[admin_token]
+            _write_json(TWO_STEP_FILE, two_steps)
             return True
         else:
             stored["attempts_left"] -= 1
             if stored["attempts_left"] <= 0:
-                del otp_store[f"2step_{primary_admin}"]
+                del two_steps[admin_token]
+                _write_json(TWO_STEP_FILE, two_steps)
                 raise HTTPException(status_code=403, detail="Too many failed attempts. 2-Step code invalidated.")
+            
+            two_steps[admin_token] = stored
+            _write_json(TWO_STEP_FILE, two_steps)
             raise HTTPException(status_code=403, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
 
     raise HTTPException(status_code=403, detail="Invalid or expired 2-Step verification code.")
