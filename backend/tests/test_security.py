@@ -19,7 +19,7 @@ def test_image_generation_no_auth():
 
 def test_video_download_fail_closed():
     # Attempt to download non-existent generation without auth
-    response = client.get("/download/12345678-1234-1234-1234-1234567890ab")
+    response = client.get("/api/video/download/12345678-1234-1234-1234-1234567890ab")
     assert response.status_code == 401
 
 def test_image_base64_limit():
