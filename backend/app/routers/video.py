@@ -216,7 +216,7 @@ async def download_video(generation_id: str, user: dict = Depends(get_current_us
     expected_dir = os.path.realpath(settings.VIDEOS_DIR)
 
     # Ensure path stays strictly inside VIDEOS_DIR
-    if not file_path.startswith(expected_dir):
+    if os.path.commonpath([expected_dir, file_path]) != expected_dir:
         raise HTTPException(status_code=403, detail="Access denied.")
 
     if not os.path.exists(file_path):

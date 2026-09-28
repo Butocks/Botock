@@ -152,7 +152,7 @@ async def download_image(generation_id: str, user: dict = Depends(get_current_us
     file_path = os.path.realpath(os.path.join(settings.IMAGES_DIR, safe_filename))
     expected_dir = os.path.realpath(settings.IMAGES_DIR)
 
-    if not file_path.startswith(expected_dir):
+    if os.path.commonpath([expected_dir, file_path]) != expected_dir:
         raise HTTPException(status_code=403, detail="Access denied.")
 
     if not os.path.exists(file_path):

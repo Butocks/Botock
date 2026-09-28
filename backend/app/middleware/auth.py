@@ -49,6 +49,8 @@ def get_current_user(
     payload = None
     decode_errors = []
 
+    expected_issuer = f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1"
+    
     # Try 1: Decode with raw secret string
     try:
         payload = jwt.decode(
@@ -56,7 +58,8 @@ def get_current_user(
             settings.SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
             audience="authenticated",
-            options={"verify_exp": True, "verify_iss": False}
+            issuer=expected_issuer,
+            options={"verify_exp": True, "verify_iss": True}
         )
     except Exception as e:
         decode_errors.append(f"Raw secret error: {str(e)}")
@@ -71,28 +74,25 @@ def get_current_user(
                 b64_secret,
                 algorithms=["HS256"],
                 audience="authenticated",
-                options={"verify_exp": True, "verify_iss": False}
+                issuer=expected_issuer,
+                options={"verify_exp": True, "verify_iss": True}
             )
         except Exception as e:
             decode_errors.append(f"Base64 secret error: {str(e)}")
 
     # If both Try 1 and Try 2 failed, the token is invalid
     if not payload:
-        logger.warning(f"JWT signature verification failed: {decode_errors}")
+        logger.warning(f"JWT signature/issuer verification failed: {decode_errors}")
         raise HTTPException(
             status_code=401,
             detail="Invalid or forged authentication token. Please sign out and sign in again to refresh your session."
         )
 
-    iss = payload.get("iss", "")
-    if "supabase" not in iss:
-        raise HTTPException(status_code=401, detail="Untrusted JWT issuer.")
-
     user_id = payload.get("sub") or payload.get("id")
     email = payload.get("email", "")
     role = payload.get("role", "authenticated")
     app_metadata = payload.get("app_metadata", {})
-    is_pro = app_metadata.get("is_pro", False) or "pro" in str(role).lower()
+    is_pro = bool(app_metadata.get("is_pro") == True or role == "pro" or app_metadata.get("subscription_status") == "active")
 
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token: missing user ID.")

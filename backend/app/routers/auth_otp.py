@@ -1,5 +1,6 @@
 import os
 import json
+import fcntl
 import time
 import random
 import string
@@ -27,13 +28,18 @@ OTP_STORE_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session
 # Persistence Helpers
 # ----------------------------------------------------
 def _read_json(path: str, default: Any) -> Any:
-    if os.path.exists(path):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Error reading {path}: {e}")
-    return default
+    if not os.path.exists(path):
+        return default
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            fcntl.flock(f, fcntl.LOCK_SH)
+            data = json.load(f)
+            fcntl.flock(f, fcntl.LOCK_UN)
+            return data
+    except Exception as e:
+        logger.error(f"Error reading {path}: {e}")
+        return default
+
 
 def _write_json(path: str, data: Any):
     try:
@@ -41,12 +47,16 @@ def _write_json(path: str, data: Any):
         # Write atomically and set restrictive permissions
         temp_path = f"{path}.tmp.{os.getpid()}.{time.time()}"
         with open(temp_path, "w", encoding="utf-8") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+            fcntl.flock(f, fcntl.LOCK_UN)
         os.chmod(temp_path, 0o600)
         os.replace(temp_path, path)
     except Exception as e:
         logger.error(f"Error writing {path}: {e}")
-
+        raise HTTPException(status_code=500, detail="Internal storage error")
 
 # ----------------------------------------------------
 # Zero-Backdoor Lockout Engine
@@ -264,7 +274,11 @@ import secrets
 @router.post("/api/admin/auth/verify-secret")
 async def verify_admin_secret(req: AdminSecretRequest, request: Request):
     email_clean = req.email.strip().lower()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = request.headers.get("X-Forwarded-For")
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown" 
     
     # 1. Check 24-hour lockout
     is_locked, seconds_left = check_lockout(client_ip)
@@ -292,9 +306,10 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
     otp_code = "".join(secrets.choice(string.digits) for _ in range(6))
     expires_at = time.time() + (settings.ADMIN_OTP_EXPIRY_MINUTES * 60)
     
+    otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
     otps = _read_json(OTP_STORE_FILE, {})
     otps[email_clean] = {
-        "otp": otp_code,
+        "otp_hash": otp_hash,
         "expires_at": expires_at,
         "attempts_left": 3,
         "purpose": "Admin Command Center Login",
@@ -314,7 +329,11 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
 @router.post("/api/admin/auth/verify-otp")
 async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
     email_clean = req.email.strip().lower()
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = request.headers.get("X-Forwarded-For")
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown" 
 
     # Check lockout
     is_locked, seconds_left = check_lockout(client_ip)
@@ -333,7 +352,8 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
         raise HTTPException(status_code=400, detail="OTP expired. The 10-minute window has lapsed.")
 
     # Check OTP match
-    if req.otp.strip() != stored["otp"]:
+    input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
+    if input_hash != stored.get("otp_hash", "") and req.otp.strip() != stored.get("otp", ""):
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
             if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
@@ -351,8 +371,9 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
     # Success: Issue admin session token (valid 24 hours)
     if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
     admin_token = "adm_" + secrets.token_hex(32)
+    hashed_token = hashlib.sha256(admin_token.encode()).hexdigest()
     tokens = _read_json(SESSION_TOKENS_FILE, {})
-    tokens[admin_token] = time.time() + (24 * 3600)
+    tokens[hashed_token] = time.time() + (24 * 3600)
     _write_json(SESSION_TOKENS_FILE, tokens)
 
     return {
@@ -368,13 +389,14 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
 TWO_STEP_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "2step_tokens.json")
 
 @router.post("/api/admin/auth/request-2step")
-async def request_two_step(admin_token: str = Depends(verify_admin_token)):
+async def request_two_step(request: Request, admin_token: str = Depends(verify_admin_token)):
     """Issues a 2-step action verification OTP to the primary admin."""
     primary_admin = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()][0]
     action_otp = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
     
     two_steps = _read_json(TWO_STEP_FILE, {})
-    two_steps[admin_token] = {
+    hashed = hashlib.sha256(admin_token.encode()).hexdigest()
+    two_steps[hashed] = {
         "otp": action_otp,
         "expires_at": time.time() + 600,
         "attempts_left": 3,
@@ -393,21 +415,23 @@ def require_2step_verification(two_step_code: Optional[str] = Header(None, alias
     
     code = two_step_code.strip()
     two_steps = _read_json(TWO_STEP_FILE, {})
-    stored = two_steps.get(admin_token)
+    hashed = hashlib.sha256(admin_token.encode()).hexdigest()
+    stored = two_steps.get(hashed)
 
+    input_hash = hashlib.sha256(code.encode()).hexdigest()
     if stored and time.time() <= stored["expires_at"]:
-        if code == stored["otp"]:
-            del two_steps[admin_token]
+        if input_hash == stored.get("otp_hash", "") or code == stored.get("otp", ""):
+            del two_steps[hashed]
             _write_json(TWO_STEP_FILE, two_steps)
             return True
         else:
             stored["attempts_left"] -= 1
             if stored["attempts_left"] <= 0:
-                del two_steps[admin_token]
+                del two_steps[hashed]
                 _write_json(TWO_STEP_FILE, two_steps)
                 raise HTTPException(status_code=403, detail="Too many failed attempts. 2-Step code invalidated.")
             
-            two_steps[admin_token] = stored
+            two_steps[hashed] = stored
             _write_json(TWO_STEP_FILE, two_steps)
             raise HTTPException(status_code=403, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
 
@@ -689,12 +713,26 @@ async def get_analytics(admin_token: str = Depends(verify_admin_token)):
 # User Signup & Forgot Password OTP
 # ----------------------------------------------------
 @router.post("/api/auth/signup-otp")
-async def send_user_signup_otp(req: UserOtpRequest):
+async def send_user_signup_otp(req: UserOtpRequest, request: Request):
+    client_ip = request.headers.get("X-Forwarded-For")
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown" 
+    
+    is_locked, _ = check_lockout(client_ip)
+    if is_locked:
+        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
+    
+    # We will log an attempt each time they SEND an OTP to prevent email spam
+    record_failed_attempt(client_ip)
+
     email = req.email.strip().lower()
     otp_code = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
+    otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
     otps = _read_json(OTP_STORE_FILE, {})
     otps[f"user_signup_{email}"] = {
-        "otp": otp_code,
+        "otp_hash": otp_hash,
         "expires_at": time.time() + 600,
         "attempts_left": 3,
         "purpose": "Account Registration Verification",
@@ -705,7 +743,17 @@ async def send_user_signup_otp(req: UserOtpRequest):
 
 
 @router.post("/api/auth/verify-signup-otp")
-async def verify_user_signup_otp(req: UserOtpVerifyRequest):
+async def verify_user_signup_otp(req: UserOtpVerifyRequest, request: Request):
+    client_ip = request.headers.get("X-Forwarded-For")
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown" 
+        
+    is_locked, _ = check_lockout(client_ip)
+    if is_locked:
+        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
+        
     email = req.email.strip().lower()
     otps = _read_json(OTP_STORE_FILE, {})
     stored = otps.get(f"user_signup_{email}")
@@ -714,7 +762,10 @@ async def verify_user_signup_otp(req: UserOtpVerifyRequest):
     if time.time() > stored["expires_at"]:
         if f"user_signup_{email}" in otps: del otps[f"user_signup_{email}"]; _write_json(OTP_STORE_FILE, otps)
         raise HTTPException(status_code=400, detail="Code expired. Please request a new verification code.")
-    if req.otp.strip() != stored["otp"]:
+    
+    input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
+    if input_hash != stored.get("otp_hash", "") and req.otp.strip() != stored.get("otp", ""):
+        record_failed_attempt(client_ip)
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
             if f"user_signup_{email}" in otps: del otps[f"user_signup_{email}"]; _write_json(OTP_STORE_FILE, otps)
@@ -728,7 +779,7 @@ async def verify_user_signup_otp(req: UserOtpVerifyRequest):
 
 
 @router.post("/api/auth/forgot-password-otp")
-async def send_user_forgot_otp(req: UserOtpRequest):
+async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
     email = req.email.strip().lower()
     otp_code = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
     otps = _read_json(OTP_STORE_FILE, {})
@@ -744,7 +795,17 @@ async def send_user_forgot_otp(req: UserOtpRequest):
 
 
 @router.post("/api/auth/verify-forgot-otp")
-async def verify_user_forgot_otp(req: UserOtpVerifyRequest):
+async def verify_user_forgot_otp(req: UserOtpVerifyRequest, request: Request):
+    client_ip = request.headers.get("X-Forwarded-For")
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown" 
+        
+    is_locked, _ = check_lockout(client_ip)
+    if is_locked:
+        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
+        
     email = req.email.strip().lower()
     otps = _read_json(OTP_STORE_FILE, {})
     stored = otps.get(f"user_forgot_{email}")
@@ -753,7 +814,10 @@ async def verify_user_forgot_otp(req: UserOtpVerifyRequest):
     if time.time() > stored["expires_at"]:
         if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
         raise HTTPException(status_code=400, detail="Reset code expired. Please request a new code.")
-    if req.otp.strip() != stored["otp"]:
+    
+    input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
+    if input_hash != stored.get("otp_hash", "") and req.otp.strip() != stored.get("otp", ""):
+        record_failed_attempt(client_ip)
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
             if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
