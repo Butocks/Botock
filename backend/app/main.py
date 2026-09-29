@@ -75,6 +75,7 @@ allowed_origins = os.getenv("ALLOWED_ORIGINS").split(",") if os.getenv("ALLOWED_
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"^https?://(.*\.)?(loca\.lt|vercel\.app|botock\.app)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
