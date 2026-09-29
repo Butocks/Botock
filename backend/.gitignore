@@ -24,3 +24,7 @@ generated_videos/
 *.png
 *.jpg
 *.log
+*.swp
+.*.swp
+*.kate-swp
+.*.kate-swp

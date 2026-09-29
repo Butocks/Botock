@@ -9,7 +9,7 @@ import hashlib
 import logging
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Header, Depends, Request
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from app.config import settings
 from app.services.email_service import send_otp_email, send_update_email, test_smtp_connection
 
@@ -941,7 +941,7 @@ class TestSmtpRequest(BaseModel):
     test_email: Optional[str] = None
 
 class SendUpdateEmailRequest(BaseModel):
-    to_email: EmailStr
+    to_email: str
     subject: str
     body_text: str
 
