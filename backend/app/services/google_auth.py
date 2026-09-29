@@ -32,15 +32,15 @@ def is_session_fresh() -> bool:
         logger.info(f"Session file is {file_age_seconds/3600:.1f}h old (max {settings.SESSION_MAX_AGE_HOURS}h). Needs refresh.")
         return False
 
-    # Also verify file is valid JSON
+    # Verify session using crypto loader
     try:
-        with open(settings.SESSION_PATH, "r") as f:
-            data = json.load(f)
-        if not data.get("cookies"):
-            logger.warning("Session file has no cookies. Needs refresh.")
+        from app.services.session_crypto import load_encrypted_session
+        data = load_encrypted_session(settings.SESSION_PATH)
+        if not data or not data.get("cookies"):
+            logger.warning("Session file has no cookies or failed decryption. Needs refresh.")
             return False
-    except (json.JSONDecodeError, KeyError):
-        logger.warning("Session file is corrupted. Needs refresh.")
+    except Exception as e:
+        logger.warning(f"Session file verification failed: {e}. Needs refresh.")
         return False
 
     return True
@@ -72,16 +72,15 @@ async def auto_login_google() -> bool:
 
         try:
             async with async_playwright() as p:
-                browser = await p.chromium.launch(
-                    headless=True,
-                    args=[
-                        "--no-sandbox",
-                        "--disable-setuid-sandbox",
-                        "--disable-blink-features=AutomationControlled",
-                        "--disable-dev-shm-usage",
-                        "--disable-infobars",
-                    ]
-                )
+                launch_args = [
+                    "--disable-blink-features=AutomationControlled",
+                    "--disable-dev-shm-usage",
+                    "--disable-infobars",
+                ]
+                if settings.CHROMIUM_NO_SANDBOX:
+                    logger.warning("Chromium sandbox is disabled by explicit configuration.")
+                    launch_args.extend(["--no-sandbox", "--disable-setuid-sandbox"])
+                browser = await p.chromium.launch(headless=True, args=launch_args)
 
                 # Create context with realistic browser fingerprint
                 context = await browser.new_context(
@@ -229,7 +228,9 @@ async def auto_login_google() -> bool:
 
                 # Save session
                 logger.info("[AUTO-LOGIN] Step 6: Saving session...")
-                await context.storage_state(path=settings.SESSION_PATH)
+                state = await context.storage_state()
+                from app.services.session_crypto import save_encrypted_session
+                save_encrypted_session(state, settings.SESSION_PATH)
 
                 await page.screenshot(path=os.path.join(settings.DEBUG_DIR, "login_success.png"))
                 logger.info(f"[AUTO-LOGIN] ✅ Login successful! Session saved to {settings.SESSION_PATH}")

@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/user", tags=["Rewards"])
 # In-memory cooldown tracker: (user_id, tool_id) -> last_awarded_timestamp
 # Prevents automated spam/farming of reward credits on tools
 user_tool_cooldowns: Dict[str, float] = {}
-COOLDOWN_SECONDS = 300  # 5 minutes per tool per user
+COOLDOWN_SECONDS = 86400  # 5 minutes per tool per user
 
 
 class ClaimRewardRequest(BaseModel):
@@ -63,29 +63,21 @@ async def claim_tool_reward(
             "current_balance": get_user_credit_balance(user_id),
         }
 
-    # 2. Anti-Spam / Bot Farming Cooldown Check
-    cooldown_key = f"{user_id}:{tool_id}"
-    now = time.time()
-    last_time = user_tool_cooldowns.get(cooldown_key, 0)
-    elapsed = now - last_time
-
-    if elapsed < COOLDOWN_SECONDS:
-        remaining_wait = int(COOLDOWN_SECONDS - elapsed)
+    # 2 & 3. Award the credits with persistent 24-hour multi-worker cooldown enforcement
+    reward_result = add_user_reward(user_id, tool_id, reward_amount, cooldown_seconds=COOLDOWN_SECONDS)
+    
+    if reward_result.get("cooldown"):
         return {
             "success": False,
             "cooldown": True,
-            "message": f"Reward cooldown active for '{tool_id}'. Try again in {remaining_wait}s.",
+            "message": reward_result.get("message", f"Reward cooldown active for '{tool_id}'."),
             "earned_credits": 0,
             "current_balance": get_user_credit_balance(user_id),
         }
 
-    # 3. Award the credits with 24-hour expiration
-    reward_result = add_user_reward(user_id, tool_id, reward_amount)
-    user_tool_cooldowns[cooldown_key] = now
-
     logger.info(
         f"🎁 Awarded {reward_amount} credits to user {user_id} for tool '{tool_id}'. "
-        f"Expires in 24h. New balance: {reward_result['new_balance']}"
+        f"Expires in 24h. New balance: {reward_result.get('new_balance')}"
     )
 
     return {

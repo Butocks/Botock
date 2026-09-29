@@ -42,7 +42,7 @@ export default function BlogPage() {
   useEffect(() => {
     const loadBlogs = async () => {
       try {
-        const backendUrl = getBackendUrl();
+        const backendUrl = await getBackendUrl();
         const res = await fetch(`${backendUrl}/api/public/blogs`);
         if (res.ok) {
           const customPosts: any[] = await res.json();

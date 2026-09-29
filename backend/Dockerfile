@@ -9,6 +9,7 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
 
@@ -49,11 +50,15 @@ RUN playwright install chromium
 COPY . .
 
 # 5. Create storage directories for sessions, generated videos and downloads
-RUN mkdir -p session generated_videos
+RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin botock && \
+    mkdir -p session generated_videos generated_images && \
+    chown -R botock:botock /app /ms-playwright
+
+USER botock
 
 # Azure App Service sets the PORT environment variable (default 8000)
 ENV PORT=8000
 EXPOSE 8000
 
-# 6. Start Uvicorn Server with dynamic port support
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
+# 6. Start Uvicorn Server with dynamic port support and trusted reverse proxy headers
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips=127.0.0.1"]

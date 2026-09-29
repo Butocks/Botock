@@ -8,18 +8,41 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
+def _get_smtp_credentials():
+    """Dynamically reads credentials from settings or live .env file."""
+    try:
+        from dotenv import dotenv_values
+        env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
+        env_vals = dotenv_values(env_path) if os.path.exists(env_path) else {}
+    except Exception:
+        env_vals = {}
+
+    host = env_vals.get("SMTP_HOST") or os.getenv("SMTP_HOST") or settings.SMTP_HOST or "smtppro.zoho.com"
+    port_val = env_vals.get("SMTP_PORT") or os.getenv("SMTP_PORT") or settings.SMTP_PORT or 587
+    try:
+        port = int(port_val)
+    except Exception:
+        port = 587
+    user = env_vals.get("SMTP_USER") or os.getenv("SMTP_USER") or settings.SMTP_USER or "info@botock.app"
+    password = (env_vals.get("SMTP_PASSWORD") or os.getenv("SMTP_PASSWORD") or settings.SMTP_PASSWORD or "").strip()
+    from_email = env_vals.get("SMTP_FROM_EMAIL") or os.getenv("SMTP_FROM_EMAIL") or settings.SMTP_FROM_EMAIL or "Botock <info@botock.app>"
+    use_ssl = (
+        str(env_vals.get("SMTP_USE_SSL", "")).lower() in ("true", "1")
+        or str(os.getenv("SMTP_USE_SSL", "")).lower() in ("true", "1")
+        or getattr(settings, "SMTP_USE_SSL", False)
+    )
+    return host, port, user, password, from_email, use_ssl
+
+
 def _get_smtp_server():
     """Establishes an authenticated SMTP connection based on port and SSL/TLS configuration."""
-    host = settings.SMTP_HOST or "smtppro.zoho.com"
-    port = settings.SMTP_PORT or 587
-    user = settings.SMTP_USER or "info@botock.app"
-    password = settings.SMTP_PASSWORD.strip() if settings.SMTP_PASSWORD else ""
+    host, port, user, password, _, use_ssl = _get_smtp_credentials()
 
     if not password:
         raise ValueError("SMTP_PASSWORD is not configured in environment.")
 
     # Port 465 uses direct SSL
-    if port == 465 or getattr(settings, "SMTP_USE_SSL", False):
+    if port == 465 or use_ssl:
         server = smtplib.SMTP_SSL(host, port, timeout=15)
         server.ehlo()
         server.login(user, password)

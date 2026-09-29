@@ -22,7 +22,7 @@ export async function claimToolReward(toolId: string): Promise<RewardResult | nu
     // Only logged in users can accumulate reward credits
     if (!token) return null;
 
-    const backendUrl = getBackendUrl();
+    const backendUrl = await getBackendUrl();
     const res = await fetch(`${backendUrl}/api/user/claim-tool-reward`, {
       method: "POST",
       headers: {
@@ -67,11 +67,24 @@ function showRewardToast(message: string) {
   toast.id = "botock-reward-toast";
   toast.className =
     "fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white shadow-2xl border border-amber-400/40 text-xs font-bold animate-bounce transition-all select-none";
-  toast.innerHTML = `
-    <span class="text-base">🎁</span>
-    <span>${message}</span>
-    <button type="button" class="ml-2 text-white/80 hover:text-white font-black text-sm" onclick="this.parentElement.remove()">&times;</button>
-  `;
+  const iconSpan = document.createElement("span");
+  iconSpan.className = "text-base";
+  iconSpan.textContent = "🎁";
+
+  const messageSpan = document.createElement("span");
+  messageSpan.textContent = message;
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.className = "ml-2 text-white/80 hover:text-white font-black text-sm";
+  closeButton.innerHTML = "&times;";
+  closeButton.onclick = () => {
+    toast.remove();
+  };
+
+  toast.appendChild(iconSpan);
+  toast.appendChild(messageSpan);
+  toast.appendChild(closeButton);
 
   document.body.appendChild(toast);
 

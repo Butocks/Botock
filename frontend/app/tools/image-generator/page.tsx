@@ -169,7 +169,7 @@ export default function ImageGeneratorPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token || "";
-      const backendBaseUrl = getBackendUrl();
+      const backendBaseUrl = await getBackendUrl();
 
       let imageBase64: string | undefined = undefined;
       if (referenceImage) {
@@ -230,7 +230,7 @@ export default function ImageGeneratorPage() {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
-          const backendBaseUrl = getBackendUrl();
+          const backendBaseUrl = await getBackendUrl();
           const authHeaders: Record<string, string> = {
             "Bypass-Tunnel-Reminder": "true",
           };
@@ -305,7 +305,7 @@ export default function ImageGeneratorPage() {
     if (!subEmail) return;
     setSubLoading(true);
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       await fetch(`${backendUrl}/api/subscription/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

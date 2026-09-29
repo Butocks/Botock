@@ -251,7 +251,7 @@ export default function VideoCompressClient() {
             {/* Left 2 Cols: Video Player Preview */}
             <div className="lg:col-span-2 space-y-4">
               <div className="rounded-2xl overflow-hidden bg-black aspect-video relative flex items-center justify-center border border-slate-200 dark:border-white/[0.08]">
-                <video
+                <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                   ref={videoRef}
                   src={videoUrl || undefined}
                   controls
@@ -468,7 +468,7 @@ export default function VideoCompressClient() {
 
               {/* Compressed Video Player Preview */}
               <div className="max-w-2xl mx-auto rounded-2xl overflow-hidden bg-black aspect-video relative flex items-center justify-center border border-slate-200 dark:border-white/[0.08]">
-                <video
+                <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                   src={resultUrl}
                   controls
                   className="w-full h-full object-contain"

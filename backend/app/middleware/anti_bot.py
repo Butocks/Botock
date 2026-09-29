@@ -69,14 +69,14 @@ class AntiBotMiddleware(BaseHTTPMiddleware):
         self.gen_request_history: Dict[str, List[float]] = defaultdict(list)
 
     def _get_client_ip(self, request: Request) -> str:
-        """Extracts client IP considering Azure/Cloud proxies."""
-        x_forwarded_for = request.headers.get("x-forwarded-for")
-        if x_forwarded_for:
-            return x_forwarded_for.split(",")[0].strip()
-        x_real_ip = request.headers.get("x-real-ip")
-        if x_real_ip:
-            return x_real_ip.strip()
-        return request.client.host if request.client else "unknown_ip"
+        """
+        Extracts real client IP safely.
+        - Supports Azure Front Door / Application Gateway via X-Client-IP or X-Forwarded-For (first entry).
+        - Defaults to request.client.host if direct connection or proxy headers absent.
+        """
+        # Never trust client-supplied forwarding headers here. Uvicorn can
+        # normalize request.client only when its proxy is explicitly trusted.
+        return request.client.host if request.client else "127.0.0.1"
 
     async def dispatch(self, request: Request, call_next):
         # 1. Allow health check and root endpoints freely

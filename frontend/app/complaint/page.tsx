@@ -29,7 +29,7 @@ export default function ComplaintPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       const res = await fetch(`${backendUrl}/api/public/complaints`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -56,7 +56,7 @@ export default function ComplaintPage() {
     setLoading(true);
     setTrackError("");
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       const res = await fetch(`${backendUrl}/api/public/complaints/${searchTicket.trim()}`);
       if (res.ok) {
         const data = await res.json();

@@ -60,6 +60,25 @@ class Settings(BaseSettings):
     VIDEO_GEN_TIMEOUT: int = 600  # 10 minutes max wait
     PAGE_LOAD_TIMEOUT: int = 60
 
+    # Distributed worker control plane. Keep this disabled until the SQL
+    # migration has been applied and Azure Blob Storage is configured.
+    DISTRIBUTED_QUEUE_ENABLED: bool = False
+    QUEUE_DATABASE_URL: str = ""
+    MAX_PENDING_VIDEO_JOBS: int = 50
+    WORKER_LEASE_SECONDS: int = 900
+    WORKER_HEARTBEAT_SECONDS: int = 30
+    MAX_JOB_ATTEMPTS: int = 2
+    # JSON mapping: {"worker-id": {"token_hash": "sha256 hex", "account_id": "flow-01"}}
+    WORKER_TOKENS_JSON: str = "{}"
+
+    # Azure control plane only. Workers must never receive this value.
+    AZURE_STORAGE_CONNECTION_STRING: str = ""
+    AZURE_VIDEO_CONTAINER: str = "botock-videos"
+    MAX_WORKER_UPLOAD_BYTES: int = 100_000_000
+    # Set true only for a platform where Chromium sandboxing is impossible.
+    # The secure default is false.
+    CHROMIUM_NO_SANDBOX: bool = False
+
 settings = Settings()
 
 os.makedirs(settings.VIDEOS_DIR, exist_ok=True)

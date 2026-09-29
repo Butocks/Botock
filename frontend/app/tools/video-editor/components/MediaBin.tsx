@@ -58,7 +58,7 @@ export default function MediaBin({ items, onUpload, onAddToTimeline }: MediaBinP
               className="group relative rounded-xl overflow-hidden border border-border/50 bg-black aspect-video flex items-center justify-center hover:border-primary transition-all cursor-pointer"
               title={`Add "${item.name}" to timeline`}
             >
-              <video src={item.url} className="w-full h-full object-cover opacity-70 group-hover:opacity-40 transition-opacity" muted playsInline />
+              <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()} src={item.url} className="w-full h-full object-cover opacity-70 group-hover:opacity-40 transition-opacity" muted playsInline />
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="p-1.5 rounded-full bg-primary text-white shadow-md">
                   <Plus className="w-4 h-4" />

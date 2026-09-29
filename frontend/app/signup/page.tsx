@@ -129,7 +129,7 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       const res = await fetch(`${backendUrl}/api/auth/signup-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -167,7 +167,7 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       const verifyRes = await fetch(`${backendUrl}/api/auth/verify-signup-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -188,9 +188,12 @@ export default function SignUpPage() {
           emailRedirectTo: `${origin}/auth/callback?next=/tools/video-generator`,
           data: {
             full_name: formData.name,
+            username: formData.email.split("@")[0],
             dob: formData.dob,
             gender: formData.gender,
             country: formData.country,
+            is_verified: true,
+            profile_completed: true,
           },
         },
       });
@@ -200,6 +203,15 @@ export default function SignUpPage() {
       } else if (data.user && data.user.identities && data.user.identities.length === 0) {
         setMessage({ type: "error", text: "An account with this email already exists. Please sign in." });
       } else {
+        // Sync verified status with backend
+        try {
+          await fetch(`${backendUrl}/api/auth/sync-user-status`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: formData.email.trim(), status: "verified" }),
+          });
+        } catch (_) {}
+
         setMessage({
           type: "success",
           text: "Registration & Email verification complete! Redirecting to creative suite...",
@@ -210,6 +222,60 @@ export default function SignUpPage() {
       }
     } catch (err: any) {
       setMessage({ type: "error", text: err.message || "Account creation failed." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // FALLBACK: Skip OTP verification and register as Unverified
+  const handleSkipVerification = async () => {
+    setLoading(true);
+    setMessage(null);
+    try {
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email.trim(),
+        password: formData.password,
+        options: {
+          emailRedirectTo: `${origin}/auth/callback?next=/tools/video-generator`,
+          data: {
+            full_name: formData.name,
+            username: formData.email.split("@")[0],
+            dob: formData.dob,
+            gender: formData.gender,
+            country: formData.country,
+            is_verified: false,
+            profile_completed: true,
+          },
+        },
+      });
+
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+      } else if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setMessage({ type: "error", text: "An account with this email already exists. Please sign in." });
+      } else {
+        // Sync unverified status with backend
+        try {
+          const token = data.session?.access_token;
+          if (!token) throw new Error("No active session");
+          await fetch(`${await getBackendUrl()}/api/auth/sync-user-status`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ email: formData.email.trim(), status: "unverified" }),
+          });
+        } catch (_) {}
+
+        setMessage({
+          type: "success",
+          text: "Account registered as Unverified. You can verify anytime in Profile Settings. Redirecting...",
+        });
+        setTimeout(() => {
+          window.location.href = `${getSiteUrl()}/tools/video-generator`;
+        }, 1200);
+      }
+    } catch (err: any) {
+      setMessage({ type: "error", text: err.message || "Failed to register account." });
     } finally {
       setLoading(false);
     }
@@ -469,12 +535,21 @@ export default function SignUpPage() {
 
             <button
               type="button"
+              disabled={loading}
+              onClick={handleSkipVerification}
+              className="w-full py-2.5 rounded-xl border border-slate-300 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/[0.04] text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors cursor-pointer"
+            >
+              Skip Verification for now (Continue as Unverified)
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 setStep("form");
                 setOtp("");
                 setMessage(null);
               }}
-              className="w-full text-center text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
+              className="w-full text-center text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer pt-1"
             >
               ← Change Details / Re-enter Email
             </button>

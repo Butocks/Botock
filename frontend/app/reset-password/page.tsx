@@ -77,7 +77,7 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       const verifyRes = await fetch(`${backendUrl}/api/auth/verify-forgot-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

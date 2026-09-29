@@ -3,11 +3,12 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import video, image, convert, auth_otp, rewards
+from app.routers import video, image, convert, auth_otp, rewards, workers
 from app.middleware.anti_bot import AntiBotMiddleware
 from app.config import settings
 from app.services.google_auth import ensure_valid_session
 from app.services.cleanup_service import purge_expired_videos
+from app.services.distributed_queue import queue
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,6 +20,9 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
     logger.info(f"Starting {settings.PROJECT_NAME}")
     logger.info("=" * 60)
+
+    if settings.DISTRIBUTED_QUEUE_ENABLED:
+        await queue.start()
 
     # 1. Run 24-hour cleanup sweep on startup
     try:
@@ -34,7 +38,9 @@ async def lifespan(app: FastAPI):
             "All authenticated routes will fail closed until this secret is configured."
         )
 
-    if settings.GOOGLE_EMAIL and settings.GOOGLE_PASSWORD:
+    if settings.DISTRIBUTED_QUEUE_ENABLED:
+        logger.info("Distributed mode: Flow sessions are loaded only by private workers.")
+    elif settings.GOOGLE_EMAIL and settings.GOOGLE_PASSWORD:
         logger.info(f"Google credentials found for: {settings.GOOGLE_EMAIL}")
         logger.info("Attempting auto-login to Google Flow on startup...")
         success = await ensure_valid_session()
@@ -55,6 +61,7 @@ async def lifespan(app: FastAPI):
     yield  # App runs
 
     logger.info("Shutting down...")
+    await queue.stop()
 
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
@@ -75,7 +82,6 @@ allowed_origins = os.getenv("ALLOWED_ORIGINS").split(",") if os.getenv("ALLOWED_
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"^https?://(.*\.)?(loca\.lt|vercel\.app|botock\.app)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,6 +92,7 @@ app.include_router(image.router)
 app.include_router(convert.router)
 app.include_router(auth_otp.router)
 app.include_router(rewards.router)
+app.include_router(workers.router)
 
 
 @app.get("/")
@@ -94,5 +101,12 @@ async def root():
         "service": settings.PROJECT_NAME,
         "status": "online",
         "docs_url": "/docs",
-        "session_ready": bool(settings.GOOGLE_EMAIL),
+        "distributed_workers": settings.DISTRIBUTED_QUEUE_ENABLED,
+        "session_ready": bool(settings.GOOGLE_EMAIL) if not settings.DISTRIBUTED_QUEUE_ENABLED else None,
     }
+
+
+@app.get("/health")
+async def health():
+    """Unauthenticated readiness check used by the frontend failover probe."""
+    return {"status": "online"}

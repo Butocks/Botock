@@ -53,19 +53,12 @@ class FlowService:
         os.makedirs(self.debug_dir, exist_ok=True)
 
     def check_session_valid(self) -> bool:
-        if os.path.exists(self.session_path):
-            return True
-        alt_paths = [
-            os.path.join(os.path.dirname(__file__), "..", "..", "session", "flow_session.json"),
-            os.path.join(os.path.dirname(__file__), "..", "..", "..", "session", "flow_session.json"),
-            "backend/session/flow_session.json",
-            "session/flow_session.json",
-        ]
-        for p in alt_paths:
-            if os.path.exists(p):
-                self.session_path = os.path.abspath(p)
-                return True
-        return False
+        # Never search fallback paths: a worker must use only its explicitly
+        # configured account session, otherwise multi-worker accounts can mix.
+        if not os.path.isfile(self.session_path):
+            return False
+        from app.services.session_crypto import load_encrypted_session
+        return bool(load_encrypted_session(self.session_path))
 
     async def _launch_browser(self):
         chrome_bin = get_chrome_path()
@@ -73,13 +66,14 @@ class FlowService:
             "headless": True,
             "ignore_default_args": ["--enable-automation"],
             "args": [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
                 "--disable-blink-features=AutomationControlled",
                 "--disable-dev-shm-usage",
                 "--disable-infobars",
             ],
         }
+        if settings.CHROMIUM_NO_SANDBOX:
+            logger.warning("Chromium sandbox is disabled by explicit configuration.")
+            launch_args["args"].extend(["--no-sandbox", "--disable-setuid-sandbox"])
         if chrome_bin:
             launch_args["executable_path"] = chrome_bin
 
@@ -92,8 +86,10 @@ class FlowService:
 
         p = await async_playwright().start()
         browser = await p.chromium.launch(**launch_args)
+        from app.services.session_crypto import load_encrypted_session
+        state = load_encrypted_session(self.session_path)
         context = await browser.new_context(
-            storage_state=self.session_path,
+            storage_state=state if state else self.session_path,
             viewport={"width": 1920, "height": 1080},
             locale="en-US",
             user_agent=(
@@ -141,15 +137,31 @@ class FlowService:
         await page.wait_for_url("**/project/**", timeout=25000)
 
         # Dismiss explore tools / onboarding overlay if open
-        back_btn = page.locator('button[aria-label*="Back button" i], button:has-text("arrow_back"), [aria-label*="Back" i]').first
-        if await back_btn.is_visible(timeout=2000):
-            await back_btn.click()
-            await asyncio.sleep(1)
+        for _ in range(3):
+            # Try 1: "Done" button on explore tools spotlight
+            done_btn = page.locator('button:has-text("Done"), [role="button"]:has-text("Done")').first
+            if await done_btn.is_visible(timeout=1500):
+                logger.info(f"[{generation_id}] Dismissing explore overlay with 'Done' button...")
+                await done_btn.click()
+                await asyncio.sleep(1)
 
-        all_media_btn = page.locator('text="All media"').first
-        if await all_media_btn.is_visible(timeout=3000):
-            await all_media_btn.click()
-            await asyncio.sleep(1.5)
+            # Try 2: Back button on top left "Explore tools"
+            back_btn = page.locator('button[aria-label*="Back" i], button:has-text("arrow_back"), [aria-label*="Back button" i]').first
+            if await back_btn.is_visible(timeout=1500):
+                logger.info(f"[{generation_id}] Dismissing explore overlay with back button...")
+                await back_btn.click()
+                await asyncio.sleep(1)
+
+            # Try 3: Click "All media" in left sidebar to return to canvas
+            all_media_btn = page.locator('text="All media", [aria-label*="All media" i]').first
+            if await all_media_btn.is_visible(timeout=1500):
+                await all_media_btn.click()
+                await asyncio.sleep(1)
+
+            # Check if prompt input is now visible
+            prompt_input = page.locator('.ProseMirror, [contenteditable="true"]').first
+            if await prompt_input.is_visible(timeout=2000):
+                return prompt_input
 
         prompt_input = page.locator('.ProseMirror, [contenteditable="true"]').first
         await prompt_input.wait_for(state="visible", timeout=25000)
@@ -291,6 +303,7 @@ class FlowService:
         is_pro: bool = False,
         model: str = "omni-1.1-flash-360p",
         aspect_ratio: str = "16:9",
+        duration_seconds: int = 8,
         motion_hint: str = None,
         image_base64: str = None,
         reference_image_path: str = None,
@@ -328,7 +341,8 @@ class FlowService:
 
                     # Model selection: Omni 1.1 Flash vs Veo 3.1
                     model_str = str(model).lower()
-                    if "veo" in model_str:
+                    is_veo = "veo" in model_str
+                    if is_veo:
                         model_dropdown = page.locator('.cdk-overlay-pane button:has-text("Omni"), .cdk-overlay-pane button:has-text("Veo"), .cdk-overlay-pane button:has-text("Flash")').first
                         if await model_dropdown.is_visible(timeout=2000):
                             await model_dropdown.click()
@@ -355,19 +369,29 @@ class FlowService:
                         await ratio_btn.click()
                         await asyncio.sleep(0.3)
 
-                    # Resolution: 360p vs 720p based on model selection
-                    target_res = "720p" if ("720p" in model_str or "hd" in model_str or "quality" in model_str) else "360p"
+                    # Resolution: Veo models strictly lock to 720p; Omni models can be 360p or 720p
+                    if is_veo:
+                        target_res = "720p"
+                    else:
+                        target_res = "720p" if "720p" in model_str else "360p"
+
                     res_btn = page.locator('.cdk-overlay-pane button').filter(has_text=target_res).first
                     if not await res_btn.is_visible(timeout=1500):
+                        res_btn = page.locator('.cdk-overlay-pane button').filter(has_text="720p").first
+                    if not await res_btn.is_visible(timeout=1000):
                         res_btn = page.locator('.cdk-overlay-pane button').filter(has_text="360p").first
                     if await res_btn.is_visible(timeout=2000):
                         await res_btn.click()
                         await asyncio.sleep(0.3)
 
-                    # Duration: 10s (fallback 8s)
-                    dur_btn = page.locator('.cdk-overlay-pane button').filter(has_text="10s").first
+                    # Duration: Veo is strictly 8s in Flow AI; Omni supports 4s, 6s, 8s, 10s
+                    target_sec = 8 if is_veo else (duration_seconds if duration_seconds in [4, 6, 8, 10] else 8)
+                    target_dur_str = f"{target_sec}s"
+                    dur_btn = page.locator('.cdk-overlay-pane button').filter(has_text=target_dur_str).first
                     if not await dur_btn.is_visible(timeout=1500):
                         dur_btn = page.locator('.cdk-overlay-pane button').filter(has_text="8s").first
+                    if not await dur_btn.is_visible(timeout=1000):
+                        dur_btn = page.locator('.cdk-overlay-pane button').filter(has_text="10s").first
                     if await dur_btn.is_visible(timeout=2000):
                         await dur_btn.click()
                         await asyncio.sleep(0.3)
@@ -496,7 +520,7 @@ class FlowService:
                 "download_url": f"/api/video/download/{generation_id}",
                 "message": "Video generated successfully!"
             })
-            await context.storage_state(path=self.session_path)
+            state = await context.storage_state(); from app.services.session_crypto import save_encrypted_session; save_encrypted_session(state, self.session_path)
 
         except Exception as e:
             logger.error(f"[{generation_id}] Video generation failed: {e}")
@@ -723,7 +747,7 @@ class FlowService:
                 "download_url": download_url,
                 "image_url": download_url,
             })
-            await context.storage_state(path=self.session_path)
+            state = await context.storage_state(); from app.services.session_crypto import save_encrypted_session; save_encrypted_session(state, self.session_path)
 
         except Exception as e:
             logger.error(f"[{generation_id}] Image generation failed: {e}")

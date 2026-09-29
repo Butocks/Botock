@@ -14,7 +14,11 @@ import json
 # Add parent dir to path so we can import app modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-SESSION_PATH = os.path.join(os.path.dirname(__file__), "..", "session", "flow_session.json")
+# Every worker must save to its configured private session path.  The default
+# preserves the single-machine setup for users who have not configured one.
+SESSION_PATH = os.environ.get(
+    "SESSION_PATH", os.path.join(os.path.dirname(__file__), "..", "session", "flow_session.json")
+)
 
 AUTH_COOKIE_NAMES = {"SID", "SSID", "HSID", "SAPISID", "APISID", "__Secure-1PSID"}
 
@@ -55,11 +59,13 @@ async def manual_login():
         "ignore_default_args": ["--enable-automation"],
         "args": [
             "--disable-blink-features=AutomationControlled",
-            "--no-sandbox",
             "--disable-infobars",
             "--disable-dev-shm-usage",
         ],
     }
+
+    if os.environ.get("CHROMIUM_NO_SANDBOX", "false").lower() in {"1", "true", "yes"}:
+        launch_kwargs["args"].append("--no-sandbox")
 
     if chrome_path:
         print(f"Using genuine Chrome binary: {chrome_path}")
@@ -116,7 +122,7 @@ async def manual_login():
                     return
 
         # Save session
-        await context.storage_state(path=SESSION_PATH)
+        state = await context.storage_state(); from app.services.session_crypto import save_encrypted_session; save_encrypted_session(state, SESSION_PATH)
 
         # Restrict permissions: 600 (owner only)
         try:

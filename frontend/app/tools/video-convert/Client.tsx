@@ -145,7 +145,7 @@ export default function VideoConvertClient() {
           <div className="max-w-3xl mx-auto bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col items-center">
             {/* Player View */}
             <div className="w-full rounded-xl overflow-hidden bg-black/40 border border-slate-800 mb-6 flex items-center justify-center">
-              <video
+              <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                 src={resultUrl || videoUrl}
                 controls
                 className="max-h-96 w-full object-contain"

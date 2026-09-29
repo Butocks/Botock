@@ -20,12 +20,16 @@ import {
   X,
   Wand2,
   ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import FirstLoginModal from "./FirstLoginModal";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement | null>(null);
   const [user, setUser] = useState<any>(null);
   const supabase = createClient();
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -35,6 +39,7 @@ export default function Navbar() {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
   const isUserAdmin = Boolean(user && envAdmins.length > 0 && envAdmins.includes(user?.email?.toLowerCase() || ""));
+  const isUserVerified = Boolean(user?.user_metadata?.is_verified ?? (user?.app_metadata?.provider === "google"));
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -45,8 +50,16 @@ export default function Navbar() {
       setUser(session?.user ?? null);
     });
 
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target as Node)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+
     return () => {
       authListener.subscription.unsubscribe();
+      document.removeEventListener("mousedown", handleClickOutside);
       if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
     };
   }, []);
@@ -358,34 +371,82 @@ export default function Navbar() {
                   Free Quota
                 </span>
 
-                <div className="flex items-center gap-2.5 pl-1">
-                  <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                    {user.email ? user.email[0].toUpperCase() : "U"}
-                  </div>
-                  <span className="text-sm text-slate-700 dark:text-slate-300 truncate max-w-[120px] font-medium">
-                    {user.email?.split("@")[0]}
-                  </span>
-                </div>
-
-                {isUserAdmin && (
-                  <Link
-                    href="/admin"
-                    title="Admin Operations Console"
-                    className="px-2.5 py-1.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                {/* Profile Dropdown Menu */}
+                <div className="relative" ref={profileDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                    className="flex items-center gap-2.5 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors cursor-pointer border border-transparent hover:border-slate-300 dark:hover:border-white/10"
                   >
-                    <ShieldCheck className="w-3.5 h-3.5 text-red-500" />
-                    <span>Admin</span>
-                  </Link>
-                )}
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white text-xs font-black shadow-sm">
+                      {user.email ? user.email[0].toUpperCase() : "U"}
+                    </div>
+                    <span className="text-xs text-slate-700 dark:text-slate-300 font-semibold max-w-[110px] truncate hidden lg:inline">
+                      {user.user_metadata?.full_name || user.email?.split("@")[0]}
+                    </span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileDropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  title="Sign Out"
-                  className="p-2 rounded-xl border border-slate-200 dark:border-white/[0.08] text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:border-red-500/30 transition-colors ml-1 cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
+                  {/* Dropdown Card */}
+                  {profileDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-white dark:bg-[#121217] border border-slate-200 dark:border-white/10 shadow-2xl p-2 z-50 animate-fade-in space-y-1">
+                      {/* User Header */}
+                      <div className="px-3 py-2.5 border-b border-slate-100 dark:border-white/[0.06] mb-1">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {user.user_metadata?.full_name || user.email?.split("@")[0]}
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mb-2">
+                          {user.email}
+                        </div>
+                        {/* Verification Status Badge */}
+                        {isUserVerified ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                            <ShieldCheck className="w-3 h-3" />
+                            <span>Verified</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                            <ShieldAlert className="w-3 h-3" />
+                            <span>Unverified</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Dropdown Items */}
+                      <Link
+                        href="/profile"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
+                      >
+                        <UserIcon className="w-4 h-4 text-violet-500" />
+                        <span>Profile Settings</span>
+                      </Link>
+
+                      {isUserAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>Admin Console</span>
+                        </Link>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          handleLogout();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <Link
@@ -487,30 +548,63 @@ export default function Navbar() {
           </div>
 
           {user && (
-            <div className="pt-3 border-t border-slate-200 dark:border-white/[0.08] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-600 dark:text-slate-400">{user.email}</span>
+            <div className="pt-3 border-t border-slate-200 dark:border-white/[0.08] space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    {user.user_metadata?.full_name || user.email?.split("@")[0]}
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">{user.email}</span>
+                </div>
+                {isUserVerified ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Verified</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-bold">
+                    <ShieldAlert className="w-3 h-3" />
+                    <span>Unverified</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <Link
+                  href="/profile"
+                  onClick={() => setIsOpen(false)}
+                  className="flex-1 py-2 rounded-xl bg-violet-600/10 hover:bg-violet-600/20 text-violet-600 dark:text-violet-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <UserIcon className="w-3.5 h-3.5" />
+                  <span>Profile Settings</span>
+                </Link>
+
                 {isUserAdmin && (
                   <Link
                     href="/admin"
                     onClick={() => setIsOpen(false)}
-                    className="px-2 py-0.5 rounded bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-[10px] font-bold"
+                    className="py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-xs flex items-center gap-1 border border-red-500/20"
                   >
-                    Admin Console
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Admin</span>
                   </Link>
                 )}
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-xs border border-red-500/20 cursor-pointer"
+                >
+                  Sign Out
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="text-xs text-red-600 dark:text-red-400 font-semibold px-3 py-1 rounded bg-red-500/10 border border-red-500/20 cursor-pointer"
-              >
-                Sign Out
-              </button>
             </div>
           )}
         </div>
       )}
+
+      {/* First Login Modal for Google OAuth users */}
+      <FirstLoginModal user={user} />
     </header>
   );
 }

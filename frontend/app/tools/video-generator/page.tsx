@@ -30,12 +30,42 @@ const SAMPLE_PROMPTS = [
   "Futuristic spacecraft leaving warp speed into orbit around a vibrant ringed gas giant",
 ];
 
-const VIDEO_MODELS = [
-  { id: "omni-1.1-flash-360p", label: "Omni 1.1 Flash (360p - Fast)", cost: 15 },
-  { id: "omni-1.1-flash-720p", label: "Omni 1.1 Flash (720p - HD)", cost: 30 },
-  { id: "veo-3.1-fast", label: "Veo 3.1 - Fast (HD)", cost: 35 },
-  { id: "veo-3.1-quality", label: "Veo 3.1 - Quality (Cinema)", cost: 45 },
-  { id: "veo-3.1-lite", label: "Veo 3.1 - Lite (Economy)", cost: 20 },
+export const VIDEO_MODELS = [
+  { 
+    id: "omni-1.1-flash-360p", 
+    label: "Omni 1.1 Flash (360p - Fast)", 
+    resolution: "360p",
+    allowedDurations: [4, 6, 8, 10],
+    durationCosts: { 4: 8, 6: 10, 8: 12, 10: 14 }
+  },
+  { 
+    id: "omni-1.1-flash-720p", 
+    label: "Omni 1.1 Flash (720p - HD)", 
+    resolution: "720p",
+    allowedDurations: [4, 6, 8, 10],
+    durationCosts: { 4: 14, 6: 20, 8: 24, 10: 30 }
+  },
+  { 
+    id: "veo-3.1-lite", 
+    label: "Veo 3.1 - Lite (720p Economy)", 
+    resolution: "720p",
+    allowedDurations: [8],
+    durationCosts: { 8: 20 }
+  },
+  { 
+    id: "veo-3.1-fast", 
+    label: "Veo 3.1 - Fast (720p HD)", 
+    resolution: "720p",
+    allowedDurations: [8],
+    durationCosts: { 8: 40 }
+  },
+  { 
+    id: "veo-3.1-quality", 
+    label: "Veo 3.1 - Quality (720p Cinema)", 
+    resolution: "720p",
+    allowedDurations: [8],
+    durationCosts: { 8: 120 }
+  },
 ];
 
 export default function VideoGeneratorPage() {
@@ -95,7 +125,7 @@ export default function VideoGeneratorPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) return;
-      const backendBaseUrl = getBackendUrl();
+      const backendBaseUrl = await getBackendUrl();
       const res = await fetch(`${backendBaseUrl}/api/video/credits`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -132,9 +162,21 @@ export default function VideoGeneratorPage() {
     });
   }, []);
 
-  const handleModelSelect = (model: string) => {
-    setSelectedModel(model);
+  const handleModelSelect = (modelId: string) => {
+    setSelectedModel(modelId);
     setErrorMessage("");
+    const modelObj = VIDEO_MODELS.find((m) => m.id === modelId);
+    if (modelObj) {
+      if (!modelObj.allowedDurations.includes(durationSeconds)) {
+        setDurationSeconds(modelObj.allowedDurations[0]);
+      }
+    }
+  };
+
+  const getActiveModelCost = () => {
+    const currentModelObj = VIDEO_MODELS.find((m) => m.id === selectedModel);
+    if (!currentModelObj) return 14;
+    return (currentModelObj.durationCosts as any)[durationSeconds] || 14;
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -174,10 +216,14 @@ export default function VideoGeneratorPage() {
     }
 
     const currentModelObj = VIDEO_MODELS.find((m) => m.id === selectedModel);
-    const neededCredits = currentModelObj ? currentModelObj.cost : 15;
+    const isVeoModel = selectedModel.includes("veo");
+    const activeDuration = isVeoModel ? 8 : durationSeconds;
+    const neededCredits = currentModelObj 
+      ? ((currentModelObj.durationCosts as any)[activeDuration] || 14)
+      : 14;
 
     if (!isPro && creditsRemaining < neededCredits) {
-      setErrorMessage(`Insufficient credits. ${selectedModel} costs ${neededCredits} credits, but you have ${creditsRemaining}.`);
+      setErrorMessage(`Insufficient credits. ${selectedModel} (${activeDuration}s) costs ${neededCredits} credits, but you have ${creditsRemaining}.`);
       setShowSubModal(true);
       return;
     }
@@ -192,7 +238,7 @@ export default function VideoGeneratorPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token || "";
-      const backendBaseUrl = getBackendUrl();
+      const backendBaseUrl = await getBackendUrl();
 
       let imageBase64: string | undefined = undefined;
       if (referenceImage) {
@@ -254,7 +300,7 @@ export default function VideoGeneratorPage() {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
-          const backendBaseUrl = getBackendUrl();
+          const backendBaseUrl = await getBackendUrl();
           const authHeaders: Record<string, string> = {
             "Bypass-Tunnel-Reminder": "true",
           };
@@ -329,7 +375,7 @@ export default function VideoGeneratorPage() {
     if (!subEmail) return;
     setSubLoading(true);
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       await fetch(`${backendUrl}/api/subscription/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -404,7 +450,7 @@ export default function VideoGeneratorPage() {
         {status === "completed" && videoUrl && (
           <div className="w-full flex flex-col items-center space-y-3 max-w-xl">
             <div className="relative rounded-2xl overflow-hidden bg-black border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-2xl max-h-[46vh] w-full">
-              <video
+              <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                 src={videoBlobUrl || videoUrl}
                 controls
                 autoPlay
@@ -517,17 +563,27 @@ export default function VideoGeneratorPage() {
               ))}
             </select>
 
-            {/* Duration Selector */}
-            <select
-              value={durationSeconds}
-              onChange={(e) => setDurationSeconds(parseInt(e.target.value))}
-              className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer hidden sm:block"
-            >
-              <option value={10} className="bg-white dark:bg-[#0c081a]">10s Video</option>
-              <option value={8} className="bg-white dark:bg-[#0c081a]">8s Video</option>
-              <option value={6} className="bg-white dark:bg-[#0c081a]">6s Video</option>
-              <option value={4} className="bg-white dark:bg-[#0c081a]">4s Video</option>
-            </select>
+            {/* Duration Selector (Dynamically matches model capabilities) */}
+            {(() => {
+              const currentModelObj = VIDEO_MODELS.find((m) => m.id === selectedModel);
+              const allowed = currentModelObj?.allowedDurations || [4, 6, 8, 10];
+              return (
+                <select
+                  value={durationSeconds}
+                  onChange={(e) => setDurationSeconds(parseInt(e.target.value))}
+                  className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer"
+                >
+                  {allowed.map((sec) => {
+                    const cost = currentModelObj?.durationCosts ? (currentModelObj.durationCosts as any)[sec] : 14;
+                    return (
+                      <option key={sec} value={sec} className="bg-white dark:bg-[#0c081a]">
+                        {sec}s Video ({cost} cr)
+                      </option>
+                    );
+                  })}
+                </select>
+              );
+            })()}
 
             {/* Reference image chip if attached */}
             {referenceImage && (
@@ -540,14 +596,17 @@ export default function VideoGeneratorPage() {
               </div>
             )}
 
-            {/* Credits Remaining Badge */}
-            <div className="ml-auto text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1">
+            {/* Cost & Credits Remaining Badge */}
+            <div className="ml-auto text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1.5">
+              <span className="px-2 py-0.5 rounded-md bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/20 font-bold">
+                Cost: {getActiveModelCost()} cr
+              </span>
               <span>⚡ {isPro ? "Unlimited" : `${creditsRemaining} cr`}</span>
               {!isPro && (
                 <button
                   type="button"
                   onClick={() => setShowSubModal(true)}
-                  className="text-violet-600 dark:text-violet-400 hover:underline font-bold ml-1 cursor-pointer"
+                  className="text-violet-600 dark:text-violet-400 hover:underline font-bold ml-0.5 cursor-pointer"
                 >
                   Pro
                 </button>

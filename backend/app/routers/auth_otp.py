@@ -1,3 +1,4 @@
+import hmac
 import os
 import json
 import fcntl
@@ -12,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Header, Depends, Request
 from pydantic import BaseModel
 from app.config import settings
 from app.services.email_service import send_otp_email, send_update_email, test_smtp_connection
+from app.middleware.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ BLOGS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "
 SESSION_TOKENS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "admin_tokens.json")
 OTP_STORE_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "otp_store.json")
 OTP_RATE_LIMITS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "otp_rate_limits.json")
+USER_STATUS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "user_status.json")
 SUBSCRIPTION_REQUESTS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "subscription_requests.json")
 
 # ----------------------------------------------------
@@ -166,11 +169,34 @@ DEFAULT_SETTINGS = {
         "subscribers_unlimited_photos": True,
         "video_tokens": 1500,
         "video_model_costs": {
-            "omni-1.1-flash-360p": 15,
+            "omni-1.1-flash-360p": 14,
             "omni-1.1-flash-720p": 30,
-            "veo-3.1-fast": 35,
-            "veo-3.1-quality": 45,
-            "veo-3.1-lite": 20
+            "veo-3.1-lite": 20,
+            "veo-3.1-fast": 40,
+            "veo-3.1-quality": 120
+        },
+        "video_duration_costs": {
+            "omni-1.1-flash-360p": {
+                "4": 8,
+                "6": 10,
+                "8": 12,
+                "10": 14
+            },
+            "omni-1.1-flash-720p": {
+                "4": 14,
+                "6": 20,
+                "8": 24,
+                "10": 30
+            },
+            "veo-3.1-lite": {
+                "8": 20
+            },
+            "veo-3.1-fast": {
+                "8": 40
+            },
+            "veo-3.1-quality": {
+                "8": 120
+            }
         }
     },
     "promotions": {
@@ -289,6 +315,11 @@ class AdminOtpVerifyRequest(BaseModel):
 
 class UserOtpRequest(BaseModel):
     email: str
+    is_verified: Optional[bool] = None
+
+class UserStatusUpdateRequest(BaseModel):
+    email: str
+    status: str  # "verified" or "unverified"
 
 class UserOtpVerifyRequest(BaseModel):
     email: str
@@ -349,7 +380,7 @@ import secrets
 @router.post("/api/admin/auth/verify-secret")
 async def verify_admin_secret(req: AdminSecretRequest, request: Request):
     email_clean = req.email.strip().lower()
-    client_ip = request.headers.get("X-Forwarded-For")
+    client_ip = request.client.host if request.client else "unknown"
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
@@ -373,7 +404,7 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
 
     # 3. Check secret code from env
     server_secret = settings.ADMIN_LOGIN_SECRET.strip()
-    if not server_secret or req.secret.strip() != server_secret:
+    if not server_secret or not hmac.compare_digest(req.secret.strip(), server_secret):
         record_failed_attempt(client_ip)
         raise HTTPException(status_code=401, detail="Invalid admin secret authorization code.")
 
@@ -404,7 +435,7 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
 @router.post("/api/admin/auth/verify-otp")
 async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
     email_clean = req.email.strip().lower()
-    client_ip = request.headers.get("X-Forwarded-For")
+    client_ip = request.client.host if request.client else "unknown"
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
@@ -428,7 +459,7 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
 
     # Check OTP match
     input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
-    if input_hash != stored.get("otp_hash", "") and req.otp.strip() != stored.get("otp", ""):
+    if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
             if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
@@ -471,8 +502,9 @@ async def request_two_step(request: Request, admin_token: str = Depends(verify_a
     
     two_steps = _read_json(TWO_STEP_FILE, {})
     hashed = hashlib.sha256(admin_token.encode()).hexdigest()
+    otp_hash = hashlib.sha256(action_otp.encode()).hexdigest()
     two_steps[hashed] = {
-        "otp": action_otp,
+        "otp_hash": otp_hash,
         "expires_at": time.time() + 600,
         "attempts_left": 3,
         "purpose": "2-Step Critical Action Confirmation",
@@ -495,7 +527,7 @@ def require_2step_verification(two_step_code: Optional[str] = Header(None, alias
 
     input_hash = hashlib.sha256(code.encode()).hexdigest()
     if stored and time.time() <= stored["expires_at"]:
-        if input_hash == stored.get("otp_hash", "") or code == stored.get("otp", ""):
+        if stored.get("otp_hash") and hmac.compare_digest(input_hash, stored.get("otp_hash")):
             del two_steps[hashed]
             _write_json(TWO_STEP_FILE, two_steps)
             return True
@@ -803,7 +835,7 @@ async def get_analytics(admin_token: str = Depends(verify_admin_token)):
 # ----------------------------------------------------
 @router.post("/api/auth/signup-otp")
 async def send_user_signup_otp(req: UserOtpRequest, request: Request):
-    client_ip = request.headers.get("X-Forwarded-For")
+    client_ip = request.client.host if request.client else "unknown"
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
@@ -833,7 +865,7 @@ async def send_user_signup_otp(req: UserOtpRequest, request: Request):
 
 @router.post("/api/auth/verify-signup-otp")
 async def verify_user_signup_otp(req: UserOtpVerifyRequest, request: Request):
-    client_ip = request.headers.get("X-Forwarded-For")
+    client_ip = request.client.host if request.client else "unknown"
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
@@ -853,7 +885,7 @@ async def verify_user_signup_otp(req: UserOtpVerifyRequest, request: Request):
         raise HTTPException(status_code=400, detail="Code expired. Please request a new verification code.")
     
     input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
-    if input_hash != stored.get("otp_hash", "") and req.otp.strip() != stored.get("otp", ""):
+    if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
         record_failed_attempt(client_ip)
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
@@ -864,12 +896,28 @@ async def verify_user_signup_otp(req: UserOtpVerifyRequest, request: Request):
         raise HTTPException(status_code=400, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
     
     if f"user_signup_{email}" in otps: del otps[f"user_signup_{email}"]; _write_json(OTP_STORE_FILE, otps)
+    statuses = _read_json(USER_STATUS_FILE, {})
+    statuses[email] = "verified"
+    _write_json(USER_STATUS_FILE, statuses)
     return {"success": True, "message": "Email verified successfully."}
 
 
-@router.post("/api/auth/forgot-password-otp")
-async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
-    client_ip = request.headers.get("X-Forwarded-For")
+@router.post("/api/auth/sync-user-status")
+async def sync_user_status(req: UserStatusUpdateRequest, user: dict = Depends(get_current_user)):
+    email = req.email.strip().lower()
+    if email != user.get("email", "").strip().lower():
+        raise HTTPException(status_code=403, detail="You may only update your own account status.")
+    if req.status not in {"verified", "unverified"}:
+        raise HTTPException(status_code=422, detail="Invalid account status.")
+    statuses = _read_json(USER_STATUS_FILE, {})
+    statuses[email] = req.status
+    _write_json(USER_STATUS_FILE, statuses)
+    return {"success": True, "status": req.status}
+
+
+@router.post("/api/auth/send-profile-verify-otp")
+async def send_profile_verify_otp(req: UserOtpRequest, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
@@ -880,6 +928,84 @@ async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
         raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
         
     email = req.email.strip().lower()
+    check_otp_spam_protection(email, client_ip)
+
+    otp_code = "".join(secrets.choice(string.digits) for _ in range(6))
+    otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
+    otps = _read_json(OTP_STORE_FILE, {})
+    otps[f"profile_verify_{email}"] = {
+        "otp_hash": otp_hash,
+        "expires_at": time.time() + 600,
+        "attempts_left": 3,
+        "purpose": "Profile Email Verification",
+    }
+    _write_json(OTP_STORE_FILE, otps)
+    send_otp_email(to_email=email, otp_code=otp_code, purpose="Profile Email Verification")
+    return {"success": True, "message": "Verification code dispatched to your email."}
+
+
+@router.post("/api/auth/verify-profile-otp")
+async def verify_profile_otp(req: UserOtpVerifyRequest, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown" 
+        
+    is_locked, _ = check_lockout(client_ip)
+    if is_locked:
+        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
+        
+    email = req.email.strip().lower()
+    otps = _read_json(OTP_STORE_FILE, {})
+    stored = otps.get(f"profile_verify_{email}")
+    if not stored:
+        raise HTTPException(status_code=400, detail="No active verification code found.")
+    if time.time() > stored["expires_at"]:
+        if f"profile_verify_{email}" in otps: del otps[f"profile_verify_{email}"]; _write_json(OTP_STORE_FILE, otps)
+        raise HTTPException(status_code=400, detail="Code expired. Please request a new verification code.")
+    
+    input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
+    if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
+        record_failed_attempt(client_ip)
+        stored["attempts_left"] -= 1
+        if stored["attempts_left"] <= 0:
+            if f"profile_verify_{email}" in otps: del otps[f"profile_verify_{email}"]; _write_json(OTP_STORE_FILE, otps)
+            raise HTTPException(status_code=400, detail="Too many failed attempts. Code invalidated.")
+        otps[f"profile_verify_{email}"] = stored
+        _write_json(OTP_STORE_FILE, otps)
+        raise HTTPException(status_code=400, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
+    
+    if f"profile_verify_{email}" in otps: del otps[f"profile_verify_{email}"]; _write_json(OTP_STORE_FILE, otps)
+    statuses = _read_json(USER_STATUS_FILE, {})
+    statuses[email] = "verified"
+    _write_json(USER_STATUS_FILE, statuses)
+    return {"success": True, "message": "Email verified successfully."}
+
+
+@router.post("/api/auth/forgot-password-otp")
+async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown" 
+        
+    is_locked, _ = check_lockout(client_ip)
+    if is_locked:
+        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
+        
+    email = req.email.strip().lower()
+
+    # Fallback support process for unverified users
+    statuses = _read_json(USER_STATUS_FILE, {})
+    user_status = statuses.get(email)
+    if req.is_verified is False or user_status == "unverified":
+        raise HTTPException(
+            status_code=403,
+            detail="Your account is unverified. Please email us at info@botock.app for assistance with your account recovery."
+        )
+
     # Anti-spam cooldown & hourly limit check
     check_otp_spam_protection(email, client_ip)
     
@@ -887,7 +1013,6 @@ async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
     otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
     otps = _read_json(OTP_STORE_FILE, {})
     otps[f"user_forgot_{email}"] = {
-        "otp": otp_code,
         "otp_hash": otp_hash,
         "expires_at": time.time() + 600,
         "attempts_left": 3,
@@ -900,7 +1025,7 @@ async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
 
 @router.post("/api/auth/verify-forgot-otp")
 async def verify_user_forgot_otp(req: UserOtpVerifyRequest, request: Request):
-    client_ip = request.headers.get("X-Forwarded-For")
+    client_ip = request.client.host if request.client else "unknown"
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
@@ -920,7 +1045,7 @@ async def verify_user_forgot_otp(req: UserOtpVerifyRequest, request: Request):
         raise HTTPException(status_code=400, detail="Reset code expired. Please request a new code.")
     
     input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
-    if input_hash != stored.get("otp_hash", "") and req.otp.strip() != stored.get("otp", ""):
+    if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
         record_failed_attempt(client_ip)
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
@@ -948,7 +1073,7 @@ class SendUpdateEmailRequest(BaseModel):
 @router.post("/api/admin/test-smtp")
 async def admin_test_smtp(
     req: Optional[TestSmtpRequest] = None,
-    admin_token: str = Depends(verify_admin_token)
+    admin_token: str = Depends(verify_admin_token),
 ):
     target = req.test_email.strip() if (req and req.test_email and req.test_email.strip()) else None
     result = test_smtp_connection(target)
@@ -957,7 +1082,7 @@ async def admin_test_smtp(
 @router.post("/api/admin/send-update")
 async def admin_send_update(
     req: SendUpdateEmailRequest,
-    admin_token: str = Depends(verify_admin_token)
+    admin_token: str = Depends(verify_admin_token),
 ):
     success = send_update_email(to_email=req.to_email, subject=req.subject, body_text=req.body_text)
     if not success:
@@ -1000,7 +1125,7 @@ async def get_subscription_requests(admin_token: str = Depends(verify_admin_toke
 async def update_subscription_request_status(
     req_id: str,
     status: str,
-    admin_token: str = Depends(verify_admin_token)
+    admin_token: str = Depends(verify_admin_token),
 ):
     requests_list = _read_json(SUBSCRIPTION_REQUESTS_FILE, [])
     found = False
@@ -1014,3 +1139,12 @@ async def update_subscription_request_status(
     _write_json(SUBSCRIPTION_REQUESTS_FILE, requests_list)
     return {"success": True, "message": f"Subscription request marked as {status}."}
 
+
+@router.post("/api/admin/logout")
+async def admin_logout(admin_token: str = Depends(verify_admin_token)):
+    tokens = _read_json(SESSION_TOKENS_FILE, {})
+    hashed_token = hashlib.sha256(admin_token.encode()).hexdigest()
+    if hashed_token in tokens:
+        del tokens[hashed_token]
+        _write_json(SESSION_TOKENS_FILE, tokens)
+    return {"success": True, "message": "Admin logged out successfully."}

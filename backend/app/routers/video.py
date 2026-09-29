@@ -8,11 +8,13 @@ from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from app.models.schemas import VideoGenerateRequest, VideoGenerateResponse, VideoStatusResponse, VideoListResponse
 from app.services.flow_service import FlowVideoService
-from app.middleware.auth import check_daily_quota, get_current_user
+from app.middleware.auth import get_current_user
 from app.config import settings
+from app.services.distributed_queue import QueueFullError, queue
+from app.services.blob_storage import download_video as download_blob_video
 
 router = APIRouter(prefix="/api/video", tags=["Video"])
 
@@ -69,6 +71,7 @@ async def safe_generate_task(
     is_pro: bool = False,
     model: str = "omni-1.1-flash-360p",
     aspect_ratio: str = "16:9",
+    duration_seconds: int = 8,
     motion_hint: str = None,
     image_base64: str = None,
 ):
@@ -84,6 +87,7 @@ async def safe_generate_task(
                 is_pro=is_pro,
                 model=model,
                 aspect_ratio=aspect_ratio,
+                duration_seconds=duration_seconds,
                 motion_hint=motion_hint,
                 image_base64=image_base64,
             )
@@ -120,61 +124,97 @@ async def generate_video(
     if "baby songs" in clean_prompt.lower():
         logger.info(f"TESTING/TRAINING LOG: Baby songs prompt detected by user {user['user_id']}")
 
-    # Check available models and their costs
+    selected_model = request.model or "omni-1.1-flash-360p"
+
+    # Veo models in Flow AI are strictly 8s and 720p
+    is_veo = "veo" in selected_model.lower()
+    if is_veo:
+        duration_seconds = 8
+    else:
+        duration_seconds = request.duration_seconds if request.duration_seconds in [4, 6, 8, 10] else 8
+
+    # Check available models and their exact duration-based costs
     from app.routers.auth_otp import get_platform_settings
     quotas = get_platform_settings().get("quotas", {})
-    model_costs = quotas.get("video_model_costs", {
-        "omni-1.1-flash-360p": 15,
+    duration_costs = quotas.get("video_duration_costs", {
+        "omni-1.1-flash-360p": {"4": 8, "6": 10, "8": 12, "10": 14},
+        "omni-1.1-flash-720p": {"4": 14, "6": 20, "8": 24, "10": 30},
+        "veo-3.1-lite": {"8": 20},
+        "veo-3.1-fast": {"8": 40},
+        "veo-3.1-quality": {"8": 120}
+    })
+    fallback_costs = quotas.get("video_model_costs", {
+        "omni-1.1-flash-360p": 14,
         "omni-1.1-flash-720p": 30,
-        "veo-3.1-fast": 35,
-        "veo-3.1-quality": 45,
         "veo-3.1-lite": 20,
+        "veo-3.1-fast": 40,
+        "veo-3.1-quality": 120
     })
 
-    selected_model = request.model or "omni-1.1-flash-360p"
-    if selected_model not in model_costs:
-        selected_model = "omni-1.1-flash-360p"
+    model_durations = duration_costs.get(selected_model, {})
+    cost = model_durations.get(str(duration_seconds), fallback_costs.get(selected_model, 14))
 
-    # Calculate Cost and Deduct
-    from app.middleware.auth import get_user_credit_balance, deduct_video_credit
-    
-    cost = model_costs.get(selected_model, 15)
-    
-    if not is_pro:
-        remaining = get_user_credit_balance(user["user_id"])
-        if remaining < cost:
-            raise HTTPException(
-                status_code=429,
-                detail=f"Insufficient daily credits. Generating with {selected_model} costs {cost} credits, but you have {remaining} remaining. Please wait for the 24h reset or upgrade to Botock Pro."
-            )
-        deduct_video_credit(user["user_id"], cost)
-
-    # Increment queue counter
-    current_queued_jobs += 1
+    # Calculate cost. In distributed mode we reserve a queue position before
+    # deducting, so a full queue can never consume a user's credits.
+    from app.middleware.auth import atomic_deduct_video_credit
 
     # Aspect ratio validation (16:9 and 9:16 supported)
     aspect_ratio = "9:16" if "9:16" in str(request.aspect_ratio) else "16:9"
 
     generation_id = str(uuid.uuid4())
     
-    save_ownership(generation_id, user["user_id"])
+    if settings.DISTRIBUTED_QUEUE_ENABLED:
+        try:
+            await queue.enqueue(
+                generation_id,
+                user["user_id"],
+                {
+                    "prompt": clean_prompt,
+                    "is_pro": is_pro,
+                    "model": selected_model,
+                    "aspect_ratio": aspect_ratio,
+                    "duration_seconds": duration_seconds,
+                    "motion_hint": request.motion_hint,
+                    "image_base64": request.image_base64,
+                },
+            )
+        except QueueFullError as exc:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Video queue is at capacity ({exc.limit} waiting jobs). Please try again shortly.",
+            )
+        try:
+            if not is_pro:
+                atomic_deduct_video_credit(user["user_id"], cost)
+            if not await queue.activate(generation_id, user["user_id"]):
+                raise HTTPException(status_code=503, detail="Could not activate video generation. Please retry.")
+        except Exception:
+            await queue.cancel_reservation(generation_id, user["user_id"])
+            raise
+    else:
+        if not is_pro:
+            atomic_deduct_video_credit(user["user_id"], cost)
+        save_ownership(generation_id, user["user_id"])
     video_statuses[generation_id] = {
         "user_id": user["user_id"],
         "status": "queued",
-        "message": f"Video generation queued in secure pipeline ({selected_model})."
+        "message": f"Video generation queued in secure pipeline ({selected_model}, {duration_seconds}s)."
     }
     
-    # Run the playwright automation inside the concurrency-limited background task
-    background_tasks.add_task(
-        safe_generate_task,
-        clean_prompt,
-        generation_id,
-        is_pro,
-        selected_model,
-        aspect_ratio,
-        request.motion_hint,
-        request.image_base64,
-    )
+    if not settings.DISTRIBUTED_QUEUE_ENABLED:
+        # Legacy single-machine mode: run Playwright locally.
+        current_queued_jobs += 1
+        background_tasks.add_task(
+            safe_generate_task,
+            clean_prompt,
+            generation_id,
+            is_pro,
+            selected_model,
+            aspect_ratio,
+            duration_seconds,
+            request.motion_hint,
+            request.image_base64,
+        )
     
     return VideoGenerateResponse(
         generation_id=generation_id,
@@ -222,6 +262,24 @@ async def get_credits(user: dict = Depends(get_current_user)):
 async def get_status(generation_id: str, user: dict = Depends(get_current_user)):
     validate_uuid(generation_id)
 
+    if settings.DISTRIBUTED_QUEUE_ENABLED:
+        job = await queue.get_for_user(generation_id, user["user_id"])
+        if not job:
+            raise HTTPException(status_code=404, detail="Generation ID not found")
+        status = job["status"]
+        message = {
+            "queued": "Waiting for an available Flow worker.",
+            "running": "Generating video.",
+            "completed": "Video generated successfully!",
+            "failed": "Generation failed. Please try again.",
+        }.get(status, "Generation status is updating.")
+        return VideoStatusResponse(
+            generation_id=generation_id,
+            status=status,
+            message=message,
+            download_url=f"/api/video/download/{generation_id}" if status == "completed" else None,
+        )
+
     if generation_id not in video_statuses:
         raise HTTPException(status_code=404, detail="Generation ID not found")
         
@@ -266,6 +324,23 @@ def check_ownership(generation_id: str, user_id: str):
 @router.get("/download/{generation_id}")
 async def download_video(generation_id: str, user: dict = Depends(get_current_user)):
     validate_uuid(generation_id)
+
+    if settings.DISTRIBUTED_QUEUE_ENABLED:
+        job = await queue.get_for_user(generation_id, user["user_id"])
+        if not job:
+            raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
+        if job["status"] != "completed" or not job["output_object_key"]:
+            raise HTTPException(status_code=404, detail="Video file not found or not yet generated.")
+        try:
+            content = await download_blob_video(job["output_object_key"])
+        except Exception:
+            logger.exception("Unable to fetch completed video %s from object storage", generation_id)
+            raise HTTPException(status_code=404, detail="Video file is temporarily unavailable.")
+        return Response(
+            content=content,
+            media_type="video/mp4",
+            headers={"Content-Disposition": f'attachment; filename="{generation_id}.mp4"'},
+        )
 
     # Persistent Ownership check
     check_ownership(generation_id, user["user_id"])

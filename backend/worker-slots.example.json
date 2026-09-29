@@ -1,0 +1,19 @@
+{
+  "control_plane_url": "https://api.botock.app",
+  "slots": [
+    {
+      "worker_id": "local-flow-01",
+      "account_id": "flow-local-01",
+      "worker_token": "replace-with-the-unique-plain-worker-token",
+      "session_path": "/private/botock/flow-local-01.session.enc",
+      "session_encryption_key": "replace-with-a-unique-fernet-key"
+    },
+    {
+      "worker_id": "local-flow-02",
+      "account_id": "flow-local-02",
+      "worker_token": "replace-with-a-different-worker-token",
+      "session_path": "/private/botock/flow-local-02.session.enc",
+      "session_encryption_key": "replace-with-a-different-fernet-key"
+    }
+  ]
+}

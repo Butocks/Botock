@@ -150,14 +150,24 @@ export default function ConsoleView() {
   // ----------------------------------------------------
   // Module 2: Quotas & Tokens
   // ----------------------------------------------------
-  const [quotas, setQuotas] = useState({
+  const [quotas, setQuotas] = useState<any>({
     free_daily_credits: 50,
     free_daily_photos: 5,
     subscribers_unlimited_photos: true,
     video_tokens: 1500,
     video_model_costs: {
-      "omni-1.1-flash-360p": 15,
-      "omni-1.1-flash-720p": 30
+      "omni-1.1-flash-360p": 14,
+      "omni-1.1-flash-720p": 30,
+      "veo-3.1-lite": 20,
+      "veo-3.1-fast": 40,
+      "veo-3.1-quality": 120
+    },
+    video_duration_costs: {
+      "omni-1.1-flash-360p": { "4": 8, "6": 10, "8": 12, "10": 14 },
+      "omni-1.1-flash-720p": { "4": 14, "6": 20, "8": 24, "10": 30 },
+      "veo-3.1-lite": { "8": 20 },
+      "veo-3.1-fast": { "8": 40 },
+      "veo-3.1-quality": { "8": 120 }
     }
   });
 
@@ -262,7 +272,7 @@ export default function ConsoleView() {
   };
 
   const loadAllData = async (token: string) => {
-    const backendUrl = getBackendUrl();
+    const backendUrl = await getBackendUrl();
     try {
       // 1. Platform Config (Quotas, Promotions, Plans, Tool Rules, Policies)
       const resConfig = await fetch(`${backendUrl}/api/public/platform-config`);
@@ -352,7 +362,7 @@ export default function ConsoleView() {
   const handleSaveQuotas = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${getBackendUrl()}/api/admin/quotas`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/quotas`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -372,7 +382,7 @@ export default function ConsoleView() {
   const handleSaveToolRewards = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${getBackendUrl()}/api/admin/tool-rewards`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/tool-rewards`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -392,7 +402,7 @@ export default function ConsoleView() {
   const handleSavePromotions = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${getBackendUrl()}/api/admin/promotions`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/promotions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -412,7 +422,7 @@ export default function ConsoleView() {
   const handleSavePlans = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${getBackendUrl()}/api/admin/plans`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/plans`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -431,7 +441,7 @@ export default function ConsoleView() {
 
   const handleSaveToolRules = () => {
     executeWithTwoStep(async (code) => {
-      const res = await fetch(`${getBackendUrl()}/api/admin/tool-rules`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/tool-rules`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -447,7 +457,7 @@ export default function ConsoleView() {
 
   const handleSavePolicies = () => {
     executeWithTwoStep(async (code) => {
-      const res = await fetch(`${getBackendUrl()}/api/admin/policies`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/policies`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -463,7 +473,7 @@ export default function ConsoleView() {
 
   const handleComplaintStatus = (ticketId: string, newStatus: string) => {
     executeWithTwoStep(async (code) => {
-      const res = await fetch(`${getBackendUrl()}/api/admin/complaints/update-status`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/complaints/update-status`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -490,7 +500,7 @@ export default function ConsoleView() {
         .split("\n")
         .map((r) => r.trim())
         .filter(Boolean);
-      const res = await fetch(`${getBackendUrl()}/api/admin/jobs`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/jobs`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -516,7 +526,7 @@ export default function ConsoleView() {
 
   const handleDeleteJob = (jobId: string) => {
     executeWithTwoStep(async (code) => {
-      const res = await fetch(`${getBackendUrl()}/api/admin/jobs/${jobId}`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/jobs/${jobId}`, {
         method: "DELETE",
         headers: {
           "X-Admin-Token": adminToken || "",
@@ -536,7 +546,7 @@ export default function ConsoleView() {
       return;
     }
     executeWithTwoStep(async (code) => {
-      const res = await fetch(`${getBackendUrl()}/api/admin/blogs`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/blogs`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -564,7 +574,7 @@ export default function ConsoleView() {
 
   const handleDeleteBlog = (blogId: string) => {
     executeWithTwoStep(async (code) => {
-      const res = await fetch(`${getBackendUrl()}/api/admin/blogs/${blogId}`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/blogs/${blogId}`, {
         method: "DELETE",
         headers: {
           "X-Admin-Token": adminToken || "",
@@ -582,7 +592,7 @@ export default function ConsoleView() {
     setSmtpTesting(true);
     setSmtpTestResult(null);
     try {
-      const res = await fetch(`${getBackendUrl()}/api/admin/test-smtp`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/test-smtp`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -613,7 +623,7 @@ export default function ConsoleView() {
     }
     setSendingUpdate(true);
     try {
-      const res = await fetch(`${getBackendUrl()}/api/admin/send-update`, {
+      const res = await fetch(`${await getBackendUrl()}/api/admin/send-update`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -640,7 +650,14 @@ export default function ConsoleView() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      const currentToken = sessionStorage.getItem("botock_admin_token") || "";
+      await fetch(`${await getBackendUrl()}/api/admin/logout`, {
+        method: "POST",
+        headers: { "x-admin-token": currentToken },
+      });
+    } catch (e) {}
     sessionStorage.removeItem("botock_admin_token");
     sessionStorage.removeItem("botock_admin_email");
     router.push("/admin/login");
@@ -1059,41 +1076,98 @@ export default function ConsoleView() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Credit Cost: Omni Flash 360p
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={quotas.video_model_costs?.["omni-1.1-flash-360p"] || 15}
-                    onChange={(e) => setQuotas({ 
-                      ...quotas, 
-                      video_model_costs: { ...quotas.video_model_costs, "omni-1.1-flash-360p": parseInt(e.target.value) || 15 }
-                    })}
-                    className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
-                  />
-                  <p className="text-[11px] text-slate-500">Credits deducted per video generation for 360p.</p>
-                </div>
+              <div className="space-y-4 mt-6">
+                <h3 className="text-sm font-bold text-slate-200">Video Generation Models & Base Rates</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Omni Flash 360p (10s Base)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={quotas.video_model_costs?.["omni-1.1-flash-360p"] || 14}
+                      onChange={(e) => setQuotas({ 
+                        ...quotas, 
+                        video_model_costs: { ...quotas.video_model_costs, "omni-1.1-flash-360p": parseInt(e.target.value) || 14 }
+                      })}
+                      className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm font-mono text-white"
+                    />
+                    <p className="text-[10px] text-slate-500">Flow: 4-7 cr | Us: 8-14 cr (4s, 6s, 8s, 10s)</p>
+                  </div>
 
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Credit Cost: Omni Flash 720p
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={200}
-                    value={quotas.video_model_costs?.["omni-1.1-flash-720p"] || 30}
-                    onChange={(e) => setQuotas({ 
-                      ...quotas, 
-                      video_model_costs: { ...quotas.video_model_costs, "omni-1.1-flash-720p": parseInt(e.target.value) || 30 }
-                    })}
-                    className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
-                  />
-                  <p className="text-[11px] text-slate-500">Credits deducted per video generation for 720p.</p>
+                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Omni Flash 720p (10s Base)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={200}
+                      value={quotas.video_model_costs?.["omni-1.1-flash-720p"] || 30}
+                      onChange={(e) => setQuotas({ 
+                        ...quotas, 
+                        video_model_costs: { ...quotas.video_model_costs, "omni-1.1-flash-720p": parseInt(e.target.value) || 30 }
+                      })}
+                      className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm font-mono text-white"
+                    />
+                    <p className="text-[10px] text-slate-500">Flow: 7-15 cr | Us: 14-30 cr (4s, 6s, 8s, 10s)</p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Veo 3.1 Lite (720p 8s)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={200}
+                      value={quotas.video_model_costs?.["veo-3.1-lite"] || 20}
+                      onChange={(e) => setQuotas({ 
+                        ...quotas, 
+                        video_model_costs: { ...quotas.video_model_costs, "veo-3.1-lite": parseInt(e.target.value) || 20 }
+                      })}
+                      className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm font-mono text-white"
+                    />
+                    <p className="text-[10px] text-slate-500">Flow: 10 cr | Our Charge: 20 cr (8s 720p)</p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Veo 3.1 Fast (720p 8s)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={200}
+                      value={quotas.video_model_costs?.["veo-3.1-fast"] || 40}
+                      onChange={(e) => setQuotas({ 
+                        ...quotas, 
+                        video_model_costs: { ...quotas.video_model_costs, "veo-3.1-fast": parseInt(e.target.value) || 40 }
+                      })}
+                      className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm font-mono text-white"
+                    />
+                    <p className="text-[10px] text-slate-500">Flow: 20 cr | Our Charge: 40 cr (8s 720p)</p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Veo 3.1 Quality (720p 8s)
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={quotas.video_model_costs?.["veo-3.1-quality"] || 120}
+                      onChange={(e) => setQuotas({ 
+                        ...quotas, 
+                        video_model_costs: { ...quotas.video_model_costs, "veo-3.1-quality": parseInt(e.target.value) || 120 }
+                      })}
+                      className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm font-mono text-white"
+                    />
+                    <p className="text-[10px] text-slate-500">Flow: 100 cr | Our Charge: 120 cr (8s 720p)</p>
+                  </div>
                 </div>
               </div>
 
@@ -1547,7 +1621,7 @@ export default function ConsoleView() {
                               </button>
                               <button
                                 onClick={async () => {
-                                  const backendUrl = getBackendUrl();
+                                  const backendUrl = await getBackendUrl();
                                   await fetch(`${backendUrl}/api/admin/subscription-requests/${req.id}/status?status=dismissed`, {
                                     method: "POST",
                                     headers: { "X-Admin-Token": adminToken || "" },

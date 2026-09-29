@@ -14,7 +14,7 @@ export default function PricingPage() {
   useEffect(() => {
     const fetchPricing = async () => {
       try {
-        const backendUrl = getBackendUrl();
+        const backendUrl = await getBackendUrl();
         const res = await fetch(`${backendUrl}/api/public/platform-config`);
         if (res.ok) {
           const data = await res.json();

@@ -191,7 +191,7 @@ export default function VideoToGifClient() {
             {/* Video Player & Output Display */}
             <div className="lg:col-span-2 space-y-4">
               <div className="rounded-2xl overflow-hidden bg-black aspect-video relative flex items-center justify-center border border-slate-200 dark:border-white/[0.08]">
-                <video
+                <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                   ref={videoRef}
                   src={videoUrl || undefined}
                   controls

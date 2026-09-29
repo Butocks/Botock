@@ -12,3 +12,8 @@ htmlcov/
 *.log
 .git
 .gitignore
+.env
+.env.*
+session/
+generated_videos/
+generated_images/

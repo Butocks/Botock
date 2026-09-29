@@ -400,7 +400,7 @@ export default function VideoEditorComponent() {
             {/* Preview */}
             <div className="lg:col-span-2 glass-card rounded-2xl border border-border/50 p-6 flex flex-col items-center justify-center relative overflow-hidden">
               <div className="relative bg-black rounded-xl overflow-hidden shadow-2xl w-full max-w-2xl aspect-video">
-                <video
+                <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                   ref={videoRef}
                   style={{ filter: previewFilterStyle, transform: previewTransformStyle }}
                   className="w-full h-full object-contain cursor-pointer"
@@ -591,7 +591,7 @@ export default function VideoEditorComponent() {
                 {resultSize !== null && <span className="text-xs font-mono text-slate-500">{formatBytes(resultSize)}</span>}
               </div>
               <div className="max-w-2xl mx-auto rounded-2xl overflow-hidden bg-black aspect-video">
-                <video src={resultUrl} controls className="w-full h-full object-contain" />
+                <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()} src={resultUrl} controls className="w-full h-full object-contain" />
               </div>
               <div className="flex justify-center">
                 <a href={resultUrl} download="botock-edited-video.mp4" className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm shadow-md hover:opacity-90 cursor-pointer">

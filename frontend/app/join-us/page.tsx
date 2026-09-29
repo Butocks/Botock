@@ -34,7 +34,7 @@ export default function JoinUsPage() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const backendUrl = getBackendUrl();
+        const backendUrl = await getBackendUrl();
         const res = await fetch(`${backendUrl}/api/public/jobs`);
         if (res.ok) {
           const data = await res.json();

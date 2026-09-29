@@ -99,7 +99,7 @@ export default function LibraryPage() {
               {/* Media Preview Container */}
               <div className="relative aspect-video bg-black/50 overflow-hidden">
                 {item.type === "video" ? (
-                  <video
+                  <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                     src={item.blobUrl || item.url}
                     controls
                     className="w-full h-full object-contain"

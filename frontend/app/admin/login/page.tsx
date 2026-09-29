@@ -83,7 +83,7 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       const res = await fetch(`${backendUrl}/api/admin/auth/verify-secret`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,7 +126,7 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       const res = await fetch(`${backendUrl}/api/admin/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

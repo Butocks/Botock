@@ -17,6 +17,7 @@ ENV/
 # Google Session and cookies (CRITICAL: NEVER COMMIT)
 session/
 *.session.json
+worker-slots.json
 
 # Generated video outputs and debug logs (contains user data & screenshots)
 generated_videos/

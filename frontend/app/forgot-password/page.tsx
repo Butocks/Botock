@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getBackendUrl } from "../../utils/runtime-urls";
-import { Mail, ArrowRight, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowRight, RefreshCw, AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -13,13 +13,16 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
+  const [unverifiedAlert, setUnverifiedAlert] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
+    setUnverifiedAlert(null);
     setLoading(true);
 
     try {
-      const backendUrl = getBackendUrl();
+      const backendUrl = await getBackendUrl();
       const res = await fetch(`${backendUrl}/api/auth/forgot-password-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -28,6 +31,10 @@ export default function ForgotPasswordPage() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (res.status === 403 || String(data.detail).toLowerCase().includes("unverified")) {
+          setUnverifiedAlert("Your account is unverified. Please email us at info@botock.app for assistance with your account recovery.");
+          return;
+        }
         throw new Error(data.detail || "Failed to dispatch password recovery code.");
       }
 
@@ -73,6 +80,34 @@ export default function ForgotPasswordPage() {
             Enter your registered email and we'll dispatch a 6-digit recovery OTP code.
           </p>
         </div>
+
+        {unverifiedAlert && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 mb-6 space-y-3">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+              <span>Recovery Assistance Required</span>
+            </div>
+            <p className="text-xs leading-relaxed font-medium">
+              Your account is unverified. Please email us at{" "}
+              <a
+                href="mailto:info@botock.app?subject=Account%20Recovery%20Assistance"
+                className="font-bold underline text-amber-600 dark:text-amber-400 hover:opacity-80"
+              >
+                info@botock.app
+              </a>{" "}
+              for assistance with your account recovery.
+            </p>
+            <div className="pt-1">
+              <a
+                href="mailto:info@botock.app?subject=Account%20Recovery%20Assistance"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Email Support (info@botock.app)</span>
+              </a>
+            </div>
+          </div>
+        )}
 
         {message && (
           <div

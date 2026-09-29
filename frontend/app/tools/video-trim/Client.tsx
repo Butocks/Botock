@@ -1128,7 +1128,7 @@ const exportVideo = useCallback(async () => {
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-950 dark:border-white/[0.08]">
             {/* Preview */}
             <div className="relative flex aspect-video max-h-[600px] items-center justify-center bg-black">
-              <video
+              <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                 ref={videoRef}
                 src={videoUrl || undefined}
                 className="h-full w-full object-contain"
@@ -1677,7 +1677,7 @@ const exportVideo = useCallback(async () => {
               </div>
 
               <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl bg-black">
-                <video
+                <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                   ref={resultVideoRef}
                   src={resultUrl}
                   controls
