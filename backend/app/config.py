@@ -26,12 +26,13 @@ class Settings(BaseSettings):
     ADMIN_OTP_EXPIRY_MINUTES: int = 10
     ADMIN_MAX_OTP_CYCLES: int = 3
 
-    # SMTP / Email Settings (falls back to local terminal OTP delivery)
-    SMTP_HOST: str = ""
+    # SMTP / Email Settings (Default: Zoho Mail for info@botock.app)
+    SMTP_HOST: str = "smtppro.zoho.com"
     SMTP_PORT: int = 587
-    SMTP_USER: str = ""
+    SMTP_USER: str = "info@botock.app"
     SMTP_PASSWORD: str = ""
-    SMTP_FROM_EMAIL: str = "security@botock.ai"
+    SMTP_FROM_EMAIL: str = "Botock <info@botock.app>"
+    SMTP_USE_SSL: bool = False  # Set True if using port 465, False for port 587 (STARTTLS)
 
     # Concurrency & Operational Limits
     MAX_BROWSER_INSTANCES: int = 2

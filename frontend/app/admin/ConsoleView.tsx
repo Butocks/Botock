@@ -98,9 +98,19 @@ export default function ConsoleView() {
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState<string>("");
   const [activeTab, setActiveTab] = useState<
-    "analytics" | "quotas" | "promotions" | "plans" | "subscriptions" | "complaints" | "jobs" | "blogs" | "tools" | "policies"
+    "analytics" | "quotas" | "promotions" | "plans" | "subscriptions" | "complaints" | "jobs" | "blogs" | "tools" | "policies" | "email"
   >("analytics");
   const [subRequests, setSubRequests] = useState<any[]>([]);
+
+  // Zoho SMTP Diagnostics & Update State
+  const [smtpTestEmail, setSmtpTestEmail] = useState("");
+  const [smtpTesting, setSmtpTesting] = useState(false);
+  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const [updateToEmail, setUpdateToEmail] = useState("");
+  const [updateSubject, setUpdateSubject] = useState("");
+  const [updateBody, setUpdateBody] = useState("");
+  const [sendingUpdate, setSendingUpdate] = useState(false);
 
   // Notifications
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -568,6 +578,68 @@ export default function ConsoleView() {
     });
   };
 
+  const handleTestSmtp = async () => {
+    setSmtpTesting(true);
+    setSmtpTestResult(null);
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/admin/test-smtp`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Token": adminToken || "",
+        },
+        body: JSON.stringify({ test_email: smtpTestEmail || undefined }),
+      });
+      const data = await res.json();
+      setSmtpTestResult(data);
+      if (data.success) {
+        showToast(data.message, "success");
+      } else {
+        showToast(data.message || "Zoho SMTP connection test failed.", "error");
+      }
+    } catch (err: any) {
+      const msg = err.message || "Failed to reach backend SMTP test service.";
+      setSmtpTestResult({ success: false, message: msg });
+      showToast(msg, "error");
+    } finally {
+      setSmtpTesting(false);
+    }
+  };
+
+  const handleSendUpdate = async () => {
+    if (!updateToEmail || !updateSubject || !updateBody) {
+      showToast("Please fill in recipient email, subject, and message content.", "error");
+      return;
+    }
+    setSendingUpdate(true);
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/admin/send-update`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Token": adminToken || "",
+        },
+        body: JSON.stringify({
+          to_email: updateToEmail,
+          subject: updateSubject,
+          body_text: updateBody,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.message, "success");
+        setUpdateSubject("");
+        setUpdateBody("");
+      } else {
+        showToast(data.detail || "Failed to send update email via Zoho SMTP.", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to send update email.", "error");
+    } finally {
+      setSendingUpdate(false);
+    }
+  };
+
   const handleLogout = () => {
     sessionStorage.removeItem("botock_admin_token");
     sessionStorage.removeItem("botock_admin_email");
@@ -794,6 +866,16 @@ export default function ConsoleView() {
           >
             <ShieldCheck className="w-4 h-4" />
             <span>Privacy & Policies</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("email")}
+            className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === "email" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900"
+            }`}
+          >
+            <Mail className="w-4 h-4 text-emerald-400" />
+            <span>Zoho Mail & Updates</span>
           </button>
         </aside>
 
@@ -1932,6 +2014,157 @@ export default function ConsoleView() {
                     onChange={(e) => setPolicies({ ...policies, terms_of_service: e.target.value })}
                     className="w-full px-4 py-3 bg-black/60 border border-slate-700 rounded-xl text-xs text-slate-200 leading-relaxed font-mono"
                   />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 10: ZOHO MAIL & UPDATES */}
+          {activeTab === "email" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-emerald-400" />
+                    <span>Zoho Mail (info@botock.app) & Updates</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Connected domain email service for OTPs, Password Resets, Admin Alerts & User Announcements
+                  </p>
+                </div>
+              </div>
+
+              {/* Status & Security Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Connected Sender</div>
+                  <div className="text-base font-semibold text-emerald-400 font-mono">info@botock.app</div>
+                  <div className="text-xs text-slate-400">Zoho Mail Pro SMTP (smtppro.zoho.com:587)</div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Credential Security</div>
+                  <div className="text-base font-semibold text-amber-400 flex items-center gap-1.5">
+                    <Lock className="w-4 h-4" />
+                    <span>App Password Protected</span>
+                  </div>
+                  <div className="text-xs text-slate-400">Strictly stored in backend/.env (Never exposed)</div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Anti-Spam Shield</div>
+                  <div className="text-base font-semibold text-indigo-400">60s Cooldown Active</div>
+                  <div className="text-xs text-slate-400">Max 4 OTP/hr per email • Max 8/15m per IP</div>
+                </div>
+              </div>
+
+              {/* Manual SMTP Diagnostic Card */}
+              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-emerald-400" />
+                      <span>Manual SMTP Diagnostic Test</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Send a live test ping to ensure your Zoho 12-digit App Password is connected and sending emails smoothly.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <input
+                    type="email"
+                    value={smtpTestEmail}
+                    onChange={(e) => setSmtpTestEmail(e.target.value)}
+                    placeholder="Enter recipient email (defaults to info@botock.app)"
+                    className="flex-1 px-4 py-2.5 bg-black/60 border border-slate-700 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    onClick={handleTestSmtp}
+                    disabled={smtpTesting}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 cursor-pointer"
+                  >
+                    {smtpTesting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                    <span>{smtpTesting ? "Testing Connection..." : "Send Test Email"}</span>
+                  </button>
+                </div>
+
+                {smtpTestResult && (
+                  <div
+                    className={`p-4 rounded-xl border text-xs leading-relaxed flex items-start gap-2.5 ${
+                      smtpTestResult.success
+                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                        : "bg-red-500/10 border-red-500/30 text-red-300"
+                    }`}
+                  >
+                    {smtpTestResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                    )}
+                    <div>
+                      <div className="font-semibold">{smtpTestResult.success ? "Success" : "Connection Failure"}</div>
+                      <div className="mt-0.5">{smtpTestResult.message}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Direct User Announcement / Update Dispatcher */}
+              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-indigo-400" />
+                    <span>Send Announcement / Update to User</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Send branded notifications or feature update announcements from info@botock.app to any user.
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">Recipient Email</label>
+                    <input
+                      type="email"
+                      value={updateToEmail}
+                      onChange={(e) => setUpdateToEmail(e.target.value)}
+                      placeholder="user@example.com"
+                      className="w-full px-4 py-2 bg-black/60 border border-slate-700 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">Subject</label>
+                    <input
+                      type="text"
+                      value={updateSubject}
+                      onChange={(e) => setUpdateSubject(e.target.value)}
+                      placeholder="Exciting Update: New AI Features Available on Botock!"
+                      className="w-full px-4 py-2 bg-black/60 border border-slate-700 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">Message Content</label>
+                    <textarea
+                      rows={5}
+                      value={updateBody}
+                      onChange={(e) => setUpdateBody(e.target.value)}
+                      placeholder="Type the message to be delivered to the user..."
+                      className="w-full px-4 py-3 bg-black/60 border border-slate-700 rounded-xl text-xs text-slate-200 outline-none focus:border-indigo-500 leading-relaxed font-mono"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleSendUpdate}
+                    disabled={sendingUpdate}
+                    className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-indigo-600/20 cursor-pointer"
+                  >
+                    {sendingUpdate ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    <span>{sendingUpdate ? "Dispatching..." : "Dispatch Announcement Email"}</span>
+                  </button>
                 </div>
               </div>
             </div>

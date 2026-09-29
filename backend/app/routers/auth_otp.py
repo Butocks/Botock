@@ -4,12 +4,14 @@ import fcntl
 import time
 import random
 import string
+import secrets
+import hashlib
 import logging
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Header, Depends, Request
 from pydantic import BaseModel, EmailStr
 from app.config import settings
-from app.services.email_service import send_otp_email
+from app.services.email_service import send_otp_email, send_update_email, test_smtp_connection
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,7 @@ JOBS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "j
 BLOGS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "blogs.json")
 SESSION_TOKENS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "admin_tokens.json")
 OTP_STORE_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "otp_store.json")
+OTP_RATE_LIMITS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "otp_rate_limits.json")
 SUBSCRIPTION_REQUESTS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "subscription_requests.json")
 
 # ----------------------------------------------------
@@ -99,6 +102,58 @@ def record_failed_attempt(ip: str) -> tuple[int, bool, int]:
     lockouts[ip] = record
     _write_json(LOCKOUT_FILE, lockouts)
     return 0, False, 0
+
+
+def check_otp_spam_protection(email: str, ip: str) -> None:
+    """
+    Enforces anti-spam rate limiting for OTP generation:
+    1. 60-second cooldown per email address.
+    2. Max 4 OTP requests per hour per email address.
+    3. Max 8 OTP requests per 15-minute window per IP (burst protection).
+    """
+    now = time.time()
+    data = _read_json(OTP_RATE_LIMITS_FILE, {"emails": {}, "ips": {}})
+    
+    email_clean = email.strip().lower()
+    ip_clean = ip.strip()
+
+    # Check IP limits (burst protection: max 8 per 15 min)
+    ip_records = data.get("ips", {}).get(ip_clean, [])
+    ip_records = [t for t in ip_records if now - t < 900]
+    if len(ip_records) >= 8:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many verification requests from your network. Please wait 15 minutes."
+        )
+
+    # Check Email limits
+    email_records = data.get("emails", {}).get(email_clean, [])
+    email_records = [t for t in email_records if now - t < 3600]
+    
+    # 60s cooldown check
+    if email_records:
+        last_req = email_records[-1]
+        elapsed = now - last_req
+        if elapsed < 60:
+            remaining = int(60 - elapsed)
+            raise HTTPException(
+                status_code=429,
+                detail=f"Please wait {remaining} seconds before requesting a new verification code."
+            )
+            
+    # Max 4 per hour
+    if len(email_records) >= 4:
+        raise HTTPException(
+            status_code=429,
+            detail="Maximum verification attempts reached for this hour (4/hr). Please try again later."
+        )
+
+    # Record the request
+    email_records.append(now)
+    ip_records.append(now)
+    data.setdefault("emails", {})[email_clean] = email_records
+    data.setdefault("ips", {})[ip_clean] = ip_records
+    _write_json(OTP_RATE_LIMITS_FILE, data)
 
 
 # ----------------------------------------------------
@@ -758,11 +813,11 @@ async def send_user_signup_otp(req: UserOtpRequest, request: Request):
     if is_locked:
         raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
     
-    # We will log an attempt each time they SEND an OTP to prevent email spam
-    record_failed_attempt(client_ip)
-
     email = req.email.strip().lower()
-    otp_code = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
+    # Anti-spam cooldown & hourly limit check
+    check_otp_spam_protection(email, client_ip)
+
+    otp_code = "".join(secrets.choice(string.digits) for _ in range(6))
     otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
     otps = _read_json(OTP_STORE_FILE, {})
     otps[f"user_signup_{email}"] = {
@@ -814,11 +869,26 @@ async def verify_user_signup_otp(req: UserOtpVerifyRequest, request: Request):
 
 @router.post("/api/auth/forgot-password-otp")
 async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
+    client_ip = request.headers.get("X-Forwarded-For")
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown" 
+        
+    is_locked, _ = check_lockout(client_ip)
+    if is_locked:
+        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
+        
     email = req.email.strip().lower()
-    otp_code = "".join("".join(secrets.choice(string.digits) for _ in range(6)))
+    # Anti-spam cooldown & hourly limit check
+    check_otp_spam_protection(email, client_ip)
+    
+    otp_code = "".join(secrets.choice(string.digits) for _ in range(6))
+    otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
     otps = _read_json(OTP_STORE_FILE, {})
     otps[f"user_forgot_{email}"] = {
         "otp": otp_code,
+        "otp_hash": otp_hash,
         "expires_at": time.time() + 600,
         "attempts_left": 3,
         "purpose": "Password Recovery",
@@ -862,6 +932,37 @@ async def verify_user_forgot_otp(req: UserOtpVerifyRequest, request: Request):
     
     if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
     return {"success": True, "message": "Reset code verified. You may now update your password."}
+
+
+# ----------------------------------------------------
+# Admin Zoho SMTP Diagnostic & Update Broadcast
+# ----------------------------------------------------
+class TestSmtpRequest(BaseModel):
+    test_email: Optional[str] = None
+
+class SendUpdateEmailRequest(BaseModel):
+    to_email: EmailStr
+    subject: str
+    body_text: str
+
+@router.post("/api/admin/test-smtp")
+async def admin_test_smtp(
+    req: Optional[TestSmtpRequest] = None,
+    admin_token: str = Depends(verify_admin_token)
+):
+    target = req.test_email.strip() if (req and req.test_email and req.test_email.strip()) else None
+    result = test_smtp_connection(target)
+    return result
+
+@router.post("/api/admin/send-update")
+async def admin_send_update(
+    req: SendUpdateEmailRequest,
+    admin_token: str = Depends(verify_admin_token)
+):
+    success = send_update_email(to_email=req.to_email, subject=req.subject, body_text=req.body_text)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to dispatch update email via Zoho SMTP.")
+    return {"success": True, "message": f"Update email dispatched to {req.to_email}"}
 
 
 # ----------------------------------------------------
