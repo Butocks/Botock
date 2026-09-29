@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://botock.com"),
+  metadataBase: new URL("https://botock.app"),
   title: {
     default: "Botock — All-in-One AI Video, Image Generator & Creative Tools",
     template: "%s | Botock",

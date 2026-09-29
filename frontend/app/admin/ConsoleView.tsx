@@ -27,6 +27,8 @@ import {
   FileCheck,
   Briefcase,
   Layers,
+  Crown,
+  Mail,
 } from "lucide-react";
 
 interface BlockItem {
@@ -96,8 +98,9 @@ export default function ConsoleView() {
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState<string>("");
   const [activeTab, setActiveTab] = useState<
-    "analytics" | "quotas" | "promotions" | "plans" | "complaints" | "jobs" | "blogs" | "tools" | "policies"
+    "analytics" | "quotas" | "promotions" | "plans" | "subscriptions" | "complaints" | "jobs" | "blogs" | "tools" | "policies"
   >("analytics");
+  const [subRequests, setSubRequests] = useState<any[]>([]);
 
   // Notifications
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -142,7 +145,28 @@ export default function ConsoleView() {
     free_daily_photos: 5,
     subscribers_unlimited_photos: true,
     video_tokens: 1500,
+    video_model_costs: {
+      "omni-1.1-flash-360p": 15,
+      "omni-1.1-flash-720p": 30
+    }
   });
+
+  // Module 2b: Tool Rewards Configuration (24h Expiry)
+  const [toolRewards, setToolRewards] = useState<Record<string, { name: string; enabled: boolean; credits: number }>>({
+    "pdf-merge": { name: "Merge PDF", enabled: true, credits: 5 },
+    "pdf-split": { name: "Split PDF", enabled: true, credits: 5 },
+    "image-compress": { name: "Compress Image", enabled: true, credits: 3 },
+    "image-remove-bg": { name: "Remove Background", enabled: true, credits: 5 },
+    "pdf-to-word": { name: "PDF to Word", enabled: true, credits: 5 },
+    "image-convert": { name: "Convert Image", enabled: true, credits: 2 },
+    "video-compress": { name: "Compress Video", enabled: true, credits: 5 },
+    "video-to-gif": { name: "Video to GIF", enabled: true, credits: 3 },
+    "audio-converter": { name: "Audio Converter", enabled: true, credits: 3 },
+    "word-counter": { name: "Word Counter", enabled: true, credits: 1 },
+  });
+  const [newToolSlug, setNewToolSlug] = useState("");
+  const [newToolName, setNewToolName] = useState("");
+  const [newToolCredits, setNewToolCredits] = useState(5);
 
   // ----------------------------------------------------
   // Module 3: Gift & Discount Promotion
@@ -239,6 +263,7 @@ export default function ConsoleView() {
         if (data.plans) setPlans(data.plans);
         if (data.tool_rules) setToolRules(data.tool_rules);
         if (data.policies) setPolicies(data.policies);
+        if (data.tool_rewards) setToolRewards(data.tool_rewards);
       }
 
       // 2. Complaints
@@ -267,6 +292,14 @@ export default function ConsoleView() {
       });
       if (resAnalytics.ok) {
         setAnalytics(await resAnalytics.json());
+      }
+
+      // 6. Subscription Requests
+      const resSubs = await fetch(`${backendUrl}/api/admin/subscription-requests`, {
+        headers: { "X-Admin-Token": token },
+      });
+      if (resSubs.ok) {
+        setSubRequests(await resSubs.json());
       }
     } catch (err) {
       console.error("Error loading admin data:", err);
@@ -306,53 +339,84 @@ export default function ConsoleView() {
     }
   };
 
-  // Handlers with 2-Step
-  const handleSaveQuotas = () => {
-    executeWithTwoStep(async (code) => {
+  const handleSaveQuotas = async () => {
+    try {
+      setLoading(true);
       const res = await fetch(`${getBackendUrl()}/api/admin/quotas`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Admin-Token": adminToken || "",
-          "X-Admin-2Step-Code": code,
         },
         body: JSON.stringify(quotas),
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Failed to update quotas.");
       showToast("Quota & Token allocation updated successfully!");
-    });
+    } catch (err: any) {
+      showToast(err.message || "Failed to update quotas.", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSavePromotions = () => {
-    executeWithTwoStep(async (code) => {
+  const handleSaveToolRewards = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${getBackendUrl()}/api/admin/tool-rewards`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Admin-Token": adminToken || "",
+        },
+        body: JSON.stringify(toolRewards),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "Failed to update tool rewards.");
+      showToast("Tool usage rewards updated live! (24h expiration rule active)");
+    } catch (err: any) {
+      showToast(err.message || "Failed to update tool rewards.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSavePromotions = async () => {
+    try {
+      setLoading(true);
       const res = await fetch(`${getBackendUrl()}/api/admin/promotions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Admin-Token": adminToken || "",
-          "X-Admin-2Step-Code": code,
         },
         body: JSON.stringify(promotions),
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Failed to update promotion.");
       showToast("Gift & Discount promotion saved live!");
-    });
+    } catch (err: any) {
+      showToast(err.message || "Failed to update promotion.", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSavePlans = () => {
-    executeWithTwoStep(async (code) => {
+  const handleSavePlans = async () => {
+    try {
+      setLoading(true);
       const res = await fetch(`${getBackendUrl()}/api/admin/plans`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Admin-Token": adminToken || "",
-          "X-Admin-2Step-Code": code,
         },
         body: JSON.stringify(plans),
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Failed to update subscription plans.");
       showToast("Subscription plans and features updated live!");
-    });
+    } catch (err: any) {
+      showToast(err.message || "Failed to update subscription plans.", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSaveToolRules = () => {
@@ -666,6 +730,23 @@ export default function ConsoleView() {
           </button>
 
           <button
+            onClick={() => setActiveTab("subscriptions")}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === "subscriptions" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900"
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <Crown className="w-4 h-4 text-amber-400" />
+              <span>Sub Requests</span>
+            </div>
+            {subRequests.filter((s: any) => s.status === "pending").length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-black text-[10px] font-bold">
+                {subRequests.filter((s: any) => s.status === "pending").length}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab("complaints")}
             className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === "complaints" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900"
@@ -831,7 +912,7 @@ export default function ConsoleView() {
                   className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Save Quotas (2-Step)</span>
+                  <span>Save Quotas</span>
                 </button>
               </div>
 
@@ -895,6 +976,194 @@ export default function ConsoleView() {
                   <p className="text-[11px] text-slate-500">Tokens granted for Google Flow AI video pipelines.</p>
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Credit Cost: Omni Flash 360p
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={quotas.video_model_costs?.["omni-1.1-flash-360p"] || 15}
+                    onChange={(e) => setQuotas({ 
+                      ...quotas, 
+                      video_model_costs: { ...quotas.video_model_costs, "omni-1.1-flash-360p": parseInt(e.target.value) || 15 }
+                    })}
+                    className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
+                  />
+                  <p className="text-[11px] text-slate-500">Credits deducted per video generation for 360p.</p>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Credit Cost: Omni Flash 720p
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={quotas.video_model_costs?.["omni-1.1-flash-720p"] || 30}
+                    onChange={(e) => setQuotas({ 
+                      ...quotas, 
+                      video_model_costs: { ...quotas.video_model_costs, "omni-1.1-flash-720p": parseInt(e.target.value) || 30 }
+                    })}
+                    className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
+                  />
+                  <p className="text-[11px] text-slate-500">Credits deducted per video generation for 720p.</p>
+                </div>
+              </div>
+
+              {/* MODULE: Tool Usage Reward Credits (24h Expiry) */}
+              <div className="pt-6 border-t border-slate-800/80 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Gift className="w-5 h-5 text-amber-400" />
+                      <span>Tool Usage Reward Credits (24h Expiration)</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Award credit points to users whenever they use a creative tool. Credits automatically expire 24 hours after being earned.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSaveToolRewards}
+                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-amber-600/20 cursor-pointer"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Save Tool Rewards</span>
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    <strong>How it works:</strong> When a user finishes processing in an enabled tool (e.g. Merge PDF, Compress Image), the system grants them these credit points with a 24-hour expiration countdown. A 5-minute cooldown prevents automated spamming.
+                  </span>
+                </div>
+
+                {/* Rewards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Object.entries(toolRewards).map(([slug, cfg]) => (
+                    <div
+                      key={slug}
+                      className="p-3.5 rounded-xl bg-[#111116] border border-slate-800 flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setToolRewards({
+                              ...toolRewards,
+                              [slug]: { ...cfg, enabled: !cfg.enabled },
+                            });
+                          }}
+                          className={`w-10 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                            cfg.enabled ? "bg-amber-500" : "bg-slate-800"
+                          }`}
+                        >
+                          <span
+                            className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${
+                              cfg.enabled ? "left-5" : "left-0.5"
+                            }`}
+                          />
+                        </button>
+                        <div className="truncate">
+                          <div className="text-xs font-bold text-white truncate">{cfg.name}</div>
+                          <div className="text-[10px] text-slate-500 font-mono">/tools/{slug}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] text-slate-400">Reward:</span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={1}
+                            max={50}
+                            value={cfg.credits}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value) || 1;
+                              setToolRewards({
+                                ...toolRewards,
+                                [slug]: { ...cfg, credits: val },
+                              });
+                            }}
+                            className="w-14 px-2 py-1 bg-black/60 border border-slate-700 rounded-lg text-xs font-mono font-bold text-amber-400 text-center"
+                          />
+                          <span className="text-[10px] font-bold text-slate-500">pts (24h)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = { ...toolRewards };
+                            delete updated[slug];
+                            setToolRewards(updated);
+                          }}
+                          className="p-1 text-slate-600 hover:text-red-400 transition-colors"
+                          title="Remove Tool"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Tool Form */}
+                <div className="p-4 rounded-xl bg-black/40 border border-slate-800 flex flex-col sm:flex-row items-center gap-2.5">
+                  <input
+                    type="text"
+                    placeholder="Tool slug (e.g. image-upscale)"
+                    value={newToolSlug}
+                    onChange={(e) => setNewToolSlug(e.target.value.toLowerCase().trim())}
+                    className="w-full sm:flex-1 px-3 py-1.5 bg-black border border-slate-700 rounded-lg text-xs text-white"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Display Name (e.g. Image Upscaler)"
+                    value={newToolName}
+                    onChange={(e) => setNewToolName(e.target.value)}
+                    className="w-full sm:flex-1 px-3 py-1.5 bg-black border border-slate-700 rounded-lg text-xs text-white"
+                  />
+                  <div className="flex items-center gap-1 w-full sm:w-auto">
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={newToolCredits}
+                      onChange={(e) => setNewToolCredits(parseInt(e.target.value) || 1)}
+                      className="w-16 px-2 py-1.5 bg-black border border-slate-700 rounded-lg text-xs font-mono text-amber-400 text-center"
+                    />
+                    <span className="text-[10px] text-slate-400">pts</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newToolSlug || !newToolName) {
+                        showToast("Please enter tool slug and name.", "error");
+                        return;
+                      }
+                      setToolRewards({
+                        ...toolRewards,
+                        [newToolSlug]: {
+                          name: newToolName,
+                          enabled: true,
+                          credits: newToolCredits,
+                        },
+                      });
+                      setNewToolSlug("");
+                      setNewToolName("");
+                      setNewToolCredits(5);
+                      showToast(`Added ${newToolName} to reward list.`);
+                    }}
+                    className="w-full sm:w-auto px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shrink-0 cursor-pointer"
+                  >
+                    + Add Tool
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -911,7 +1180,7 @@ export default function ConsoleView() {
                   className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Save Discount (2-Step)</span>
+                  <span>Save Discount</span>
                 </button>
               </div>
 
@@ -1000,7 +1269,7 @@ export default function ConsoleView() {
                   className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Save Plans (2-Step)</span>
+                  <span>Save Plans</span>
                 </button>
               </div>
 
@@ -1018,6 +1287,21 @@ export default function ConsoleView() {
                           setPlans(updated);
                         }}
                         className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] text-slate-300 text-right"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] text-slate-500 block mb-1">Plan Description</label>
+                      <textarea
+                        rows={2}
+                        value={p.desc || ""}
+                        onChange={(e) => {
+                          const updated = [...plans];
+                          updated[pIdx].desc = e.target.value;
+                          setPlans(updated);
+                        }}
+                        placeholder="Brief summary of plan target..."
+                        className="w-full px-3 py-1.5 bg-black/60 border border-slate-700 rounded-xl text-xs text-slate-300 resize-none outline-none focus:border-indigo-500"
                       />
                     </div>
 
@@ -1099,6 +1383,111 @@ export default function ConsoleView() {
           )}
 
           {/* TAB 5: COMPLAINTS PORTAL */}
+          {/* TAB: SUBSCRIPTION WAITLIST & NOTIFY EMAILS */}
+          {activeTab === "subscriptions" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Mail className="w-5 h-5 text-indigo-400" />
+                    <span>Subscription Waitlist & Notification Emails</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Users waiting to subscribe when payment methods launch. Admin can view and copy emails to notify them.
+                  </p>
+                </div>
+              </div>
+
+              {/* Mode Banner */}
+              <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold">
+                    ✉️
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-white">Waitlist Collection Active</h4>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Users see "We will notify you when available" and submit their emails.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const allEmails = subRequests.map((r: any) => r.email).join(", ");
+                    navigator.clipboard.writeText(allEmails);
+                    showToast("All waitlist emails copied to clipboard!");
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs cursor-pointer"
+                >
+                  Copy All Emails
+                </button>
+              </div>
+
+              {/* Table */}
+              <div className="bg-[#111116] border border-slate-800 rounded-2xl overflow-hidden">
+                <div className="p-4 border-b border-slate-800 flex justify-between items-center">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Collected User Emails ({subRequests.length})
+                  </h3>
+                </div>
+
+                {subRequests.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-slate-500">
+                    No waitlist submissions yet. When users request to be notified, their emails will appear here.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-900/50 text-slate-400 border-b border-slate-800">
+                        <tr>
+                          <th className="p-3">User Email</th>
+                          <th className="p-3">Interested Plan</th>
+                          <th className="p-3">Date Submitted</th>
+                          <th className="p-3 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800 text-slate-200">
+                        {subRequests.map((req: any) => (
+                          <tr key={req.id} className="hover:bg-white/[0.02]">
+                            <td className="p-3 font-semibold text-white">{req.email}</td>
+                            <td className="p-3 text-indigo-400">{req.plan || "Pro"}</td>
+                            <td className="p-3 text-slate-500 text-[11px]">{req.created_at}</td>
+                            <td className="p-3 text-right space-x-2">
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(req.email);
+                                  showToast(`Copied ${req.email} to clipboard!`);
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] cursor-pointer"
+                              >
+                                Copy Email
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  const backendUrl = getBackendUrl();
+                                  await fetch(`${backendUrl}/api/admin/subscription-requests/${req.id}/status?status=dismissed`, {
+                                    method: "POST",
+                                    headers: { "X-Admin-Token": adminToken || "" },
+                                  });
+                                  showToast("Removed from list.");
+                                  loadAllData(adminToken || "");
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 font-bold text-[11px] cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === "complaints" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">

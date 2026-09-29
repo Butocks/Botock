@@ -5,6 +5,7 @@ import { useDropzone } from "react-dropzone";
 import { PDFDocument } from "pdf-lib";
 import { FileUp, FileText, X, Loader2, Download } from "lucide-react";
 import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
+import { claimToolReward } from "@/lib/toolReward";
 
 export default function PDFMergeClient() {
   const [files, setFiles] = useState<File[]>([]);
@@ -47,6 +48,9 @@ export default function PDFMergeClient() {
 
       const mergedPdfBytes = await mergedPdf.save();
       setBlob(mergedPdfBytes);
+
+      // Award credits to logged-in user (24h expiration)
+      claimToolReward("pdf-merge");
     } catch (error) {
       console.error("Failed to merge PDFs:", error);
       throw new Error("Failed to process PDFs. They might be encrypted or corrupted.");

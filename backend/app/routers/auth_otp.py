@@ -23,6 +23,7 @@ JOBS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "j
 BLOGS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "blogs.json")
 SESSION_TOKENS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "admin_tokens.json")
 OTP_STORE_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "otp_store.json")
+SUBSCRIPTION_REQUESTS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "subscription_requests.json")
 
 # ----------------------------------------------------
 # Persistence Helpers
@@ -109,6 +110,13 @@ DEFAULT_SETTINGS = {
         "free_daily_photos": 5,
         "subscribers_unlimited_photos": True,
         "video_tokens": 1500,
+        "video_model_costs": {
+            "omni-1.1-flash-360p": 15,
+            "omni-1.1-flash-720p": 30,
+            "veo-3.1-fast": 35,
+            "veo-3.1-quality": 45,
+            "veo-3.1-lite": 20
+        }
     },
     "promotions": {
         "active": True,
@@ -117,6 +125,18 @@ DEFAULT_SETTINGS = {
         "discount_percentage": 25,
         "code": "BOTOCK25",
         "banner_text": "🎁 Limited Time Gift: Get 25% OFF all Pro plans + 1,500 High-Speed Video Tokens!",
+    },
+    "tool_rewards": {
+        "pdf-merge": {"name": "Merge PDF", "enabled": True, "credits": 5},
+        "pdf-split": {"name": "Split PDF", "enabled": True, "credits": 5},
+        "image-compress": {"name": "Compress Image", "enabled": True, "credits": 3},
+        "image-remove-bg": {"name": "Remove Background", "enabled": True, "credits": 5},
+        "pdf-to-word": {"name": "PDF to Word", "enabled": True, "credits": 5},
+        "image-convert": {"name": "Convert Image", "enabled": True, "credits": 2},
+        "video-compress": {"name": "Compress Video", "enabled": True, "credits": 5},
+        "video-to-gif": {"name": "Video to GIF", "enabled": True, "credits": 3},
+        "audio-converter": {"name": "Audio Converter", "enabled": True, "credits": 3},
+        "word-counter": {"name": "Word Counter", "enabled": True, "credits": 1},
     },
     "plans": [
         {
@@ -451,22 +471,38 @@ async def get_public_config():
         "plans": cfg.get("plans", []),
         "tool_rules": cfg.get("tool_rules", []),
         "policies": cfg.get("policies", {}),
+        "tool_rewards": cfg.get("tool_rewards", DEFAULT_SETTINGS.get("tool_rewards", {})),
     }
+
+
+@router.post("/api/admin/tool-rewards")
+async def update_tool_rewards(
+    data: Dict[str, Any],
+    admin_token: str = Depends(verify_admin_token),
+):
+    """Admin configures which tools award credits on use and credit points amount."""
+    cfg = get_platform_settings()
+    cfg["tool_rewards"] = data
+    _write_json(SETTINGS_FILE, cfg)
+    return {"success": True, "tool_rewards": cfg["tool_rewards"]}
 
 
 @router.post("/api/admin/quotas")
 async def update_quotas(
     data: Dict[str, Any],
     admin_token: str = Depends(verify_admin_token),
-    _verified: bool = Depends(require_2step_verification),
 ):
-    """Admin updates daily free credits, photos, and video tokens (Protected by 2-Step)."""
+    """Admin updates daily free credits, photos, and video tokens."""
     cfg = get_platform_settings()
     cfg["quotas"].update({
         "free_daily_credits": int(data.get("free_daily_credits", 50)),
         "free_daily_photos": int(data.get("free_daily_photos", 5)),
         "subscribers_unlimited_photos": True,
         "video_tokens": int(data.get("video_tokens", 1500)),
+        "video_model_costs": data.get("video_model_costs", {
+            "omni-1.1-flash-360p": 15,
+            "omni-1.1-flash-720p": 30
+        }),
     })
     _write_json(SETTINGS_FILE, cfg)
     return {"success": True, "quotas": cfg["quotas"]}
@@ -476,9 +512,8 @@ async def update_quotas(
 async def update_promotions(
     data: Dict[str, Any],
     admin_token: str = Depends(verify_admin_token),
-    _verified: bool = Depends(require_2step_verification),
 ):
-    """Admin configures gift / discount offers (Protected by 2-Step)."""
+    """Admin configures gift / discount offers."""
     cfg = get_platform_settings()
     cfg["promotions"] = data
     _write_json(SETTINGS_FILE, cfg)
@@ -489,9 +524,8 @@ async def update_promotions(
 async def update_plans(
     data: List[Dict[str, Any]],
     admin_token: str = Depends(verify_admin_token),
-    _verified: bool = Depends(require_2step_verification),
 ):
-    """Admin edits pricing and plan feature bullets (Protected by 2-Step)."""
+    """Admin edits pricing and plan feature bullets."""
     cfg = get_platform_settings()
     cfg["plans"] = data
     _write_json(SETTINGS_FILE, cfg)
@@ -828,3 +862,54 @@ async def verify_user_forgot_otp(req: UserOtpVerifyRequest, request: Request):
     
     if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
     return {"success": True, "message": "Reset code verified. You may now update your password."}
+
+
+# ----------------------------------------------------
+# Subscription Notification & Manual Activation
+# ----------------------------------------------------
+class SubscriptionNotifyRequest(BaseModel):
+    email: str
+    plan: str = "AI Creator Pro ($15/mo)"
+    note: Optional[str] = ""
+
+@router.post("/api/subscription/request")
+async def create_subscription_request(req: SubscriptionNotifyRequest):
+    requests_list = _read_json(SUBSCRIPTION_REQUESTS_FILE, [])
+    new_req = {
+        "id": f"sub_{int(time.time())}_{random.randint(100, 999)}",
+        "email": req.email.strip().lower(),
+        "plan": req.plan,
+        "note": req.note or "Manual activation requested via platform",
+        "status": "pending",
+        "created_at": time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()),
+    }
+    requests_list.insert(0, new_req)
+    _write_json(SUBSCRIPTION_REQUESTS_FILE, requests_list)
+    logger.info(f"New Pro subscription notification received: {new_req['email']} for {new_req['plan']}")
+    return {
+        "success": True,
+        "message": "Subscription request received! The administrator has been notified to activate your Pro privileges."
+    }
+
+@router.get("/api/admin/subscription-requests")
+async def get_subscription_requests(admin_token: str = Depends(verify_admin_token)):
+    return _read_json(SUBSCRIPTION_REQUESTS_FILE, [])
+
+@router.post("/api/admin/subscription-requests/{req_id}/status")
+async def update_subscription_request_status(
+    req_id: str,
+    status: str,
+    admin_token: str = Depends(verify_admin_token)
+):
+    requests_list = _read_json(SUBSCRIPTION_REQUESTS_FILE, [])
+    found = False
+    for r in requests_list:
+        if r.get("id") == req_id:
+            r["status"] = status
+            found = True
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="Subscription request not found.")
+    _write_json(SUBSCRIPTION_REQUESTS_FILE, requests_list)
+    return {"success": True, "message": f"Subscription request marked as {status}."}
+

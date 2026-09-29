@@ -15,9 +15,20 @@ import {
   Briefcase,
   AlertCircle,
 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  // The user requested: "is page may footer lena kei zaroorat nhi 1 page kafi hai scrol nhi ho responive rakho"
+  if (
+    pathname?.startsWith("/tools/image-generator") ||
+    pathname?.startsWith("/tools/video-generator")
+  ) {
+    return null;
+  }
+
   return (
     <footer className="border-t border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#07050d] text-slate-600 dark:text-slate-300 mt-auto select-none transition-colors">
       {/* 1. Status Bar */}

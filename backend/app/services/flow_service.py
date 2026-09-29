@@ -53,7 +53,19 @@ class FlowService:
         os.makedirs(self.debug_dir, exist_ok=True)
 
     def check_session_valid(self) -> bool:
-        return os.path.exists(self.session_path)
+        if os.path.exists(self.session_path):
+            return True
+        alt_paths = [
+            os.path.join(os.path.dirname(__file__), "..", "..", "session", "flow_session.json"),
+            os.path.join(os.path.dirname(__file__), "..", "..", "..", "session", "flow_session.json"),
+            "backend/session/flow_session.json",
+            "session/flow_session.json",
+        ]
+        for p in alt_paths:
+            if os.path.exists(p):
+                self.session_path = os.path.abspath(p)
+                return True
+        return False
 
     async def _launch_browser(self):
         chrome_bin = get_chrome_path()
@@ -301,9 +313,9 @@ class FlowService:
             prompt_input = await self._ensure_studio_page(page, generation_id, status_dict)
 
             # Configure Settings Popup for Video
-            status_dict[generation_id]["message"] = "Configuring Flow AI video engine..."
+            status_dict[generation_id]["message"] = "Configuring AI video engine..."
             try:
-                settings_btn = page.locator('button:has-text("Banana"), button:has-text("Video"), button:has-text("Omni")').first
+                settings_btn = page.locator('button:has-text("Banana"), button:has-text("Video"), button:has-text("Omni"), button:has-text("Veo")').first
                 if await settings_btn.is_visible(timeout=3000):
                     await settings_btn.click()
                     await asyncio.sleep(1)
@@ -314,6 +326,28 @@ class FlowService:
                         await video_tab.click()
                         await asyncio.sleep(0.8)
 
+                    # Model selection: Omni 1.1 Flash vs Veo 3.1
+                    model_str = str(model).lower()
+                    if "veo" in model_str:
+                        model_dropdown = page.locator('.cdk-overlay-pane button:has-text("Omni"), .cdk-overlay-pane button:has-text("Veo"), .cdk-overlay-pane button:has-text("Flash")').first
+                        if await model_dropdown.is_visible(timeout=2000):
+                            await model_dropdown.click()
+                            await asyncio.sleep(0.6)
+                            target_veo = "Veo 3.1 - Fast" if "fast" in model_str else "Veo 3.1 - Quality" if "quality" in model_str else "Veo 3.1 - Lite"
+                            veo_opt = page.locator('.cdk-overlay-pane [role="menuitem"], [role="menu"] button, .mat-mdc-menu-item').filter(has_text=target_veo).first
+                            if await veo_opt.is_visible(timeout=2000):
+                                await veo_opt.click()
+                                await asyncio.sleep(0.4)
+                    else:
+                        model_dropdown = page.locator('.cdk-overlay-pane button:has-text("Veo")').first
+                        if await model_dropdown.is_visible(timeout=1500):
+                            await model_dropdown.click()
+                            await asyncio.sleep(0.6)
+                            omni_opt = page.locator('.cdk-overlay-pane [role="menuitem"], [role="menu"] button, .mat-mdc-menu-item').filter(has_text="Omni 1.1 Flash").first
+                            if await omni_opt.is_visible(timeout=2000):
+                                await omni_opt.click()
+                                await asyncio.sleep(0.4)
+
                     # Aspect Ratio
                     ratio_to_click = "9:16" if "9:16" in str(aspect_ratio) else "16:9"
                     ratio_btn = page.locator('.cdk-overlay-pane button').filter(has_text=ratio_to_click).first
@@ -321,8 +355,11 @@ class FlowService:
                         await ratio_btn.click()
                         await asyncio.sleep(0.3)
 
-                    # Resolution: 360p
-                    res_btn = page.locator('.cdk-overlay-pane button').filter(has_text="360p").first
+                    # Resolution: 360p vs 720p based on model selection
+                    target_res = "720p" if ("720p" in model_str or "hd" in model_str or "quality" in model_str) else "360p"
+                    res_btn = page.locator('.cdk-overlay-pane button').filter(has_text=target_res).first
+                    if not await res_btn.is_visible(timeout=1500):
+                        res_btn = page.locator('.cdk-overlay-pane button').filter(has_text="360p").first
                     if await res_btn.is_visible(timeout=2000):
                         await res_btn.click()
                         await asyncio.sleep(0.3)
@@ -498,9 +535,12 @@ class FlowService:
         await dl_btn.click()
         await asyncio.sleep(1.5)
 
-        opt = page.get_by_text("720p").first
+        menu = page.locator('.cdk-overlay-pane, [role="menu"], .mat-mdc-menu-panel').last
+        opt = menu.locator('button, [role="menuitem"]').filter(has_text="720p").first
         if not await opt.is_visible(timeout=2000):
-            opt = page.get_by_text("Original size").first
+            opt = menu.locator('button, [role="menuitem"]').filter(has_text="Original").first
+        if not await opt.is_visible(timeout=2000):
+            opt = menu.locator('button, [role="menuitem"]').first
         if not await opt.is_visible(timeout=2000):
             opt = page.locator('[role="menuitem"], .mat-mdc-menu-item').first
 

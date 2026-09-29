@@ -7,7 +7,7 @@ export function getSiteUrl() {
     return window.location.origin;
   }
 
-  return 'https://botock.vercel.app';
+  return 'https://botock.app';
 }
 
 export function getBackendUrl() {

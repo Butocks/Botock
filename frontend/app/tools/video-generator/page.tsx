@@ -8,43 +8,34 @@ import { getBackendUrl } from "../../../utils/runtime-urls";
 import { useMediaStore } from "../../store/useMediaStore";
 import {
   Sparkles,
-  Scissors,
   Download,
   Image as ImageIcon,
   Film,
   Lock,
-  Zap,
   Upload,
   AlertCircle,
   X,
-  Play,
-  CheckCircle2,
   Dices,
-  Camera,
-  Layers,
-  ArrowRight,
-  Maximize2,
   Clock,
-  Sliders,
+  Send,
+  Bell,
+  CheckCircle2,
 } from "lucide-react";
-import AdBanner from "../../components/AdBanner";
-import ToolSuggestions from "../../components/ToolSuggestions";
 
 const SAMPLE_PROMPTS = [
-  "Majestic snow leopard resting on Himalayan cliff at sunset, ultra realistic 8k, cinematic slow motion",
-  "Cyberpunk neon street in heavy rain with glowing reflections and steaming manholes, 35mm film still",
-  "Cute baby red panda eating fresh green bamboo in misty Japanese zen garden, soft morning sunlight",
-  "Slow motion macro shot of a crystal-clear water droplet creating ripples on purple lavender petal",
-  "Futuristic hyperdrive spacecraft leaving warp speed into orbit around a vibrant ringed gas giant",
+  "Majestic snow leopard resting on Himalayan cliff at sunset, cinematic slow motion 8k",
+  "Cyberpunk neon street in heavy rain with glowing reflections and steaming manholes, 35mm film",
+  "Cute baby red panda eating fresh green bamboo in misty Japanese zen garden, morning light",
+  "Slow motion macro shot of a water droplet creating ripples on purple lavender petal",
+  "Futuristic spacecraft leaving warp speed into orbit around a vibrant ringed gas giant",
 ];
 
-const MOTION_PRESETS = [
-  { label: "Zoom In 🔍", value: "Slow cinematic zoom in towards the subject" },
-  { label: "Pan Right ➡️", value: "Smooth horizontal camera pan to the right" },
-  { label: "Pan Left ⬅️", value: "Smooth horizontal camera pan to the left" },
-  { label: "Slow Motion ⏳", value: "Ultra smooth cinematic slow motion 60fps" },
-  { label: "Drone Orbit 🔄", value: "Sweeping 360 degree aerial drone orbit" },
-  { label: "Tilt Up ⬆️", value: "Dramatic upward camera tilt revealing the sky" },
+const VIDEO_MODELS = [
+  { id: "omni-1.1-flash-360p", label: "Omni 1.1 Flash (360p - Fast)", cost: 15 },
+  { id: "omni-1.1-flash-720p", label: "Omni 1.1 Flash (720p - HD)", cost: 30 },
+  { id: "veo-3.1-fast", label: "Veo 3.1 - Fast (HD)", cost: 35 },
+  { id: "veo-3.1-quality", label: "Veo 3.1 - Quality (Cinema)", cost: 45 },
+  { id: "veo-3.1-lite", label: "Veo 3.1 - Lite (Economy)", cost: 20 },
 ];
 
 export default function VideoGeneratorPage() {
@@ -69,12 +60,35 @@ export default function VideoGeneratorPage() {
   // Status & Progress
   const [status, setStatus] = useState<"idle" | "generating" | "polling" | "completed" | "error">("idle");
   const [generationId, setGenerationId] = useState<string | null>(null);
+  const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressText, setProgressText] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
   const [creditsRemaining, setCreditsRemaining] = useState<number>(50);
-  const [showGenerateMore, setShowGenerateMore] = useState<boolean>(false);
+
+  // Smooth loading percentage counter
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (status === "generating" || status === "polling") {
+      timer = setInterval(() => {
+        setProgressPercent((prev) => {
+          if (prev < 35) return prev + 4;
+          if (prev < 65) return prev + 3;
+          if (prev < 85) return prev + 2;
+          if (prev < 96) return prev + 1;
+          return prev;
+        });
+      }, 1100);
+    }
+    return () => clearInterval(timer);
+  }, [status]);
+
+  // Waitlist / Notify Modal
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [subEmail, setSubEmail] = useState("");
+  const [subSubmitted, setSubSubmitted] = useState(false);
+  const [subLoading, setSubLoading] = useState(false);
 
   const fetchCredits = async () => {
     try {
@@ -93,10 +107,23 @@ export default function VideoGeneratorPage() {
   };
 
   useEffect(() => {
+    const handler = (e: any) => {
+      if (e.detail?.new_balance !== undefined) {
+        setCreditsRemaining(e.detail.new_balance);
+      } else {
+        fetchCredits();
+      }
+    };
+    window.addEventListener("botock:credits-updated", handler);
+    return () => window.removeEventListener("botock:credits-updated", handler);
+  }, []);
+
+  useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const u = data.user;
       setUser(u);
       if (u) {
+        setSubEmail(u.email || "");
         const proStatus = u.app_metadata?.is_pro || u.user_metadata?.is_pro || false;
         setIsPro(Boolean(proStatus));
         fetchCredits();
@@ -105,12 +132,18 @@ export default function VideoGeneratorPage() {
     });
   }, []);
 
+  const handleModelSelect = (model: string) => {
+    setSelectedModel(model);
+    setErrorMessage("");
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setReferenceImage(file);
       const url = URL.createObjectURL(file);
       setReferencePreview(url);
+      setMode("photo-to-video");
     }
   };
 
@@ -120,6 +153,7 @@ export default function VideoGeneratorPage() {
     }
     setReferenceImage(null);
     setReferencePreview(null);
+    setMode("text-to-video");
   };
 
   const applySurprisePrompt = () => {
@@ -128,24 +162,30 @@ export default function VideoGeneratorPage() {
     setErrorMessage("");
   };
 
-  const applyMotionPreset = (val: string) => {
-    setMotionHint((prev) => (prev ? `${prev}, ${val}` : val));
-  };
-
   const handleGenerate = async () => {
     if (!user) {
       window.location.href = "/login";
       return;
     }
 
-    if (prompt.trim().length < 5) {
-      setErrorMessage("Please enter a scene description (at least 5 characters).");
+    if (prompt.trim().length < 3) {
+      setErrorMessage("Please enter a scene description (at least 3 characters).");
+      return;
+    }
+
+    const currentModelObj = VIDEO_MODELS.find((m) => m.id === selectedModel);
+    const neededCredits = currentModelObj ? currentModelObj.cost : 15;
+
+    if (!isPro && creditsRemaining < neededCredits) {
+      setErrorMessage(`Insufficient credits. ${selectedModel} costs ${neededCredits} credits, but you have ${creditsRemaining}.`);
+      setShowSubModal(true);
       return;
     }
 
     setErrorMessage("");
     setStatus("generating");
-    setProgressText("Connecting to Google Flow AI pipeline...");
+    setProgressPercent(15);
+    setProgressText("Initializing cinematic video engine...");
     setVideoUrl(null);
     setVideoBlobUrl(null);
 
@@ -174,7 +214,7 @@ export default function VideoGeneratorPage() {
         body: JSON.stringify({
           prompt: prompt.trim(),
           aspect_ratio: aspectRatio,
-          model: isPro ? selectedModel : "omni-1.1-flash-360p",
+          model: selectedModel,
           duration_seconds: durationSeconds,
           motion_hint: motionHint.trim() || undefined,
           image_base64: imageBase64,
@@ -196,32 +236,13 @@ export default function VideoGeneratorPage() {
       const data = await response.json();
       setGenerationId(data.generation_id);
       setStatus("polling");
-      setCreditsRemaining((prev) => Math.max(0, prev - 15));
-      setShowGenerateMore(false);
+      setProgressPercent(30);
+      setCreditsRemaining((prev) => Math.max(0, prev - neededCredits));
     } catch (err: any) {
       setStatus("error");
+      setProgressPercent(0);
       setErrorMessage(err.message || "An unexpected error occurred.");
     }
-  };
-
-  const handleCloseSession = async () => {
-    setShowGenerateMore(false);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) return;
-      const backendBaseUrl = getBackendUrl();
-      await fetch(`${backendBaseUrl}/api/video/close-session`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch (e) {}
-  };
-
-  const handleKeepSessionForMore = () => {
-    setShowGenerateMore(false);
-    setStatus("idle");
-    setPrompt("");
   };
 
   // Status Polling Loop
@@ -233,6 +254,7 @@ export default function VideoGeneratorPage() {
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData.session?.access_token;
+          const backendBaseUrl = getBackendUrl();
           const authHeaders: Record<string, string> = {
             "Bypass-Tunnel-Reminder": "true",
           };
@@ -240,14 +262,11 @@ export default function VideoGeneratorPage() {
             authHeaders["Authorization"] = `Bearer ${token}`;
           }
 
-          const backendBaseUrl = getBackendUrl();
           const statusUrl = token
             ? `${backendBaseUrl}/api/video/status/${generationId}?token=${encodeURIComponent(token)}`
             : `${backendBaseUrl}/api/video/status/${generationId}`;
 
-          const response = await fetch(statusUrl, {
-            headers: authHeaders,
-          });
+          const response = await fetch(statusUrl, { headers: authHeaders });
           if (!response.ok) return;
 
           const data = await response.json();
@@ -265,34 +284,17 @@ export default function VideoGeneratorPage() {
               : rawUrl;
 
             setVideoUrl(authenticatedUrl);
+            setProgressPercent(100);
             setStatus("completed");
-            setShowGenerateMore(true);
-            fetchCredits();
             clearInterval(pollInterval);
 
-            // Fetch blob for Zero-Network Studio Bridge & caching
+            // Fetch blob for instant memory preview & library
             fetch(rawUrl, { headers: authHeaders })
               .then((res) => res.blob())
               .then((blob) => {
                 const bUrl = URL.createObjectURL(blob);
                 setVideoBlobUrl(bUrl);
 
-                const item = {
-                  id: generationId,
-                  title: prompt.slice(0, 35) + "...",
-                  type: "video" as const,
-                  url: authenticatedUrl,
-                  blob,
-                  blobUrl: bUrl,
-                  createdAt: new Date().toISOString(),
-                  expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-                  prompt,
-                };
-
-                addToLibrary(item);
-                setActiveMedia(item);
-              })
-              .catch(() => {
                 const item = {
                   id: generationId,
                   title: prompt.slice(0, 35) + "...",
@@ -307,6 +309,7 @@ export default function VideoGeneratorPage() {
               });
           } else if (data.status === "failed") {
             setStatus("error");
+            setProgressPercent(0);
             setErrorMessage(data.message || "Video generation failed.");
             clearInterval(pollInterval);
           }
@@ -321,482 +324,364 @@ export default function VideoGeneratorPage() {
     };
   }, [status, generationId, prompt]);
 
+  const handleNotifyWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subEmail) return;
+    setSubLoading(true);
+    try {
+      const backendUrl = getBackendUrl();
+      await fetch(`${backendUrl}/api/subscription/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: subEmail,
+          plan: "AI Video Pro",
+          note: "User requested launch notification for Video Pro subscriptions",
+        }),
+      });
+      setSubSubmitted(true);
+    } catch (e) {
+      setSubSubmitted(true);
+    } finally {
+      setSubLoading(false);
+    }
+  };
+
   return (
-    <div className="flex-1 flex flex-col max-w-[1520px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Top Header Bar */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-white/[0.08]">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-violet-600/20 text-violet-300 border border-violet-500/30">
-              Runway-Grade AI Studio
-            </span>
-            <span className="text-xs text-slate-600 dark:text-slate-400">• Google Flow Engine (Omni 1.1 Flash)</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-            <Film className="w-6 h-6 text-violet-400" />
-            AI Video Studio
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-            Turn prompts and photos into realistic cinematic videos with precision duration and camera controls.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <div className="px-4 py-2 rounded-full bg-[#120e26] border border-violet-500/30 text-violet-300 text-xs font-bold flex items-center gap-2 shadow-inner">
-            <Zap className="w-3.5 h-3.5 fill-violet-400 text-violet-400" />
-            <span>Balance: {user ? `${creditsRemaining} / 50 Credits` : "50 Free Credits / Day"}</span>
-          </div>
-          <Link
-            href="/pricing"
-            className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
-          >
-            Upgrade Plan →
-          </Link>
-        </div>
-      </div>
-
-      {/* Guest Lock Notice */}
-      {!user && !authLoading && (
-        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-violet-950/40 via-[#130d2a] to-cyan-950/30 border border-violet-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-fade-in">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/40 flex items-center justify-center text-violet-400 flex-shrink-0">
-              <Lock className="w-5 h-5" />
+    <div className="fixed inset-x-0 top-16 bottom-0 flex flex-col justify-between overflow-hidden bg-slate-50 dark:bg-[#07050e] text-slate-900 dark:text-white select-none">
+      
+      {/* Scrollable Upper Canvas Area */}
+      <div className="flex-1 overflow-y-auto min-h-0 w-full max-w-3xl mx-auto px-4 py-2 sm:py-4 flex flex-col items-center justify-center">
+        
+        {/* Generating / Polling State */}
+        {(status === "generating" || status === "polling") && (
+          <div className="flex flex-col items-center justify-center text-center p-6 space-y-4 max-w-md my-auto">
+            {/* Circular Ring with Centered Film Icon */}
+            <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-violet-500/15 blur-xl animate-pulse" />
+              <div
+                className="absolute inset-0 border-3 border-violet-500/20 border-t-violet-500 rounded-full animate-spin"
+                style={{ animationDuration: "2.5s" }}
+              />
+              <div
+                className="absolute inset-2 border-2 border-fuchsia-500/20 border-b-fuchsia-400 rounded-full animate-spin"
+                style={{ animationDuration: "1.8s", animationDirection: "reverse" }}
+              />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-violet-600 via-purple-600 to-indigo-600 flex items-center justify-center shadow-[0_0_30px_rgba(139,92,246,0.6)] z-10">
+                <Film className="w-7 h-7 sm:w-8 sm:h-8 text-white animate-pulse" />
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Sign In Required to Generate AI Videos</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                Sign in with 1-click Google or Email to unlock 3 free daily video generations and 24-hour cloud storage.
+
+            {/* Percentage & Progress Bar */}
+            <div className="space-y-3 w-full flex flex-col items-center">
+              <div className="flex items-baseline justify-center gap-1">
+                <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight bg-gradient-to-r from-violet-600 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                  {progressPercent}
+                </span>
+                <span className="text-base sm:text-lg font-bold text-violet-500 dark:text-violet-400 font-mono">%</span>
+              </div>
+
+              <div className="w-64 sm:w-72 h-2.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden p-0.5 shadow-inner">
+                <div
+                  className="h-full bg-gradient-to-r from-violet-600 via-purple-500 to-pink-500 rounded-full transition-all duration-700 ease-out shadow-[0_0_12px_rgba(139,92,246,0.7)]"
+                  style={{ width: `${Math.max(6, Math.min(progressPercent, 100))}%` }}
+                />
+              </div>
+
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/30 text-violet-600 dark:text-violet-300 text-xs font-bold">
+                <span className="w-2 h-2 rounded-full bg-violet-500 animate-ping" />
+                <span>{progressText || "Synthesizing Motion Frames..."}</span>
+              </div>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                AI is generating your video. It will appear right here and save to your library.
               </p>
             </div>
           </div>
-          <Link
-            href="/login"
-            className="text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-xl transition-all shadow-lg shadow-violet-600/30 hover:scale-105 active:scale-95 whitespace-nowrap cursor-pointer"
-          >
-            Sign In with Google / Email →
-          </Link>
-        </div>
-      )}
+        )}
 
-      {/* 2-Column AI Studio (Runway ML Architecture: 35% Controls, 65% Canvas) */}
-      <div className="flex flex-col lg:flex-row gap-8 flex-1 min-h-[640px]">
-        {/* Left Panel: Studio Controls (35% Width) */}
-        <div className="w-full lg:w-[35%] flex flex-col gap-6">
-          <div className="rounded-2xl p-6 flex-1 flex flex-col justify-between studio-panel shadow-2xl">
-            <div className="space-y-5">
-              {/* Mode Switcher Pills */}
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2">
-                  Generation Mode
-                </label>
-                <div className="flex gap-2 p-1.5 bg-slate-50 dark:bg-[#080512] rounded-xl border border-slate-200 dark:border-white/[0.08]">
-                  <button
-                    type="button"
-                    onClick={() => setMode("text-to-video")}
-                    className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                      mode === "text-to-video"
-                        ? "bg-violet-600 text-white shadow-md shadow-violet-600/40"
-                        : "text-slate-600 dark:text-slate-400 hover:text-white hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    <Film className="w-3.5 h-3.5" />
-                    Text to Video
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMode("photo-to-video")}
-                    className={`flex-1 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                      mode === "photo-to-video"
-                        ? "bg-violet-600 text-white shadow-md shadow-violet-600/40"
-                        : "text-slate-600 dark:text-slate-400 hover:text-white hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    <ImageIcon className="w-3.5 h-3.5" />
-                    Photo to Video
-                  </button>
-                </div>
+        {/* Completed State */}
+        {status === "completed" && videoUrl && (
+          <div className="w-full flex flex-col items-center space-y-3 max-w-xl">
+            <div className="relative rounded-2xl overflow-hidden bg-black border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-2xl max-h-[46vh] w-full">
+              <video
+                src={videoBlobUrl || videoUrl}
+                controls
+                autoPlay
+                loop
+                className="w-full h-auto max-h-[42vh] rounded-xl bg-black"
+              />
+              <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-[10px] text-violet-300 font-bold border border-violet-500/30 flex items-center gap-1 shadow-md">
+                <Clock className="w-3 h-3 text-violet-400" />
+                <span>24h</span>
               </div>
-
-              {/* Photo to Video Dropzone */}
-              {mode === "photo-to-video" && (
-                <div className="animate-fade-in">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <Camera className="w-3.5 h-3.5 text-violet-400" />
-                      <span>Start-Frame Reference Photo</span>
-                      <span className="text-violet-400 font-bold">*</span>
-                    </label>
-                    <span className="text-[10px] text-slate-600 dark:text-slate-400">PNG, JPG (10MB)</span>
-                  </div>
-
-                  {!referencePreview ? (
-                    <label className="border border-dashed border-slate-300 dark:border-white/[0.14] hover:border-violet-500/60 rounded-xl p-5 flex flex-col items-center justify-center cursor-pointer bg-slate-50 dark:bg-[#080512] hover:bg-[#120d26] transition-all group">
-                      <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400 group-hover:scale-110 transition-transform mb-2">
-                        <Upload className="w-4 h-4" />
-                      </div>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">Click to upload starting frame</span>
-                      <span className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5">
-                        Used as initial visual anchor
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg,image/webp"
-                        onChange={handleImageChange}
-                        className="hidden"
-                      />
-                    </label>
-                  ) : (
-                    <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 dark:bg-[#080512] border border-violet-500/30 relative">
-                      <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-300 dark:border-white/[0.1] flex-shrink-0 relative">
-                        <img src={referencePreview} alt="Ref" className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{referenceImage?.name}</div>
-                        <div className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
-                          <CheckCircle2 className="w-3 h-3" /> Ready as start frame
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={removeReferenceImage}
-                        className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
-                        title="Remove photo"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Prompt Textarea Header with Dice */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-slate-900 dark:text-white">
-                    Scene Prompt
-                  </label>
-                  <button
-                    type="button"
-                    onClick={applySurprisePrompt}
-                    className="text-[11px] font-bold text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <Dices className="w-3.5 h-3.5" />
-                    <span>Surprise Me 🎲</span>
-                  </button>
-                </div>
-
-                <textarea
-                  rows={4}
-                  className={`w-full bg-slate-50 dark:bg-[#080512] border rounded-xl p-3.5 text-white text-xs sm:text-sm focus:ring-1 focus:ring-violet-500 focus:border-violet-500 outline-none resize-none transition-all placeholder:text-slate-500 dark:text-slate-400 ${
-                    errorMessage && prompt.trim().length < 5 ? "border-red-500/60" : "border-slate-300 dark:border-white/[0.1]"
-                  }`}
-                  placeholder={
-                    mode === "photo-to-video"
-                      ? "Describe how the photo should animate... E.g. The subject smiles gently, camera zooms out revealing cinematic sunset landscape..."
-                      : "Describe your scene in detail. E.g. A majestic white owl gliding over a misty snow-covered pine forest in golden dawn sunlight..."
-                  }
-                  value={prompt}
-                  onChange={(e) => {
-                    setPrompt(e.target.value);
-                    if (errorMessage) setErrorMessage("");
-                  }}
-                  disabled={status === "generating" || status === "polling"}
-                />
-
-                {/* Prompt Ideas Chips */}
-                <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] no-scrollbar">
-                  <span className="text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold flex-shrink-0">Inspiration:</span>
-                  {SAMPLE_PROMPTS.slice(0, 2).map((s, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setPrompt(s)}
-                      className="px-2.5 py-1 rounded-md bg-white/[0.04] hover:bg-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-white border border-slate-200 dark:border-white/[0.06] whitespace-nowrap truncate max-w-[180px] transition-all cursor-pointer"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Duration & Aspect Ratio */}
-              <div className="space-y-4 pt-1">
-                {/* Duration Locked to 10s */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-slate-900 dark:text-white">
-                      Duration
-                    </label>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-violet-600/20 text-violet-300 border border-violet-500/30">
-                      Costs 15 Credits
-                    </span>
-                  </div>
-                  <div className="p-3 rounded-xl border border-violet-500 bg-violet-600/15 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-violet-400" />
-                      <span className="text-xs font-bold text-white">10 Seconds (Standard Render)</span>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-600 text-white font-extrabold">10s</span>
-                  </div>
-                </div>
-
-                {/* Aspect Ratio */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-900 dark:text-white mb-1.5">
-                    Aspect Ratio
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAspectRatio("16:9")}
-                      disabled={status === "generating" || status === "polling"}
-                      className={`py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer active:scale-95 ${
-                        aspectRatio === "16:9"
-                          ? "border-violet-500 bg-violet-600/20 text-violet-300"
-                          : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#080512] hover:border-violet-500/40 text-slate-600 dark:text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      16:9 Landscape
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAspectRatio("9:16")}
-                      disabled={status === "generating" || status === "polling"}
-                      className={`py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer active:scale-95 ${
-                        aspectRatio === "9:16"
-                          ? "border-violet-500 bg-violet-600/20 text-violet-300"
-                          : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#080512] hover:border-violet-500/40 text-slate-600 dark:text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      9:16 Reels / Shorts
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Model Info Badge */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#080512] border border-slate-200 dark:border-white/[0.06] flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    Engine: {isPro ? "Omni 1.1 High & Veo" : "Omni 1.1 Flash 360p"}
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-600 dark:text-slate-400">
-                  {isPro ? "Pro Active" : "Free Tier (15 Cr / Gen)"}
-                </span>
-              </div>
-
-              {/* Error Alert */}
-              {errorMessage && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2.5">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
             </div>
 
-            {/* Main Action Button */}
-            <div className="pt-6 border-t border-slate-200 dark:border-white/[0.08] mt-6">
+            {/* Notification Banner */}
+            <div className="py-2 px-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-semibold text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Your video is in your library</span>
+              <Link href="/tools/library" className="underline font-bold ml-1 hover:text-emerald-500">View Library &rarr;</Link>
+            </div>
+
+            {/* Download & Action Buttons */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <a
+                href={videoUrl}
+                download={`botock-video-${generationId || "vid"}.mp4`}
+                className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download MP4</span>
+              </a>
+
+              <a
+                href={videoUrl}
+                download={`botock-video-2k-${generationId || "vid"}.mp4`}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Download 2K</span>
+              </a>
+
+              <Link
+                href="/tools/video-editor"
+                className="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-800 dark:text-white font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              >
+                <Film className="w-3.5 h-3.5" />
+                <span>Edit in Studio</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Idle Canvas State */}
+        {status === "idle" && (
+          <div className="w-full max-w-lg aspect-video rounded-2xl border-2 border-dashed border-slate-300 dark:border-white/10 bg-slate-100/50 dark:bg-white/[0.02] flex flex-col items-center justify-center p-6 text-center space-y-3 transition-all my-auto">
+            <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-500 shadow-inner">
+              <Film className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Video Canvas Ready</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">
+                Your generated video will render right here. Enter a prompt below to synthesize motion.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {status === "error" && (
+          <div className="flex flex-col items-center justify-center text-center p-4 space-y-2">
+            <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white">Generation Failed</h3>
+            <p className="text-xs text-red-500 dark:text-red-400 max-w-xs">{errorMessage || "Failed to generate video."}</p>
+            <button
+              type="button"
+              onClick={() => setStatus("idle")}
+              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 active:scale-95 cursor-pointer"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+      </div>
+
+      {/* Pinned Bottom Input Dock */}
+      <div className="shrink-0 w-full bg-white/95 dark:bg-[#0c081a]/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/10 px-3 sm:px-6 py-2 sm:py-2.5 z-30 shadow-lg">
+        <div className="max-w-3xl mx-auto flex flex-col gap-1.5 sm:gap-2">
+          
+          {/* Controls Chips Row */}
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-0.5 scrollbar-none text-xs">
+            {/* Aspect Ratio */}
+            <select
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value as any)}
+              className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer"
+            >
+              <option value="16:9" className="bg-white dark:bg-[#0c081a]">16:9 Landscape</option>
+              <option value="9:16" className="bg-white dark:bg-[#0c081a]">9:16 Portrait</option>
+            </select>
+
+            {/* Model Select */}
+            <select
+              value={selectedModel}
+              onChange={(e) => handleModelSelect(e.target.value)}
+              className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer"
+            >
+              {VIDEO_MODELS.map((m) => (
+                <option key={m.id} value={m.id} className="bg-white dark:bg-[#0c081a]">{m.label}</option>
+              ))}
+            </select>
+
+            {/* Duration Selector */}
+            <select
+              value={durationSeconds}
+              onChange={(e) => setDurationSeconds(parseInt(e.target.value))}
+              className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer hidden sm:block"
+            >
+              <option value={10} className="bg-white dark:bg-[#0c081a]">10s Video</option>
+              <option value={8} className="bg-white dark:bg-[#0c081a]">8s Video</option>
+              <option value={6} className="bg-white dark:bg-[#0c081a]">6s Video</option>
+              <option value={4} className="bg-white dark:bg-[#0c081a]">4s Video</option>
+            </select>
+
+            {/* Reference image chip if attached */}
+            {referenceImage && (
+              <div className="px-2 py-1 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-600 dark:text-violet-400 text-[11px] font-semibold flex items-center gap-1 shrink-0">
+                <ImageIcon className="w-3 h-3" />
+                <span className="truncate max-w-[80px]">Photo</span>
+                <button type="button" onClick={removeReferenceImage} className="hover:text-violet-300 ml-0.5">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
+            {/* Credits Remaining Badge */}
+            <div className="ml-auto text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1">
+              <span>⚡ {isPro ? "Unlimited" : `${creditsRemaining} cr`}</span>
+              {!isPro && (
+                <button
+                  type="button"
+                  onClick={() => setShowSubModal(true)}
+                  className="text-violet-600 dark:text-violet-400 hover:underline font-bold ml-1 cursor-pointer"
+                >
+                  Pro
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Prompt Input Box */}
+          <div className="rounded-2xl border border-slate-300 dark:border-white/10 bg-slate-100/90 dark:bg-white/[0.04] focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/20 transition-all flex items-end p-1 sm:p-1.5 gap-1.5 shadow-inner">
+            
+            {/* Left Tools */}
+            <div className="flex items-center gap-0.5 pl-1 pb-1 shrink-0">
+              <label className="cursor-pointer p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors" title="Attach Start Photo">
+                <Upload className="w-4 h-4" />
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              </label>
+
+              <button
+                type="button"
+                onClick={applySurprisePrompt}
+                className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 text-violet-500 transition-colors"
+                title="Surprise Me (Random Prompt)"
+              >
+                <Dices className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Textarea */}
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe the video scene you want to animate..."
+              rows={1}
+              className="flex-1 bg-transparent resize-none outline-none py-1.5 px-1 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 min-h-[38px] max-h-24"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleGenerate();
+                }
+              }}
+            />
+
+            {/* Right Action */}
+            <div className="shrink-0 pr-0.5 pb-0.5">
               {user ? (
                 <button
                   type="button"
                   onClick={handleGenerate}
-                  disabled={status === "generating" || status === "polling" || creditsRemaining < 15}
-                  className={`w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2.5 transition-all shadow-xl cursor-pointer ${
-                    status === "generating" || status === "polling"
-                      ? "bg-violet-600/40 text-white/70 cursor-not-allowed"
-                      : creditsRemaining < 15
-                      ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                      : "bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white shadow-violet-600/40 hover:scale-[1.01] active:scale-[0.99]"
-                  }`}
+                  disabled={status === "generating" || status === "polling" || prompt.trim().length < 3}
+                  className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-extrabold text-xs sm:text-sm flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  <span>
-                    {status === "generating" || status === "polling"
-                      ? "Rendering Video..."
-                      : creditsRemaining < 15
-                      ? "Insufficient Daily Credits (15 Needed)"
-                      : "Generate Video (15 Credits)"}
-                  </span>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Generate</span>
                 </button>
               ) : (
                 <Link
                   href="/login"
-                  className="w-full py-3.5 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2.5 bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600 text-white shadow-xl shadow-violet-600/30 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-xs flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Lock className="w-4 h-4" />
-                  <span>Sign In to Generate Video Free</span>
+                  <Lock className="w-3 h-3" />
+                  <span>Sign In</span>
                 </Link>
               )}
             </div>
-          </div>
-        </div>
 
-        {/* Right Panel: The Cinema Hero Canvas (65% Width) */}
-        <div className="w-full lg:w-[65%] flex flex-col gap-6">
-          <div className="rounded-2xl p-6 flex-1 flex flex-col justify-center items-center obsidian-card shadow-2xl relative overflow-hidden min-h-[520px]">
-            {/* Generating State with Futuristic Multi-Ring Orbital Loader */}
-            {(status === "generating" || status === "polling") && (
-              <div className="flex flex-col items-center justify-center text-center p-8 space-y-6">
-                <div className="relative w-28 h-28 flex items-center justify-center">
-                  {/* Outer spinning ring */}
-                  <div className="absolute inset-0 border-2 border-violet-500/20 border-t-violet-400 rounded-full animate-spin" style={{ animationDuration: '3s' }} />
-                  {/* Middle reverse spinning ring */}
-                  <div className="absolute inset-2 border-2 border-cyan-500/20 border-b-cyan-400 rounded-full animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }} />
-                  {/* Center glowing core */}
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-cyan-500 flex items-center justify-center shadow-[0_0_30px_rgba(139,92,246,0.6)] animate-pulse">
-                    <Film className="w-7 h-7 text-white" />
-                  </div>
-                </div>
-
-                <div className="space-y-2 max-w-sm">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-600/20 border border-violet-500/30 text-violet-300 text-xs font-bold animate-pulse">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Rendering Frame Sequence</span>
-                  </div>
-                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">Synthesizing Video on Google Flow</h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {progressText || "Connecting to headless Chrome cluster..."}
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 pt-2">
-                    Generating {durationSeconds} seconds at 360p resolution. Typically takes 35–55s.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Completed State: Prominent Cinema Display */}
-            {status === "completed" && videoUrl && (
-              <div className="w-full h-full flex flex-col justify-between space-y-4">
-                <div className="relative rounded-2xl overflow-hidden bg-black/80 border border-slate-300 dark:border-white/[0.1] aspect-video flex items-center justify-center shadow-2xl">
-                  <video
-                    src={videoBlobUrl || videoUrl}
-                    controls
-                    autoPlay
-                    loop
-                    className="w-full h-full object-contain"
-                  />
-                  <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-[11px] text-violet-300 font-bold border border-violet-500/30 flex items-center gap-1.5 shadow-lg">
-                    <Clock className="w-3 h-3 text-violet-400" />
-                    <span>Expires in 24h</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => router.push("/tools/video-editor")}
-                      className="py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
-                    >
-                      <Scissors className="w-4 h-4" />
-                      <span>Edit in Video Studio (0ms Bridge)</span>
-                    </button>
-                    <a
-                      href={videoUrl}
-                      download={`botock-${generationId || "video"}.mp4`}
-                      className="py-3.5 rounded-xl bg-slate-50 dark:bg-[#080512] hover:bg-white/[0.08] border border-white/[0.12] text-slate-900 dark:text-white font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Download Video (MP4)</span>
-                    </a>
-                  </div>
-
-                  <Link
-                    href="/tools/library"
-                    className="text-center text-xs text-slate-600 dark:text-slate-400 hover:text-violet-400 transition-colors cursor-pointer"
-                  >
-                    Saved to My Library (24h Retention) →
-                  </Link>
-                </div>
-
-                {/* Prompt: Do you want to generate more? */}
-                {showGenerateMore && (
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-violet-950/60 via-[#120d2a] to-slate-900 border border-violet-500/40 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-violet-600/20 text-violet-400 flex items-center justify-center flex-shrink-0">
-                        <Sparkles className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">Do you want to generate another video?</h4>
-                        <p className="text-xs text-slate-600 dark:text-slate-400">
-                          {creditsRemaining >= 15
-                            ? `You have ${creditsRemaining} credits remaining. Keep the studio active for instant rendering!`
-                            : "Daily credits used up. Wait 24h or upgrade to Pro."}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {creditsRemaining >= 15 && (
-                        <button
-                          type="button"
-                          onClick={handleKeepSessionForMore}
-                          className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-md transition-all active:scale-95 cursor-pointer"
-                        >
-                          Yes, Generate More
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={handleCloseSession}
-                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-white/[0.08] transition-all cursor-pointer"
-                      >
-                        No, Close Session
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <ToolSuggestions />
-              </div>
-            )}
-
-            {/* Idle State: High-Tech Creative Canvas */}
-            {status === "idle" && (
-              <div className="flex flex-col items-center justify-center text-center p-8 space-y-4 max-w-md">
-                <div className="w-20 h-20 rounded-3xl bg-[#100b24] border border-slate-200 dark:border-white/[0.08] flex items-center justify-center shadow-inner group">
-                  <Film className="w-9 h-9 text-violet-400/70 group-hover:scale-110 transition-transform" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Live AI Cinema Stage</h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                    Set your scene prompt and duration ({durationSeconds}s) on the left, then click Generate to watch your scene stream here in high fidelity.
-                  </p>
-                </div>
-                <div className="flex items-center gap-4 text-[11px] text-slate-500 dark:text-slate-400 pt-2">
-                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Omni 1.1 Engine</span>
-                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 0ms Studio Bridge</span>
-                </div>
-              </div>
-            )}
-
-            {/* Error State */}
-            {status === "error" && (
-              <div className="flex flex-col items-center justify-center text-center p-8 space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400">
-                  <AlertCircle className="w-8 h-8" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Generation Stalled</h3>
-                  <p className="text-xs text-red-400 mt-1 max-w-xs">
-                    {errorMessage || "An error occurred during video processing."}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setStatus("idle")}
-                  className="px-5 py-2 rounded-xl text-xs font-bold bg-slate-50 dark:bg-[#080512] border border-slate-300 dark:border-white/[0.1] text-white hover:bg-white/[0.08] active:scale-95 cursor-pointer"
-                >
-                  Try Again
-                </button>
-              </div>
-            )}
           </div>
 
-          <AdBanner slot="video-generator-sidebar" />
         </div>
       </div>
+
+      {/* Subscription Waitlist Modal */}
+      {showSubModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#110d22] border border-slate-200 dark:border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
+            <button
+              onClick={() => { setShowSubModal(false); setSubSubmitted(false); }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-2xl bg-violet-500/20 text-violet-500 flex items-center justify-center">
+                <Bell className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Pro Subscriptions</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">We will notify you when available</p>
+              </div>
+            </div>
+
+            {subSubmitted ? (
+              <div className="py-4 text-center space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+                <h4 className="font-bold text-sm text-slate-900 dark:text-white">You're on the list!</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  We will notify you when available as soon as subscriptions launch.
+                </p>
+                <button
+                  onClick={() => setShowSubModal(false)}
+                  className="px-5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold mt-2 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleNotifyWaitlist} className="space-y-3.5">
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Pro subscriptions will be launching soon. Enter your email below and we will notify you when available!
+                </p>
+                <div>
+                  <input
+                    type="email"
+                    required
+                    value={subEmail}
+                    onChange={(e) => setSubEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-violet-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={subLoading}
+                  className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{subLoading ? "Saving..." : "Notify Me When Available"}</span>
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -154,7 +154,7 @@ export default function Navbar() {
                         <div>
                           <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors flex items-center gap-1.5">
                             AI Video Generator
-                            <span className="text-[9px] px-1.5 py-0.2 bg-violet-500/15 text-violet-600 dark:text-violet-300 rounded font-semibold border border-violet-500/30">Flow</span>
+                            <span className="text-[9px] px-1.5 py-0.2 bg-violet-500/15 text-violet-600 dark:text-violet-300 rounded font-semibold border border-violet-500/30">HD</span>
                           </div>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
                             Text & Photo to realistic 4–10s video with camera motion hints
@@ -433,7 +433,7 @@ export default function Navbar() {
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] cursor-pointer"
             >
               <Film className="w-4 h-4 text-violet-500 dark:text-violet-400" />
-              <span>AI Video Generator (Flow)</span>
+              <span>AI Video Generator</span>
             </Link>
             <Link
               href="/tools/image-generator"
@@ -441,7 +441,7 @@ export default function Navbar() {
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] cursor-pointer"
             >
               <ImageIcon className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-              <span>AI Image Generator (Nano Banana)</span>
+              <span>AI Image Generator</span>
             </Link>
             <Link
               href="/tools/video-editor"

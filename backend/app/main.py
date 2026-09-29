@@ -3,7 +3,8 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import video, image, convert, auth_otp
+from app.routers import video, image, convert, auth_otp, rewards
+from app.middleware.anti_bot import AntiBotMiddleware
 from app.config import settings
 from app.services.google_auth import ensure_valid_session
 from app.services.cleanup_service import purge_expired_videos
@@ -58,9 +59,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
+# Anti-Bot & Anti-Spam Shield (protects against scrapers, DDoS, and farming)
+app.add_middleware(AntiBotMiddleware)
+
+# Cross-Origin Resource Sharing
+default_origins = [
+    "http://localhost:3000",
+    "https://botock.app",
+    "https://www.botock.app",
+    "https://botock.vercel.app",
+    "https://botock.azurewebsites.net",
+]
+allowed_origins = os.getenv("ALLOWED_ORIGINS").split(",") if os.getenv("ALLOWED_ORIGINS") else default_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://botock.vercel.app"] if not os.getenv("ALLOWED_ORIGINS") else os.getenv("ALLOWED_ORIGINS").split(","),
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,6 +84,7 @@ app.include_router(video.router)
 app.include_router(image.router)
 app.include_router(convert.router)
 app.include_router(auth_otp.router)
+app.include_router(rewards.router)
 
 
 @app.get("/")

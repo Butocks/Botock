@@ -18,10 +18,12 @@ backend/.env.local
 
 # Session & credentials (CRITICAL: NEVER COMMIT)
 backend/session/
+session/
 *.session.json
 
 # Video & debug storage
 backend/generated_videos/
+generated_videos/
 backend/*.mp4
 backend/*.png
 backend/*.jpg
