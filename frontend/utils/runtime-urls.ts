@@ -25,22 +25,21 @@ function withoutTrailingSlash(url: string) {
 
 function getPrimaryBackendUrl() {
   const configured = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+  // When running in a browser on HTTPS (production), always use the
+  // same-origin Next.js proxy to avoid CORS errors entirely.
+  // The proxy rewrites /api/proxy/* → backend/* server-side.
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    return '/api/proxy';
+  }
+
   if (configured) {
-    const cleanUrl = withoutTrailingSlash(configured);
-    // If browser is on HTTPS (e.g. https://botock.app) and backend is plain HTTP,
-    // use the Next.js same-origin rewrite proxy to eliminate Mixed Content blocking!
-    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && cleanUrl.startsWith('http://')) {
-      return '/api/proxy';
-    }
-    return cleanUrl;
+    return withoutTrailingSlash(configured);
   }
 
   if (typeof window !== 'undefined') {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:8000';
-    }
-    if (window.location.protocol === 'https:') {
-      return '/api/proxy';
     }
   }
 
