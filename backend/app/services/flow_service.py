@@ -152,18 +152,24 @@ class FlowService:
                 await page.goto("https://flow.google.com", timeout=30000, wait_until="domcontentloaded")
                 await asyncio.sleep(3)
 
-        # 4. Check for "New project" button in studio workspace
-        new_btn = page.locator('button:has-text("New project"), button:has-text("Start Creating"), [aria-label*="New project" i]').first
-        if not await new_btn.is_visible(timeout=8000):
-            # Check for inner span if button tag varies
-            new_btn = page.locator('span:has-text("New project")').first
+        # 4. If prompt input box is already open in active canvas (as shown in Flow Studio), use it directly!
+        prompt_input = page.locator('.ProseMirror, [contenteditable="true"], textarea[placeholder*="create" i], [aria-label*="prompt" i]').first
+        if await prompt_input.is_visible(timeout=3000):
+            logger.info(f"[{generation_id}] Active studio canvas with prompt box detected directly! Proceeding...")
+            return prompt_input
 
-        if not await new_btn.is_visible(timeout=5000):
+        # 5. Check for "New project" button in studio workspace (or "+" button on top right)
+        new_btn = page.locator('button:has-text("New project"), button[aria-label*="New project" i], header button:has-text("+"), button[aria-label*="Create project" i]').first
+        if not await new_btn.is_visible(timeout=6000):
+            # Check for inner span or icon if button tag varies
+            new_btn = page.locator('span:has-text("New project"), [aria-label*="New project" i]').first
+
+        if not await new_btn.is_visible(timeout=3000):
+            # Check if prompt input became visible in the meantime
+            if await prompt_input.is_visible(timeout=2000):
+                return prompt_input
             await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_no_new_project_btn.png"))
-            raise Exception(
-                "Could not find 'New project' button — refusing to fall back to an "
-                "existing project to guarantee complete generation isolation."
-            )
+            raise Exception("AI creative canvas was not reachable. Please retry.")
 
         await new_btn.click()
         await page.wait_for_url("**/project/**", timeout=25000)
