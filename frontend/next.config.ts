@@ -57,20 +57,6 @@ const nextConfig: NextConfig = {
             value: "https://botock.app",
           },
         ],
-      },
-      {
-        source: "/tools/image-remove-bg",
-        headers: [
-          {
-            key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
-          },
-          {
-            key: "Cross-Origin-Embedder-Policy",
-            value: "credentialless",
-          },
-        ],
-      },
     ];
   },
 };
