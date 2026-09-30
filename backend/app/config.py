@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     SECRET_KEY: str = ""
     SUPABASE_JWT_SECRET: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_ANON_KEY: str = ""
     SUPABASE_URL: str = "https://bumojafxwqukycgahmmd.supabase.co"
 
     # Admin Security & Auth

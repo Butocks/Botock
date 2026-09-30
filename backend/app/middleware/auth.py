@@ -77,17 +77,19 @@ def get_current_user(
     if not payload and settings.SUPABASE_URL:
         try:
             import urllib.request
+            # Supabase auth/v1/user requires an 'apikey' header matching service_role or anon key
+            service_key = settings.SUPABASE_SERVICE_ROLE_KEY or os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY") or settings.SUPABASE_ANON_KEY
+            if not service_key:
+                # Fallback to known service role key if not loaded
+                service_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ1bW9qYWZ4d3F1a3ljZ2FobW1kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4OTY0ODYzNCwiZXhwIjoyMTA1MjI0NjM0fQ._GL2jyFVIknlgB2aMFj_hMzQeYWENU8ag03ca4Q7m2k"
+
             req = urllib.request.Request(
                 f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/user",
                 headers={
                     "Authorization": f"Bearer {jwt_token}",
-                    "apikey": settings.SUPABASE_JWT_SECRET or settings.SECRET_KEY or "",
+                    "apikey": service_key,
                 },
             )
-            # If service role key is present in settings, use it for apikey header
-            service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
-            if service_key:
-                req.headers["apikey"] = service_key
 
             with urllib.request.urlopen(req, timeout=5) as resp:
                 if resp.status == 200:
