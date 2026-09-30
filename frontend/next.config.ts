@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
       canvas: "./lib/shims/canvas.ts",
     },
   },
+  async rewrites() {
+    const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://20.187.127.68:8000";
+    return [
+      {
+        source: "/api/proxy/:path*",
+        destination: `${backendUrl.replace(/\/$/, '')}/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

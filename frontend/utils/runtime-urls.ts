@@ -22,12 +22,24 @@ function withoutTrailingSlash(url: string) {
 }
 
 function getFallbackBackendUrl() {
-  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
-    return withoutTrailingSlash(process.env.NEXT_PUBLIC_BACKEND_URL);
+  const configured = process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (configured) {
+    const cleanUrl = withoutTrailingSlash(configured);
+    // If browser is on HTTPS (e.g. https://botock.app) and backend is plain HTTP,
+    // use the Next.js same-origin rewrite proxy to eliminate Mixed Content blocking!
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && cleanUrl.startsWith('http://')) {
+      return '/api/proxy';
+    }
+    return cleanUrl;
   }
 
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return 'http://localhost:8000';
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:8000';
+    }
+    if (window.location.protocol === 'https:') {
+      return '/api/proxy';
+    }
   }
 
   return 'https://botock.azurewebsites.net';
