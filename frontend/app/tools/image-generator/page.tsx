@@ -251,13 +251,14 @@ export default function ImageGeneratorPage() {
           }
 
           if (data.status === "completed") {
-            const rawUrl = data.download_url
-              ? new URL(data.download_url, backendBaseUrl).toString()
-              : `${backendBaseUrl}/api/image/download/${generationId}`;
+            let finalUrl = data.download_url || `/api/image/download/${generationId}`;
+            if (finalUrl.startsWith("/")) {
+              finalUrl = `${backendBaseUrl.replace(/\/$/, "")}${finalUrl}`;
+            }
 
             const authenticatedUrl = token
-              ? `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
-              : rawUrl;
+              ? `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+              : finalUrl;
 
             setImageUrl(authenticatedUrl);
             setProgressPercent(100);
@@ -265,8 +266,11 @@ export default function ImageGeneratorPage() {
             clearInterval(pollInterval);
 
             // Fetch blob for instant memory preview & library
-            fetch(rawUrl, { headers: authHeaders })
-              .then((res) => res.blob())
+            fetch(finalUrl, { headers: authHeaders })
+              .then((res) => {
+                if (!res.ok) throw new Error("Could not fetch image blob");
+                return res.blob();
+              })
               .then((blob) => {
                 const bUrl = URL.createObjectURL(blob);
                 setImageBlobUrl(bUrl);
@@ -282,6 +286,10 @@ export default function ImageGeneratorPage() {
                 };
                 addToLibrary(item);
                 setActiveMedia(item);
+              })
+              .catch((err) => {
+                console.error("Blob load note:", err);
+                setImageBlobUrl(authenticatedUrl);
               });
           } else if (data.status === "failed") {
             setStatus("error");

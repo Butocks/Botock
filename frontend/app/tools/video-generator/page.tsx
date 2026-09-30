@@ -321,13 +321,14 @@ export default function VideoGeneratorPage() {
           }
 
           if (data.status === "completed") {
-            const rawUrl = data.download_url
-              ? new URL(data.download_url, backendBaseUrl).toString()
-              : `${backendBaseUrl}/api/video/download/${generationId}`;
+            let finalUrl = data.download_url || `/api/video/download/${generationId}`;
+            if (finalUrl.startsWith("/")) {
+              finalUrl = `${backendBaseUrl.replace(/\/$/, "")}${finalUrl}`;
+            }
 
             const authenticatedUrl = token
-              ? `${rawUrl}${rawUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
-              : rawUrl;
+              ? `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+              : finalUrl;
 
             setVideoUrl(authenticatedUrl);
             setProgressPercent(100);
@@ -335,8 +336,11 @@ export default function VideoGeneratorPage() {
             clearInterval(pollInterval);
 
             // Fetch blob for instant memory preview & library
-            fetch(rawUrl, { headers: authHeaders })
-              .then((res) => res.blob())
+            fetch(finalUrl, { headers: authHeaders })
+              .then((res) => {
+                if (!res.ok) throw new Error("Could not fetch video blob");
+                return res.blob();
+              })
               .then((blob) => {
                 const bUrl = URL.createObjectURL(blob);
                 setVideoBlobUrl(bUrl);
