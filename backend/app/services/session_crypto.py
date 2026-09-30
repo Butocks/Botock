@@ -16,7 +16,7 @@ def _get_fernet_instance():
     - Uses explicit SESSION_ENCRYPTION_KEY from env / Azure Key Vault if provided.
     - Fallback: Deterministically derives from SUPABASE_JWT_SECRET or SECRET_KEY via SHA256 KDF.
     """
-    explicit_key = os.getenv("SESSION_ENCRYPTION_KEY", "").strip()
+    explicit_key = (settings.SESSION_ENCRYPTION_KEY or os.getenv("SESSION_ENCRYPTION_KEY", "")).strip()
     if explicit_key:
         try:
             return Fernet(explicit_key.encode())

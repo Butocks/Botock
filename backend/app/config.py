@@ -1,8 +1,11 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_env_path = os.path.join(_backend_dir, ".env")
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_env_path, extra="ignore")
 
     PROJECT_NAME: str = "Botock AI Creative Suite"
     SESSION_PATH: str = "session/flow_session.json"
