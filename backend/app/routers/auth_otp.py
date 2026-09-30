@@ -771,6 +771,15 @@ async def list_public_blogs():
     return _read_json(BLOGS_FILE, DEFAULT_BLOGS)
 
 
+@router.get("/api/public/blogs/{blog_id}")
+async def get_public_blog(blog_id: str):
+    blogs = _read_json(BLOGS_FILE, DEFAULT_BLOGS)
+    for b in blogs:
+        if b.get("id") == blog_id:
+            return b
+    raise HTTPException(status_code=404, detail="Blog post not found")
+
+
 @router.post("/api/admin/blogs")
 async def save_blog(
     blog: BlogPostCreate,
