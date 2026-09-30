@@ -185,7 +185,7 @@ async def generate_video(
             )
         try:
             if not is_pro:
-                atomic_deduct_video_credit(user["user_id"], cost)
+                await atomic_deduct_video_credit(user["user_id"], cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
             if not await queue.activate(generation_id, user["user_id"]):
                 raise HTTPException(status_code=503, detail="Could not activate video generation. Please retry.")
         except Exception:
@@ -193,7 +193,7 @@ async def generate_video(
             raise
     else:
         if not is_pro:
-            atomic_deduct_video_credit(user["user_id"], cost)
+            await atomic_deduct_video_credit(user["user_id"], cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
         save_ownership(generation_id, user["user_id"])
     video_statuses[generation_id] = {
         "user_id": user["user_id"],
@@ -249,7 +249,7 @@ async def get_credits(user: dict = Depends(get_current_user)):
             "video_model_costs": model_costs,
             "is_pro": True
         }
-    remaining = get_user_credit_balance(user["user_id"])
+    remaining = await get_user_credit_balance(user["user_id"], daily_quota)
     return {
         "credits_remaining": remaining,
         "daily_quota": daily_quota,
@@ -268,11 +268,11 @@ async def get_status(generation_id: str, user: dict = Depends(get_current_user))
             raise HTTPException(status_code=404, detail="Generation ID not found")
         status = job["status"]
         message = {
-            "queued": "Waiting for an available Flow worker.",
-            "running": "Generating video.",
+            "queued": "Allocating dedicated creative AI compute node...",
+            "running": "Synthesizing neural video frames...",
             "completed": "Video generated successfully!",
-            "failed": "Generation failed. Please try again.",
-        }.get(status, "Generation status is updating.")
+            "failed": "Generation encountered an issue. Please try again.",
+        }.get(status, "Generation pipeline is updating...")
         return VideoStatusResponse(
             generation_id=generation_id,
             status=status,
