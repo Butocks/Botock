@@ -165,6 +165,7 @@ export default function ImageRemoveBgClient() {
   // ─── Helper: try backend API first ──────────────────────────────────────
   const tryBackendRemoval = async (file: File): Promise<Blob | null> => {
     try {
+      console.log("[BG-Remove] Trying backend API...", file.name, file.size);
       const formData = new FormData();
       formData.append("file", file);
 
@@ -179,12 +180,20 @@ export default function ImageRemoveBgClient() {
 
       clearTimeout(timeout);
 
-      if (!res.ok) return null;
+      console.log("[BG-Remove] Backend response:", res.status, res.statusText);
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.warn("[BG-Remove] Backend error body:", errText);
+        return null;
+      }
 
       const blob = await res.blob();
+      console.log("[BG-Remove] Backend success! Blob size:", blob?.size);
       if (!blob || blob.size === 0) return null;
       return blob;
-    } catch {
+    } catch (err) {
+      console.warn("[BG-Remove] Backend fetch failed:", err);
       return null;
     }
   };
