@@ -44,6 +44,18 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+          {
+            // Next.js needs inline bootstrap styles/scripts. All other
+            // resource classes are restricted to known safe schemes.
+            key: "Content-Security-Policy",
+            value: "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https:; media-src 'self' blob: https:; worker-src 'self' blob:; upgrade-insecure-requests",
+          },
+          {
+            // The public HTML site has no cross-origin API use. A wildcard
+            // unnecessarily lets arbitrary sites read browser-visible output.
+            key: "Access-Control-Allow-Origin",
+            value: "https://botock.app",
+          },
         ],
       },
       {
@@ -55,7 +67,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Cross-Origin-Embedder-Policy",
-            value: "require-corp",
+            value: "credentialless",
           },
         ],
       },
