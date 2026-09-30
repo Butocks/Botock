@@ -48,7 +48,7 @@ const nextConfig: NextConfig = {
             // Next.js needs inline bootstrap styles/scripts. All other
             // resource classes are restricted to known safe schemes.
             key: "Content-Security-Policy",
-            value: "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: https:; media-src 'self' blob: https:; worker-src 'self' blob:; upgrade-insecure-requests",
+            value: "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' blob: https:; media-src 'self' blob: https:; worker-src 'self' blob:; frame-src 'self' https://accounts.google.com; upgrade-insecure-requests",
           },
           {
             // The public HTML site has no cross-origin API use. A wildcard
