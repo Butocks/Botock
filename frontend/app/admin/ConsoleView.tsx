@@ -951,8 +951,8 @@ export default function ConsoleView() {
                   ))}
                 </div>
               </div>
-
-
+            </div>
+          )}
 
           {/* TAB 2: CREDITS & PHOTO QUOTA */}
           {activeTab === "quotas" && (
