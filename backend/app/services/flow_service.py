@@ -152,26 +152,31 @@ class FlowService:
                 await page.goto("https://flow.google.com", timeout=30000, wait_until="domcontentloaded")
                 await asyncio.sleep(3)
 
-        # 4. If prompt input box is already open in active canvas (as shown in Flow Studio), use it directly!
-        prompt_input = page.locator('.ProseMirror, [contenteditable="true"], textarea[placeholder*="create" i], [aria-label*="prompt" i]').first
-        if await prompt_input.is_visible(timeout=3000):
-            logger.info(f"[{generation_id}] Active studio canvas with prompt box detected directly! Proceeding...")
+        # 4. Check for Floating Prompt Bar: "What do you want to create?" (Verified in screenshot)
+        floating_bar = page.locator('div:has-text("What do you want to create?"), p:has-text("What do you want to create?"), [placeholder*="What do you want to create" i]').last
+        if await floating_bar.is_visible(timeout=3000):
+            logger.info(f"[{generation_id}] Found floating prompt bar ('What do you want to create?'). Clicking to activate...")
+            await floating_bar.click()
+            await asyncio.sleep(1)
+            prompt_input = page.locator('.ProseMirror, [contenteditable="true"], textarea, input').first
+            if await prompt_input.is_visible(timeout=3000):
+                return prompt_input
+
+        # 5. Check if ProseMirror / contenteditable is already active
+        prompt_input = page.locator('.ProseMirror, [contenteditable="true"]').first
+        if await prompt_input.is_visible(timeout=2000):
+            logger.info(f"[{generation_id}] Active studio prompt input detected directly!")
             return prompt_input
 
-        # 5. Check for "New project" button in studio workspace (or "+" button on top right)
-        new_btn = page.locator('button:has-text("New project"), button[aria-label*="New project" i], header button:has-text("+"), button[aria-label*="Create project" i]').first
-        if not await new_btn.is_visible(timeout=6000):
-            # Check for inner span or icon if button tag varies
-            new_btn = page.locator('span:has-text("New project"), [aria-label*="New project" i]').first
-
-        if not await new_btn.is_visible(timeout=3000):
-            # Check if prompt input became visible in the meantime
-            if await prompt_input.is_visible(timeout=2000):
+        # 6. Check for '+' button in top navigation or 'New project'
+        plus_btn = page.locator('button:has-text("+"), [aria-label*="Create" i], [aria-label*="New project" i], button:has-text("New project")').first
+        if await plus_btn.is_visible(timeout=4000):
+            logger.info(f"[{generation_id}] Clicking '+' / 'New project' button in header...")
+            await plus_btn.click()
+            await asyncio.sleep(2)
+            prompt_input = page.locator('.ProseMirror, [contenteditable="true"], [placeholder*="create" i]').first
+            if await prompt_input.is_visible(timeout=5000):
                 return prompt_input
-            await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_no_new_project_btn.png"))
-            raise Exception("AI creative canvas was not reachable. Please retry.")
-
-        await new_btn.click()
         await page.wait_for_url("**/project/**", timeout=25000)
 
         # Dismiss explore tools / onboarding overlay if open
