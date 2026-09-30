@@ -112,14 +112,14 @@ class FlowService:
         CRITICAL: Never falls back to an existing project — this shared account requires
         strict project isolation to prevent cross-user content or tile leaks.
         """
-        logger.info(f"[{generation_id}] Navigating to Flow for fresh isolated project...")
-        status_dict[generation_id]["message"] = "Connecting to Flow Studio..."
+        logger.info(f"[{generation_id}] Navigating to creative engine for fresh isolated workspace...")
+        status_dict[generation_id]["message"] = "Initializing Botock AI Engine..."
         await page.goto("https://flow.google.com", timeout=settings.PAGE_LOAD_TIMEOUT * 1000, wait_until="domcontentloaded")
         await asyncio.sleep(3)
 
         if "accounts.google.com" in page.url:
             await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_session_expired.png"))
-            raise Exception("Google Flow session expired. Please re-run authentication.")
+            raise Exception("AI generation session requires refresh. Please try again shortly.")
 
         new_btn = page.locator('button:has-text("New project"), button:has-text("Start Creating"), [aria-label*="New project" i]').first
         if not await new_btn.is_visible(timeout=8000):
@@ -317,7 +317,7 @@ class FlowService:
 
         status_dict[generation_id] = {
             "status": "processing",
-            "message": "Connecting to Google Flow AI..."
+            "message": "Allocating dedicated creative AI compute..."
         }
 
         p, browser, context, page = await self._launch_browser()
@@ -326,7 +326,7 @@ class FlowService:
             prompt_input = await self._ensure_studio_page(page, generation_id, status_dict)
 
             # Configure Settings Popup for Video
-            status_dict[generation_id]["message"] = "Configuring AI video engine..."
+            status_dict[generation_id]["message"] = "Optimizing neural video model parameters..."
             try:
                 settings_btn = page.locator('button:has-text("Banana"), button:has-text("Video"), button:has-text("Omni"), button:has-text("Veo")').first
                 if await settings_btn.is_visible(timeout=3000):
@@ -598,7 +598,7 @@ class FlowService:
 
         status_dict[generation_id] = {
             "status": "processing",
-            "message": "Connecting to Google Flow AI..."
+            "message": "Allocating dedicated creative AI compute..."
         }
 
         p, browser, context, page = await self._launch_browser()
@@ -607,7 +607,7 @@ class FlowService:
             prompt_input = await self._ensure_studio_page(page, generation_id, status_dict)
 
             # Configure Settings Popup for Image
-            status_dict[generation_id]["message"] = "Configuring Flow AI Nano Banana 2 engine..."
+            status_dict[generation_id]["message"] = "Optimizing neural image synthesis engine..."
             try:
                 settings_btn = page.locator('button:has-text("Banana"), button:has-text("Video"), button:has-text("Omni")').first
                 if await settings_btn.is_visible(timeout=3000):
@@ -657,14 +657,14 @@ class FlowService:
             if style:
                 full_prompt += f", {style} style"
 
-            status_dict[generation_id]["message"] = "Entering prompt into Flow AI..."
+            status_dict[generation_id]["message"] = "Synthesizing creative prompt & styling..."
             await prompt_input.click()
             await asyncio.sleep(0.3)
             await page.keyboard.type(full_prompt, delay=12)
             await asyncio.sleep(0.8)
 
             # Submit
-            status_dict[generation_id]["message"] = "Generating image with Nano Banana 2..."
+            status_dict[generation_id]["message"] = "Generating neural image synthesis..."
             generate_btn = page.locator('button[aria-label*="Start generation" i], .generate-icon-button, button[type="submit"]').first
             if await generate_btn.is_visible(timeout=3000):
                 await generate_btn.click()
@@ -675,7 +675,7 @@ class FlowService:
             await self._handle_credit_approval(page, generation_id)
 
             # Polling for Image completion
-            status_dict[generation_id]["message"] = "Synthesizing Nano Banana 2 image... Please wait."
+            status_dict[generation_id]["message"] = "Rendering high-definition visual... Please wait."
             found_img_url = None
             save_path = os.path.join(self.images_dir, f"{generation_id}.png")
 
