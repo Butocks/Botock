@@ -84,6 +84,13 @@ class FlowService:
                 proxy_cfg["password"] = settings.PROXY_PASS
             launch_args["proxy"] = proxy_cfg
 
+        # Ensure standard paths are available so the google-chrome wrapper script
+        # can find utilities like readlink, dirname, cat, etc., when running under systemd
+        launch_env = os.environ.copy()
+        current_path = launch_env.get("PATH", "")
+        launch_env["PATH"] = f"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:{current_path}"
+        launch_args["env"] = launch_env
+
         p = await async_playwright().start()
         browser = await p.chromium.launch(**launch_args)
         from app.services.session_crypto import load_encrypted_session
