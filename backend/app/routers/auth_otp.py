@@ -855,6 +855,20 @@ async def send_user_signup_otp(req: UserOtpRequest, request: Request):
         raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
     
     email = req.email.strip().lower()
+
+    # Validate email format
+    import re as _re
+    if not _re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+        raise HTTPException(status_code=400, detail="Invalid email address format.")
+
+    # Validate domain has MX records (real email domain check)
+    domain = email.split("@")[-1]
+    try:
+        import dns.resolver as _dns
+        _dns.resolve(domain, "MX")
+    except Exception:
+        raise HTTPException(status_code=400, detail=f"Email address \"{email}\" is invalid or the domain does not accept email.")
+
     # Anti-spam cooldown & hourly limit check
     check_otp_spam_protection(email, client_ip)
 

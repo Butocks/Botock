@@ -25,6 +25,7 @@ import {
 import { formatBytes } from "@/lib/utils/formatters";
 import { useImageDocument } from "@/lib/image/useImageDocument";
 import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
+import { getBackendUrl } from "@/utils/runtime-urls";
 
 type ModelQuality = "isnet_fp16" | "isnet_quint8" | "isnet";
 type BrushMode = "erase" | "restore";
@@ -169,16 +170,25 @@ export default function ImageRemoveBgClient() {
       const formData = new FormData();
       formData.append("file", file);
 
+      // Use the same Azure/failover resolution as image and video generation.
+      // The previous hard-coded Next rewrite could be missing from the Vercel
+      // build, which appears in DevTools as a cancelled proxy request.
+      const backendBaseUrl = await getBackendUrl();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30_000);
+      // The first request can load the rembg ONNX model on a cold Azure
+      // instance. Thirty seconds was short enough to abort a healthy server.
+      const timeout = setTimeout(() => controller.abort(), 90_000);
 
-      const res = await fetch("/api/proxy/api/image/remove-bg", {
-        method: "POST",
-        body: formData,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
+      let res: Response;
+      try {
+        res = await fetch(`${backendBaseUrl}/api/image/remove-bg`, {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       console.log("[BG-Remove] Backend response:", res.status, res.statusText);
 

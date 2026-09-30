@@ -128,24 +128,13 @@ export default function ConsoleView() {
   // Module 1: Analytics & Demographics
   // ----------------------------------------------------
   const [analytics, setAnalytics] = useState({
-    visitors: { live: 42, daily: 5840, weekly: 38920, monthly: 164500 },
-    countries: [
-      { country: "Pakistan", code: "PK", percentage: 34, users: 1985 },
-      { country: "United States", code: "US", percentage: 28, users: 1635 },
-      { country: "United Kingdom", code: "GB", percentage: 14, users: 817 },
-      { country: "United Arab Emirates", code: "AE", percentage: 11, users: 642 },
-      { country: "India", code: "IN", percentage: 8, users: 467 },
-      { country: "Others", code: "GL", percentage: 5, users: 294 },
-    ],
-    subscribers_total: 482,
-    mrr: "$6,840",
+    visitors: { live: 0, daily: 0, weekly: 0, monthly: 0 },
+    countries: [] as { country: string; code: string; percentage: number; users: number }[],
+    subscribers_total: 0,
+    mrr: "$0",
   });
 
-  // Blocked users
-  const [blockedUsers, setBlockedUsers] = useState([
-    { email: "spammer_bot99@tempmail.org", ip: "194.26.29.11", reason: "Automated API flood", date: "2026-09-24" },
-    { email: "test_scraping@disposable.com", ip: "45.133.1.80", reason: "Rate limit evasion", date: "2026-09-21" },
-  ]);
+
 
   // ----------------------------------------------------
   // Module 2: Quotas & Tokens
@@ -660,6 +649,9 @@ export default function ConsoleView() {
     } catch (e) {}
     sessionStorage.removeItem("botock_admin_token");
     sessionStorage.removeItem("botock_admin_email");
+    // Clear middleware cookies
+    document.cookie = "botock_admin_token=; path=/; max-age=0";
+    document.cookie = "botock_admin_email=; path=/; max-age=0";
     router.push("/admin/login");
   };
 
@@ -960,43 +952,7 @@ export default function ConsoleView() {
                 </div>
               </div>
 
-              {/* Security & Blocked Users Monitoring */}
-              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800">
-                <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-red-400" />
-                  <span>Security & Blocked Users Monitoring</span>
-                </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-slate-400">
-                        <th className="py-2.5 font-semibold">User Email</th>
-                        <th className="py-2.5 font-semibold">Client IP</th>
-                        <th className="py-2.5 font-semibold">Incident Reason</th>
-                        <th className="py-2.5 font-semibold">Date Blocked</th>
-                        <th className="py-2.5 font-semibold">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/60">
-                      {blockedUsers.map((u) => (
-                        <tr key={u.email} className="hover:bg-slate-900/30">
-                          <td className="py-3 font-mono text-slate-300">{u.email}</td>
-                          <td className="py-3 font-mono text-slate-400">{u.ip}</td>
-                          <td className="py-3 text-red-300">{u.reason}</td>
-                          <td className="py-3 text-slate-500">{u.date}</td>
-                          <td className="py-3">
-                            <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 font-semibold text-[10px]">
-                              RESTRICTED
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           {/* TAB 2: CREDITS & PHOTO QUOTA */}
           {activeTab === "quotas" && (

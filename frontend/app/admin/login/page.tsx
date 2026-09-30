@@ -82,6 +82,13 @@ export default function AdminLoginPage() {
     setSuccessMsg("");
     setLoading(true);
 
+    // Only this email is allowed
+    if (email.trim().toLowerCase() !== "butoameeralibuto@gmail.com") {
+      setError("Access denied. Unauthorized admin account.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const backendUrl = await getBackendUrl();
       const res = await fetch(`${backendUrl}/api/admin/auth/verify-secret`, {
@@ -112,6 +119,7 @@ export default function AdminLoginPage() {
       setLoading(false);
     }
   };
+
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,10 +154,14 @@ export default function AdminLoginPage() {
         throw new Error(data.detail || "Invalid verification code.");
       }
 
-      // Store authenticated session token
+      // Store authenticated session — both sessionStorage (UI) and cookie (middleware)
       if (typeof window !== "undefined") {
         sessionStorage.setItem("botock_admin_token", data.admin_token);
         sessionStorage.setItem("botock_admin_email", email.trim().toLowerCase());
+        // Set cookies for server-side middleware protection
+        const maxAge = 24 * 60 * 60; // 24h
+        document.cookie = `botock_admin_token=${data.admin_token}; path=/; max-age=${maxAge}; SameSite=Strict`;
+        document.cookie = `botock_admin_email=${email.trim().toLowerCase()}; path=/; max-age=${maxAge}; SameSite=Strict`;
       }
 
       setSuccessMsg("Authorization verified. Redirecting to Command Center...");
