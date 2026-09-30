@@ -125,10 +125,34 @@ class FlowService:
         landing_cta = page.locator('button:has-text("Create with"), a:has-text("Create with"), button:has-text("Start Creating"), [role="button"]:has-text("Create with")').first
         if await landing_cta.is_visible(timeout=3500):
             logger.info(f"[{generation_id}] Landing CTA detected ('Create with...'). Clicking to enter studio...")
-            await landing_cta.click()
+            try:
+                await landing_cta.click(timeout=10000)
+            except Exception as e_click:
+                logger.warning(f"Landing CTA click note: {e_click}")
             await asyncio.sleep(2)
 
-        # 2. Check for "New project" button in studio workspace
+        # 2. Handle Google Account Chooser if redirected to select account
+        if "accountchooser" in page.url or "accounts.google.com" in page.url:
+            logger.info(f"[{generation_id}] Google Account Chooser detected. Selecting existing signed-in account...")
+            email_target = settings.GOOGLE_EMAIL or ""
+            # Look for account tile matching email or first available profile
+            account_tile = page.locator(f'[data-email*="{email_target}"], div:has-text("{email_target}"), li:has-text("{email_target}")').first
+            if not await account_tile.is_visible(timeout=3000):
+                account_tile = page.locator('[role="link"], [data-identifier], div[jsname]').first
+
+            if await account_tile.is_visible(timeout=2000):
+                await account_tile.click()
+                logger.info(f"[{generation_id}] Clicked account tile in account chooser.")
+                await asyncio.sleep(3)
+
+        # 3. If still on Google Sign-In, wait or retry navigation to Flow
+        if "accounts.google.com" in page.url:
+            await asyncio.sleep(2)
+            if "accounts.google.com" in page.url:
+                await page.goto("https://flow.google.com", timeout=30000, wait_until="domcontentloaded")
+                await asyncio.sleep(3)
+
+        # 4. Check for "New project" button in studio workspace
         new_btn = page.locator('button:has-text("New project"), button:has-text("Start Creating"), [aria-label*="New project" i]').first
         if not await new_btn.is_visible(timeout=8000):
             # Check for inner span if button tag varies
