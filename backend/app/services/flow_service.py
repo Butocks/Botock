@@ -703,16 +703,29 @@ class FlowService:
             status_dict[generation_id]["message"] = "Synthesizing creative prompt & styling..."
             await prompt_input.click()
             await asyncio.sleep(0.3)
-            await page.keyboard.type(full_prompt, delay=12)
-            await asyncio.sleep(0.8)
+            # Focus, clear and type with realistic events
+            await page.keyboard.press("Control+A")
+            await page.keyboard.press("Backspace")
+            await page.keyboard.type(full_prompt, delay=15)
+            await asyncio.sleep(0.5)
+            await page.keyboard.press("Space")
+            await page.keyboard.press("Backspace")
+            await asyncio.sleep(0.5)
 
-            # Submit
+            # Submit: first try direct Enter key (most reliable across ProseMirror)
             status_dict[generation_id]["message"] = "Generating neural image synthesis..."
+            await page.keyboard.press("Enter")
+            await asyncio.sleep(1)
+
+            # Check if generate button is enabled and click if needed
             generate_btn = page.locator('button[aria-label*="Start generation" i], .generate-icon-button, button[type="submit"]').first
-            if await generate_btn.is_visible(timeout=3000):
-                await generate_btn.click()
-            else:
-                await page.keyboard.press("Enter")
+            if await generate_btn.is_visible(timeout=1500):
+                is_disabled = await generate_btn.get_attribute("disabled")
+                if not is_disabled or is_disabled == "false":
+                    try:
+                        await generate_btn.click(timeout=3000)
+                    except Exception as e_gen:
+                        logger.debug(f"Button click note: {e_gen}")
 
             await asyncio.sleep(3)
             await self._handle_credit_approval(page, generation_id)
