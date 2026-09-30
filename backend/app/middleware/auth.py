@@ -11,20 +11,25 @@ from typing import Any, Optional
 
 import httpx
 import jwt
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Query
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
-def get_current_user(authorization: Optional[str] = Header(None)) -> dict:
-    """Verify a Supabase access token without ever accepting URL tokens."""
-    if not authorization or not authorization.startswith("Bearer "):
+def get_current_user(authorization: Optional[str] = Header(None), token_query: Optional[str] = Query(None, alias="token")) -> dict:
+    """Verify a Supabase access token (from Header or URL param for downloads)."""
+    if not authorization and not token_query:
         raise HTTPException(status_code=401, detail="Authentication required.")
-    token = authorization.removeprefix("Bearer ").strip()
+    
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.removeprefix("Bearer ").strip()
+    else:
+        token = token_query.strip() if token_query else ""
+        
     if not token or " " in token:
-        raise HTTPException(status_code=401, detail="Invalid Authorization header.")
+        raise HTTPException(status_code=401, detail="Invalid token format.")
 
     issuer = f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1"
     payload: Optional[dict[str, Any]] = None

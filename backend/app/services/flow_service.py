@@ -120,7 +120,7 @@ class FlowService:
         strict project isolation to prevent cross-user content or tile leaks.
         """
         logger.info(f"[{generation_id}] Navigating to creative engine for fresh isolated workspace...")
-        status_dict[generation_id]["message"] = "Initializing Botock AI Engine..."
+        status_dict[generation_id]["message"] = "Initializing AI compute..."
         await page.goto("https://flow.google.com", timeout=settings.PAGE_LOAD_TIMEOUT * 1000, wait_until="domcontentloaded")
         await asyncio.sleep(3)
 
@@ -376,7 +376,7 @@ class FlowService:
             prompt_input = await self._ensure_studio_page(page, generation_id, status_dict)
 
             # Configure Settings Popup for Video
-            status_dict[generation_id]["message"] = "Optimizing neural video model parameters..."
+            status_dict[generation_id]["message"] = "Preparing video engine..."
             try:
                 settings_btn = page.locator('button:has-text("Banana"), button:has-text("Video"), button:has-text("Omni"), button:has-text("Veo")').first
                 if await settings_btn.is_visible(timeout=3000):
@@ -459,7 +459,7 @@ class FlowService:
 
             # Upload ingredient image into prompt box if provided
             if image_base64:
-                status_dict[generation_id]["message"] = "Attaching reference image to video prompt..."
+                status_dict[generation_id]["message"] = "Processing reference image..."
                 await self._upload_ingredient(page, image_base64, generation_id)
 
             # Prompt Construction
@@ -473,7 +473,7 @@ class FlowService:
             if motion_hint:
                 formatted_prompt += f". Camera motion: {motion_hint.strip()}"
 
-            status_dict[generation_id]["message"] = "Entering prompt into Flow AI..."
+            status_dict[generation_id]["message"] = "Generating video..."
             await prompt_input.click()
             await asyncio.sleep(0.3)
             await page.keyboard.type(formatted_prompt, delay=15)
@@ -487,7 +487,7 @@ class FlowService:
             }""")
 
             # Submit
-            status_dict[generation_id]["message"] = "Submitting prompt to Flow AI..."
+            status_dict[generation_id]["message"] = "Generating video..."
             generate_btn = page.locator('button[aria-label*="Start generation" i], .generate-icon-button, button[type="submit"]').first
             if await generate_btn.is_visible(timeout=3000):
                 await generate_btn.click()
@@ -498,7 +498,7 @@ class FlowService:
             await self._handle_credit_approval(page, generation_id)
 
             # Polling for video completion
-            status_dict[generation_id]["message"] = "AI is generating your video... Please wait."
+            status_dict[generation_id]["message"] = "Generating video... This may take a few minutes."
             start_time = asyncio.get_event_loop().time()
             video_ready = False
             already_opened = False
@@ -562,7 +562,7 @@ class FlowService:
                 await asyncio.sleep(4)
 
             # Download MP4
-            status_dict[generation_id]["message"] = "Downloading your video..."
+            status_dict[generation_id]["message"] = "Finalizing video..."
             file_path = await self._download_video(page, generation_id, already_opened=already_opened, existing_video_tiles=existing_video_tiles)
 
             status_dict[generation_id].update({
@@ -657,7 +657,7 @@ class FlowService:
             prompt_input = await self._ensure_studio_page(page, generation_id, status_dict)
 
             # Configure Settings Popup for Image
-            status_dict[generation_id]["message"] = "Optimizing neural image synthesis engine..."
+            status_dict[generation_id]["message"] = "Preparing image engine..."
             try:
                 settings_btn = page.locator('button:has-text("Banana"), button:has-text("Video"), button:has-text("Omni")').first
                 if await settings_btn.is_visible(timeout=3000):
@@ -691,7 +691,7 @@ class FlowService:
 
             # Upload ingredient image if provided
             if image_base64:
-                status_dict[generation_id]["message"] = "Uploading image ingredient..."
+                status_dict[generation_id]["message"] = "Processing reference image..."
                 await self._upload_ingredient(page, image_base64, generation_id)
 
             # Baseline: record existing image tiles before submitting
@@ -707,7 +707,7 @@ class FlowService:
             if style:
                 full_prompt += f", {style} style"
 
-            status_dict[generation_id]["message"] = "Synthesizing creative prompt & styling..."
+            status_dict[generation_id]["message"] = "Generating image..."
             await prompt_input.click()
             await asyncio.sleep(0.3)
             # Focus, clear and type with realistic events
@@ -720,7 +720,7 @@ class FlowService:
             await asyncio.sleep(0.5)
 
             # Submit: first try direct Enter key (most reliable across ProseMirror)
-            status_dict[generation_id]["message"] = "Generating neural image synthesis..."
+            status_dict[generation_id]["message"] = "Generating image..."
             await page.keyboard.press("Enter")
             await asyncio.sleep(1)
 
@@ -738,7 +738,7 @@ class FlowService:
             await self._handle_credit_approval(page, generation_id)
 
             # Polling for Image completion
-            status_dict[generation_id]["message"] = "Rendering high-definition visual... Please wait."
+            status_dict[generation_id]["message"] = "Generating image... Please wait."
             found_img_url = None
             save_path = os.path.join(self.images_dir, f"{generation_id}.png")
 
@@ -760,11 +760,11 @@ class FlowService:
                 pct_matches = re.findall(r'(\d{1,3})%', body_text)
                 if pct_matches:
                     latest_pct = pct_matches[-1]
-                    status_dict[generation_id]["message"] = f"Rendering high-definition visual... ({latest_pct}%)"
+                    status_dict[generation_id]["message"] = f"Generating image... ({latest_pct}%)"
                     logger.info(f"[{generation_id}] Image render in progress: {latest_pct}%")
                     continue
                 else:
-                    status_dict[generation_id]["message"] = f"Rendering high-definition visual... ({int(elapsed)}s elapsed)"
+                    status_dict[generation_id]["message"] = f"Generating image... ({int(elapsed)}s elapsed)"
 
                 # Flow images finish in ~15-35s. After 15s and no percentage, download image
                 if elapsed >= 15:
