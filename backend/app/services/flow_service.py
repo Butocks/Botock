@@ -121,12 +121,20 @@ class FlowService:
             await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_session_expired.png"))
             raise Exception("AI generation session requires refresh. Please try again shortly.")
 
+        # 1. Handle Landing Page if "Create with Google Flow" / "Start Creating" button is shown
+        landing_cta = page.locator('button:has-text("Create with"), a:has-text("Create with"), button:has-text("Start Creating"), [role="button"]:has-text("Create with")').first
+        if await landing_cta.is_visible(timeout=3500):
+            logger.info(f"[{generation_id}] Landing CTA detected ('Create with...'). Clicking to enter studio...")
+            await landing_cta.click()
+            await asyncio.sleep(2)
+
+        # 2. Check for "New project" button in studio workspace
         new_btn = page.locator('button:has-text("New project"), button:has-text("Start Creating"), [aria-label*="New project" i]').first
         if not await new_btn.is_visible(timeout=8000):
             # Check for inner span if button tag varies
             new_btn = page.locator('span:has-text("New project")').first
 
-        if not await new_btn.is_visible(timeout=4000):
+        if not await new_btn.is_visible(timeout=5000):
             await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_no_new_project_btn.png"))
             raise Exception(
                 "Could not find 'New project' button — refusing to fall back to an "
