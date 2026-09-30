@@ -745,14 +745,19 @@ class FlowService:
                 except Exception:
                     body_text = ""
 
+                # Immediate check for AI safety / policy flags
+                if "violate our policies" in body_text.lower() or "policy violation" in body_text.lower():
+                    logger.warning(f"[{generation_id}] Image generation rejected by safety filter: violate policies")
+                    raise Exception("Generation was flagged by AI content safety guidelines. Please try rephrasing your prompt.")
+
                 pct_matches = re.findall(r'(\d{1,3})%', body_text)
                 if pct_matches:
                     latest_pct = pct_matches[-1]
-                    status_dict[generation_id]["message"] = f"Rendering with Nano Banana 2... ({latest_pct}%)"
+                    status_dict[generation_id]["message"] = f"Rendering high-definition visual... ({latest_pct}%)"
                     logger.info(f"[{generation_id}] Image render in progress: {latest_pct}%")
                     continue
                 else:
-                    status_dict[generation_id]["message"] = f"Rendering with Nano Banana 2... ({int(elapsed)}s elapsed)"
+                    status_dict[generation_id]["message"] = f"Rendering high-definition visual... ({int(elapsed)}s elapsed)"
 
                 # Flow images finish in ~15-35s. After 15s and no percentage, download image
                 if elapsed >= 15:
