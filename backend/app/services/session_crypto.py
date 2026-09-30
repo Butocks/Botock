@@ -67,11 +67,22 @@ def load_encrypted_session(path: str) -> dict:
         with open(path, "rb") as f:
             content = f.read()
 
-        # Fernet ciphertexts start with b"gAAAAA". Plain JSON sessions are
-        # deliberately rejected; re-authenticate to migrate them securely.
+        # Fernet ciphertexts start with b"gAAAAA".
         if _fernet and content.startswith(b"gAAAAA"):
             decrypted = _fernet.decrypt(content)
             return json.loads(decrypted.decode("utf-8"))
+
+        # If it is plain JSON, parse it and auto-migrate to encrypted format!
+        if content.strip().startswith(b"{"):
+            try:
+                data = json.loads(content.decode("utf-8"))
+                if data.get("cookies"):
+                    logger.info("Migrating plain JSON Flow session to encrypted format...")
+                    save_encrypted_session(data, path)
+                    return data
+            except Exception as e_json:
+                logger.warning(f"Failed to parse plain JSON session: {e_json}")
+
         logger.error("Refusing to load an unencrypted or unsupported Flow session: %s", path)
         return None
     except Exception as e:

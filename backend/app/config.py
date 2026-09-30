@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     # Groq API Key & Security
     GROQ_API_KEY: str = ""
     SECRET_KEY: str = ""
+    SESSION_ENCRYPTION_KEY: str = ""
     SUPABASE_JWT_SECRET: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_ANON_KEY: str = ""
