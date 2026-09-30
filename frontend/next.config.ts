@@ -57,6 +57,7 @@ const nextConfig: NextConfig = {
             value: "https://botock.app",
           },
         ],
+      },
     ];
   },
 };
