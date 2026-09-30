@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from app.config import settings
 from app.services.blob_storage import upload_video
 from app.services.distributed_queue import queue
+from app.middleware.auth import refund_video_credit
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/worker", tags=["Worker"])
@@ -85,6 +86,14 @@ async def complete(
 async def fail(job_id: str, error_code: str = "worker_error", worker: dict = Depends(_worker_identity)):
     _require_distributed()
     safe_code = re.sub(r"[^a-z0-9_-]", "_", error_code.lower())[:120]
-    if not await queue.fail(job_id, error_code=safe_code, **worker):
+    result = await queue.fail(job_id, error_code=safe_code, **worker)
+    if not result:
         raise HTTPException(status_code=409, detail="Job failure was rejected")
+    if result["status"] == "failed":
+        # Database RPC records one refund per generation, even if this request
+        # is retried after a transient network failure.
+        try:
+            await refund_video_credit(result["user_id"], job_id)
+        except HTTPException:
+            logger.exception("Credit refund deferred for failed job %s", job_id)
     return {"ok": True}

@@ -170,7 +170,7 @@ export default function Navbar() {
                             <span className="text-[9px] px-1.5 py-0.2 bg-violet-500/15 text-violet-600 dark:text-violet-300 rounded font-semibold border border-violet-500/30">HD</span>
                           </div>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-                            Text & Photo to realistic 4–10s video with camera motion hints
+                            Text & Photo to realistic 4–10s videos
                           </p>
                         </div>
                       </Link>

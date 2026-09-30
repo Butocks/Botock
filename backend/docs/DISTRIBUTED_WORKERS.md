@@ -154,7 +154,7 @@ worker configuration above plus `FLOW_CONCURRENCY=1`, and run:
 python worker.py
 ```
 
-Run that command once per account in a separate environment.  For example,
+`worker.py` is included in this repository. Run that command once per account in a separate environment.  For example,
 Colab with two accounts requires two isolated runtimes (or two isolated
 containers), each with its own session path, encryption key, worker id, and
 token.  Do not run two copies using the same account/session.

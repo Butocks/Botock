@@ -47,18 +47,23 @@ class DistributedQueue:
     async def enqueue(self, job_id: str, user_id: str, payload: dict[str, Any]) -> None:
         pool = self._require_pool()
         async with pool.acquire() as conn:
-            pending = await conn.fetchval(
-                "SELECT count(*) FROM video_jobs WHERE status IN ('reserving', 'queued', 'running')"
-            )
-            if pending >= settings.MAX_PENDING_VIDEO_JOBS:
-                raise QueueFullError(settings.MAX_PENDING_VIDEO_JOBS)
-            await conn.execute(
-                """INSERT INTO video_jobs (id, user_id, status, payload)
-                   VALUES ($1::uuid, $2, 'reserving', $3::jsonb)""",
-                job_id,
-                user_id,
-                json.dumps(payload),
-            )
+            # The count and insert must be one transaction.  Without this
+            # advisory lock, simultaneous Azure replicas can overfill the
+            # queue after all observing the same old count.
+            async with conn.transaction():
+                await conn.execute("SELECT pg_advisory_xact_lock(hashtext('botock-video-queue-capacity'))")
+                pending = await conn.fetchval(
+                    "SELECT count(*) FROM video_jobs WHERE status IN ('reserving', 'queued', 'running')"
+                )
+                if pending >= settings.MAX_PENDING_VIDEO_JOBS:
+                    raise QueueFullError(settings.MAX_PENDING_VIDEO_JOBS)
+                await conn.execute(
+                    """INSERT INTO video_jobs (id, user_id, status, payload)
+                       VALUES ($1::uuid, $2, 'reserving', $3::jsonb)""",
+                    job_id,
+                    user_id,
+                    json.dumps(payload),
+                )
 
     async def activate(self, job_id: str, user_id: str) -> bool:
         pool = self._require_pool()
@@ -147,18 +152,30 @@ class DistributedQueue:
             )
         return _command_count(result) == 1
 
-    async def fail(self, job_id: str, worker_id: str, account_id: str, error_code: str) -> bool:
+    async def fail(self, job_id: str, worker_id: str, account_id: str, error_code: str) -> dict[str, Any] | None:
         pool = self._require_pool()
         async with pool.acquire() as conn:
-            result = await conn.execute(
+            row = await conn.fetchrow(
                 """UPDATE video_jobs SET status = CASE WHEN attempts >= $1 THEN 'failed'::video_job_status
                                                          ELSE 'queued'::video_job_status END,
                            error_code = $2, worker_id = NULL, account_id = NULL,
                            lease_expires_at = NULL, updated_at = now()
-                   WHERE id = $3::uuid AND status = 'running' AND worker_id = $4 AND account_id = $5""",
+                   WHERE id = $3::uuid AND status = 'running' AND worker_id = $4 AND account_id = $5
+                   RETURNING user_id, status::text""",
                 settings.MAX_JOB_ATTEMPTS, error_code[:120], job_id, worker_id, account_id,
             )
-        return _command_count(result) == 1
+        return dict(row) if row else None
+
+    async def failed_jobs_for_refund(self, limit: int = 100) -> list[dict[str, str]]:
+        """Terminal jobs are safe to retry here: the credit RPC is idempotent."""
+        pool = self._require_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """SELECT id::text, user_id FROM video_jobs
+                   WHERE status = 'failed' ORDER BY updated_at ASC LIMIT $1""",
+                limit,
+            )
+        return [dict(row) for row in rows]
 
     async def get_for_user(self, job_id: str, user_id: str) -> dict[str, Any] | None:
         pool = self._require_pool()

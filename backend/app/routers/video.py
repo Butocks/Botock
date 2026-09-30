@@ -74,6 +74,7 @@ async def safe_generate_task(
     duration_seconds: int = 8,
     motion_hint: str = None,
     image_base64: str = None,
+    user_id: str | None = None,
 ):
     """Wrapper that enforces single-user execution and subscriber priority."""
     global current_queued_jobs
@@ -91,12 +92,21 @@ async def safe_generate_task(
                 motion_hint=motion_hint,
                 image_base64=image_base64,
             )
+            if not is_pro and user_id and video_statuses.get(generation_id, {}).get("status") == "failed":
+                from app.middleware.auth import refund_video_credit
+                await refund_video_credit(user_id, generation_id)
     except Exception as e:
-        logger.error(f"Error in safe_generate_task {generation_id}: {e}")
+        logger.exception("Video generation task failed: %s", generation_id)
         video_statuses[generation_id] = {
             "status": "failed",
-            "message": str(e) or "Video generation encountered an unexpected error."
+            "message": "The video service is temporarily unavailable. Your credits have been returned. Please try again shortly."
         }
+        if not is_pro and user_id:
+            try:
+                from app.middleware.auth import refund_video_credit
+                await refund_video_credit(user_id, generation_id)
+            except HTTPException:
+                logger.exception("Credit refund deferred for failed local job %s", generation_id)
 
 
 @router.post("/generate", response_model=VideoGenerateResponse)
@@ -156,7 +166,7 @@ async def generate_video(
 
     # Calculate cost. In distributed mode we reserve a queue position before
     # deducting, so a full queue can never consume a user's credits.
-    from app.middleware.auth import atomic_deduct_video_credit
+    from app.middleware.auth import reserve_video_credit
 
     # Aspect ratio validation (16:9 and 9:16 supported)
     aspect_ratio = "9:16" if "9:16" in str(request.aspect_ratio) else "16:9"
@@ -185,7 +195,7 @@ async def generate_video(
             )
         try:
             if not is_pro:
-                await atomic_deduct_video_credit(user["user_id"], cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
+                await reserve_video_credit(user["user_id"], generation_id, cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
             if not await queue.activate(generation_id, user["user_id"]):
                 raise HTTPException(status_code=503, detail="Could not activate video generation. Please retry.")
         except Exception:
@@ -193,7 +203,7 @@ async def generate_video(
             raise
     else:
         if not is_pro:
-            await atomic_deduct_video_credit(user["user_id"], cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
+            await reserve_video_credit(user["user_id"], generation_id, cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
         save_ownership(generation_id, user["user_id"])
     video_statuses[generation_id] = {
         "user_id": user["user_id"],
@@ -214,6 +224,7 @@ async def generate_video(
             duration_seconds,
             request.motion_hint,
             request.image_base64,
+            user["user_id"],
         )
     
     return VideoGenerateResponse(

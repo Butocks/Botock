@@ -3,6 +3,7 @@ import io
 import os
 import shutil
 import tempfile
+import logging
 import pymupdf as fitz
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
@@ -11,6 +12,7 @@ import pdfplumber
 import pandas as pd
 
 router = APIRouter(prefix="/api/convert", tags=["Conversion & PDF Tools"])
+logger = logging.getLogger(__name__)
 
 @router.post("/pdf-to-docx")
 async def convert_pdf_to_docx(file: UploadFile = File(...)):
@@ -33,8 +35,9 @@ async def convert_pdf_to_docx(file: UploadFile = File(...)):
             filename=file.filename.replace(".pdf", ".docx"),
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+    except Exception:
+        logger.exception("PDF-to-DOCX conversion failed")
+        raise HTTPException(status_code=503, detail="The conversion service is temporarily unavailable. Please try again shortly.")
     finally:
         if os.path.exists(in_path):
             try:
@@ -82,8 +85,9 @@ async def convert_pdf_to_excel(file: UploadFile = File(...)):
         )
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+    except Exception:
+        logger.exception("PDF-to-Excel conversion failed")
+        raise HTTPException(status_code=503, detail="The conversion service is temporarily unavailable. Please try again shortly.")
 
 
 @router.post("/docx-to-pdf")
@@ -125,8 +129,9 @@ async def convert_docx_to_pdf(file: UploadFile = File(...)):
         )
     except HTTPException:
         raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+    except Exception:
+        logger.exception("Word-to-PDF conversion failed")
+        raise HTTPException(status_code=503, detail="The conversion service is temporarily unavailable. Please try again shortly.")
     finally:
         if os.path.exists(in_path):
             try:
@@ -179,5 +184,6 @@ async def protect_pdf(
             filename=file.filename.replace(".pdf", "-protected.pdf"),
             media_type="application/pdf"
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"PDF Protection failed: {str(e)}")
+    except Exception:
+        logger.exception("PDF protection failed")
+        raise HTTPException(status_code=503, detail="The document service is temporarily unavailable. Please try again shortly.")

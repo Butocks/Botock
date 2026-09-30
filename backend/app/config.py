@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     WORKER_LEASE_SECONDS: int = 900
     WORKER_HEARTBEAT_SECONDS: int = 30
     MAX_JOB_ATTEMPTS: int = 2
+    # How often the control plane reclaims dead worker leases and performs
+    # idempotent refunds for terminally failed jobs.
+    QUEUE_MAINTENANCE_SECONDS: int = 30
     # JSON mapping: {"worker-id": {"token_hash": "sha256 hex", "account_id": "flow-01"}}
     WORKER_TOKENS_JSON: str = "{}"
 

@@ -566,11 +566,11 @@ class FlowService:
             state = await context.storage_state(); from app.services.session_crypto import save_encrypted_session; save_encrypted_session(state, self.session_path)
 
         except Exception as e:
-            logger.error(f"[{generation_id}] Video generation failed: {e}")
+            logger.exception("[%s] Video generation failed", generation_id)
             await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_video_error.png"))
             status_dict[generation_id].update({
                 "status": "failed",
-                "message": str(e)
+                "message": "The video service is temporarily unavailable. Please try again shortly."
             })
         finally:
             await browser.close()
@@ -811,11 +811,11 @@ class FlowService:
             state = await context.storage_state(); from app.services.session_crypto import save_encrypted_session; save_encrypted_session(state, self.session_path)
 
         except Exception as e:
-            logger.error(f"[{generation_id}] Image generation failed: {e}")
+            logger.exception("[%s] Image generation failed", generation_id)
             await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_image_error.png"))
             status_dict[generation_id].update({
                 "status": "failed",
-                "message": str(e)
+                "message": "The image service is temporarily unavailable. Please try again shortly."
             })
         finally:
             await browser.close()

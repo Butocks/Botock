@@ -18,6 +18,7 @@ ENV/
 session/
 *.session.json
 worker-slots.json
+worker.env
 
 # Generated video outputs and debug logs (contains user data & screenshots)
 generated_videos/

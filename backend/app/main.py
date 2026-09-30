@@ -1,7 +1,10 @@
 import os
 import logging
+import asyncio
+import secrets
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import video, image, convert, auth_otp, rewards, workers
 from app.middleware.anti_bot import AntiBotMiddleware
@@ -14,6 +17,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+async def _queue_maintenance() -> None:
+    """Reclaim dead workers and retry idempotent refunds without user action."""
+    from app.middleware.auth import refund_video_credit
+    while True:
+        try:
+            await queue.reclaim_expired()
+            for job in await queue.failed_jobs_for_refund():
+                await refund_video_credit(job["user_id"], job["id"])
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Distributed queue maintenance failed")
+        await asyncio.sleep(max(10, settings.QUEUE_MAINTENANCE_SECONDS))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: run cleanup sweep & verify Google Flow session."""
@@ -23,6 +41,9 @@ async def lifespan(app: FastAPI):
 
     if settings.DISTRIBUTED_QUEUE_ENABLED:
         await queue.start()
+        maintenance_task = asyncio.create_task(_queue_maintenance())
+    else:
+        maintenance_task = None
 
     # 1. Run 24-hour cleanup sweep on startup
     try:
@@ -61,10 +82,30 @@ async def lifespan(app: FastAPI):
     yield  # App runs
 
     logger.info("Shutting down...")
+    if maintenance_task:
+        maintenance_task.cancel()
+        try:
+            await maintenance_task
+        except asyncio.CancelledError:
+            pass
     await queue.stop()
 
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+
+
+@app.exception_handler(Exception)
+async def internal_error_handler(request: Request, exc: Exception):
+    """Keep stack traces and provider details out of browser responses."""
+    incident_id = secrets.token_hex(8)
+    logger.exception("Unhandled request failure [%s] %s %s", incident_id, request.method, request.url.path)
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": "The service is temporarily unavailable. Please try again shortly.",
+            "incident_id": incident_id,
+        },
+    )
 
 # Anti-Bot & Anti-Spam Shield (protects against scrapers, DDoS, and farming)
 app.add_middleware(AntiBotMiddleware)

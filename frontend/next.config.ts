@@ -8,7 +8,10 @@ const nextConfig: NextConfig = {
     },
   },
   async rewrites() {
-    const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://20.187.127.68:8000";
+    // Do not ship a fallback Azure IP in the public build. A missing deployment
+    // secret must fail closed instead of silently proxying user data elsewhere.
+    const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (!backendUrl) return [];
     return [
       {
         source: "/api/proxy/:path*",
