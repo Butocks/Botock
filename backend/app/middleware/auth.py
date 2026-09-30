@@ -47,21 +47,19 @@ def get_current_user(
 
     payload = None
     expected_issuer = f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1"
-    
-    # Try 1: Decode with raw secret string
+
+    # Try 1: Fast Local Decode with HS256 (raw secret)
     try:
         payload = jwt.decode(
             jwt_token,
             settings.SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
-            audience="authenticated",
-            issuer=expected_issuer,
-            options={"verify_exp": True, "verify_iss": True}
+            options={"verify_exp": True, "verify_aud": False, "verify_iss": False}
         )
-    except Exception:
+    except Exception as e1:
         pass
 
-    # Try 2: Decode with base64 decoded secret (common in Supabase dashboards)
+    # Try 2: Fast Local Decode with base64 decoded secret
     if not payload:
         try:
             import base64
@@ -70,16 +68,45 @@ def get_current_user(
                 jwt_token,
                 b64_secret,
                 algorithms=["HS256"],
-                audience="authenticated",
-                issuer=expected_issuer,
-                options={"verify_exp": True, "verify_iss": True}
+                options={"verify_exp": True, "verify_aud": False, "verify_iss": False}
             )
-        except Exception:
+        except Exception as e2:
             pass
 
-    # If both Try 1 and Try 2 failed, the token is invalid
+    # Try 3: Supabase new JWT Signing Keys (Verify directly with Supabase Auth API)
+    if not payload and settings.SUPABASE_URL:
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/user",
+                headers={
+                    "Authorization": f"Bearer {jwt_token}",
+                    "apikey": settings.SUPABASE_JWT_SECRET or settings.SECRET_KEY or "",
+                },
+            )
+            # If service role key is present in settings, use it for apikey header
+            service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
+            if service_key:
+                req.headers["apikey"] = service_key
+
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                if resp.status == 200:
+                    import json
+                    user_data = json.loads(resp.read().decode())
+                    payload = {
+                        "sub": user_data.get("id"),
+                        "id": user_data.get("id"),
+                        "email": user_data.get("email"),
+                        "role": user_data.get("role", "authenticated"),
+                        "app_metadata": user_data.get("app_metadata", {}),
+                        "user_metadata": user_data.get("user_metadata", {}),
+                    }
+        except Exception as e3:
+            logger.warning(f"Supabase auth/v1/user check failed: {e3}")
+
+    # If all 3 failed, token is truly invalid
     if not payload:
-        logger.warning("JWT signature or issuer verification failed.")
+        logger.warning("JWT verification failed against both local secrets and Supabase auth endpoint.")
         raise HTTPException(
             status_code=401,
             detail="Invalid or forged authentication token. Please sign out and sign in again to refresh your session."
