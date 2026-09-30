@@ -311,7 +311,7 @@ class FlowService:
         if not self.check_session_valid():
             status_dict[generation_id] = {
                 "status": "failed",
-                "message": "Session not found. Please log in to Google Flow first."
+                "message": "AI Generation nodes are currently busy or undergoing scheduled maintenance. Please try again shortly."
             }
             return
 
@@ -592,7 +592,7 @@ class FlowService:
         if not self.check_session_valid():
             status_dict[generation_id] = {
                 "status": "failed",
-                "message": "Session not found. Please log in to Google Flow first."
+                "message": "AI Generation nodes are currently busy or undergoing scheduled maintenance. Please try again shortly."
             }
             return
 
