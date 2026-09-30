@@ -11,7 +11,9 @@ export function getSiteUrl() {
 }
 
 const HEALTH_CHECK_TIMEOUT_MS = 2_500;
-const HEALTH_CHECK_CACHE_MS = 15_000;
+// A short cache makes an Azure outage switch to an available private tunnel
+// quickly, without probing on every UI render.
+const HEALTH_CHECK_CACHE_MS = 5_000;
 
 let cachedBackendUrl: string | null = null;
 let backendUrlCheckedAt = 0;
@@ -21,7 +23,7 @@ function withoutTrailingSlash(url: string) {
   return url.replace(/\/$/, '');
 }
 
-function getFallbackBackendUrl() {
+function getPrimaryBackendUrl() {
   const configured = process.env.NEXT_PUBLIC_BACKEND_URL;
   if (configured) {
     const cleanUrl = withoutTrailingSlash(configured);
@@ -42,7 +44,7 @@ function getFallbackBackendUrl() {
     }
   }
 
-  return 'https://botock.azurewebsites.net';
+  return '';
 }
 
 async function isBackendHealthy(backendUrl: string) {
@@ -63,17 +65,17 @@ async function isBackendHealthy(backendUrl: string) {
 }
 
 /**
- * Chooses the laptop tunnel when it is reachable, otherwise the configured
- * cloud backend. Set NEXT_PUBLIC_LAPTOP_BACKEND_URL to enable this behavior.
+ * Uses Azure first. If it is unavailable, safely fails over to the configured
+ * laptop tunnel and then Colab tunnel. All backends must share the same
+ * Supabase queue/database; only workers may differ.
  */
 export async function getBackendUrl() {
-  const fallbackBackendUrl = getFallbackBackendUrl();
+  const primaryBackendUrl = getPrimaryBackendUrl();
   const laptopBackendUrl = process.env.NEXT_PUBLIC_LAPTOP_BACKEND_URL;
+  const colabBackendUrl = process.env.NEXT_PUBLIC_COLAB_BACKEND_URL;
 
-  // Server-rendered code and deployments without a laptop tunnel keep the
-  // original, synchronous-config behavior without performing a browser probe.
-  if (typeof window === 'undefined' || !laptopBackendUrl) {
-    return fallbackBackendUrl;
+  if (typeof window === 'undefined') {
+    return primaryBackendUrl || getSiteUrl();
   }
 
   const now = Date.now();
@@ -83,8 +85,19 @@ export async function getBackendUrl() {
 
   if (!backendUrlRequest) {
     backendUrlRequest = (async () => {
-      const laptopUrl = withoutTrailingSlash(laptopBackendUrl);
-      cachedBackendUrl = await isBackendHealthy(laptopUrl) ? laptopUrl : fallbackBackendUrl;
+      const candidates = [primaryBackendUrl, laptopBackendUrl, colabBackendUrl]
+        .filter((url): url is string => Boolean(url))
+        .map(withoutTrailingSlash);
+      for (const candidate of candidates) {
+        if (await isBackendHealthy(candidate)) {
+          cachedBackendUrl = candidate;
+          backendUrlCheckedAt = Date.now();
+          return candidate;
+        }
+      }
+      // Keep the normal API error path; do not silently direct user data to an
+      // unknown endpoint when every configured backend is offline.
+      cachedBackendUrl = primaryBackendUrl || getSiteUrl();
       backendUrlCheckedAt = Date.now();
       return cachedBackendUrl;
     })().finally(() => {

@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import video, image, convert, auth_otp, rewards, workers
+from app.routers import video, image, convert, auth_otp, rewards, workers, remove_bg
 from app.middleware.anti_bot import AntiBotMiddleware
 from app.config import settings
 from app.services.google_auth import ensure_valid_session
@@ -58,6 +58,14 @@ async def lifespan(app: FastAPI):
             "⚠️ CRITICAL SECURITY WARNING: SUPABASE_JWT_SECRET is not set in environment! "
             "All authenticated routes will fail closed until this secret is configured."
         )
+
+    # 3. Pre-load rembg model for instant background removal
+    try:
+        from app.routers.remove_bg import _get_rembg_session
+        await asyncio.to_thread(_get_rembg_session)
+        logger.info("✅ rembg background removal model pre-loaded.")
+    except Exception as e:
+        logger.warning(f"⚠️ rembg model pre-load failed (will lazy-load on first request): {e}")
 
     if settings.DISTRIBUTED_QUEUE_ENABLED:
         logger.info("Distributed mode: Flow sessions are loaded only by private workers.")
@@ -134,6 +142,7 @@ app.include_router(convert.router)
 app.include_router(auth_otp.router)
 app.include_router(rewards.router)
 app.include_router(workers.router)
+app.include_router(remove_bg.router)
 
 
 @app.get("/")

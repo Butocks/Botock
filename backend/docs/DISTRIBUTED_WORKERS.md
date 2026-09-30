@@ -187,6 +187,30 @@ Instead, add six independently authenticated Flow accounts and six slots.
 
 ## Capacity and offline behaviour
 
+## Control-plane failover (Azure backend to laptop/Colab backend)
+
+Workers and the public API are different roles. A laptop running only
+`worker.py` can finish jobs while Azure is online, but it cannot accept new
+browser requests if the Azure API itself is down. To make the laptop or Colab
+an API failover node, run the full FastAPI backend there with the **same**
+`DISTRIBUTED_QUEUE_ENABLED=true`, `QUEUE_DATABASE_URL`, Supabase service-role
+secret, and Blob Storage settings as Azure. Keep its Flow sessions local and
+encrypted; do not copy an Azure Flow session.
+
+Configure these public Vercel variables (every URL must use HTTPS):
+
+```dotenv
+NEXT_PUBLIC_BACKEND_URL=https://your-azure-api.example
+NEXT_PUBLIC_LAPTOP_BACKEND_URL=https://your-laptop-tunnel.example
+NEXT_PUBLIC_COLAB_BACKEND_URL=https://your-colab-tunnel.example
+```
+
+The frontend probes Azure first. It uses the laptop only when Azure `/health`
+is unavailable, then Colab if both are unavailable. It never divides one
+claimed generation between machines: a claimed job remains with that worker
+until completion, explicit failure, or lease expiry. All nodes must use the
+same Postgres queue; separate local queues would lose failover guarantees.
+
 Set the public waiting limit centrally, for example `MAX_PENDING_VIDEO_JOBS=50`.
 This is safe even if only Azure is online.  Capacity is created by starting
 slots:

@@ -119,58 +119,158 @@ export default function ImageRemoveBgClient() {
     maxFiles: 1,
   });
 
-  // ─── AI processing ────────────────────────────────────────────────────────
+  // ─── Helper: resize image on client before processing ────────────────────
+  const resizeImageForProcessing = async (
+    file: File,
+    maxDim: number = 1536
+  ): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const { naturalWidth: w, naturalHeight: h } = img;
+        if (Math.max(w, h) <= maxDim) {
+          URL.revokeObjectURL(img.src);
+          resolve(file);
+          return;
+        }
+        const ratio = maxDim / Math.max(w, h);
+        const nw = Math.round(w * ratio);
+        const nh = Math.round(h * ratio);
+        const canvas = document.createElement("canvas");
+        canvas.width = nw;
+        canvas.height = nh;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, nw, nh);
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(img.src);
+            if (blob) {
+              resolve(new File([blob], file.name, { type: "image/png" }));
+            } else {
+              resolve(file);
+            }
+          },
+          "image/png",
+          1.0
+        );
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(img.src);
+        resolve(file);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // ─── Helper: try backend API first ──────────────────────────────────────
+  const tryBackendRemoval = async (file: File): Promise<Blob | null> => {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
+
+      const res = await fetch("/api/proxy/api/image/remove-bg", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!res.ok) return null;
+
+      const blob = await res.blob();
+      if (!blob || blob.size === 0) return null;
+      return blob;
+    } catch {
+      return null;
+    }
+  };
+
+  // ─── Client-side fallback processing ────────────────────────────────────
+  const processClientSide = async (inputFile: File | null, inputUrl: string | null): Promise<Blob> => {
+    setStatusMessage("Server unavailable — processing locally...");
+    setProgress(5);
+
+    const imgly = await import("@imgly/background-removal");
+    const removeBackground = imgly.removeBackground || imgly.default;
+
+    if (typeof removeBackground !== "function") {
+      throw new Error("Failed to initialize background removal engine.");
+    }
+
+    // Pre-resize large images for faster client-side inference
+    let inputSource: File | string;
+    if (inputFile) {
+      inputSource = await resizeImageForProcessing(inputFile, 1536);
+    } else {
+      inputSource = inputUrl!;
+    }
+
+    const blob = await removeBackground(inputSource, {
+      model: modelQuality,
+      progress: (key: string, current: number, total: number) => {
+        let pct = 0;
+        if (total > 0) {
+          pct = Math.min(100, Math.round((current / total) * 100));
+        } else if (current > 0) {
+          pct = Math.min(99, Math.round(current * 100));
+        }
+        setProgress(pct);
+
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes("fetch") || lowerKey.includes("download") || lowerKey.includes("model")) {
+          setStatusMessage(`Loading neural network model (${pct}%)...`);
+        } else if (lowerKey.includes("init") || lowerKey.includes("session")) {
+          setStatusMessage("Initializing WebAssembly runtime...");
+        } else if (
+          lowerKey.includes("compute") ||
+          lowerKey.includes("inference") ||
+          lowerKey.includes("segment")
+        ) {
+          setStatusMessage(`Processing image segmentation (${pct}%)...`);
+        } else {
+          setStatusMessage(`Processing: ${key} (${pct}%)`);
+        }
+      },
+      output: {
+        format: "image/png",
+        quality: 1.0,
+      },
+    });
+
+    return blob;
+  };
+
+  // ─── AI processing — backend-first with client fallback ─────────────────
   const handleProcess = async () => {
     if (!imageFile && !imageSrc) return;
 
     setIsProcessing(true);
     setActionError(null);
     setProgress(0);
-    setStatusMessage("Loading neural network model...");
+    setStatusMessage("Connecting to server for ultra-fast processing...");
 
     try {
-      const imgly = await import("@imgly/background-removal");
-      const removeBackground = imgly.removeBackground || imgly.default;
+      let resultBlob: Blob | null = null;
 
-      if (typeof removeBackground !== "function") {
-        throw new Error("Failed to initialize background removal engine.");
+      // ── Step 1: Try backend API (fast, 2-5 seconds) ─────────────────
+      if (imageFile) {
+        setProgress(10);
+        resultBlob = await tryBackendRemoval(imageFile);
       }
 
-      const inputSource: File | string = imageFile || imageSrc!;
+      // ── Step 2: Fallback to client-side if backend failed ───────────
+      if (!resultBlob) {
+        resultBlob = await processClientSide(imageFile, imageSrc);
+      } else {
+        setProgress(100);
+        setStatusMessage("Background removed successfully! ⚡");
+      }
 
-      const blob = await removeBackground(inputSource, {
-        model: modelQuality,
-        progress: (key: string, current: number, total: number) => {
-          let pct = 0;
-          if (total > 0) {
-            pct = Math.min(100, Math.round((current / total) * 100));
-          } else if (current > 0) {
-            pct = Math.min(99, Math.round(current * 100));
-          }
-          setProgress(pct);
-
-          const lowerKey = key.toLowerCase();
-          if (lowerKey.includes("fetch") || lowerKey.includes("download") || lowerKey.includes("model")) {
-            setStatusMessage(`Loading neural network model (${pct}%)...`);
-          } else if (lowerKey.includes("init") || lowerKey.includes("session")) {
-            setStatusMessage("Initializing WebAssembly runtime...");
-          } else if (
-            lowerKey.includes("compute") ||
-            lowerKey.includes("inference") ||
-            lowerKey.includes("segment")
-          ) {
-            setStatusMessage(`Processing image segmentation (${pct}%)...`);
-          } else {
-            setStatusMessage(`Processing: ${key} (${pct}%)`);
-          }
-        },
-        output: {
-          format: "image/png",
-          quality: 1.0,
-        },
-      });
-
-      setResultBlob(blob, "image/png");
+      setResultBlob(resultBlob, "image/png");
       setProgress(100);
       setStatusMessage("Background removed successfully!");
     } catch (err: unknown) {
@@ -673,7 +773,7 @@ export default function ImageRemoveBgClient() {
                   />
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  First run downloads model weights into browser cache.
+                  Server processing is instant. Local fallback may download model on first use.
                 </p>
               </div>
             )}
