@@ -10,12 +10,16 @@ import { useMediaStore } from "../../store/useMediaStore";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { useEditorTimeline } from "@/lib/editor/useEditorTimeline";
 import { useThumbnails } from "@/lib/editor/useThumbnails";
+import { useWaveforms } from "@/lib/editor/useWaveforms";
 import { useMediaBin } from "@/lib/editor/useMediaBin";
 import { exportEditorProject } from "@/lib/editor/exportTimeline";
 import { formatBytes } from "@/lib/utils/formatters";
 import { MediaBinItem } from "@/lib/editor/types";
 
 import EditorTimeline from "./components/EditorTimeline";
+import PreviewCanvas from "./components/PreviewCanvas";
+import TransformInspector from "./components/TransformInspector";
+import TransformOverlay from "./components/TransformOverlay";
 import MediaBin from "./components/MediaBin";
 
 function fmtTime(t: number) {
@@ -32,9 +36,26 @@ export default function VideoEditorComponent() {
   const { activeMedia } = useMediaStore();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const rafRef = useRef<number | null>(null);
-
   const [currentTime, setCurrentTime] = useState(0);
+  const timeRef = useRef(currentTime);
   const [isPlaying, setIsPlaying] = useState(false);
+  useEffect(() => { timeRef.current = currentTime; }, [currentTime]);
+  
+  // Format time utility for the direct DOM update
+  useEffect(() => {
+    const handleTime = (e: any) => {
+      const el = document.getElementById("editor-time-display");
+      if (el) {
+        const t = e.detail;
+        const m = Math.floor(t / 60);
+        const s = Math.floor(t % 60);
+        const ms = Math.floor((t % 1) * 10);
+        el.innerText = `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms}`;
+      }
+    };
+    window.addEventListener('editor-time-update', handleTime);
+    return () => window.removeEventListener('editor-time-update', handleTime);
+  }, []);
   const [zoom, setZoom] = useState(1);
   const [thumbnailsBySource, setThumbnailsBySource] = useState<Record<string, string[]>>({});
 
@@ -47,6 +68,7 @@ export default function VideoEditorComponent() {
   const mediaBin = useMediaBin();
   const timeline = useEditorTimeline();
   const thumbs = useThumbnails();
+  const waveformsBySource = useWaveforms(mediaBin.items);
   const { load, writeFile, readFile, deleteFile, exec } = useFFmpeg();
 
   const allVideoClips = React.useMemo(() => timeline.project.tracks
@@ -153,16 +175,15 @@ export default function VideoEditorComponent() {
       }
       const dt = (ts - lastTs) / 1000;
       lastTs = ts;
-      setCurrentTime((prev) => {
-        const next = prev + dt;
-        const maxTime = allVideoClips.length > 0 ? allVideoClips[allVideoClips.length - 1].timelineStart + allVideoClips[allVideoClips.length - 1].duration : 10;
-        
-        if (next >= maxTime && maxTime > 0) {
-          setIsPlaying(false);
-          return maxTime;
-        }
-        return next;
-      });
+      const maxTime = allVideoClips.length > 0 ? Math.max(...allVideoClips.map(c => c.timelineStart + c.duration)) : 10;
+      // Bypass React state for 60fps playback to prevent crushing the render tree
+      let next = timeRef.current + dt;
+      if (next >= maxTime && maxTime > 0) {
+          next = maxTime;
+          setTimeout(() => setIsPlaying(false), 0);
+      }
+      timeRef.current = next;
+      window.dispatchEvent(new CustomEvent('editor-time-update', { detail: next }));
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -173,7 +194,7 @@ export default function VideoEditorComponent() {
 
   const togglePlay = () => {
     const video = videoRef.current;
-    const maxTime = allVideoClips.length > 0 ? allVideoClips[allVideoClips.length - 1].timelineStart + allVideoClips[allVideoClips.length - 1].duration : 10;
+    const maxTime = allVideoClips.length > 0 ? Math.max(...allVideoClips.map(c => c.timelineStart + c.duration)) : 10;
     
     if (isPlaying) {
       if (video) video.pause();
@@ -187,7 +208,7 @@ export default function VideoEditorComponent() {
   };
 
   const seekTo = useCallback((t: number) => {
-     const maxTime = allVideoClips.length > 0 ? allVideoClips[allVideoClips.length - 1].timelineStart + allVideoClips[allVideoClips.length - 1].duration : 10;
+     const maxTime = allVideoClips.length > 0 ? Math.max(...allVideoClips.map(c => c.timelineStart + c.duration)) : 10;
      setCurrentTime(Math.max(0, Math.min(maxTime, t)));
   }, [allVideoClips]);
 
@@ -226,6 +247,7 @@ export default function VideoEditorComponent() {
     { icon: Type, label: "Text" },
   ];
 
+  const selectedClip = timeline.project.tracks.flatMap(t => t.clips).find(c => c.id === timeline.selectedClipId);
   const currentMaxTime = allVideoClips.length > 0 ? allVideoClips[allVideoClips.length - 1].timelineStart + allVideoClips[allVideoClips.length - 1].duration : 0;
 
   return (
@@ -273,6 +295,7 @@ export default function VideoEditorComponent() {
                      onUpload={handleMediaBinUpload} 
                      onAddToTimeline={handleAddToTimeline}
                    />
+
                 </div>
              </div>
 
@@ -299,15 +322,23 @@ export default function VideoEditorComponent() {
                 )}
 
                 <div className="flex-1 relative w-full h-full flex items-center justify-center overflow-hidden bg-[#0a0a0c] p-4" onClick={togglePlay}>
-                   <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
-                     ref={videoRef}
-                     className="max-w-full max-h-full bg-black shadow-2xl ring-1 ring-white/10"
-                     style={{ 
-                        aspectRatio: `${timeline.project.width} / ${timeline.project.height}`,
-                        objectFit: "contain"
-                     }}
-                     playsInline
-                   />
+                   <div className="relative max-w-full max-h-full" style={{ aspectRatio: `${timeline.project.width} / ${timeline.project.height}` }}>
+                      <PreviewCanvas 
+                        project={timeline.project} 
+                        mediaItems={mediaBin.items} 
+                        currentTime={currentTime} 
+                        isPlaying={isPlaying} 
+                      />
+                      {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image") && (
+                         <TransformOverlay 
+                            clip={selectedClip} 
+                            project={timeline.project}
+                            mediaItem={mediaBin.items.find(m => m.id === selectedClip.sourceId)}
+                            onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
+                            onCommitLive={() => timeline.commitLiveUpdate()}
+                         />
+                      )}
+                   </div>
                 </div>
 
                 {/* Player Controls */}
@@ -321,6 +352,25 @@ export default function VideoEditorComponent() {
                    <button onClick={() => seekTo(currentMaxTime)} className="text-gray-400 hover:text-white"><div className="w-3 h-3 border-r-2 border-current flex items-center justify-end"><Play className="w-3 h-3 fill-current"/></div></button>
                 </div>
              </div>
+
+
+             {/* Inspector Area */}
+             {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image") && (
+                 <div className="w-[280px] bg-[#141419] border-l border-[#2b2b36] flex flex-col min-h-0 overflow-y-auto shrink-0 shadow-xl">
+                    <TransformInspector 
+                        clip={selectedClip} 
+                        onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
+                        onBeginLive={() => timeline.beginLiveUpdate()}
+                        onCommitLive={() => timeline.commitLiveUpdate()}
+                        onUpdate={(patch) => {
+                            timeline.beginLiveUpdate();
+                            timeline.updateClipLive(selectedClip.id, patch);
+                            timeline.commitLiveUpdate();
+                        }}
+                    />
+                 </div>
+             )}
+
           </div>
 
           {/* Bottom Panel: Timeline */}
@@ -337,7 +387,7 @@ export default function VideoEditorComponent() {
                 </div>
                 <div className="flex items-center gap-4 text-xs">
                    <div className="flex items-center font-mono gap-1">
-                      <span className="text-white">{fmtTime(currentTime)}</span>
+                      <span id="editor-time-display" className="text-white">{fmtTime(currentTime)}</span>
                       <span className="text-gray-600">/</span>
                       <span className="text-gray-500">{fmtTime(currentMaxTime)}</span>
                    </div>
@@ -368,6 +418,7 @@ export default function VideoEditorComponent() {
                   onEdgeCommit={timeline.commitLiveUpdate}
                   zoom={zoom}
                   thumbnailsBySource={thumbnailsBySource}
+                  waveformsBySource={waveformsBySource}
                 />
              </div>
 

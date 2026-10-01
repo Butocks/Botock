@@ -12,7 +12,7 @@ function fmt(t: number) {
 
 const SOURCE_COLORS = ["bg-emerald-500", "bg-blue-500", "bg-purple-500", "bg-pink-500", "bg-orange-500", "bg-indigo-500", "bg-teal-500"];
 
-const TrackLane = React.memo(function TrackLane({ track, totalDuration, selectedClipId, onSelectClip, startDrag, sourceIndexOf, thumbnailsBySource }: any) {
+const TrackLane = React.memo(function TrackLane({ track, totalDuration, selectedClipId, onSelectClip, startDrag, sourceIndexOf, thumbnailsBySource, waveformsBySource, mediaItems }: any) {
   return (
     <div key={track.id} className="relative flex h-24 border-b border-slate-800 group">
       {/* Track Header (Sticky Left) */}
@@ -115,6 +115,7 @@ type Props = {
   onSplit: (time: number) => void;
   zoom: number;
   thumbnailsBySource: Record<string, string[]>;
+  waveformsBySource: Record<string, number[]>;
 };
 
 export default function EditorTimeline({
@@ -128,7 +129,8 @@ export default function EditorTimeline({
   onEdgeLive,
   onEdgeCommit,
   zoom,
-  thumbnailsBySource
+  thumbnailsBySource,
+  waveformsBySource
 }: Props) {
   const trackRef = useRef<HTMLDivElement | null>(null);
 
@@ -169,6 +171,18 @@ export default function EditorTimeline({
     onEdgeBegin();
     setDragging({ id, side, startX: e.clientX, originalT: 0 });
   };
+
+  useEffect(() => {
+    const handleTimeUpdate = (e: any) => {
+      const t = e.detail;
+      const el = document.getElementById("editor-playhead");
+      if (el && totalDuration > 0) {
+        el.style.left = `${(t / totalDuration) * 100}%`;
+      }
+    };
+    window.addEventListener('editor-time-update', handleTimeUpdate);
+    return () => window.removeEventListener('editor-time-update', handleTimeUpdate);
+  }, [totalDuration]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -257,6 +271,8 @@ export default function EditorTimeline({
             startDrag={startDrag}
             sourceIndexOf={sourceIndexOf}
             thumbnailsBySource={thumbnailsBySource}
+            waveformsBySource={waveformsBySource}
+            mediaItems={mediaItems}
           />
         ))}
         
@@ -264,6 +280,7 @@ export default function EditorTimeline({
         <div className="absolute inset-y-0 right-0 z-40 pointer-events-none" style={{ left: '150px' }}>
           {totalDuration > 0 && (
             <div
+              id="editor-playhead"
               className="absolute top-0 bottom-0 flex flex-col items-center pointer-events-auto cursor-ew-resize group"
               style={{ left: `${(currentTime / totalDuration) * 100}%`, transform: 'translateX(-50%)', width: '20px' }}
               onPointerDown={(e) => { e.stopPropagation(); setDraggingPlayhead(true); }}
