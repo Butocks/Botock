@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getBackendUrl } from "../../../utils/runtime-urls";
+import { createClient } from "../../../utils/supabase/client";
 import {
   ShieldAlert,
   ShieldCheck,
@@ -20,12 +21,39 @@ import {
 
 export default function AdminLoginPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [step, setStep] = useState<"credentials" | "otp" | "locked">("credentials");
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   // Step 1: Credentials
   const [email, setEmail] = useState("");
   const [secret, setSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
+
+  useEffect(() => {
+    async function checkAdminAuth() {
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+      // Check if user is an admin
+      const envAdmins = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+      
+      const userEmail = user.email?.toLowerCase() || "";
+      if (envAdmins.length === 0 || !envAdmins.includes(userEmail)) {
+        router.push("/"); // Not an admin
+        return;
+      }
+      setEmail(userEmail);
+      setCheckingAuth(false);
+    }
+    checkAdminAuth();
+  }, [router, supabase]);
 
   // Step 2: OTP
   const [otp, setOtp] = useState("");
@@ -187,6 +215,14 @@ export default function AdminLoginPage() {
     const secs = seconds % 60;
     return `${hours}h ${mins}m ${secs}s`;
   };
+
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#070709] flex flex-col justify-center items-center">
+        <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070709] text-slate-900 dark:text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden select-none transition-colors">

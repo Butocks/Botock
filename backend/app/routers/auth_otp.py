@@ -1020,10 +1020,11 @@ async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
         
     email = req.email.strip().lower()
 
-    # Fallback support process for unverified users
-    statuses = _read_json(USER_STATUS_FILE, {})
-    user_status = statuses.get(email)
-    if req.is_verified is False or user_status == "unverified":
+    # DB Check for user verification
+    from app.middleware.auth import _rpc
+    is_verified_in_db = await _rpc("is_user_verified", {"p_email": email})
+    
+    if not is_verified_in_db:
         raise HTTPException(
             status_code=403,
             detail="Your account is unverified. Please email us at info@botock.app for assistance with your account recovery."

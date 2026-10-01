@@ -64,14 +64,39 @@ function LoginForm() {
     setMessage(null);
 
     try {
+      // 1. Check if user is already locked
+      const { data: lockStatus } = await supabase.rpc('check_login_status', { p_email: email });
+      if (lockStatus && lockStatus.status === 'locked') {
+        const lockTime = new Date(lockStatus.lock_until);
+        setMessage({ type: "error", text: `Your account is temporarily locked due to multiple failed login attempts. Please try again after ${lockTime.toLocaleTimeString()}.` });
+        setLoading(false);
+        return;
+      }
+
+      // 2. Try login
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        setMessage({ type: "error", text: error.message });
+        // 3. Record failed attempt
+        const { data: failStatus } = await supabase.rpc('record_failed_login', { p_email: email });
+        
+        let errorMsg = error.message;
+        if (failStatus) {
+          if (failStatus.status === 'warn') {
+            errorMsg += ` (Attempt ${failStatus.failed_attempts}. After 3 failed attempts, your account will be locked.)`;
+          } else if (failStatus.status === 'locked_15m') {
+            errorMsg = "Account locked for 15 minutes due to 3 failed attempts.";
+          } else if (failStatus.status === 'locked_24h') {
+            errorMsg = "Account locked for 24 hours due to 6 failed attempts.";
+          }
+        }
+        setMessage({ type: "error", text: errorMsg });
       } else {
+        // Clear login attempts on success
+        await supabase.rpc('clear_login_attempts', { p_email: email });
         setMessage({ type: "success", text: "Login successful! Redirecting..." });
         setTimeout(() => {
           window.location.href = `${getSiteUrl()}/tools/video-generator`;

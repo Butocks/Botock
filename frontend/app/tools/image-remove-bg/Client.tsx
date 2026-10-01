@@ -1,3 +1,4 @@
+import { logToolUsage } from "@/lib/analytics";
 "use client";
 
  
@@ -270,7 +271,7 @@ export default function ImageRemoveBgClient() {
     setIsProcessing(true);
     setActionError(null);
     setProgress(0);
-    setStatusMessage("Connecting to server for ultra-fast processing...");
+    setStatusMessage("Analyzing image for subject extraction...");
 
     try {
       let resultBlob: Blob | null = null;
@@ -292,11 +293,13 @@ export default function ImageRemoveBgClient() {
       setResultBlob(resultBlob, "image/png");
       setProgress(100);
       setStatusMessage("Background removed successfully!");
+      logToolUsage("image-remove-bg", "Image Remove BG", "success");
     } catch (err: unknown) {
       console.error("AI Background Removal Error:", err);
       setActionError(
         err instanceof Error ? err.message : "Failed to remove background from image."
       );
+      logToolUsage("image-remove-bg", "Image Remove BG", "error", err instanceof Error ? err.message : "Unknown error");
     } finally {
       setIsProcessing(false);
     }
@@ -777,23 +780,34 @@ export default function ImageRemoveBgClient() {
             )}
 
             {isProcessing && (
-              <div className="flex flex-col gap-3 p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 animate-in fade-in duration-300">
-                <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
-                    {statusMessage || "Processing image..."}
-                  </span>
-                  <span>{progress}%</span>
+              <div className="flex flex-col gap-4 p-5 rounded-2xl border border-slate-200 dark:border-white/[0.05] animate-in fade-in duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse flex shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full w-3/4 animate-pulse"></div>
+                    <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full w-1/2 animate-pulse"></div>
+                  </div>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-white/10 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-emerald-500 h-2 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${progress}%` }}
-                  />
+                <div className="flex flex-col gap-2 mt-2">
+                  <div className="flex justify-between items-center text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <span className="flex items-center gap-2">
+                       <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" />
+                       {statusMessage || "Processing image..."}
+                    </span>
+                    <span className="text-emerald-500">{progress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all duration-300 ease-out relative"
+                      style={{ width: `${Math.max(10, progress)}%` }}
+                    >
+                       <div className="absolute top-0 bottom-0 left-0 right-0 bg-white/20 animate-pulse" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1 text-center font-medium">
+                    Please wait, this may take a moment to ensure high quality.
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Server processing is instant. Local fallback may download model on first use.
-                </p>
               </div>
             )}
 

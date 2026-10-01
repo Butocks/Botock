@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { Film, Plus, Upload } from "lucide-react";
+import React from "react";
 import { MediaBinItem } from "@/lib/editor/types";
 
 function fmt(t: number) {
@@ -17,7 +18,7 @@ interface MediaBinProps {
   onAddToTimeline: (item: MediaBinItem) => void;
 }
 
-export default function MediaBin({ items, onUpload, onAddToTimeline }: MediaBinProps) {
+export default React.memo(function MediaBin({ items, onUpload, onAddToTimeline }: MediaBinProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   return (
@@ -73,4 +74,4 @@ export default function MediaBin({ items, onUpload, onAddToTimeline }: MediaBinP
       )}
     </div>
   );
-}
+});
