@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import logging
 import pymupdf as fitz
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from pdf2docx import Converter
 import pdfplumber
@@ -14,8 +14,20 @@ import pandas as pd
 router = APIRouter(prefix="/api/convert", tags=["Conversion & PDF Tools"])
 logger = logging.getLogger(__name__)
 
+def remove_file_or_dir(path: str):
+    """Utility to clean up a file or a directory structure."""
+    if not os.path.exists(path):
+        return
+    try:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+    except Exception as e:
+        logger.error("Failed to clean up %s: %s", path, e)
+
 @router.post("/pdf-to-docx")
-async def convert_pdf_to_docx(file: UploadFile = File(...)):
+async def convert_pdf_to_docx(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="File must be a PDF")
     
@@ -30,6 +42,7 @@ async def convert_pdf_to_docx(file: UploadFile = File(...)):
         cv.convert(out_path, start=0, end=None)
         cv.close()
         
+        background_tasks.add_task(remove_file_or_dir, out_path)
         return FileResponse(
             out_path, 
             filename=file.filename.replace(".pdf", ".docx"),
@@ -40,14 +53,11 @@ async def convert_pdf_to_docx(file: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail="The conversion service is temporarily unavailable. Please try again shortly.")
     finally:
         if os.path.exists(in_path):
-            try:
-                os.remove(in_path)
-            except Exception:
-                pass
+            remove_file_or_dir(in_path)
 
 
 @router.post("/pdf-to-excel")
-async def convert_pdf_to_excel(file: UploadFile = File(...)):
+async def convert_pdf_to_excel(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="File must be a PDF")
     
@@ -78,6 +88,7 @@ async def convert_pdf_to_excel(file: UploadFile = File(...)):
             out_f.write(output.getvalue())
             out_path = out_f.name
             
+        background_tasks.add_task(remove_file_or_dir, out_path)
         return FileResponse(
             out_path, 
             filename=file.filename.replace(".pdf", ".xlsx"),
@@ -91,7 +102,7 @@ async def convert_pdf_to_excel(file: UploadFile = File(...)):
 
 
 @router.post("/docx-to-pdf")
-async def convert_docx_to_pdf(file: UploadFile = File(...)):
+async def convert_docx_to_pdf(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     if not file.filename.lower().endswith((".doc", ".docx")):
         raise HTTPException(status_code=400, detail="File must be a Word document (.doc or .docx)")
     
@@ -122,6 +133,7 @@ async def convert_docx_to_pdf(file: UploadFile = File(...)):
         if not os.path.exists(out_path):
             raise Exception("Output PDF not found")
              
+        background_tasks.add_task(remove_file_or_dir, out_dir)
         return FileResponse(
             out_path, 
             filename=file.filename.rsplit(".", 1)[0] + ".pdf",
@@ -134,14 +146,12 @@ async def convert_docx_to_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail="The conversion service is temporarily unavailable. Please try again shortly.")
     finally:
         if os.path.exists(in_path):
-            try:
-                os.remove(in_path)
-            except Exception:
-                pass
+            remove_file_or_dir(in_path)
 
 
 @router.post("/pdf-protect")
 async def protect_pdf(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     password: str = Form(...),
     owner_password: str = Form(None)
@@ -179,6 +189,7 @@ async def protect_pdf(
         )
         doc.close()
         
+        background_tasks.add_task(remove_file_or_dir, out_path)
         return FileResponse(
             out_path,
             filename=file.filename.replace(".pdf", "-protected.pdf"),

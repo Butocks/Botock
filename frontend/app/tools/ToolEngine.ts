@@ -1411,64 +1411,6 @@ ToolRegistry.registerTool({
 });
 
 ToolRegistry.registerTool({
-  id: "json-formatter",
-  name: "JSON Formatter & Validator",
-  description: "Format, validate, beautify, and minify JSON with syntax verification in browser.",
-  category: "ai",
-  seoTitle: "JSON Formatter & Validator Online Free - Botock",
-  seoDescription: "Format, validate, and minify JSON data directly in your browser.",
-  endpoint: "/tools/json-formatter",
-  isClientSideOnly: true,
-  parameters: [
-    { name: "jsonString", type: "string", description: "Raw JSON string", required: true },
-    { name: "indent", type: "number", description: "Indent spaces", required: false, default: 2 }
-  ]
-});
-
-ToolRegistry.registerTool({
-  id: "hash-generator",
-  name: "Cryptographic Hash Generator",
-  description: "Generate SHA-256, SHA-512, and MD5 hashes via native hardware WebCrypto API.",
-  category: "ai",
-  seoTitle: "Cryptographic Hash Generator - Botock",
-  seoDescription: "Generate SHA-256, SHA-512, MD5, and SHA-1 cryptographic hashes directly in your browser.",
-  endpoint: "/tools/hash-generator",
-  isClientSideOnly: true,
-  parameters: [
-    { name: "text", type: "string", description: "Input text string", required: true }
-  ]
-});
-
-ToolRegistry.registerTool({
-  id: "password-generator",
-  name: "Secure Password Generator",
-  description: "Generate cryptographically secure random passwords using CSPRNG bytes in browser.",
-  category: "ai",
-  seoTitle: "Secure Password Generator & Crack Time Calculator - Botock",
-  seoDescription: "Generate high-entropy secure passwords directly in your browser with zero server storage.",
-  endpoint: "/tools/password-generator",
-  isClientSideOnly: true,
-  parameters: [
-    { name: "length", type: "number", description: "Password length", required: false, default: 16 }
-  ]
-});
-
-ToolRegistry.registerTool({
-  id: "video-rotate",
-  name: "Rotate & Flip Video",
-  description: "Rotate videos 90, 180, 270 degrees or mirror flip horizontally/vertically via WASM FFmpeg.",
-  category: "video",
-  seoTitle: "Rotate Video Online Free - Botock",
-  seoDescription: "Rotate and flip videos directly in your browser with zero server uploads.",
-  endpoint: "/tools/video-rotate",
-  isClientSideOnly: true,
-  parameters: [
-    { name: "file", type: "file", description: "Video file", required: true },
-    { name: "rotation", type: "number", description: "Rotation degrees (90, 180, 270)", required: true }
-  ]
-});
-
-ToolRegistry.registerTool({
   id: "video-filters",
   name: "Video Filters & Effects",
   description: "Color grade, adjust brightness/contrast, and apply cinematic presets via WASM FFmpeg.",

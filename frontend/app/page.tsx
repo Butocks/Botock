@@ -38,7 +38,7 @@ const TOP_USED_TOOLS = [
     category: "PDF Suite",
     badge: "Most Used",
     badgeColor: "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/20",
-    href: "/tools/pdf?action=merge",
+    href: "/tools/pdf-merge",
     icon: FileText,
     iconBg: "bg-rose-500/15",
     iconColor: "text-rose-600 dark:text-rose-400",
@@ -62,7 +62,7 @@ const TOP_USED_TOOLS = [
     category: "Image Suite",
     badge: "Instant AI",
     badgeColor: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/20",
-    href: "/tools/image?action=remove-bg",
+    href: "/tools/image-remove-bg",
     icon: Sparkles,
     iconBg: "bg-emerald-500/15",
     iconColor: "text-emerald-600 dark:text-emerald-400",
@@ -74,7 +74,7 @@ const TOP_USED_TOOLS = [
     category: "Video Suite",
     badge: "0ms Lag",
     badgeColor: "bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/20",
-    href: "/tools/video?action=trim",
+    href: "/tools/video-trim",
     icon: Scissors,
     iconBg: "bg-sky-500/15",
     iconColor: "text-sky-600 dark:text-sky-400",
@@ -86,7 +86,7 @@ const TOP_USED_TOOLS = [
     category: "PDF Suite",
     badge: "OCR Enabled",
     badgeColor: "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/20",
-    href: "/tools/pdf?action=to-word",
+    href: "/tools/pdf-to-word",
     icon: FileCheck,
     iconBg: "bg-rose-500/15",
     iconColor: "text-rose-600 dark:text-rose-400",
@@ -110,7 +110,7 @@ const TOP_USED_TOOLS = [
     category: "PDF Suite",
     badge: "Up to 80%",
     badgeColor: "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/20",
-    href: "/tools/pdf?action=compress",
+    href: "/tools/pdf-compress",
     icon: Minimize2,
     iconBg: "bg-rose-500/15",
     iconColor: "text-rose-600 dark:text-rose-400",
@@ -122,7 +122,7 @@ const TOP_USED_TOOLS = [
     category: "Audio Suite",
     badge: "Lossless Audio",
     badgeColor: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/20",
-    href: "/tools/video?action=to-mp3",
+    href: "/tools/video-to-mp3",
     icon: Music,
     iconBg: "bg-indigo-500/15",
     iconColor: "text-indigo-600 dark:text-indigo-400",
@@ -385,10 +385,10 @@ export default function Home() {
           <div className="mb-8">
             <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Interactive Utility Selector</span>
+              <span>Suggested For You</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-              Browse Tools by Category
+              Personalized Recommendations
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
               Select a category to filter, or scroll horizontally to launch any online utility immediately.
@@ -448,7 +448,7 @@ export default function Home() {
                 </div>
               </div>
               <Link
-                href="/tools/pdf"
+                href="/tools/pdf-merge"
                 className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline inline-flex items-center gap-1 pt-3 border-t border-slate-100 dark:border-white/[0.06] cursor-pointer"
               >
                 <span>Browse PDF Tools</span>
@@ -489,7 +489,7 @@ export default function Home() {
                 </div>
               </div>
               <Link
-                href="/tools/video"
+                href="/tools/video-trim"
                 className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-1 pt-3 border-t border-slate-100 dark:border-white/[0.06] cursor-pointer"
               >
                 <span>Browse Video Tools</span>
@@ -530,7 +530,7 @@ export default function Home() {
                 </div>
               </div>
               <Link
-                href="/tools/image"
+                href="/tools/image-remove-bg"
                 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 pt-3 border-t border-slate-100 dark:border-white/[0.06] cursor-pointer"
               >
                 <span>Browse Image Tools</span>
@@ -582,7 +582,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7. Pricing Teaser */}
+      {/* 7. Services Teaser */}
       <section className="py-16 bg-white dark:bg-[#09090b] transition-colors">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
@@ -599,10 +599,10 @@ export default function Home() {
             </div>
             <div className="hidden sm:block h-8 w-px bg-slate-300 dark:bg-white/[0.08]" />
             <Link
-              href="/pricing"
+              href="/services"
               className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition-all shadow-md shadow-violet-600/20 cursor-pointer"
             >
-              View Pricing Plans →
+              View Services Plans →
             </Link>
           </div>
         </div>

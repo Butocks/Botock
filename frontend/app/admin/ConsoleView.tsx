@@ -98,7 +98,7 @@ export default function ConsoleView() {
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState<string>("");
   const [activeTab, setActiveTab] = useState<
-    "analytics" | "quotas" | "promotions" | "plans" | "subscriptions" | "complaints" | "jobs" | "blogs" | "tools" | "policies" | "email"
+    "analytics" | "quotas" | "tool-usage" | "promotions" | "plans" | "subscriptions" | "complaints" | "jobs" | "blogs" | "tools" | "policies" | "email"
   >("analytics");
   const [subRequests, setSubRequests] = useState<any[]>([]);
 
@@ -123,6 +123,12 @@ export default function ConsoleView() {
   const [twoStepCode, setTwoStepCode] = useState("");
   const [twoStepError, setTwoStepError] = useState("");
   const [pendingAction, setPendingAction] = useState<((code: string) => Promise<void>) | null>(null);
+
+
+  // ----------------------------------------------------
+  // Module 10: Tool Usage Analytics
+  // ----------------------------------------------------
+  const [toolUsage, setToolUsage] = useState<{ summary: any[], errors: any[] }>({ summary: [], errors: [] });
 
   // ----------------------------------------------------
   // Module 1: Analytics & Demographics
@@ -296,6 +302,12 @@ export default function ConsoleView() {
       }
 
       // 5. Analytics
+
+      const resToolUsage = await fetch(`/api/analytics/tool-usage`);
+      if (resToolUsage.ok) {
+        setToolUsage(await resToolUsage.json());
+      }
+
       const resAnalytics = await fetch(`${backendUrl}/api/admin/analytics`, {
         headers: { "X-Admin-Token": token },
       });
@@ -1300,7 +1312,7 @@ export default function ConsoleView() {
                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
                   <div>
                     <div className="text-sm font-bold text-white">Enable Discount Banner on Platform</div>
-                    <div className="text-xs text-slate-400">Toggles visibility on live /pricing and announcement bar</div>
+                    <div className="text-xs text-slate-400">Toggles visibility on live /services and announcement bar</div>
                   </div>
                   <button
                     onClick={() => setPromotions({ ...promotions, active: !promotions.active })}
@@ -1374,7 +1386,7 @@ export default function ConsoleView() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-white">Subscription Plans & Feature Bundles</h2>
-                  <p className="text-xs text-slate-400 mt-1">Edit plan pricing and features displayed on /pricing</p>
+                  <p className="text-xs text-slate-400 mt-1">Edit plan pricing and features displayed on /services</p>
                 </div>
                 <button
                   onClick={handleSavePlans}
@@ -1600,7 +1612,45 @@ export default function ConsoleView() {
             </div>
           )}
 
-          {activeTab === "complaints" && (
+
+        {activeTab === "tool-usage" && (
+          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+            <h2 className="text-xl font-bold flex items-center gap-2 mb-6">
+              <Activity className="w-6 h-6 text-violet-500" /> Tool Usage Analytics
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="p-6 rounded-2xl bg-[#111115] border border-white/[0.05]">
+                 <h3 className="text-sm font-bold text-white mb-4">Most Used Tools</h3>
+                 <div className="space-y-3">
+                   {toolUsage.summary.slice(0, 10).map((tool, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
+                        <div>
+                          <p className="text-sm font-bold">{tool.tool_name}</p>
+                          <p className="text-xs text-emerald-500">{tool.success} Success | <span className="text-rose-500">{tool.error} Failed</span></p>
+                        </div>
+                        <div className="text-xl font-black text-slate-700">#{i + 1}</div>
+                      </div>
+                   ))}
+                   {toolUsage.summary.length === 0 && <p className="text-xs text-slate-500">No usage data yet.</p>}
+                 </div>
+               </div>
+               <div className="p-6 rounded-2xl bg-[#111115] border border-white/[0.05] overflow-auto max-h-[400px]">
+                 <h3 className="text-sm font-bold text-rose-500 mb-4">Recent Errors & Failures</h3>
+                 <div className="space-y-3">
+                   {toolUsage.errors.map((err, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs">
+                         <div className="font-bold text-rose-400 mb-1">{err.tool_name} <span className="text-slate-500 font-normal">({new Date(err.used_at).toLocaleString()})</span></div>
+                         <div className="text-rose-300">{err.error_message}</div>
+                      </div>
+                   ))}
+                   {toolUsage.errors.length === 0 && <p className="text-xs text-slate-500">No errors recorded.</p>}
+                 </div>
+               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "complaints" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>

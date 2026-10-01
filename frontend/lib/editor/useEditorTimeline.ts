@@ -1,7 +1,15 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { EditorClip, cloneClips, createClip, getTimelinePositions } from "./types";
+import {
+  EditorProject,
+  TimelineTrack,
+  TimelineClip,
+  cloneProject,
+  createProject,
+  createTrack,
+  createClip
+} from "./types";
 
 const MIN_CLIP_DURATION = 0.05;
 
@@ -10,153 +18,232 @@ function clampNum(v: number, min: number, max: number) {
 }
 
 export function useEditorTimeline() {
-  const [clips, setClips] = useState<EditorClip[]>([]);
+  const [project, setProject] = useState<EditorProject>(createProject());
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
-  const [undoStack, setUndoStack] = useState<EditorClip[][]>([]);
-  const [redoStack, setRedoStack] = useState<EditorClip[][]>([]);
-  const dragSnapshotRef = useRef<EditorClip[] | null>(null);
 
-  const pushHistory = useCallback((prev: EditorClip[]) => {
-    setUndoStack((u) => [...u, cloneClips(prev)]);
+  const [undoStack, setUndoStack] = useState<EditorProject[]>([]);
+  const [redoStack, setRedoStack] = useState<EditorProject[]>([]);
+
+  const dragSnapshotRef = useRef<EditorProject | null>(null);
+  const livePatchSnapshotRef = useRef<EditorProject | null>(null);
+
+  const pushHistory = useCallback((prev: EditorProject) => {
+    setUndoStack((u) => [...u, cloneProject(prev)]);
     setRedoStack([]);
   }, []);
 
-  /** Start a brand-new timeline from a single source's full duration. */
-  const initFromSource = useCallback((sourceId: string, duration: number) => {
-    const clip = createClip(sourceId, 0, duration);
-    setClips([clip]);
-    setSelectedClipId(clip.id);
+  const reset = useCallback(() => {
+    setProject(createProject());
+    setSelectedClipId(null);
     setUndoStack([]);
     setRedoStack([]);
   }, []);
 
-  /** Append a new clip (from any media-bin source) to the end of the timeline. */
-  const appendClipFromSource = useCallback(
-    (sourceId: string, sourceStart: number, sourceEnd: number) => {
-      setClips((prev) => {
-        pushHistory(prev);
-        const clip = createClip(sourceId, sourceStart, sourceEnd);
-        setSelectedClipId(clip.id);
-        return [...prev, clip];
-      });
-    },
-    [pushHistory]
-  );
+  const addTrack = useCallback((type: TimelineTrack["type"], name: string) => {
+    setProject(prev => {
+      pushHistory(prev);
+      const next = cloneProject(prev);
+      next.tracks.push(createTrack(type, name));
+      return next;
+    });
+  }, [pushHistory]);
 
-  const selectedClip = clips.find((c) => c.id === selectedClipId) || null;
+  const deleteTrack = useCallback((trackId: string) => {
+    setProject(prev => {
+      pushHistory(prev);
+      const next = cloneProject(prev);
+      next.tracks = next.tracks.filter(t => t.id !== trackId);
+      return next;
+    });
+  }, [pushHistory]);
 
-  /** Split whichever clip contains `virtualTime` (timeline seconds). */
-  const splitAt = useCallback(
-    (virtualTime: number) => {
-      setClips((prev) => {
-        const positions = getTimelinePositions(prev);
-        const hit = positions.find(
-          (p) => virtualTime > p.timelineStart + MIN_CLIP_DURATION && virtualTime < p.timelineEnd - MIN_CLIP_DURATION
-        );
-        if (!hit) return prev;
+  const updateTrack = useCallback((trackId: string, patch: Partial<TimelineTrack>) => {
+    setProject(prev => {
+      pushHistory(prev);
+      const next = cloneProject(prev);
+      const track = next.tracks.find(t => t.id === trackId);
+      if (track) Object.assign(track, patch);
+      return next;
+    });
+  }, [pushHistory]);
 
-        pushHistory(prev);
+  const addClip = useCallback((trackId: string, sourceId: string, type: TimelineClip["type"], timelineStart: number, sourceDuration: number) => {
+    setProject(prev => {
+      pushHistory(prev);
+      const next = cloneProject(prev);
+      const track = next.tracks.find(t => t.id === trackId);
+      if (track) {
+         const clip = createClip(sourceId, trackId, type, timelineStart, sourceDuration);
+         track.clips.push(clip);
+         track.clips.sort((a, b) => a.timelineStart - b.timelineStart);
+         setSelectedClipId(clip.id);
+      }
+      return next;
+    });
+  }, [pushHistory]);
 
-        const localSplit = hit.clip.sourceStart + (virtualTime - hit.timelineStart) * hit.clip.speed;
+  const deleteClip = useCallback((clipId: string) => {
+    setProject(prev => {
+      pushHistory(prev);
+      const next = cloneProject(prev);
+      for (const track of next.tracks) {
+        track.clips = track.clips.filter(c => c.id !== clipId);
+      }
+      if (selectedClipId === clipId) setSelectedClipId(null);
+      return next;
+    });
+  }, [pushHistory, selectedClipId]);
 
-        const first: EditorClip = { ...hit.clip, id: `${Date.now()}-a`, sourceEnd: localSplit, filters: { ...hit.clip.filters }, transitionOut: "none" };
-        const second: EditorClip = { ...hit.clip, id: `${Date.now()}-b`, sourceStart: localSplit, filters: { ...hit.clip.filters } };
+  const splitAt = useCallback((virtualTime: number) => {
+    setProject(prev => {
+      let madeChanges = false;
+      const next = cloneProject(prev);
 
-        const next = prev.flatMap((c) => (c.id === hit.clip.id ? [first, second] : [c]));
-        setSelectedClipId(second.id);
-        return next;
-      });
-    },
-    [pushHistory]
-  );
+      for (const track of next.tracks) {
+        const newClips: TimelineClip[] = [];
+        for (const clip of track.clips) {
+          const clipEnd = clip.timelineStart + clip.duration;
+          if (virtualTime > clip.timelineStart + MIN_CLIP_DURATION && virtualTime < clipEnd - MIN_CLIP_DURATION) {
+            // Split it
+            madeChanges = true;
+            const splitRatio = (virtualTime - clip.timelineStart) / clip.duration;
+            const localSplitTime = clip.sourceStart + (clip.sourceEnd - clip.sourceStart) * splitRatio;
 
-  const deleteClip = useCallback(
-    (id: string) => {
-      setClips((prev) => {
-        if (prev.length <= 1) return prev;
-        pushHistory(prev);
-        const next = prev.filter((c) => c.id !== id);
-        setSelectedClipId(next[0]?.id ?? null);
-        return next;
-      });
-    },
-    [pushHistory]
-  );
-
-  const duplicateClip = useCallback(
-    (id: string) => {
-      setClips((prev) => {
-        const idx = prev.findIndex((c) => c.id === id);
-        if (idx === -1) return prev;
-        pushHistory(prev);
-        const source = prev[idx];
-        const copy: EditorClip = { ...source, id: `${Date.now()}-copy`, filters: { ...source.filters } };
-        const next = [...prev];
-        next.splice(idx + 1, 0, copy);
-        setSelectedClipId(copy.id);
-        return next;
-      });
-    },
-    [pushHistory]
-  );
-
-  const reorderClip = useCallback(
-    (fromIndex: number, toIndex: number) => {
-      setClips((prev) => {
-        if (fromIndex < 0 || toIndex < 0 || fromIndex >= prev.length || toIndex >= prev.length || fromIndex === toIndex) {
-          return prev;
+            const first: TimelineClip = {
+              ...clip,
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}a`,
+              duration: virtualTime - clip.timelineStart,
+              sourceEnd: localSplitTime
+            };
+            const second: TimelineClip = {
+              ...clip,
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}b`,
+              timelineStart: virtualTime,
+              duration: clipEnd - virtualTime,
+              sourceStart: localSplitTime
+            };
+            newClips.push(first, second);
+            if (selectedClipId === clip.id) setSelectedClipId(second.id);
+          } else {
+            newClips.push(clip);
+          }
         }
+        track.clips = newClips;
+      }
+
+      if (madeChanges) {
         pushHistory(prev);
-        const next = [...prev];
-        const [moved] = next.splice(fromIndex, 1);
-        next.splice(toIndex, 0, moved);
         return next;
-      });
-    },
-    [pushHistory]
-  );
+      }
+      return prev;
+    });
+  }, [pushHistory, selectedClipId]);
 
-  const updateClip = useCallback(
-    (id: string, patch: Partial<EditorClip>) => {
-      setClips((prev) => {
-        pushHistory(prev);
-        return prev.map((c) =>
-          c.id === id ? { ...c, ...patch, filters: { ...c.filters, ...(patch.filters || {}) } } : c
-        );
-      });
-    },
-    [pushHistory]
-  );
+  const duplicateClip = useCallback((clipId: string) => {
+    setProject(prev => {
+      const next = cloneProject(prev);
+      for (const track of next.tracks) {
+        const idx = track.clips.findIndex(c => c.id === clipId);
+        if (idx !== -1) {
+          pushHistory(prev);
+          const source = track.clips[idx];
+          const copy: TimelineClip = {
+            ...source,
+            id: `${Date.now()}-copy`,
+            timelineStart: source.timelineStart + source.duration, // place right after
+          };
+          track.clips.splice(idx + 1, 0, copy);
+          // Shift subsequent clips
+          for (let i = idx + 2; i < track.clips.length; i++) {
+             track.clips[i].timelineStart += copy.duration;
+          }
+          setSelectedClipId(copy.id);
+          break;
+        }
+      }
+      return next;
+    });
+  }, [pushHistory]);
 
-  /** Live edge-drag in LOCAL source time (since clip may not start the timeline at 0). */
-  const updateClipEdgeLive = useCallback((id: string, side: "start" | "end", localTime: number, sourceDuration: number) => {
-    setClips((prev) =>
-      prev.map((c) => {
-        if (c.id !== id) return c;
-        if (side === "start") return { ...c, sourceStart: clampNum(localTime, 0, c.sourceEnd - MIN_CLIP_DURATION) };
-        return { ...c, sourceEnd: clampNum(localTime, c.sourceStart + MIN_CLIP_DURATION, sourceDuration) };
-      })
-    );
-  }, []);
+  const beginLiveUpdate = useCallback(() => {
+    livePatchSnapshotRef.current = cloneProject(project);
+  }, [project]);
 
-  const beginEdgeDrag = useCallback(() => {
-    dragSnapshotRef.current = cloneClips(clips);
-  }, [clips]);
-
-  const commitEdgeDrag = useCallback(() => {
-    if (dragSnapshotRef.current) {
-      pushHistory(dragSnapshotRef.current);
-      dragSnapshotRef.current = null;
+  const commitLiveUpdate = useCallback(() => {
+    if (livePatchSnapshotRef.current) {
+      pushHistory(livePatchSnapshotRef.current);
+      livePatchSnapshotRef.current = null;
     }
   }, [pushHistory]);
+
+  const updateClipLive = useCallback((clipId: string, patch: Partial<TimelineClip>) => {
+    setProject(prev => {
+      const next = cloneProject(prev);
+      for (const track of next.tracks) {
+        const clip = track.clips.find(c => c.id === clipId);
+        if (clip) {
+          Object.assign(clip, patch);
+          break;
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const updateClipEdgeLive = useCallback((clipId: string, side: "start" | "end", virtualDelta: number, maxSourceDuration: number) => {
+    setProject(prev => {
+      const next = cloneProject(prev);
+      for (const track of next.tracks) {
+        const clipIdx = track.clips.findIndex(c => c.id === clipId);
+        if (clipIdx !== -1) {
+          const clip = track.clips[clipIdx];
+          const previousClip = clipIdx > 0 ? track.clips[clipIdx - 1] : null;
+          const nextClip = clipIdx < track.clips.length - 1 ? track.clips[clipIdx + 1] : null;
+
+          if (side === "start") {
+             const minTimelineStart = previousClip ? previousClip.timelineStart + previousClip.duration : 0;
+             const maxTimelineStart = clip.timelineStart + clip.duration - MIN_CLIP_DURATION;
+
+             const newTimelineStart = clampNum(clip.timelineStart + virtualDelta, minTimelineStart, maxTimelineStart);
+             const timeShift = newTimelineStart - clip.timelineStart;
+
+             const speedAdjustedShift = timeShift * clip.speed;
+             const newSourceStart = clampNum(clip.sourceStart + speedAdjustedShift, 0, clip.sourceEnd - MIN_CLIP_DURATION);
+
+             // Recalculate accurate timeline start based on clamped source
+             const accurateTimeShift = (newSourceStart - clip.sourceStart) / clip.speed;
+             clip.timelineStart = clip.timelineStart + accurateTimeShift;
+             clip.duration = clip.duration - accurateTimeShift;
+             clip.sourceStart = newSourceStart;
+
+          } else {
+             const maxTimelineEnd = nextClip ? nextClip.timelineStart : 999999;
+             const minTimelineEnd = clip.timelineStart + MIN_CLIP_DURATION;
+
+             const newTimelineEnd = clampNum(clip.timelineStart + clip.duration + virtualDelta, minTimelineEnd, maxTimelineEnd);
+             const timeShift = newTimelineEnd - (clip.timelineStart + clip.duration);
+
+             const speedAdjustedShift = timeShift * clip.speed;
+             const newSourceEnd = clampNum(clip.sourceEnd + speedAdjustedShift, clip.sourceStart + MIN_CLIP_DURATION, maxSourceDuration);
+
+             const accurateTimeShift = (newSourceEnd - clip.sourceEnd) / clip.speed;
+             clip.duration = clip.duration + accurateTimeShift;
+             clip.sourceEnd = newSourceEnd;
+          }
+          break;
+        }
+      }
+      return next;
+    });
+  }, []);
 
   const undo = useCallback(() => {
     setUndoStack((prev) => {
       if (prev.length === 0) return prev;
       const last = prev[prev.length - 1];
-      setClips((current) => {
-        setRedoStack((r) => [...r, cloneClips(current)]);
-        return cloneClips(last);
+      setProject((current) => {
+        setRedoStack((r) => [...r, cloneProject(current)]);
+        return cloneProject(last);
       });
       return prev.slice(0, -1);
     });
@@ -166,36 +253,29 @@ export function useEditorTimeline() {
     setRedoStack((prev) => {
       if (prev.length === 0) return prev;
       const last = prev[prev.length - 1];
-      setClips((current) => {
-        setUndoStack((u) => [...u, cloneClips(current)]);
-        return cloneClips(last);
+      setProject((current) => {
+        setUndoStack((u) => [...u, cloneProject(current)]);
+        return cloneProject(last);
       });
       return prev.slice(0, -1);
     });
   }, []);
 
-  const reset = useCallback(() => {
-    setClips([]);
-    setSelectedClipId(null);
-    setUndoStack([]);
-    setRedoStack([]);
-  }, []);
-
   return {
-    clips,
+    project,
     selectedClipId,
     setSelectedClipId,
-    selectedClip,
-    initFromSource,
-    appendClipFromSource,
+    addTrack,
+    deleteTrack,
+    updateTrack,
+    addClip,
     splitAt,
     deleteClip,
     duplicateClip,
-    reorderClip,
-    updateClip,
+    updateClipLive,
     updateClipEdgeLive,
-    beginEdgeDrag,
-    commitEdgeDrag,
+    beginLiveUpdate,
+    commitLiveUpdate,
     undo,
     redo,
     canUndo: undoStack.length > 0,

@@ -1,11 +1,15 @@
-export interface ClipFilters {
-  brightness: number;
-  contrast: number;
-  saturation: number;
-}
+export type TrackType = "video" | "audio" | "text" | "graphics";
 
-export type ClipRotation = 0 | 90 | 180 | 270;
-export type TransitionType = "none" | "fade" | "wipeleft" | "wiperight" | "slideup";
+export interface Transform {
+  x: number; // percentage
+  y: number; // percentage
+  width: number; // percentage
+  height: number; // percentage
+  rotation: number;
+  scaleX: number;
+  scaleY: number;
+  opacity: number;
+}
 
 export interface CropRect {
   x: number; // normalized 0..1, top-left
@@ -14,94 +18,193 @@ export interface CropRect {
   height: number;
 }
 
-export type KenBurnsDirection = "center" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
-
-export interface KenBurnsConfig {
-  enabled: boolean;
-  startZoom: number; // e.g. 1.0
-  endZoom: number;   // e.g. 1.15
-  direction: KenBurnsDirection;
+export interface ClipFilters {
+  brightness: number;
+  contrast: number;
+  saturation: number;
 }
 
-export const DEFAULT_KEN_BURNS: KenBurnsConfig = {
-  enabled: false,
-  startZoom: 1.0,
-  endZoom: 1.15,
-  direction: "center",
+export type TransitionType = "none" | "fade" | "wipeleft" | "wiperight" | "slideup";
+
+export type SpeedPoint = {
+  time: number; // local time 0-1 (normalized within the clip)
+  speed: number;
 };
 
-export interface EditorClip {
-  id: string;
-  sourceId: string;
-  sourceStart: number;
-  sourceEnd: number;
-  speed: number;
-  muted: boolean;
+export interface AudioSettings {
   volumePercent: number;
-  rotation: ClipRotation;
-  flipH: boolean;
-  flipV: boolean;
-  filters: ClipFilters;
-  transitionOut: TransitionType;
-  transitionDuration: number;
-  crop: CropRect | null;
-  kenBurns: KenBurnsConfig;
+  muted: boolean;
+  fadeInSeconds: number;
+  fadeOutSeconds: number;
 }
+
+// Stub for Phase 5+
+export interface Effect {
+  id: string;
+  type: string;
+}
+
+// Stub for Phase 7
+export interface Keyframe {
+  id: string;
+  property: string;
+  time: number;
+  value: number;
+}
+
+export interface ChromaKeySettings {
+  enabled: boolean;
+  color: string;
+  similarity: number;
+  blend: number;
+  spillReduction: number;
+}
+
+// Canonical Media Layer / Timeline Clip
+export interface TimelineClip {
+  id: string;
+  trackId: string;
+  sourceId: string;
+  type: "video" | "audio" | "image" | "text"; // source type
+
+  // Timing
+  timelineStart: number;
+  duration: number; // duration on timeline
+  sourceStart: number; // starting point in the source media
+  sourceEnd: number; // ending point in the source media
+  speed: number;
+  speedCurve?: SpeedPoint[];
+
+  // Spatial
+  transform?: Transform;
+  crop?: CropRect;
+
+  // Audio
+  audio?: AudioSettings;
+
+  // Visuals
+  filters?: ClipFilters;
+  effects?: Effect[];
+  transitions?: TransitionType; // Simplified for Phase 1
+  transitionDuration?: number;
+  keyframes?: Keyframe[];
+  chromaKey?: ChromaKeySettings;
+
+  // Extra specific properties
+  text?: string;
+  color?: string;
+  fontSizePercent?: number;
+}
+
+export interface TimelineTrack {
+  id: string;
+  type: TrackType;
+  name: string;
+  clips: TimelineClip[];
+  muted: boolean;
+  locked: boolean;
+  hidden: boolean;
+}
+
+export interface EditorProject {
+  id: string;
+  width: number;
+  height: number;
+  fps: number;
+  tracks: TimelineTrack[];
+  duration: number; // project total duration
+}
+
+export const DEFAULT_TRANSFORM: Transform = {
+  x: 50, y: 50, width: 100, height: 100, rotation: 0, scaleX: 1, scaleY: 1, opacity: 100
+};
 
 export const DEFAULT_FILTERS: ClipFilters = { brightness: 0, contrast: 1, saturation: 1 };
 
-export function createClip(sourceId: string, sourceStart: number, sourceEnd: number): EditorClip {
+export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
+  volumePercent: 100,
+  muted: false,
+  fadeInSeconds: 0,
+  fadeOutSeconds: 0
+};
+
+export function createClip(
+  sourceId: string,
+  trackId: string,
+  type: TimelineClip["type"],
+  timelineStart: number,
+  sourceDuration: number
+): TimelineClip {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    trackId,
     sourceId,
-    sourceStart,
-    sourceEnd,
+    type,
+    timelineStart,
+    duration: sourceDuration,
+    sourceStart: 0,
+    sourceEnd: sourceDuration,
     speed: 1,
-    muted: false,
-    volumePercent: 100,
-    rotation: 0,
-    flipH: false,
-    flipV: false,
-    filters: { ...DEFAULT_FILTERS },
-    transitionOut: "none",
-    transitionDuration: 0.6,
-    crop: null,
-    kenBurns: { ...DEFAULT_KEN_BURNS },
+    audio: type === "video" || type === "audio" ? { ...DEFAULT_AUDIO_SETTINGS } : undefined,
+    transform: type === "video" || type === "image" || type === "text" ? { ...DEFAULT_TRANSFORM } : undefined,
+    filters: type === "video" || type === "image" ? { ...DEFAULT_FILTERS } : undefined,
   };
 }
 
-export function cloneClips(clips: EditorClip[]): EditorClip[] {
-  return clips.map((c) => ({
-    ...c,
-    filters: { ...c.filters },
-    crop: c.crop ? { ...c.crop } : null,
-    kenBurns: { ...c.kenBurns },
-  }));
+export function createTrack(type: TrackType, name: string): TimelineTrack {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    type,
+    name,
+    clips: [],
+    muted: false,
+    locked: false,
+    hidden: false
+  };
 }
 
-export function clipTimelineDuration(clip: EditorClip): number {
-  const speed = Math.min(4, Math.max(0.25, clip.speed));
-  return Math.max(0, (clip.sourceEnd - clip.sourceStart) / speed);
+export function createProject(width = 1280, height = 720, fps = 30): EditorProject {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    width,
+    height,
+    fps,
+    tracks: [
+      createTrack("video", "V1"),
+      createTrack("audio", "A1")
+    ],
+    duration: 0
+  };
 }
 
-export interface TimelinePosition {
-  clip: EditorClip;
-  timelineStart: number;
-  timelineEnd: number;
+export function getProjectDuration(project: EditorProject): number {
+  let max = 0;
+  for (const track of project.tracks) {
+    for (const clip of track.clips) {
+      const end = clip.timelineStart + clip.duration;
+      if (end > max) max = end;
+    }
+  }
+  return max;
 }
 
-export function getTimelinePositions(clips: EditorClip[]): TimelinePosition[] {
-  let cursor = 0;
-  return clips.map((clip) => {
-    const dur = clipTimelineDuration(clip);
-    const pos: TimelinePosition = { clip, timelineStart: cursor, timelineEnd: cursor + dur };
-    cursor += dur;
-    return pos;
-  });
-}
-
-export function getTotalTimelineDuration(clips: EditorClip[]): number {
-  return clips.reduce((sum, c) => sum + clipTimelineDuration(c), 0);
+export function cloneProject(project: EditorProject): EditorProject {
+  return {
+    ...project,
+    tracks: project.tracks.map(t => ({
+      ...t,
+      clips: t.clips.map(c => ({
+        ...c,
+        transform: c.transform ? { ...c.transform } : undefined,
+        crop: c.crop ? { ...c.crop } : undefined,
+        audio: c.audio ? { ...c.audio } : undefined,
+        filters: c.filters ? { ...c.filters } : undefined,
+        effects: c.effects ? [...c.effects] : undefined,
+        keyframes: c.keyframes ? [...c.keyframes] : undefined,
+        chromaKey: c.chromaKey ? { ...c.chromaKey } : undefined,
+      }))
+    }))
+  };
 }
 
 // ─── Media Bin ───────────────────────────────────────────────────────────
@@ -114,107 +217,4 @@ export interface MediaBinItem {
   duration: number;
   width: number;
   height: number;
-}
-
-// ─── Audio tracks ────────────────────────────────────────────────────────
-
-export type AudioTrackKind = "music" | "sfx";
-
-export interface AudioTrack {
-  id: string;
-  kind: AudioTrackKind;
-  label: string;
-  file: File;
-  sourceUrl: string;
-  timelineStart: number;
-  trimStart: number;
-  trimEnd: number;
-  volumePercent: number;
-  muted: boolean;
-  fadeInSeconds: number;
-  fadeOutSeconds: number;
-  peaks: number[];
-  sourceDuration: number;
-}
-
-export function createAudioTrack(params: {
-  kind: AudioTrackKind;
-  label: string;
-  file: File;
-  sourceUrl: string;
-  sourceDuration: number;
-  timelineStart: number;
-}): AudioTrack {
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-    kind: params.kind,
-    label: params.label,
-    file: params.file,
-    sourceUrl: params.sourceUrl,
-    timelineStart: params.timelineStart,
-    trimStart: 0,
-    trimEnd: params.sourceDuration,
-    volumePercent: 100,
-    muted: false,
-    fadeInSeconds: 0,
-    fadeOutSeconds: 0,
-    peaks: [],
-    sourceDuration: params.sourceDuration,
-  };
-}
-
-// ─── Text overlays ───────────────────────────────────────────────────────
-
-export type TextOverlayAnchor = "top" | "center" | "bottom";
-
-export interface TextOverlay {
-  id: string;
-  text: string;
-  start: number;
-  end: number;
-  anchor: TextOverlayAnchor;
-  fontSizePercent: number;
-  color: string;
-  backgroundOpacity: number;
-}
-
-export function createTextOverlay(start: number, end: number): TextOverlay {
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-    text: "Your text here",
-    start,
-    end,
-    anchor: "bottom",
-    fontSizePercent: 6,
-    color: "#ffffff",
-    backgroundOpacity: 0.35,
-  };
-}
-
-// ─── Image overlays ──────────────────────────────────────────────────────
-
-export interface ImageOverlay {
-  id: string;
-  file: File;
-  url: string;
-  start: number;
-  end: number;
-  xPercent: number; // top-left, 0-100 of canvas width
-  yPercent: number; // top-left, 0-100 of canvas height
-  widthPercent: number; // relative to canvas width, 5-100
-  opacity: number; // 0-1
-}
-
-export function createImageOverlay(file: File, url: string, start: number, end: number): ImageOverlay {
-  return {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-    file,
-    url,
-    start,
-    end,
-    xPercent: 10,
-    yPercent: 10,
-    widthPercent: 30,
-    opacity: 1,
-  };
 }

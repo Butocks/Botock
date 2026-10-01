@@ -3,7 +3,8 @@
 // Extracted here so the Video Editor calls the exact same functions
 // instead of duplicating filter strings.
 
-import { CropRect, KenBurnsConfig } from "./types";
+import { CropRect } from "./types";
+export type KenBurnsConfig = { direction: "center" | "top-left" | "top-right" | "bottom-left" | "bottom-right", startZoom: number, endZoom: number };
 
 export function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));

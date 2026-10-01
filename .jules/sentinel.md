@@ -1,0 +1,4 @@
+## 2026-10-02 - Uncleaned Temporary Files in Conversion Endpoints
+**Vulnerability:** File conversion endpoints (`/pdf-to-docx`, `/pdf-to-excel`, `/docx-to-pdf`, `/pdf-protect`) created temporary files for processing but did not securely delete them after the `FileResponse` was streamed to the user.
+**Learning:** Returning a `FileResponse` transfers ownership of the file object to FastAPI's streaming response mechanism. However, without scheduling a cleanup task, temporary files (and intermediate directories like those created by `tempfile.mkdtemp()`) persist on the server filesystem indefinitely, leading to a resource exhaustion (DoS) vulnerability.
+**Prevention:** Always attach a cleanup routine using FastAPI's `BackgroundTasks` when returning temporary artifacts via `FileResponse` to ensure they are deleted as soon as the client successfully downloads them or the request ends.

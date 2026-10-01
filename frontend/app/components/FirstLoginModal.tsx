@@ -38,10 +38,9 @@ export default function FirstLoginModal({ user, onCompleted }: FirstLoginModalPr
       user.identities?.some((i: any) => i.provider === "google");
     const isCompleted = Boolean(user.user_metadata?.profile_completed);
 
+    // If they are a Google user, they don't need to complete the profile
     if (isGoogle && !isCompleted) {
-      setFullName(user.user_metadata?.full_name || user.user_metadata?.name || "");
-      setUsername(user.email ? user.email.split("@")[0] : "");
-      setIsOpen(true);
+      setIsOpen(false);
     }
   }, [user]);
 

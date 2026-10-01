@@ -612,151 +612,23 @@ export default function ToolsDirectoryPage() {
       href: "/tools/generate-qr",
       icon: QrCode,
     },
-    {
-      id: "json-formatter",
-      name: "JSON Formatter & Validator",
-      desc: "Format, validate, beautify, and minify JSON with syntax verification.",
-      category: "converters",
-      status: "active",
-      href: "/tools/json-formatter",
-      icon: RefreshCw,
-    },
-    {
-      id: "hash-generator",
-      name: "Cryptographic Hash Generator",
-      desc: "Generate SHA-256, SHA-512, and MD5 hashes via hardware WebCrypto.",
-      category: "converters",
-      status: "active",
-      href: "/tools/hash-generator",
-      icon: Lock,
-    },
-    {
-      id: "password-generator",
-      name: "Secure Password Generator",
-      desc: "Create random high-entropy passwords with custom length and symbols.",
-      category: "converters",
-      status: "active",
-      href: "/tools/password-generator",
-      icon: Lock,
-    },
-    {
-      id: "xml-formatter",
-      name: "XML Formatter & Beautifier",
-      desc: "Format, validate, beautify, and minify XML and SVG code in-browser.",
-      category: "converters",
-      status: "active",
-      href: "/tools/xml-formatter",
-      icon: RefreshCw,
-    },
-    {
-      id: "html-formatter",
-      name: "HTML Formatter & Beautifier",
-      desc: "Beautify messy HTML templates or minify production code losslessly.",
-      category: "converters",
-      status: "active",
-      href: "/tools/html-formatter",
-      icon: Code,
-    },
+
+
+
+
+
     // --- TEXT & CONTENT UTILITIES ---
-    {
-      id: "word-counter",
-      name: "Word & Character Counter",
-      desc: "Live character and word counts, reading time, and keyword density analysis.",
-      category: "text",
-      status: "active",
-      href: "/tools/word-counter",
-      icon: Type,
-    },
-    {
-      id: "lorem-ipsum-generator",
-      name: "Lorem Ipsum Dummy Text",
-      desc: "Generate custom placeholder paragraphs, sentences, or words with HTML tags.",
-      category: "text",
-      status: "active",
-      href: "/tools/lorem-ipsum-generator",
-      icon: FileText,
-    },
-    {
-      id: "case-converter",
-      name: "Case Converter Online",
-      desc: "Convert text to UPPERCASE, lowercase, Title Case, camelCase, snake_case, and kebab-case.",
-      category: "text",
-      status: "active",
-      href: "/tools/case-converter",
-      icon: Type,
-    },
-    {
-      id: "slug-generator",
-      name: "SEO URL Slug Generator",
-      desc: "Convert blog titles and headlines into clean, URL-safe permalinks.",
-      category: "text",
-      status: "active",
-      href: "/tools/slug-generator",
-      icon: Globe,
-    },
-    {
-      id: "markdown-to-html",
-      name: "Markdown to HTML Converter",
-      desc: "Convert Markdown to clean HTML code with live real-time visual preview.",
-      category: "text",
-      status: "active",
-      href: "/tools/markdown-to-html",
-      icon: FileCode,
-    },
-    {
-      id: "url-encoder-decoder",
-      name: "URL Encoder & Decoder",
-      desc: "RFC 3986 compliant URL and query parameter encoder and decoder.",
-      category: "converters",
-      status: "active",
-      href: "/tools/url-encoder-decoder",
-      icon: Link2,
-    },
-    {
-      id: "diff-checker",
-      name: "Text & Code Diff Checker",
-      desc: "Compare two text snippets side-by-side to highlight additions and deletions.",
-      category: "dev",
-      status: "active",
-      href: "/tools/diff-checker",
-      icon: GitCompare,
-    },
-    {
-      id: "duplicate-line-remover",
-      name: "Duplicate Line Remover",
-      desc: "Remove duplicate lines from text and lists with whitespace trimming options.",
-      category: "text",
-      status: "active",
-      href: "/tools/duplicate-line-remover",
-      icon: ListFilter,
-    },
-    {
-      id: "text-sorter",
-      name: "Text & List Sorter",
-      desc: "Sort text lists alphabetically (A-Z), naturally (1, 2, 10), by length, or shuffle.",
-      category: "text",
-      status: "active",
-      href: "/tools/text-sorter",
-      icon: ArrowUpDown,
-    },
-    {
-      id: "regex-tester",
-      name: "Regular Expression (Regex) Tester",
-      desc: "Test and debug JavaScript regular expressions with match highlighting and capture groups.",
-      category: "dev",
-      status: "active",
-      href: "/tools/regex-tester",
-      icon: Code2,
-    },
-    {
-      id: "jwt-decoder",
-      name: "JSON Web Token (JWT) Decoder",
-      desc: "Safely decode and inspect JWT headers, payload claims, and token expiration dates.",
-      category: "dev",
-      status: "active",
-      href: "/tools/jwt-decoder",
-      icon: KeyRound,
-    },
+
+
+
+
+
+
+
+
+
+
+
     {
       id: "svg-to-png",
       name: "SVG to PNG Converter",
@@ -767,97 +639,17 @@ export default function ToolsDirectoryPage() {
       icon: ImageIcon,
     },
     // --- DATA & CONVERSION UTILITIES ---
-    {
-      id: "csv-to-json",
-      name: "CSV to JSON Converter",
-      desc: "Convert CSV and TSV spreadsheets into structured JSON arrays of objects.",
-      category: "converters",
-      status: "active",
-      href: "/tools/csv-to-json",
-      icon: FileSpreadsheet,
-    },
-    {
-      id: "json-to-csv",
-      name: "JSON to CSV Converter",
-      desc: "Export JSON arrays of objects to CSV or TSV spreadsheets with custom delimiters.",
-      category: "converters",
-      status: "active",
-      href: "/tools/json-to-csv",
-      icon: FileSpreadsheet,
-    },
-    {
-      id: "uuid-generator",
-      name: "Bulk UUID v4 Generator",
-      desc: "Generate cryptographically secure random UUID v4 strings in bulk.",
-      category: "dev",
-      status: "active",
-      href: "/tools/uuid-generator",
-      icon: KeyRound,
-    },
-    {
-      id: "timestamp-converter",
-      name: "Unix Timestamp & Epoch Converter",
-      desc: "Convert Unix epoch timestamps to UTC, ISO 8601, and local human dates.",
-      category: "dev",
-      status: "active",
-      href: "/tools/timestamp-converter",
-      icon: Clock,
-    },
-    {
-      id: "markdown-table-generator",
-      name: "Markdown Table Generator",
-      desc: "Visual spreadsheet grid editor that generates clean GitHub-Flavored Markdown tables.",
-      category: "text",
-      status: "active",
-      href: "/tools/markdown-table-generator",
-      icon: Table,
-    },
-    {
-      id: "base64-file-converter",
-      name: "Base64 File Encoder & Decoder",
-      desc: "Encode any file to Base64 Data URI or reconstruct binary files from Base64.",
-      category: "converters",
-      status: "active",
-      href: "/tools/base64-file-converter",
-      icon: Binary,
-    },
+
+
+
+
+
+
     // --- SYSTEM, COLOR & DATABASE UTILITIES ---
-    {
-      id: "unit-converter",
-      name: "Universal Unit Converter",
-      desc: "High-precision conversion for digital storage (MB, GB, TB), length, weight, and temperature.",
-      category: "converters",
-      status: "active",
-      href: "/tools/unit-converter",
-      icon: Scale,
-    },
-    {
-      id: "sql-formatter",
-      name: "SQL Formatter & Beautifier",
-      desc: "Beautify, indent, and format complex SQL queries with keyword capitalization.",
-      category: "dev",
-      status: "active",
-      href: "/tools/sql-formatter",
-      icon: Database,
-    },
-    {
-      id: "yaml-to-json",
-      name: "YAML to JSON Converter",
-      desc: "Bidirectional YAML and JSON parser and serializer with nested list preservation.",
-      category: "converters",
-      status: "active",
-      href: "/tools/yaml-to-json",
-      icon: FileCode,
-    },
-    {
-      id: "cron-generator",
-      name: "Cron Expression Generator",
-      desc: "Visually build 5-part cron schedules with plain English descriptions and presets.",
-      category: "dev",
-      status: "active",
-      href: "/tools/cron-generator",
-      icon: Clock,
-    },
+
+
+
+
   ];
 
   const categories = [

@@ -824,6 +824,15 @@ class FlowService:
                 "status": "failed",
                 "message": "The image service is temporarily unavailable. Please try again shortly."
             })
+
+            try:
+                user_id = status_dict[generation_id].get("user_id")
+                if user_id:
+                    from app.middleware.auth import refund_image_credit
+                    await refund_image_credit(user_id, generation_id)
+                    logger.info("[%s] Refunded image credit for user %s", generation_id, user_id)
+            except Exception as refund_err:
+                logger.error("[%s] Failed to refund image credit: %s", generation_id, refund_err)
         finally:
             await browser.close()
             await p.stop()

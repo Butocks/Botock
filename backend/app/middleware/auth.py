@@ -142,6 +142,13 @@ async def refund_video_credit(user_id: str, generation_id: str) -> bool:
     }))
 
 
+async def refund_image_credit(user_id: str, generation_id: str) -> bool:
+    """Refund is idempotent, so retries after a worker/control-plane crash are safe."""
+    return bool(await _rpc("refund_image_credit", {
+        "p_user_id": user_id, "p_generation_id": generation_id,
+    }))
+
+
 async def check_daily_image_quota(user: dict = Depends(get_current_user)) -> dict:
     if user.get("is_pro"):
         return user
