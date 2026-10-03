@@ -358,12 +358,14 @@ class FlowService:
         image_base64: str = None,
         reference_image_path: str = None,
     ):
+        from app.services.google_auth import ensure_valid_session
         if not self.check_session_valid():
-            status_dict[generation_id] = {
-                "status": "failed",
-                "message": "AI Generation nodes are currently busy or undergoing scheduled maintenance. Please try again shortly."
-            }
-            return
+            if not await ensure_valid_session():
+                status_dict[generation_id] = {
+                    "status": "failed",
+                    "message": "AI Generation nodes are currently busy or undergoing scheduled maintenance. Please try again shortly."
+                }
+                return
 
         status_dict[generation_id] = {
             "status": "processing",
@@ -650,12 +652,14 @@ class FlowService:
         style: str = None,
         is_pro: bool = False,
     ):
+        from app.services.google_auth import ensure_valid_session
         if not self.check_session_valid():
-            status_dict[generation_id] = {
-                "status": "failed",
-                "message": "AI Generation nodes are currently busy or undergoing scheduled maintenance. Please try again shortly."
-            }
-            return
+            if not await ensure_valid_session():
+                status_dict[generation_id] = {
+                    "status": "failed",
+                    "message": "AI Generation nodes are currently busy or undergoing scheduled maintenance. Please try again shortly."
+                }
+                return
 
         status_dict[generation_id] = {
             "status": "processing",
