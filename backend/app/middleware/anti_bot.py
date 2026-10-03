@@ -74,6 +74,18 @@ class AntiBotMiddleware(BaseHTTPMiddleware):
         - Supports Azure Front Door / Application Gateway via X-Client-IP or X-Forwarded-For (first entry).
         - Defaults to request.client.host if direct connection or proxy headers absent.
         """
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
+            
+        client_ip = request.headers.get("x-client-ip")
+        if client_ip:
+            return client_ip.strip()
+            
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip.strip()
+            
         # Never trust client-supplied forwarding headers here. Uvicorn can
         # normalize request.client only when its proxy is explicitly trusted.
         return request.client.host if request.client else "127.0.0.1"

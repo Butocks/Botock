@@ -102,9 +102,15 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 @app.exception_handler(Exception)
 async def internal_error_handler(request: Request, exc: Exception):
     """Keep stack traces and provider details out of browser responses."""
+    if isinstance(exc, StarletteHTTPException):
+        # Let FastAPI's default exception handler deal with standard HTTPExceptions
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
     incident_id = secrets.token_hex(8)
     logger.exception("Unhandled request failure [%s] %s %s", incident_id, request.method, request.url.path)
     return JSONResponse(
