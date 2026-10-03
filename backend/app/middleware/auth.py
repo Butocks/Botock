@@ -72,7 +72,32 @@ def get_current_user(authorization: Optional[str] = Header(None), token_query: O
         raise HTTPException(status_code=401, detail="Invalid or expired authentication token.")
     metadata = payload.get("app_metadata") or {}
     is_pro = bool(metadata.get("is_pro") or metadata.get("subscription_status") == "active" or payload.get("role") == "pro")
-    return {"user_id": payload["sub"], "email": payload.get("email", ""), "is_pro": is_pro, "payload": payload}
+    return {"user_id": payload["sub"], "email": payload.get("email", ""), "is_pro": is_pro, "is_guest": False, "payload": payload}
+
+
+def get_current_user_or_guest(
+    authorization: Optional[str] = Header(None),
+    token_query: Optional[str] = Query(None, alias="token"),
+    x_guest_id: Optional[str] = Header(None, alias="X-Guest-ID"),
+) -> dict:
+    """Returns authenticated user if token present, or guest user object if unauthenticated."""
+    if (authorization and authorization.strip()) or (token_query and token_query.strip()):
+        try:
+            return get_current_user(authorization, token_query)
+        except HTTPException:
+            pass
+
+    guest_id = (x_guest_id or "").strip()
+    if not guest_id or len(guest_id) < 5:
+        guest_id = "guest_anon_user"
+
+    return {
+        "user_id": guest_id,
+        "email": "guest@botock.app",
+        "is_pro": False,
+        "is_guest": True,
+        "payload": {},
+    }
 
 
 def _service_headers() -> dict[str, str]:

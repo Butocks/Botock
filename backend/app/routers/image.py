@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.responses import FileResponse
 from app.models.schemas import ImageGenerateRequest, ImageGenerateResponse, ImageStatusResponse, ImageListResponse
 from app.services.image_service import NanoBananaImageService
-from app.middleware.auth import check_daily_image_quota, get_current_user
+from app.middleware.auth import check_daily_image_quota, get_current_user, get_current_user_or_guest
 from app.config import settings
 
 router = APIRouter(prefix="/api/image", tags=["Image"])
@@ -56,17 +56,18 @@ async def generate_image(
     request: ImageGenerateRequest,
     req: Request,
     background_tasks: BackgroundTasks,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user_or_guest),
 ):
     clean_prompt = request.prompt.strip()
     is_pro = user.get("is_pro", False)
+    is_guest = user.get("is_guest", False)
     
     from app.middleware.auth import _rpc
     from app.routers.auth_otp import get_platform_settings
     
     generation_id = str(uuid.uuid4())
     
-    if not is_pro:
+    if not is_pro and not is_guest:
         quotas = get_platform_settings().get("quotas", {})
         limit = int(quotas.get("free_daily_photos", settings.FREE_DAILY_IMAGE_LIMIT))
         await _rpc("consume_image_quota", {
@@ -110,7 +111,7 @@ async def generate_image(
 
 
 @router.get("/status/{generation_id}", response_model=ImageStatusResponse)
-async def get_image_status(generation_id: str, user: dict = Depends(get_current_user)):
+async def get_image_status(generation_id: str, user: dict = Depends(get_current_user_or_guest)):
     validate_uuid(generation_id)
 
     if generation_id not in image_statuses:
@@ -156,7 +157,7 @@ def check_ownership(generation_id: str, user_id: str):
         raise HTTPException(status_code=403, detail="Access denied: You do not own this image generation.")
 
 @router.get("/download/{generation_id}")
-async def download_image(generation_id: str, user: dict = Depends(get_current_user)):
+async def download_image(generation_id: str, user: dict = Depends(get_current_user_or_guest)):
     validate_uuid(generation_id)
 
     # Persistent Ownership check

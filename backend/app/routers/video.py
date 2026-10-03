@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.responses import FileResponse, Response
 from app.models.schemas import VideoGenerateRequest, VideoGenerateResponse, VideoStatusResponse, VideoListResponse
 from app.services.flow_service import FlowVideoService
-from app.middleware.auth import get_current_user
+from app.middleware.auth import get_current_user, get_current_user_or_guest
 from app.config import settings
 from app.services.distributed_queue import QueueFullError, queue
 from app.services.blob_storage import download_video as download_blob_video
@@ -114,7 +114,7 @@ async def generate_video(
     request: VideoGenerateRequest,
     req: Request,
     background_tasks: BackgroundTasks,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_current_user_or_guest),
 ):
     global current_queued_jobs
     client_ip = req.client.host if req.client else "unknown"
@@ -123,6 +123,7 @@ async def generate_video(
     # Sanitize prompt (strip extra whitespace, length checked by Pydantic)
     clean_prompt = request.prompt.strip()
     is_pro = user.get("is_pro", False)
+    is_guest = user.get("is_guest", False)
 
     # Queue limit: 1 user generating at a time, max 2 in queue, priority to subscribers
     if not is_pro and current_queued_jobs >= MAX_QUEUE_LIMIT:
@@ -207,7 +208,7 @@ async def generate_video(
                 detail=f"Video queue is at capacity ({exc.limit} waiting jobs). Please try again shortly.",
             )
         try:
-            if not is_pro:
+            if not is_pro and not is_guest:
                 await reserve_video_credit(user["user_id"], generation_id, cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
             if not await queue.activate(generation_id, user["user_id"]):
                 raise HTTPException(status_code=503, detail="Could not activate video generation. Please retry.")
@@ -215,7 +216,7 @@ async def generate_video(
             await queue.cancel_reservation(generation_id, user["user_id"])
             raise
     else:
-        if not is_pro:
+        if not is_pro and not is_guest:
             await reserve_video_credit(user["user_id"], generation_id, cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
         save_ownership(generation_id, user["user_id"])
     video_statuses[generation_id] = {
@@ -283,7 +284,7 @@ async def get_credits(user: dict = Depends(get_current_user)):
 
 
 @router.get("/status/{generation_id}", response_model=VideoStatusResponse)
-async def get_status(generation_id: str, user: dict = Depends(get_current_user)):
+async def get_status(generation_id: str, user: dict = Depends(get_current_user_or_guest)):
     validate_uuid(generation_id)
 
     if settings.DISTRIBUTED_QUEUE_ENABLED:
@@ -346,7 +347,7 @@ def check_ownership(generation_id: str, user_id: str):
         raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
 
 @router.get("/download/{generation_id}")
-async def download_video(generation_id: str, user: dict = Depends(get_current_user)):
+async def download_video(generation_id: str, user: dict = Depends(get_current_user_or_guest)):
     validate_uuid(generation_id)
 
     if settings.DISTRIBUTED_QUEUE_ENABLED:

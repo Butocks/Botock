@@ -80,6 +80,18 @@ export default function ImageGeneratorPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageBlobUrl, setImageBlobUrl] = useState<string | null>(null);
   const [dailyImagesLeft, setDailyImagesLeft] = useState(5);
+  const [guestId, setGuestId] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      let gid = localStorage.getItem("botock_guest_id");
+      if (!gid) {
+        gid = "guest_" + Math.random().toString(36).substring(2, 12);
+        localStorage.setItem("botock_guest_id", gid);
+      }
+      setGuestId(gid);
+    }
+  }, []);
 
   // Smooth loading percentage counter
   useEffect(() => {
@@ -150,11 +162,6 @@ export default function ImageGeneratorPage() {
   };
 
   const handleGenerate = async () => {
-    if (!user) {
-      setShowGuestCTA(true);
-      return;
-    }
-
     if (prompt.trim().length < 3) {
       setErrorMessage("Please enter an image description (at least 3 characters).");
       return;
@@ -182,13 +189,19 @@ export default function ImageGeneratorPage() {
         });
       }
 
+      const reqHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        "Bypass-Tunnel-Reminder": "true",
+      };
+      if (token) {
+        reqHeaders["Authorization"] = `Bearer ${token}`;
+      } else if (guestId) {
+        reqHeaders["X-Guest-ID"] = guestId;
+      }
+
       const response = await fetch(`${backendBaseUrl}/api/image/generate`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Bypass-Tunnel-Reminder": "true",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: reqHeaders,
         body: JSON.stringify({
           prompt: prompt.trim(),
           aspect_ratio: aspectRatio,
@@ -237,6 +250,8 @@ export default function ImageGeneratorPage() {
           };
           if (token) {
             authHeaders["Authorization"] = `Bearer ${token}`;
+          } else if (guestId) {
+            authHeaders["X-Guest-ID"] = guestId;
           }
 
           const statusUrl = token
