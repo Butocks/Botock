@@ -93,6 +93,7 @@ export default function VideoGeneratorPage() {
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressText, setProgressText] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [showGuestCTA, setShowGuestCTA] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
   const [creditsRemaining, setCreditsRemaining] = useState<number>(50);
@@ -206,7 +207,7 @@ export default function VideoGeneratorPage() {
 
   const handleGenerate = async () => {
     if (!user) {
-      window.location.href = "/login";
+      setShowGuestCTA(true);
       return;
     }
 

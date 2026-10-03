@@ -33,7 +33,7 @@ export default function UploadDropzone({
   title,
   subtitle,
   onDrop,
-  multiple = false,
+  multiple = true,
   accentClass = "emerald",
   footer,
 }: UploadDropzoneProps) {

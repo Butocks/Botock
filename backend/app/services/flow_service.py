@@ -378,80 +378,72 @@ class FlowService:
             # Configure Settings Popup for Video
             status_dict[generation_id]["message"] = "Preparing video engine..."
             try:
-                settings_btn = page.locator('button:has-text("Banana"), button:has-text("Video"), button:has-text("Omni"), button:has-text("Veo")').first
+                # 1. Open Settings
+                settings_btn = page.locator('.settings-trigger-button, button[aria-label="Settings trigger"]').first
                 if await settings_btn.is_visible(timeout=3000):
                     await settings_btn.click()
                     await asyncio.sleep(1)
 
-                    # Video Tab — popup lives in .cdk-overlay-pane NOT [role="dialog"]
-                    video_tab = page.locator('.cdk-overlay-pane button').filter(has_text="Video").first
+                    # 2. Switch to Video Mode
+                    video_tab = page.locator('mat-button-toggle[value*="video" i] button, mat-button-toggle button').filter(has_text="Video").first
                     if await video_tab.is_visible(timeout=2000):
                         await video_tab.click()
                         await asyncio.sleep(0.8)
 
-                    # Model selection: Omni 1.1 Flash vs Veo 3.1
+                    # 3. Model selection
                     model_str = str(model).lower()
                     is_veo = "veo" in model_str
-                    if is_veo:
-                        model_dropdown = page.locator('.cdk-overlay-pane button:has-text("Omni"), .cdk-overlay-pane button:has-text("Veo"), .cdk-overlay-pane button:has-text("Flash")').first
-                        if await model_dropdown.is_visible(timeout=2000):
-                            await model_dropdown.click()
-                            await asyncio.sleep(0.6)
-                            target_veo = "Veo 3.1 - Fast" if "fast" in model_str else "Veo 3.1 - Quality" if "quality" in model_str else "Veo 3.1 - Lite"
-                            veo_opt = page.locator('.cdk-overlay-pane [role="menuitem"], [role="menu"] button, .mat-mdc-menu-item').filter(has_text=target_veo).first
-                            if await veo_opt.is_visible(timeout=2000):
-                                await veo_opt.click()
-                                await asyncio.sleep(0.4)
-                    else:
-                        model_dropdown = page.locator('.cdk-overlay-pane button:has-text("Veo")').first
-                        if await model_dropdown.is_visible(timeout=1500):
-                            await model_dropdown.click()
-                            await asyncio.sleep(0.6)
-                            omni_opt = page.locator('.cdk-overlay-pane [role="menuitem"], [role="menu"] button, .mat-mdc-menu-item').filter(has_text="Omni 1.1 Flash").first
-                            if await omni_opt.is_visible(timeout=2000):
-                                await omni_opt.click()
-                                await asyncio.sleep(0.4)
+                    model_dropdown = page.locator('.model-select-trigger-content').first
+                    if not await model_dropdown.is_visible():
+                        model_dropdown = page.locator('[aria-label="Select model family"]').first
+                        
+                    if await model_dropdown.is_visible(timeout=1500):
+                        await model_dropdown.click()
+                        await asyncio.sleep(0.5)
+                        
+                        target_model_name = "Veo" if is_veo else "Omni"
+                        target_model = page.locator('.mat-mdc-menu-content .mat-mdc-menu-item, .mat-mdc-menu-content [role="menuitem"]').filter(has_text=target_model_name).first
+                        if await target_model.is_visible(timeout=2000):
+                            await target_model.click()
+                            await asyncio.sleep(0.5)
 
                     # Aspect Ratio
                     ratio_to_click = "9:16" if "9:16" in str(aspect_ratio) else "16:9"
-                    ratio_btn = page.locator('.cdk-overlay-pane button').filter(has_text=ratio_to_click).first
+                    ratio_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text=ratio_to_click).first
                     if await ratio_btn.is_visible(timeout=2000):
                         await ratio_btn.click()
                         await asyncio.sleep(0.3)
 
-                    # Resolution: Veo models strictly lock to 720p; Omni models can be 360p or 720p
-                    if is_veo:
-                        target_res = "720p"
-                    else:
-                        target_res = "720p" if "720p" in model_str else "360p"
-
-                    res_btn = page.locator('.cdk-overlay-pane button').filter(has_text=target_res).first
+                    # Resolution
+                    target_res = "720p" if is_veo else ("720p" if "720p" in model_str else "360p")
+                    res_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text=target_res).first
                     if not await res_btn.is_visible(timeout=1500):
-                        res_btn = page.locator('.cdk-overlay-pane button').filter(has_text="720p").first
+                        res_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text="720p").first
                     if not await res_btn.is_visible(timeout=1000):
-                        res_btn = page.locator('.cdk-overlay-pane button').filter(has_text="360p").first
+                        res_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text="360p").first
                     if await res_btn.is_visible(timeout=2000):
                         await res_btn.click()
                         await asyncio.sleep(0.3)
 
-                    # Duration: Veo is strictly 8s in Flow AI; Omni supports 4s, 6s, 8s, 10s
-                    target_sec = 8 if is_veo else (duration_seconds if duration_seconds in [4, 6, 8, 10] else 8)
+                    # Duration
+                    target_sec = 8 if is_veo else (duration_seconds if duration_seconds in [4, 5, 6, 8, 10] else 8)
                     target_dur_str = f"{target_sec}s"
-                    dur_btn = page.locator('.cdk-overlay-pane button').filter(has_text=target_dur_str).first
+                    dur_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text=target_dur_str).first
                     if not await dur_btn.is_visible(timeout=1500):
-                        dur_btn = page.locator('.cdk-overlay-pane button').filter(has_text="8s").first
+                        dur_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text="5s").first
                     if not await dur_btn.is_visible(timeout=1000):
-                        dur_btn = page.locator('.cdk-overlay-pane button').filter(has_text="10s").first
+                        dur_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text="10s").first
                     if await dur_btn.is_visible(timeout=2000):
                         await dur_btn.click()
                         await asyncio.sleep(0.3)
 
                     # Count: x1
-                    count_btn = page.locator('.cdk-overlay-pane button').filter(has_text="x1").first
+                    count_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text="x1").first
                     if await count_btn.is_visible(timeout=2000):
                         await count_btn.click()
                         await asyncio.sleep(0.3)
 
+                    # Close settings safely
                     await page.keyboard.press("Escape")
                     await asyncio.sleep(0.5)
             except Exception as ex:
@@ -476,8 +468,18 @@ class FlowService:
             status_dict[generation_id]["message"] = "Generating video..."
             await prompt_input.click()
             await asyncio.sleep(0.3)
-            await page.keyboard.type(formatted_prompt, delay=15)
-            await asyncio.sleep(0.8)
+            
+            # Use execCommand for faster, reliable insertion into ProseMirror
+            escaped_prompt = formatted_prompt.replace('"', '\\"')
+            await page.evaluate(f"""(p) => {{
+                const promptBox = document.querySelector('.ProseMirror[contenteditable="true"]');
+                if (promptBox) {{
+                    promptBox.focus();
+                    document.execCommand('selectAll', false, null);
+                    document.execCommand('insertText', false, p);
+                }}
+            }}""", formatted_prompt)
+            await asyncio.sleep(1)
 
             # Baseline: record existing video tiles before submitting this prompt
             existing_video_tiles = await page.evaluate("""() => {
@@ -486,13 +488,9 @@ class FlowService:
                     .filter(Boolean);
             }""")
 
-            # Submit
+            # Submit: Native Enter key on ProseMirror triggers the generation POST request
             status_dict[generation_id]["message"] = "Generating video..."
-            generate_btn = page.locator('button[aria-label*="Start generation" i], .generate-icon-button, button[type="submit"]').first
-            if await generate_btn.is_visible(timeout=3000):
-                await generate_btn.click()
-            else:
-                await page.keyboard.press("Enter")
+            await prompt_input.press("Enter")
 
             await asyncio.sleep(3)
             await self._handle_credit_approval(page, generation_id)
@@ -585,12 +583,14 @@ class FlowService:
 
     async def _download_video(self, page, generation_id: str, already_opened: bool = False, existing_video_tiles: list = None) -> str:
         file_path = os.path.join(self.videos_dir, f"{generation_id}.mp4")
+        
+        more_vert = page.locator('button:has(mat-icon:has-text("more_vert")), mat-icon:has-text("more_vert")').first
         dl_btn = page.locator('button[aria-label*="Download media" i], button[aria-label*="Download" i]').first
-
-        if not already_opened or not await dl_btn.is_visible():
+        
+        if not already_opened and not await dl_btn.is_visible() and not await more_vert.is_visible():
             new_tile = None
             if existing_video_tiles is not None:
-                for tile in await page.locator('img[alt*="video" i], video').all():
+                for tile in await page.locator('img[alt*="video" i], video, flow-video-tile img').all():
                     src = await tile.evaluate("el => el.currentSrc || el.src || ''")
                     if src and src not in existing_video_tiles:
                         new_tile = tile
@@ -602,27 +602,38 @@ class FlowService:
                 await page.mouse.click(350, 250)
             await asyncio.sleep(2.5)
 
-        if not await dl_btn.is_visible(timeout=8000):
+        if await more_vert.is_visible():
+            await more_vert.click()
+            await asyncio.sleep(1)
+            dl_opt = page.locator('.mat-mdc-menu-content button, [role="menuitem"]').filter(has_text=re.compile("Download", re.IGNORECASE)).first
+            if await dl_opt.is_visible(timeout=2000):
+                await dl_opt.click()
+                await asyncio.sleep(1)
+        elif await dl_btn.is_visible(timeout=4000):
+            await dl_btn.click()
+            await asyncio.sleep(1.5)
+        else:
             await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_no_dl_btn.png"))
-            raise Exception("Download media button not visible after opening video tile.")
+            raise Exception("Download media button not visible.")
 
-        await dl_btn.click()
-        await asyncio.sleep(1.5)
+        # Use global locators to avoid stale menu references
+        opt = page.locator('.cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]').filter(has_text=re.compile("720p|360p|Original", re.IGNORECASE)).first
+        if not await opt.is_visible(timeout=3000):
+            opt = page.locator('.cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]').first
+            
+        if not await opt.is_visible(timeout=2000):
+            raise Exception("Resolution option not found in download menu")
 
-        menu = page.locator('.cdk-overlay-pane, [role="menu"], .mat-mdc-menu-panel').last
-        opt = menu.locator('button, [role="menuitem"]').filter(has_text="720p").first
-        if not await opt.is_visible(timeout=2000):
-            opt = menu.locator('button, [role="menuitem"]').filter(has_text="Original").first
-        if not await opt.is_visible(timeout=2000):
-            opt = menu.locator('button, [role="menuitem"]').first
-        if not await opt.is_visible(timeout=2000):
-            opt = page.locator('[role="menuitem"], .mat-mdc-menu-item').first
-
+        # Sometimes click is intercepted, use force or evaluate
         async with page.expect_download(timeout=90000) as dl_info:
-            await opt.click()
-
+            await opt.click(force=True)
+            
         download = await dl_info.value
         await download.save_as(file_path)
+        
+        await page.keyboard.press("Escape")
+        await asyncio.sleep(0.5)
+            
         return file_path
 
     # =========================================================================
@@ -659,27 +670,43 @@ class FlowService:
             # Configure Settings Popup for Image
             status_dict[generation_id]["message"] = "Preparing image engine..."
             try:
-                settings_btn = page.locator('button:has-text("Banana"), button:has-text("Video"), button:has-text("Omni")').first
+                # 1. Open Settings
+                settings_btn = page.locator('.settings-trigger-button, button[aria-label="Settings trigger"]').first
                 if await settings_btn.is_visible(timeout=3000):
                     await settings_btn.click()
                     await asyncio.sleep(1)
 
-                    # Image Tab — popup lives in .cdk-overlay-pane
-                    img_tab = page.locator('.cdk-overlay-pane button').filter(has_text="Image").first
+                    # 2. Switch to Image Mode
+                    img_tab = page.locator('mat-button-toggle[value*="image" i] button, mat-button-toggle button').filter(has_text="Image").first
                     if await img_tab.is_visible(timeout=2000):
                         await img_tab.click()
+                        await asyncio.sleep(0.8)
+
+                    # 3. Select Model
+                    model_dropdown = page.locator('.model-select-trigger-content').first
+                    if not await model_dropdown.is_visible():
+                        model_dropdown = page.locator('[aria-label="Select model family"]').first
+                    if await model_dropdown.is_visible(timeout=1500):
+                        await model_dropdown.click()
                         await asyncio.sleep(0.5)
+                        
+                        target_model = page.locator('.mat-mdc-menu-content .mat-mdc-menu-item, .mat-mdc-menu-content [role="menuitem"]').filter(has_text="Nano Banana").first
+                        if not await target_model.is_visible():
+                            target_model = page.locator('.mat-mdc-menu-content .mat-mdc-menu-item, .mat-mdc-menu-content [role="menuitem"]').filter(has_text="Nano").first
+                        if await target_model.is_visible():
+                            await target_model.click()
+                            await asyncio.sleep(0.5)
 
                     # Aspect Ratio
                     allowed_ratios = ["1:1", "16:9", "9:16", "4:3", "3:4"]
                     ratio_str = aspect_ratio if aspect_ratio in allowed_ratios else "1:1"
-                    ratio_btn = page.locator('.cdk-overlay-pane button').filter(has_text=ratio_str).first
+                    ratio_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text=ratio_str).first
                     if await ratio_btn.is_visible(timeout=2000):
                         await ratio_btn.click()
                         await asyncio.sleep(0.3)
 
                     # Count: x1
-                    count_btn = page.locator('.cdk-overlay-pane button').filter(has_text="x1").first
+                    count_btn = page.locator('.cdk-overlay-pane button, mat-button-toggle button').filter(has_text="x1").first
                     if await count_btn.is_visible(timeout=2000):
                         await count_btn.click()
                         await asyncio.sleep(0.3)
@@ -710,29 +737,23 @@ class FlowService:
             status_dict[generation_id]["message"] = "Generating image..."
             await prompt_input.click()
             await asyncio.sleep(0.3)
-            # Focus, clear and type with realistic events
-            await page.keyboard.press("Control+A")
-            await page.keyboard.press("Backspace")
-            await page.keyboard.type(full_prompt, delay=15)
-            await asyncio.sleep(0.5)
-            await page.keyboard.press("Space")
-            await page.keyboard.press("Backspace")
-            await asyncio.sleep(0.5)
-
-            # Submit: first try direct Enter key (most reliable across ProseMirror)
-            status_dict[generation_id]["message"] = "Generating image..."
-            await page.keyboard.press("Enter")
+            
+            # Use execCommand for faster, reliable insertion into ProseMirror
+            escaped_prompt = full_prompt.replace('"', '\\"')
+            await page.evaluate(f"""(p) => {{
+                const promptBox = document.querySelector('.ProseMirror[contenteditable="true"]');
+                if (promptBox) {{
+                    promptBox.focus();
+                    document.execCommand('selectAll', false, null);
+                    document.execCommand('insertText', false, p);
+                }}
+            }}""", full_prompt)
             await asyncio.sleep(1)
 
-            # Check if generate button is enabled and click if needed
-            generate_btn = page.locator('button[aria-label*="Start generation" i], .generate-icon-button, button[type="submit"]').first
-            if await generate_btn.is_visible(timeout=1500):
-                is_disabled = await generate_btn.get_attribute("disabled")
-                if not is_disabled or is_disabled == "false":
-                    try:
-                        await generate_btn.click(timeout=3000)
-                    except Exception as e_gen:
-                        logger.debug(f"Button click note: {e_gen}")
+            # Submit: Native Enter key on ProseMirror triggers the generation POST request
+            status_dict[generation_id]["message"] = "Generating image..."
+            await prompt_input.press("Enter")
+            await asyncio.sleep(1)
 
             await asyncio.sleep(3)
             await self._handle_credit_approval(page, generation_id)
@@ -791,12 +812,12 @@ class FlowService:
                         await dl_btn.click()
                         await asyncio.sleep(1)
 
-                        opt = page.locator('button:has-text("Original size"), [role="menuitem"]:has-text("Original size"), button:has-text("1K")').first
+                        opt = page.locator('.cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]').filter(has_text=re.compile("Original size|1K", re.IGNORECASE)).first
                         if not await opt.is_visible(timeout=3000):
-                            opt = page.locator('[role="menuitem"]').first
+                            opt = page.locator('.cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]').first
 
-                        async with page.expect_download(timeout=30000) as dl_info:
-                            await opt.click()
+                        async with page.expect_download(timeout=60000) as dl_info:
+                            await opt.click(force=True)
 
                         download = await dl_info.value
                         await download.save_as(save_path)

@@ -143,6 +143,19 @@ async def generate_video(
     else:
         duration_seconds = request.duration_seconds if request.duration_seconds in [4, 6, 8, 10] else 8
 
+    # Premium Gates
+    if not is_pro and is_veo:
+        raise HTTPException(
+            status_code=403,
+            detail="The Veo cinematic engine is reserved for Pro subscribers. Please upgrade to unlock photorealistic generation."
+        )
+        
+    if not is_pro and not is_veo and duration_seconds > 6:
+        raise HTTPException(
+            status_code=403,
+            detail="Video durations over 6 seconds require a Pro subscription. Please upgrade to create longer videos."
+        )
+
     # Check available models and their exact duration-based costs
     from app.routers.auth_otp import get_platform_settings
     quotas = get_platform_settings().get("quotas", {})

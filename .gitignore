@@ -36,3 +36,12 @@ backend/*.log
 # OS files
 .DS_Store
 Thumbs.db
+/botock-admin
+*.md
+!README.md
+*.png
+*.jpg
+*.html
+*.pyc
+__pycache__/
+botock-admin/

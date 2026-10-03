@@ -76,6 +76,7 @@ export default function ImageGeneratorPage() {
   const [progressPercent, setProgressPercent] = useState<number>(0);
   const [progressText, setProgressText] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [showGuestCTA, setShowGuestCTA] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageBlobUrl, setImageBlobUrl] = useState<string | null>(null);
   const [dailyImagesLeft, setDailyImagesLeft] = useState(5);
@@ -150,7 +151,7 @@ export default function ImageGeneratorPage() {
 
   const handleGenerate = async () => {
     if (!user) {
-      window.location.href = "/login";
+      setShowGuestCTA(true);
       return;
     }
 

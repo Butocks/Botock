@@ -100,6 +100,14 @@ class DistributedQueue:
                    WHERE status = 'running' AND lease_expires_at < now() AND attempts >= $1""",
                 settings.MAX_JOB_ATTEMPTS,
             )
+            # Release accounts for any jobs that just failed/re-queued due to expiry
+            await conn.execute(
+                """UPDATE flow_accounts SET status = 'ACTIVE' 
+                   WHERE id IN (
+                       SELECT account_id FROM video_jobs 
+                       WHERE status = 'running' AND lease_expires_at < now() AND account_id IS NOT NULL
+                   )"""
+            )
             queued = await conn.execute(
                 """UPDATE video_jobs SET status = 'queued', worker_id = NULL, account_id = NULL,
                            lease_expires_at = NULL, updated_at = now()
@@ -113,9 +121,26 @@ class DistributedQueue:
         pool = self._require_pool()
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
-                """WITH candidate AS (
-                       SELECT id FROM video_jobs WHERE status = 'queued'
-                       ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1
+                """
+                   -- 1. Lock a free flow account for this worker
+                   WITH locked_account AS (
+                       UPDATE flow_accounts 
+                       SET status = 'BUSY', current_worker_id = $1, last_heartbeat = now()
+                       WHERE id = (
+                           SELECT id FROM flow_accounts 
+                           WHERE status = 'ACTIVE' AND id = $2
+                           FOR UPDATE SKIP LOCKED
+                       )
+                       RETURNING id
+                   ),
+                   -- 2. Select the highest priority job
+                   candidate AS (
+                       SELECT id FROM video_jobs 
+                       WHERE status = 'queued' AND EXISTS (SELECT 1 FROM locked_account)
+                       ORDER BY 
+                           (payload->>'is_pro')::boolean DESC NULLS LAST,
+                           created_at ASC 
+                       FOR UPDATE SKIP LOCKED LIMIT 1
                    )
                    UPDATE video_jobs j
                    SET status = 'running', worker_id = $1, account_id = $2,
@@ -126,7 +151,7 @@ class DistributedQueue:
                    RETURNING j.id::text, j.payload, j.attempts""",
                 worker_id,
                 account_id,
-                settings.WORKER_LEASE_SECONDS,
+                str(settings.WORKER_LEASE_SECONDS),
             )
         return dict(row) if row else None
 
@@ -137,7 +162,7 @@ class DistributedQueue:
                 """UPDATE video_jobs SET lease_expires_at = now() + ($1::text || ' seconds')::interval,
                            updated_at = now()
                    WHERE id = $2::uuid AND status = 'running' AND worker_id = $3 AND account_id = $4""",
-                settings.WORKER_LEASE_SECONDS, job_id, worker_id, account_id,
+                str(settings.WORKER_LEASE_SECONDS), job_id, worker_id, account_id,
             )
         return _command_count(result) == 1
 
@@ -150,6 +175,8 @@ class DistributedQueue:
                    WHERE id = $2::uuid AND status = 'running' AND worker_id = $3 AND account_id = $4""",
                 object_key, job_id, worker_id, account_id,
             )
+            if _command_count(result) == 1:
+                await conn.execute("UPDATE flow_accounts SET status = 'ACTIVE' WHERE id = $1", account_id)
         return _command_count(result) == 1
 
     async def fail(self, job_id: str, worker_id: str, account_id: str, error_code: str) -> dict[str, Any] | None:
@@ -164,6 +191,8 @@ class DistributedQueue:
                    RETURNING user_id, status::text""",
                 settings.MAX_JOB_ATTEMPTS, error_code[:120], job_id, worker_id, account_id,
             )
+            if row:
+                await conn.execute("UPDATE flow_accounts SET status = 'ACTIVE' WHERE id = $1", account_id)
         return dict(row) if row else None
 
     async def failed_jobs_for_refund(self, limit: int = 100) -> list[dict[str, str]]:

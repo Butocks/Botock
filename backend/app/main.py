@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import video, image, convert, auth_otp, rewards, workers, remove_bg
+from app.routers import video, image, convert, auth_otp, rewards, workers, remove_bg, admin
 from app.middleware.anti_bot import AntiBotMiddleware
 from app.config import settings
 from app.services.google_auth import ensure_valid_session
@@ -143,6 +143,7 @@ app.include_router(auth_otp.router)
 app.include_router(rewards.router)
 app.include_router(workers.router)
 app.include_router(remove_bg.router)
+app.include_router(admin.router)
 
 
 @app.get("/")
