@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Lock, ShieldCheck, Activity, Users, Image as ImageIcon } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import { notFound } from "next/navigation";
 
 export default function DaddyPage() {
   const [password, setPassword] = useState("");
@@ -10,13 +12,32 @@ export default function DaddyPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+
+  // Check Supabase Auth FIRST
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      const email = data?.user?.email?.toLowerCase() || "";
+      if (email === "butoameerali@gmail.com" || email === "butoameerali@gmai.com") {
+        setIsAuthorized(true);
+      } else {
+        setIsAuthorized(false);
+      }
+      setCheckingAuth(false);
+    });
+  }, []);
+
   // Check if already authenticated via localStorage
   useEffect(() => {
-    const savedKey = localStorage.getItem("daddy_key");
-    if (savedKey) {
-      checkKey(savedKey);
+    if (!checkingAuth && isAuthorized) {
+      const savedKey = localStorage.getItem("daddy_key");
+      if (savedKey) {
+        checkKey(savedKey);
+      }
     }
-  }, []);
+  }, [checkingAuth, isAuthorized]);
 
   const checkKey = async (key: string) => {
     setLoading(true);
@@ -45,6 +66,22 @@ export default function DaddyPage() {
     e.preventDefault();
     checkKey(password);
   };
+
+  if (checkingAuth) {
+    return <div className="min-h-screen bg-background"></div>; // Blank while checking
+  }
+
+  if (!isAuthorized) {
+    // Fake 404 to hide the page completely from unauthorized users
+    return (
+      <div className="h-[80vh] flex flex-col items-center justify-center font-sans">
+        <div className="flex items-center gap-6">
+          <h1 className="text-2xl font-semibold text-slate-900 dark:text-white border-r border-slate-300 dark:border-slate-700 pr-6">404</h1>
+          <h2 className="text-sm font-normal text-slate-700 dark:text-slate-300">This page could not be found.</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
