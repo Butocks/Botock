@@ -32,12 +32,68 @@ interface BlogPost {
   attachmentUrl?: string;
 }
 
-const POSTS: BlogPost[] = [];
+const POSTS: BlogPost[] = [
+  {
+    id: "about-botock-app",
+    title: "About Us: The Story Behind Botock",
+    excerpt: "Botock was created by Boto with a simple idea: creative technology should be easier to access. Learn about our vision, why we offer free tools, and our future plans.",
+    category: "ai",
+    categoryLabel: "Story",
+    categoryColor: "amber",
+    readTime: "8 min read",
+    date: "October 4, 2026",
+    author: "Boto"
+  },
+  {
+    id: "guide-to-ai-video-generation",
+    title: "The Ultimate Guide to AI Video Generation: From Text to Masterpiece",
+    excerpt: "Learn the secrets of Text-to-Video and Image-to-Video. Discover how to write the perfect prompt and stitch 10-second clips into a 30-minute masterpiece.",
+    category: "video",
+    categoryLabel: "Video Generation",
+    categoryColor: "blue",
+    readTime: "15 min read",
+    date: "October 4, 2026",
+    author: "Boto"
+  },
+  {
+    id: "guide-to-photo-generation-and-faq",
+    title: "Mastering AI Photo Generation & Important FAQs",
+    excerpt: "Everything you need to know about generating stunning images, understanding system speeds, and navigating our strict content safety policies.",
+    category: "image",
+    categoryLabel: "Photo Generation",
+    categoryColor: "emerald",
+    readTime: "12 min read",
+    date: "October 4, 2026",
+    author: "Boto"
+  },
+  {
+    id: "guide-to-image-editing-and-background-removal",
+    title: "The Magic of AI Image Editing & Background Removal",
+    excerpt: "Discover how to seamlessly remove backgrounds and utilize transparent PNGs for thumbnails, e-commerce, and professional presentations.",
+    category: "image",
+    categoryLabel: "Image Editing",
+    categoryColor: "purple",
+    readTime: "10 min read",
+    date: "October 4, 2026",
+    author: "Boto"
+  },
+  {
+    id: "guide-to-pdf-and-document-tools",
+    title: "Streamlining Your Workflow with Botock's PDF Tools",
+    excerpt: "Learn how to secure, unlock, and split PDF documents directly inside your Botock creative workspace.",
+    category: "pdf",
+    categoryLabel: "Productivity",
+    categoryColor: "red",
+    readTime: "8 min read",
+    date: "October 4, 2026",
+    author: "Boto"
+  }
+];
 
 export default function BlogPage() {
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
-  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [posts, setPosts] = useState<BlogPost[]>(POSTS);
 
   useEffect(() => {
     const loadBlogs = async () => {
@@ -66,7 +122,7 @@ export default function BlogPage() {
             attachmentName: cp.attachmentName,
             attachmentUrl: cp.attachmentUrl,
           }));
-          setPosts(formatted);
+          setPosts([...POSTS, ...formatted]);
         }
       } catch (e) {
         console.error("Failed to fetch blogs:", e);
