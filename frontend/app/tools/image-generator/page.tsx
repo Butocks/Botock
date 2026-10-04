@@ -545,7 +545,7 @@ export default function ImageGeneratorPage() {
 
             {/* Quota Indicator */}
             <div className="ml-auto text-[11px] font-semibold text-slate-500 dark:text-slate-400 shrink-0">
-              {isPro ? "Unlimited" : `${dailyImagesLeft} free left`}
+              {isPro ? "Unlimited" : "Standard Plan"}
             </div>
           </div>
 

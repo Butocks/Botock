@@ -72,8 +72,7 @@ async def generate_image(
         limit = int(quotas.get("free_daily_photos", settings.FREE_DAILY_IMAGE_LIMIT))
         await _rpc("consume_image_quota", {
             "p_user_id": user["user_id"], "p_daily_limit": limit,
-            "p_cost": int(settings.IMAGE_CREDIT_COST),
-            "p_generation_id": generation_id
+            "p_cost": int(settings.IMAGE_CREDIT_COST)
         })
 
 
