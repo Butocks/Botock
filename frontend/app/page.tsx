@@ -139,7 +139,7 @@ export default function Home() {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
       if (code) {
-        window.location.href = `/auth/callback?code=${encodeURIComponent(code)}&next=/tools/video-generator`;
+        window.location.href = `/auth/callback?code=${encodeURIComponent(code)}&next=/`;
       }
     }
   }, []);
@@ -245,7 +245,7 @@ export default function Home() {
         <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12 mb-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
             <Sparkles className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
-            <span>Continuous Tool Directory (Hover to Pause)</span>
+            <span>Our Tools</span>
           </span>
           <Link href="/tools" className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1">
             <span>View All 100+ Tools →</span>
@@ -582,28 +582,77 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7. Services Teaser */}
-      <section className="py-16 bg-white dark:bg-[#09090b] transition-colors">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            Start 100% Free, Upgrade for Heavy Commercial Work
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mb-6">
-            All 100+ utilities are free forever. Upgrade only when you need unlimited generative AI credits, 720p HD renders, and priority queues.
-          </p>
-
-          <div className="inline-flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-4 rounded-2xl bg-slate-50 dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08]">
-            <div className="text-center sm:text-left">
-              <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Free Daily Allowance</div>
-              <div className="text-base font-bold text-slate-900 dark:text-white">3 AI Videos + 5 AI Images Every Day</div>
+      {/* 7. Top Blogs & Guides */}
+      <section className="py-16 bg-slate-50/50 dark:bg-[#0a0a0e] border-t border-slate-200 dark:border-white/[0.06] transition-colors">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
+                <FileText className="w-3.5 h-3.5" />
+                <span>Knowledge Hub</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                Latest Guides & Tutorials
+              </h2>
             </div>
-            <div className="hidden sm:block h-8 w-px bg-slate-300 dark:bg-white/[0.08]" />
             <Link
-              href="/services"
-              className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition-all shadow-md shadow-violet-600/20 cursor-pointer"
+              href="/blog"
+              className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1 self-start sm:self-auto"
             >
-              View Services Plans →
+              <span>View All Articles →</span>
             </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { id: "guide-to-ai-video-generation", title: "The Ultimate Guide to AI Video Generation", desc: "Learn the secrets of Text-to-Video and Image-to-Video. Discover how to write the perfect prompt...", date: "Oct 4, 2026", cat: "AI Studio", color: "text-violet-500 border-violet-500/20 bg-violet-500/10" },
+              { id: "guide-to-photo-generation-and-faq", title: "Mastering AI Photo Generation", desc: "Everything you need to know about generating stunning images, understanding system speeds...", date: "Oct 4, 2026", cat: "Image Generation", color: "text-amber-500 border-amber-500/20 bg-amber-500/10" },
+              { id: "guide-to-pdf-and-document-tools", title: "Streamlining Workflow with PDF Tools", desc: "Learn how to secure, unlock, and split PDF documents directly inside your Botock creative workspace.", date: "Oct 4, 2026", cat: "Productivity", color: "text-rose-500 border-rose-500/20 bg-rose-500/10" },
+            ].map(b => (
+              <Link key={b.id} href={`/blog/${b.id}`} className="block rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] p-6 hover:border-violet-500/40 transition-all hover:shadow-lg group">
+                <div className="flex justify-between items-center mb-4">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${b.color}`}>{b.cat}</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">{b.date}</span>
+                </div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">{b.title}</h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{b.desc}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 8. Modern CTA Banner */}
+      <section className="py-20 bg-white dark:bg-[#09090b] transition-colors">
+        <div className="max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12">
+          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-700 dark:from-violet-900 dark:to-indigo-950 px-6 py-16 sm:px-16 text-center shadow-2xl border border-violet-500/20">
+            {/* Background elements */}
+            <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/10 blur-3xl rounded-full pointer-events-none" />
+            <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-blue-500/20 blur-3xl rounded-full pointer-events-none" />
+            
+            <div className="relative z-10 max-w-3xl mx-auto">
+              <h2 className="text-3xl sm:text-5xl font-black text-white mb-6 tracking-tight">
+                Start 100% Free. Upgrade for Commercial Power.
+              </h2>
+              <p className="text-sm sm:text-base text-violet-100/90 mb-10 max-w-xl mx-auto font-medium leading-relaxed">
+                All 100+ utilities are free forever. Only upgrade when you need priority queues, 720p HD video renders, and unlimited generative AI studio access.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link
+                  href="/services"
+                  className="px-8 py-4 rounded-xl bg-white text-violet-900 hover:bg-slate-50 font-black text-sm transition-all shadow-xl hover:-translate-y-1 hover:shadow-2xl"
+                >
+                  View Pro Plans
+                </Link>
+                <Link
+                  href="/tools"
+                  className="px-8 py-4 rounded-xl bg-violet-800/50 hover:bg-violet-800 text-white border border-violet-400/30 font-bold text-sm transition-all shadow-lg hover:-translate-y-1 backdrop-blur-sm"
+                >
+                  Explore 100+ Free Tools
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>

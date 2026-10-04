@@ -136,7 +136,8 @@ export default function SecurityPage() {
             <div className="p-4 rounded-xl bg-black/40 border border-slate-200 dark:border-white/[0.06] flex items-center justify-between">
               <div>
                 <div className="text-xs font-bold text-slate-900 dark:text-white">Security Contact</div>
-                <div className="text-xs text-violet-400 font-mono">security@botock.ai</div>
+                <div className="text-xs text-violet-400 font-mono">services@botock.app</div>
+                <div className="text-xs text-red-400 font-mono">complaint@botock.app</div>
               </div>
               <Link
                 href="/contact"

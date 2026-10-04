@@ -99,7 +99,9 @@ function LoginForm() {
         await supabase.rpc('clear_login_attempts', { p_email: email });
         setMessage({ type: "success", text: "Login successful! Redirecting..." });
         setTimeout(() => {
-          window.location.href = `${getSiteUrl()}/tools/video-generator`;
+          const params = new URLSearchParams(window.location.search);
+          const nextUrl = params.get("next") || "/";
+          window.location.href = `${getSiteUrl()}${nextUrl === "/" ? "" : nextUrl}`;
         }, 400);
       }
     } catch (err: any) {

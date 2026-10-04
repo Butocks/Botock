@@ -217,7 +217,9 @@ export default function SignUpPage() {
           text: "Registration & Email verification complete! Redirecting to creative suite...",
         });
         setTimeout(() => {
-          window.location.href = `${getSiteUrl()}/tools/video-generator`;
+          const params = new URLSearchParams(window.location.search);
+          const nextUrl = params.get("next") || "/";
+          window.location.href = `${getSiteUrl()}${nextUrl === "/" ? "" : nextUrl}`;
         }, 1000);
       }
     } catch (err: any) {
@@ -271,7 +273,9 @@ export default function SignUpPage() {
           text: "Account registered as Unverified. You can verify anytime in Profile Settings. Redirecting...",
         });
         setTimeout(() => {
-          window.location.href = `${getSiteUrl()}/tools/video-generator`;
+          const params = new URLSearchParams(window.location.search);
+          const nextUrl = params.get("next") || "/";
+          window.location.href = `${getSiteUrl()}${nextUrl === "/" ? "" : nextUrl}`;
         }, 1200);
       }
     } catch (err: any) {
