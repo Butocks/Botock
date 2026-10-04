@@ -152,47 +152,6 @@ app.include_router(remove_bg.router)
 app.include_router(admin.router)
 
 
-@app.get("/debug-session")
-async def debug_session():
-    import os
-    import json
-    from app.config import settings
-    from app.services.session_crypto import _fernet
-    
-    path = settings.SESSION_PATH
-    info = {
-        "cwd": os.getcwd(),
-        "session_path_configured": path,
-        "session_path_absolute": os.path.abspath(path),
-        "file_exists": os.path.exists(path),
-        "env_key_present": bool(settings.SESSION_ENCRYPTION_KEY),
-        "secret_key_present": bool(settings.SECRET_KEY),
-        "fernet_initialized": bool(_fernet)
-    }
-    
-    if os.path.exists(path):
-        info["file_size"] = os.path.getsize(path)
-        try:
-            with open(path, "rb") as f:
-                content = f.read()
-            info["content_preview"] = content[:20].decode(errors="ignore")
-            
-            if _fernet and content.startswith(b"gAAAAA"):
-                try:
-                    decrypted = _fernet.decrypt(content)
-                    data = json.loads(decrypted.decode("utf-8"))
-                    info["decryption_success"] = True
-                    info["cookies_count"] = len(data.get("cookies", []))
-                except Exception as e:
-                    info["decryption_success"] = False
-                    info["decryption_error"] = str(e)
-            else:
-                info["is_encrypted"] = False
-        except Exception as e:
-            info["file_read_error"] = str(e)
-            
-    return info
-
 @app.get("/")
 async def root():
     return {
