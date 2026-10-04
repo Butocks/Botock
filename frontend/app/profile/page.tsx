@@ -21,6 +21,9 @@ import {
   EyeOff,
   Sparkles,
   ArrowLeft,
+  Activity,
+  Users,
+  Image as ImageIcon
 } from "lucide-react";
 
 const COUNTRIES = [
@@ -60,26 +63,50 @@ export default function ProfilePage() {
   // Notifications
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // Admin Panel State
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminStats, setAdminStats] = useState<any>(null);
+
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 4000);
   };
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) {
         router.push("/login");
         return;
       }
       const u = data.user;
       setUser(u);
-      setEmail(u.email || "");
+      
+      const userEmail = u.email?.toLowerCase() || "";
+      setEmail(userEmail);
       setFullName(u.user_metadata?.full_name || u.user_metadata?.name || "");
       setUsername(u.user_metadata?.username || (u.email ? u.email.split("@")[0] : ""));
       setDob(u.user_metadata?.dob || "");
       setGender(u.user_metadata?.gender || "male");
       setCountry(u.user_metadata?.country || "Pakistan");
       setIsVerified(Boolean(u.user_metadata?.is_verified ?? (u.app_metadata?.provider === "google")));
+      
+      // Admin Check
+      if (userEmail === "butoameerali@gmail.com" || userEmail === "butoameerali@gmai.com" || u.user_metadata?.role === "admin") {
+        setIsAdmin(true);
+        // Fetch Admin Stats silently
+        try {
+          const res = await fetch("/api/proxy/api/admin/stats", {
+            headers: { "admin-api-key": "i0crMqU5rxWp" }
+          });
+          if (res.ok) {
+            const statsData = await res.json();
+            setAdminStats(statsData);
+          }
+        } catch (err) {
+          console.error("Admin stats fetch failed", err);
+        }
+      }
+
       setLoading(false);
     });
   }, [router]);
@@ -515,6 +542,53 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Admin Dashboard (Hidden for normal users) */}
+          {isAdmin && (
+            <div className="p-6 sm:p-8 rounded-3xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/30 shadow-sm space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-amber-600 dark:text-amber-500 flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5" />
+                  <span>Daddy Control Panel</span>
+                </h2>
+                <p className="text-xs text-amber-700/70 dark:text-amber-500/70 mt-1">
+                  You are viewing this because you have an Admin Role.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white/50 dark:bg-black/20 p-4 rounded-2xl border border-amber-500/20 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500">TOTAL USERS</p>
+                    <p className="text-xl font-black text-slate-900 dark:text-white">{adminStats?.users || 0}</p>
+                  </div>
+                </div>
+                
+                <div className="bg-white/50 dark:bg-black/20 p-4 rounded-2xl border border-amber-500/20 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500">GENERATIONS</p>
+                    <p className="text-xl font-black text-slate-900 dark:text-white">{adminStats?.generations || 0}</p>
+                  </div>
+                </div>
+
+                <div className="bg-white/50 dark:bg-black/20 p-4 rounded-2xl border border-amber-500/20 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-500">SYSTEM STATUS</p>
+                    <p className="text-lg font-black text-emerald-500">Online</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-3 pt-2">
