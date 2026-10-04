@@ -94,6 +94,7 @@ interface PlanItem {
 }
 
 export default function AdminConsole() {
+  const router = useRouter();
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [adminEmail, setAdminEmail] = useState<string>("");
   const [activeTab, setActiveTab] = useState<
@@ -642,22 +643,6 @@ export default function AdminConsole() {
     } finally {
       setSendingUpdate(false);
     }
-  };
-
-  const handleLogout = async () => {
-    try {
-      const currentToken = sessionStorage.getItem("botock_daddy_token") || "";
-      await fetch(`${await getBackendUrl()}/api/admin/logout`, {
-        method: "POST",
-        headers: { "x-admin-token": currentToken },
-      });
-    } catch (e) {}
-    sessionStorage.removeItem("botock_daddy_token");
-    sessionStorage.removeItem("botock_admin_email");
-    // Clear middleware cookies
-    document.cookie = "botock_daddy_token=; path=/; max-age=0";
-    document.cookie = "botock_admin_email=; path=/; max-age=0";
-    router.push("/admin/login");
   };
 
   return (

@@ -66,6 +66,8 @@ export default function ProfilePage() {
 
   // Admin Panel State
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [adminUnlockPasskey, setAdminUnlockPasskey] = useState("");
   const [adminStats, setAdminStats] = useState<any>(null);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
@@ -545,7 +547,40 @@ export default function ProfilePage() {
           </div>
 
           {/* Real Full Admin Console */}
-          {isAdmin && (
+          {isAdmin && !adminUnlocked && (
+            <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/30 shadow-sm flex flex-col items-center justify-center text-center space-y-4">
+              <ShieldCheck className="w-12 h-12 text-amber-500 opacity-50" />
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Admin Console Locked</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Please enter your master passkey to unlock the control panel.</p>
+              </div>
+              <div className="flex gap-2 w-full max-w-sm mt-4">
+                <input
+                  type="password"
+                  value={adminUnlockPasskey}
+                  onChange={(e) => setAdminUnlockPasskey(e.target.value)}
+                  placeholder="Enter Passkey..."
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-amber-500 text-center"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (adminUnlockPasskey === "i0crMqU5rxWp") {
+                      setAdminUnlocked(true);
+                      setToast({ type: "success", message: "Admin Panel Unlocked" });
+                    } else {
+                      setToast({ type: "error", message: "Incorrect Passkey" });
+                    }
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all cursor-pointer"
+                >
+                  Unlock
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isAdmin && adminUnlocked && (
             <AdminConsole />
           )}
 

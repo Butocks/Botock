@@ -39,7 +39,7 @@ const POSTS: BlogPost[] = [
     excerpt: "Botock was created by Boto with a simple idea: creative technology should be easier to access. Learn about our vision, why we offer free tools, and our future plans.",
     category: "ai",
     categoryLabel: "Story",
-    categoryColor: "amber",
+    categoryColor: "bg-amber-500/20 text-amber-500 dark:text-amber-300 border-amber-500/30",
     readTime: "8 min read",
     date: "October 4, 2026",
     author: "Boto"
@@ -50,7 +50,7 @@ const POSTS: BlogPost[] = [
     excerpt: "Learn the secrets of Text-to-Video and Image-to-Video. Discover how to write the perfect prompt and stitch 10-second clips into a 30-minute masterpiece.",
     category: "video",
     categoryLabel: "Video Generation",
-    categoryColor: "blue",
+    categoryColor: "bg-blue-500/20 text-blue-500 dark:text-blue-300 border-blue-500/30",
     readTime: "15 min read",
     date: "October 4, 2026",
     author: "Boto"
@@ -61,7 +61,7 @@ const POSTS: BlogPost[] = [
     excerpt: "Everything you need to know about generating stunning images, understanding system speeds, and navigating our strict content safety policies.",
     category: "image",
     categoryLabel: "Photo Generation",
-    categoryColor: "emerald",
+    categoryColor: "bg-emerald-500/20 text-emerald-500 dark:text-emerald-300 border-emerald-500/30",
     readTime: "12 min read",
     date: "October 4, 2026",
     author: "Boto"
@@ -72,7 +72,7 @@ const POSTS: BlogPost[] = [
     excerpt: "Discover how to seamlessly remove backgrounds and utilize transparent PNGs for thumbnails, e-commerce, and professional presentations.",
     category: "image",
     categoryLabel: "Image Editing",
-    categoryColor: "purple",
+    categoryColor: "bg-purple-500/20 text-purple-500 dark:text-purple-300 border-purple-500/30",
     readTime: "10 min read",
     date: "October 4, 2026",
     author: "Boto"
@@ -83,7 +83,7 @@ const POSTS: BlogPost[] = [
     excerpt: "Learn how to secure, unlock, and split PDF documents directly inside your Botock creative workspace.",
     category: "pdf",
     categoryLabel: "Productivity",
-    categoryColor: "red",
+    categoryColor: "bg-red-500/20 text-red-500 dark:text-red-300 border-red-500/30",
     readTime: "8 min read",
     date: "October 4, 2026",
     author: "Boto"

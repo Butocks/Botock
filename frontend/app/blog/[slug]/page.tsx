@@ -200,18 +200,32 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 }
                 if (b.type === "attachment" && b.url && b.url !== featuredImg?.url) { // Skip featured image
                   return (
-                    <figure key={idx} className="my-10 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-100 dark:bg-black/30">
+                    <figure key={idx} className="my-10 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-100 dark:bg-black/30 flex flex-col items-center">
                       {b.url.endsWith(".mp4") || b.url.endsWith(".webm") ? (
-                        <video src={b.url} controls className="w-full h-auto max-h-[600px] object-contain" />
+                        <video src={b.url} controls className="w-full h-auto max-h-[600px] object-contain rounded-t-2xl" />
                       ) : (
-                        <img src={b.url} alt={b.caption || "Blog attachment"} className="w-full h-auto max-h-[600px] object-contain m-0" />
+                        <img src={b.url} alt={b.caption || "Blog attachment"} className="w-full h-auto max-h-[600px] object-contain m-0 rounded-t-2xl" />
                       )}
                       {b.caption && (
-                        <figcaption className="p-4 text-center text-sm font-semibold text-slate-500 bg-white dark:bg-[#111116] border-t border-slate-200 dark:border-slate-800 m-0">
+                        <figcaption className="w-full p-4 text-center text-sm font-semibold text-slate-500 bg-white dark:bg-[#111116] border-t border-slate-200 dark:border-slate-800 m-0 rounded-b-2xl">
                           {b.caption}
                         </figcaption>
                       )}
                     </figure>
+                  );
+                }
+                if (b.type === "button" && b.url) {
+                  return (
+                    <div key={idx} className="my-8 flex justify-center sm:justify-start">
+                      <a 
+                        href={b.url} 
+                        target={b.url.startsWith("http") ? "_blank" : "_self"} 
+                        rel={b.url.startsWith("http") ? "noopener noreferrer" : ""}
+                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm shadow-xl shadow-violet-600/30 transition-all hover:-translate-y-0.5 hover:shadow-violet-600/40 no-underline"
+                      >
+                        {b.content || "Click Here"}
+                      </a>
+                    </div>
                   );
                 }
                 return null;
