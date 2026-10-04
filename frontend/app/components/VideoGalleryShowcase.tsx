@@ -35,12 +35,12 @@ const SHOWCASES: ShowcaseItem[] = [
     id: "sc-1",
     title: "Cyberpunk Neo-Tokyo Rain",
     type: "video",
-    model: "Omni 1.1 Flash 360p",
+    model: "Botock Engine Flash 360p",
     duration: "10s",
     ratio: "16:9",
     prompt: "Cinematic 4K hyperlapse through a neon-lit Tokyo street during heavy rain, futuristic flying vehicles reflected in wet asphalt, anamorphic lens flare.",
     previewGradient: "from-blue-950 via-indigo-900 to-violet-950",
-    badge: "Omni 1.1 Flash",
+    badge: "Botock Engine Flash",
     badgeColor: "bg-blue-500/20 text-blue-300 border-blue-500/30",
     targetUrl: "/tools/video-generator?prompt=Cinematic+4K+hyperlapse+through+a+neon-lit+Tokyo+street+during+heavy+rain",
   },
@@ -60,7 +60,7 @@ const SHOWCASES: ShowcaseItem[] = [
     id: "sc-3",
     title: "Vertical TikTok Fashion Glow",
     type: "video",
-    model: "Omni 1.1 Flash",
+    model: "Botock Engine Flash",
     duration: "8s",
     ratio: "9:16",
     prompt: "Vertical 9:16 mobile reel of a high-fashion model walking in Paris at golden hour, silk fabric floating in slow motion, soft cinematic backlight.",
@@ -73,12 +73,12 @@ const SHOWCASES: ShowcaseItem[] = [
     id: "sc-4",
     title: "Fjord Drone Hyperlapse",
     type: "video",
-    model: "Omni 1.1 Flash 360p",
+    model: "Botock Engine Flash 360p",
     duration: "6s",
     ratio: "16:9",
     prompt: "Sweeping cinematic drone shot gliding through mystical misty Norwegian fjords at sunrise, crystal clear waterfalls tumbling down jagged green cliffs.",
     previewGradient: "from-emerald-950 via-teal-950 to-cyan-950",
-    badge: "Google Flow",
+    badge: "Cinematic AI",
     badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
     targetUrl: "/tools/video-generator?prompt=Sweeping+cinematic+drone+shot+gliding+through+mystical+misty+fjords",
   },
@@ -86,12 +86,12 @@ const SHOWCASES: ShowcaseItem[] = [
     id: "sc-5",
     title: "Neon Sports Car Drift",
     type: "video",
-    model: "Omni 1.1 Flash",
+    model: "Botock Engine Flash",
     duration: "4s",
     ratio: "16:9",
     prompt: "Sleek metallic electric sports car drifting around a wet mountain hairpin curve at midnight, glowing purple taillight trails, sparks flying.",
     previewGradient: "from-violet-950 via-slate-900 to-blue-950",
-    badge: "Omni 1.1 Flash",
+    badge: "Botock Engine Flash",
     badgeColor: "bg-violet-500/20 text-violet-300 border-violet-500/30",
     targetUrl: "/tools/video-generator?prompt=Sleek+metallic+electric+sports+car+drifting+around+mountain+curve",
   },
@@ -136,7 +136,7 @@ export default function VideoGalleryShowcase() {
             Generative Video & Image Gallery
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Sample high-fidelity outputs generated with Omni 1.1 Flash 360p and Nano Banana. Click to launch with prompt.
+            Sample high-fidelity outputs generated with Botock Engine Flash 360p and Nano Banana. Click to launch with prompt.
           </p>
         </div>
 

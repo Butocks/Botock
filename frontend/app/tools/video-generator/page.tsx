@@ -34,14 +34,14 @@ const SAMPLE_PROMPTS = [
 export const VIDEO_MODELS = [
   { 
     id: "omni-1.1-flash-360p", 
-    label: "Omni 1.1 Flash (360p - Fast)", 
+    label: "Botock Engine Flash (360p - Fast)", 
     resolution: "360p",
     allowedDurations: [4, 6, 8, 10],
     durationCosts: { 4: 8, 6: 10, 8: 12, 10: 14 }
   },
   { 
     id: "omni-1.1-flash-720p", 
-    label: "Omni 1.1 Flash (720p - HD)", 
+    label: "Botock Engine Flash (720p - HD)", 
     resolution: "720p",
     allowedDurations: [4, 6, 8, 10],
     durationCosts: { 4: 14, 6: 20, 8: 24, 10: 30 }

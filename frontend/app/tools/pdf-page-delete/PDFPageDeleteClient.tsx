@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { PDFDocument } from "pdf-lib";
-import { FileUp, FileText, Download, Loader2, RefreshCcw, Trash2 } from "lucide-react";
+import { FileUp, FileText, Download, Loader2, RefreshCcw, Trash2, X } from "lucide-react";
 import { usePdfDocument } from "@/lib/pdf/usePdfDocument";
 import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
+import * as pdfjsLib from "pdfjs-dist";
+import PDFPageThumbnail from "./PDFPageThumbnail";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export default function PDFPageDeleteClient() {
   const { file, pageCount, error: docError, loadFile, reset: resetDoc } = usePdfDocument();
@@ -14,6 +18,7 @@ export default function PDFPageDeleteClient() {
   const [pagesToDelete, setPagesToDelete] = useState<number[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pdfProxy, setPdfProxy] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
 
   const errorMessage = actionError || docError;
 
@@ -24,6 +29,14 @@ export default function PDFPageDeleteClient() {
       resetDownload();
       setPagesToDelete([]);
       await loadFile(acceptedFiles[0]);
+      
+      try {
+        const arrayBuffer = await acceptedFiles[0].arrayBuffer();
+        const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        setPdfProxy(doc);
+      } catch (err) {
+        console.error("Failed to render PDF thumbnails:", err);
+      }
     },
     [loadFile, resetDownload]
   );
@@ -84,7 +97,9 @@ export default function PDFPageDeleteClient() {
     resetDownload();
     setPagesToDelete([]);
     setActionError(null);
+    setPdfProxy(null);
   };
+  
   return (
     <div className="w-full bg-white dark:bg-[#121215] p-6 rounded-3xl border border-slate-200 dark:border-white/[0.08] shadow-sm">
       {!file ? (
@@ -104,7 +119,7 @@ export default function PDFPageDeleteClient() {
             Drop your PDF to remove pages
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Click on unwanted pages to delete them from your final document.
+            See visual thumbnails and click on unwanted pages to delete them from your final document.
           </p>
         </div>
       ) : (
@@ -130,10 +145,11 @@ export default function PDFPageDeleteClient() {
           </div>
 
           <div>
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Select Pages to Delete (Click to mark for removal):
+            <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center justify-between">
+              <span>Select Pages to Delete (Click to mark for removal):</span>
+              <span className="text-[10px] font-normal bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 px-2 py-1 rounded">Selected: {pagesToDelete.length}</span>
             </p>
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2.5 max-h-64 overflow-y-auto p-2 border border-slate-200 dark:border-white/[0.08] rounded-2xl bg-slate-50/50 dark:bg-white/[0.01]">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 max-h-[500px] overflow-y-auto p-4 border border-slate-200 dark:border-white/[0.08] rounded-2xl bg-slate-50 dark:bg-[#09090b]">
               {Array.from({ length: pageCount }, (_, i) => i + 1).map((pageNum) => {
                 const isMarked = pagesToDelete.includes(pageNum);
                 return (
@@ -141,14 +157,33 @@ export default function PDFPageDeleteClient() {
                     key={pageNum}
                     type="button"
                     onClick={() => togglePageDeletion(pageNum)}
-                    className={`aspect-square rounded-xl p-2 flex flex-col items-center justify-center border transition-all text-xs font-bold ${
+                    className={`relative aspect-[3/4] rounded-xl flex flex-col items-center justify-center overflow-hidden border-2 transition-all shadow-sm ${
                       isMarked
-                        ? "bg-rose-500 text-white border-rose-500 line-through shadow-sm"
-                        : "bg-white dark:bg-[#121215] border-slate-200 dark:border-white/[0.1] text-slate-800 dark:text-slate-200 hover:border-slate-400"
+                        ? "border-rose-500 shadow-md scale-95"
+                        : "border-slate-200 dark:border-white/[0.1] hover:border-violet-400 hover:shadow-md bg-white dark:bg-[#121215]"
                     }`}
                   >
-                    {isMarked ? <Trash2 className="w-4 h-4 mb-1" /> : <FileText className="w-4 h-4 mb-1 text-slate-400" />}
-                    <span>p.{pageNum}</span>
+                    {pdfProxy ? (
+                       <div className={`w-full h-full transition-opacity duration-300 ${isMarked ? "opacity-30" : "opacity-100"}`}>
+                         <PDFPageThumbnail pdf={pdfProxy} pageNum={pageNum} width={120} />
+                       </div>
+                    ) : (
+                       <FileText className={`w-8 h-8 mb-2 ${isMarked ? "text-rose-500" : "text-slate-300"}`} />
+                    )}
+                    
+                    {/* Number Badge */}
+                    <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm ${isMarked ? "bg-rose-500 text-white" : "bg-white/80 dark:bg-black/60 backdrop-blur-sm text-slate-700 dark:text-white border border-slate-200 dark:border-slate-700"}`}>
+                      Pg {pageNum}
+                    </div>
+                    
+                    {/* Delete Overlay */}
+                    {isMarked && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-rose-500/20">
+                         <div className="bg-rose-500 rounded-full p-2 text-white shadow-lg">
+                           <Trash2 className="w-6 h-6" />
+                         </div>
+                      </div>
+                    )}
                   </button>
                 );
               })}

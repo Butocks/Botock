@@ -55,7 +55,7 @@ export default function ContactPage() {
             Contact the Botock Team
           </h1>
           <p className="text-slate-600 dark:text-slate-400 text-sm sm:text-base leading-relaxed">
-            Have a question about Google Flow AI generation, API integrations, custom enterprise plans, or technical support? We're here to help.
+            Have a question about Cinematic AI AI generation, API integrations, custom enterprise plans, or technical support? We're here to help.
           </p>
         </div>
 

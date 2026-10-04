@@ -152,7 +152,7 @@ export default function PdfProtectClient() {
             Drop PDF here or click to browse
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-            Encrypt and password-protect sensitive contracts, tax records, and documents with zero server uploads.
+            Encrypt and password-protect sensitive contracts, tax records, and documents securely.
           </p>
         </div>
       ) : (
@@ -226,7 +226,7 @@ export default function PdfProtectClient() {
                 </div>
 
                 <p className="text-[11px] text-slate-500">
-                  Password encryption is processed directly on your computer. Botock does not store or see your password.
+                  Password encryption is processed securely. Botock does not store or see your password.
                 </p>
 
                 <button

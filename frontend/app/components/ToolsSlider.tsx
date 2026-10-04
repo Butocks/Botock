@@ -37,9 +37,9 @@ const FEATURED_TOOLS: SliderTool[] = [
   {
     id: "ai-video",
     name: "AI Video Generator",
-    desc: "Generate 4–10s cinematic clips from prompts and photos with Omni 1.1 Flash 360p.",
+    desc: "Generate 4–10s cinematic clips from prompts and photos with Botock Engine Flash 360p.",
     category: "ai",
-    badge: "Google Flow",
+    badge: "Cinematic AI",
     badgeColor: "bg-violet-500/20 text-violet-300 border-violet-500/30",
     href: "/tools/video-generator",
     icon: Film,

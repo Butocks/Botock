@@ -41,15 +41,23 @@ export async function POST(
     if (!backendRes.ok) {
       let errorMsg = `Server error (${backendRes.status}: ${backendRes.statusText})`;
       try {
-        const errorJson = await backendRes.json();
-        if (errorJson?.detail) {
-          errorMsg = typeof errorJson.detail === "string" 
-            ? errorJson.detail 
-            : JSON.stringify(errorJson.detail);
-        }
-      } catch {
         const text = await backendRes.text();
-        if (text) errorMsg = text.slice(0, 300);
+        if (text) {
+          try {
+            const errorJson = JSON.parse(text);
+            if (errorJson?.detail) {
+              errorMsg = typeof errorJson.detail === "string" 
+                ? errorJson.detail 
+                : JSON.stringify(errorJson.detail);
+            } else {
+              errorMsg = text.slice(0, 300);
+            }
+          } catch (e) {
+            errorMsg = text.slice(0, 300);
+          }
+        }
+      } catch (err) {
+        // Ignored, just use default errorMsg
       }
       return NextResponse.json({ detail: errorMsg }, { status: backendRes.status });
     }

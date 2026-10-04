@@ -46,7 +46,7 @@ const TOP_USED_TOOLS = [
   {
     id: "ai-video",
     name: "AI Video Generator",
-    desc: "Generate 4–10s realistic scenes from text prompts and photos via Google Flow AI.",
+    desc: "Generate 4–10s realistic scenes from text prompts and photos via Cinematic AI AI.",
     category: "AI Studio",
     badge: "Daily Free",
     badgeColor: "bg-violet-500/15 text-violet-600 dark:text-violet-300 border-violet-500/20",
@@ -147,7 +147,7 @@ export default function Home() {
   const [cms, setCms] = useState({
     heroHeadline: "Every Online Tool You Need.",
     heroGradient: "PDFs, Media & Generative AI.",
-    heroSubtitle: "Convert, edit, compress, and process PDFs, images, and videos in seconds — plus generate cinematic AI videos and photorealistic artwork powered by Google Flow & Nano Banana.",
+    heroSubtitle: "Convert, edit, compress, and process PDFs, images, and videos in seconds — plus generate cinematic AI videos and photorealistic artwork powered by Cinematic AI & Nano Banana.",
     topBannerText: "All-in-One Creative Studio & 100+ Online Utilities",
   });
 
@@ -306,7 +306,7 @@ export default function Home() {
                 Free Daily Quotas
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Every registered user receives 3 free video clips (Omni 1.1) and 5 free images (Nano Banana) refreshed automatically every 24 hours.
+                Every registered user receives 3 free video clips (Botock Engine) and 5 free images (Nano Banana) refreshed automatically every 24 hours.
               </p>
             </div>
           </div>
@@ -549,11 +549,11 @@ export default function Home() {
                     AI Studios
                   </h3>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/20">
-                    Google Flow
+                    Cinematic AI
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                  Turn text prompts and photos into realistic 4–10s video clips with Omni 1.1 Flash 360p, or create artwork with Nano Banana.
+                  Turn text prompts and photos into realistic 4–10s video clips with Botock Engine Flash 360p, or create artwork with Nano Banana.
                 </p>
                 <div className="space-y-1.5 mb-5 border-t border-slate-100 dark:border-white/[0.06] pt-3">
                   <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">

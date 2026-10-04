@@ -7,11 +7,44 @@ import { FileUp, FileText, Download, Loader2, RefreshCcw, RotateCw } from "lucid
 import { usePdfDocument } from "@/lib/pdf/usePdfDocument";
 import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 
+const parsePagesString = (input: string, maxPages: number): number[] => {
+  if (!input.trim()) return Array.from({ length: maxPages }, (_, i) => i);
+  
+  const pages = new Set<number>();
+  const parts = input.split(',');
+  
+  for (const part of parts) {
+    const range = part.trim().split('-');
+    if (range.length === 1) {
+      const p = parseInt(range[0], 10);
+      if (!isNaN(p) && p >= 1 && p <= maxPages) pages.add(p - 1);
+    } else if (range.length === 2) {
+      let start = parseInt(range[0], 10);
+      let end = parseInt(range[1], 10);
+      
+      if (!isNaN(start) && !isNaN(end)) {
+        if (start > end) {
+           const temp = start;
+           start = end;
+           end = temp;
+        }
+        start = Math.max(1, start);
+        end = Math.min(maxPages, end);
+        for (let i = start; i <= end; i++) {
+          pages.add(i - 1);
+        }
+      }
+    }
+  }
+  return Array.from(pages);
+};
+
 export default function PDFRotateClient() {
   const { file, pageCount, error: docError, loadFile, reset: resetDoc } = usePdfDocument();
   const { url: downloadUrl, setBlob, reset: resetDownload } = useObjectUrlDownload();
 
   const [rotationAngle, setRotationAngle] = useState<number>(90);
+  const [pagesInput, setPagesInput] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -22,6 +55,7 @@ export default function PDFRotateClient() {
       if (!acceptedFiles || acceptedFiles.length === 0) return;
       setActionError(null);
       resetDownload();
+      setPagesInput("");
       await loadFile(acceptedFiles[0]);
     },
     [loadFile, resetDownload]
@@ -42,10 +76,18 @@ export default function PDFRotateClient() {
       const buffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(buffer);
       const pages = pdfDoc.getPages();
+      
+      const targetIndices = parsePagesString(pagesInput, pages.length);
+      
+      if (targetIndices.length === 0) {
+        throw new Error("No valid pages found for the given input.");
+      }
 
-      for (const page of pages) {
-        const currentRotation = page.getRotation().angle;
-        page.setRotation(degrees((currentRotation + rotationAngle) % 360));
+      for (let i = 0; i < pages.length; i++) {
+        if (targetIndices.includes(i)) {
+          const currentRotation = pages[i].getRotation().angle;
+          pages[i].setRotation(degrees((currentRotation + rotationAngle) % 360));
+        }
       }
 
       const pdfBytes = await pdfDoc.save();
@@ -63,6 +105,7 @@ export default function PDFRotateClient() {
     resetDownload();
     setActionError(null);
     setRotationAngle(90);
+    setPagesInput("");
   };
   
   return (
@@ -84,7 +127,7 @@ export default function PDFRotateClient() {
             Drop your PDF to rotate
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Rotate all pages 90°, 180°, or 270° clockwise.
+            Rotate specific pages or all pages 90°, 180°, or 270° clockwise.
           </p>
         </div>
       ) : (
@@ -109,29 +152,47 @@ export default function PDFRotateClient() {
             </button>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Select Rotation Angle
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: "+90° Clockwise", angle: 90 },
-                { label: "180° Flip", angle: 180 },
-                { label: "+270° (90° Left)", angle: 270 },
-              ].map((item) => (
-                <button
-                  key={item.angle}
-                  type="button"
-                  onClick={() => setRotationAngle(item.angle)}
-                  className={`py-3 px-4 rounded-xl border text-xs font-bold transition-all ${
-                    rotationAngle === item.angle
-                      ? "bg-violet-600 text-white border-violet-600 shadow-md"
-                      : "border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.2] text-slate-700 dark:text-slate-300"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Pages to Rotate
+              </label>
+              <input
+                type="text"
+                value={pagesInput}
+                onChange={(e) => setPagesInput(e.target.value)}
+                placeholder="e.g. 1, 3, 5-7 (leave empty for all)"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-[#18181b] text-sm font-medium focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">
+                Leave empty to rotate all {pageCount} pages. Example format: 1, 3, 5-7.
+              </p>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                Select Rotation Angle
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: "+90°", angle: 90 },
+                  { label: "180° Flip", angle: 180 },
+                  { label: "+270°", angle: 270 },
+                ].map((item) => (
+                  <button
+                    key={item.angle}
+                    type="button"
+                    onClick={() => setRotationAngle(item.angle)}
+                    className={`flex-1 min-w-[80px] py-3 px-2 rounded-xl border text-xs font-bold transition-all ${
+                      rotationAngle === item.angle
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-md"
+                        : "border-slate-200 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.2] text-slate-700 dark:text-slate-300"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -153,7 +214,7 @@ export default function PDFRotateClient() {
                 </>
               ) : (
                 <>
-                  <RotateCw className="w-4 h-4" /> Rotate {pageCount} Pages ({rotationAngle}°)
+                  <RotateCw className="w-4 h-4" /> Rotate Selected Pages ({rotationAngle}°)
                 </>
               )}
             </button>
@@ -172,7 +233,7 @@ export default function PDFRotateClient() {
                   Rotation Applied!
                 </p>
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
-                  All {pageCount} pages rotated by {rotationAngle}°.
+                  Pages rotated by {rotationAngle}°.
                 </p>
               </div>
               <a

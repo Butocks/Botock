@@ -3,9 +3,13 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { PDFDocument } from "pdf-lib";
-import { FileUp, FileText, Download, Loader2, RefreshCcw, Layers } from "lucide-react";
+import { FileUp, FileText, Download, Loader2, RefreshCcw, Layers, Check } from "lucide-react";
 import { usePdfDocument } from "@/lib/pdf/usePdfDocument";
 import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
+import * as pdfjsLib from "pdfjs-dist";
+import PDFPageThumbnail from "./PDFPageThumbnail";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export default function PDFSplitClient() {
   const { file, pageCount, error: docError, loadFile, reset: resetDoc } = usePdfDocument();
@@ -17,6 +21,7 @@ export default function PDFSplitClient() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [outputFileName, setOutputFileName] = useState<string>("split-pages.pdf");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pdfProxy, setPdfProxy] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
 
   const errorMessage = actionError || docError;
 
@@ -32,6 +37,14 @@ export default function PDFSplitClient() {
         setFromPage(1);
         setToPage(Math.min(total, 1));
       }
+      
+      try {
+        const arrayBuffer = await acceptedFiles[0].arrayBuffer();
+        const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        setPdfProxy(doc);
+      } catch (err) {
+        console.error("Failed to render PDF thumbnails:", err);
+      }
     },
     [loadFile, resetDownload]
   );
@@ -41,6 +54,20 @@ export default function PDFSplitClient() {
     accept: { "application/pdf": [".pdf"] },
     maxFiles: 1,
   });
+
+  const handlePageClick = (pageNum: number) => {
+    setRangeMode("range");
+    if (fromPage === toPage && fromPage !== pageNum) {
+      if (pageNum < fromPage) {
+        setFromPage(pageNum);
+      } else {
+        setToPage(pageNum);
+      }
+    } else {
+      setFromPage(pageNum);
+      setToPage(pageNum);
+    }
+  };
 
   const handleSplit = async () => {
     if (!file || pageCount === 0) return;
@@ -90,6 +117,7 @@ export default function PDFSplitClient() {
     resetDoc();
     resetDownload();
     setActionError(null);
+    setPdfProxy(null);
   };
   
   return (
@@ -198,6 +226,58 @@ export default function PDFSplitClient() {
                 Creates a fresh reconstructed PDF containing all {pageCount} pages, stripping metadata and bad objects.
               </p>
             </div>
+          </div>
+
+          {/* Visual Page Grid */}
+          <div className="mt-4">
+            <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 flex items-center justify-between">
+              <span className="uppercase tracking-wider">Visual Page Selector</span>
+              {rangeMode === "range" && (
+                <span className="text-[10px] font-normal bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 px-2 py-1 rounded">
+                  Pages {fromPage} to {toPage}
+                </span>
+              )}
+            </h4>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 max-h-[500px] overflow-y-auto p-4 border border-slate-200 dark:border-white/[0.08] rounded-xl bg-slate-50/50 dark:bg-[#09090b]/50">
+              {Array.from({ length: pageCount }).map((_, idx) => {
+                const pageNum = idx + 1;
+                const isSelected = rangeMode === "all" || (pageNum >= fromPage && pageNum <= toPage);
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageClick(pageNum)}
+                    className={`relative aspect-[3/4] rounded-xl flex flex-col items-center justify-center overflow-hidden border-2 transition-all shadow-sm ${
+                      isSelected 
+                        ? "border-violet-500 shadow-md scale-[1.02]" 
+                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-[#121215] opacity-50 hover:opacity-100 hover:border-violet-300"
+                    }`}
+                  >
+                    {pdfProxy ? (
+                       <div className="w-full h-full">
+                         <PDFPageThumbnail pdf={pdfProxy} pageNum={pageNum} width={120} />
+                       </div>
+                    ) : (
+                       <FileText className={`w-8 h-8 mb-2 ${isSelected ? "text-violet-500" : "text-slate-300"}`} />
+                    )}
+                    
+                    {/* Number Badge */}
+                    <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm ${isSelected ? "bg-violet-500 text-white" : "bg-white/80 dark:bg-black/60 backdrop-blur-sm text-slate-700 dark:text-white border border-slate-200 dark:border-slate-700"}`}>
+                      Pg {pageNum}
+                    </div>
+                    
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 bg-violet-500 rounded-full p-0.5 text-white shadow">
+                         <Check className="w-3 h-3" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-2">
+              Tip: Click on a page to select it. Click another page to select a range.
+            </p>
           </div>
 
           {errorMessage && (

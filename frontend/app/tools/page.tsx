@@ -58,7 +58,7 @@ export default function ToolsDirectoryPage() {
     {
       id: "video-gen",
       name: "AI Video Generator",
-      desc: "Turn text prompts and photos into cinematic videos with Google Flow AI.",
+      desc: "Turn text prompts and photos into cinematic videos with Cinematic AI AI.",
       category: "ai",
       status: "active",
       href: "/tools/video-generator",
@@ -334,6 +334,15 @@ export default function ToolsDirectoryPage() {
       category: "pdf",
       status: "active",
       href: "/tools/pdf-forms",
+      icon: FileText,
+    },
+    {
+      id: "pdf-to-book",
+      name: "PDF to Book Viewer",
+      desc: "Read your PDF files like a real book with side-by-side pages.",
+      category: "pdf",
+      status: "active",
+      href: "/tools/pdf-to-book",
       icon: FileText,
     },
     {

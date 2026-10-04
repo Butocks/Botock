@@ -3,7 +3,7 @@ import io
 import os
 import shutil
 import tempfile
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pdf2docx import Converter
@@ -135,3 +135,43 @@ async def convert_docx_to_pdf(file: UploadFile = File(...)):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Conversion failed: {str(e)}")
+
+
+@app.post("/api/convert/pdf-protect")
+async def protect_pdf(file: UploadFile = File(...), password: str = Form(...)):
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="File must be a PDF")
+    
+    try:
+        from PyPDF2 import PdfReader, PdfWriter
+    except ImportError:
+        try:
+            from pypdf import PdfReader, PdfWriter
+        except ImportError:
+            raise HTTPException(status_code=500, detail="PDF library not installed in backend")
+
+    try:
+        pdf_bytes = await file.read()
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        writer = PdfWriter()
+
+        for page in reader.pages:
+            writer.add_page(page)
+
+        writer.encrypt(password)
+        
+        output = io.BytesIO()
+        writer.write(output)
+        output.seek(0)
+        
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as out_f:
+            out_f.write(output.getvalue())
+            out_path = out_f.name
+            
+        return FileResponse(
+            out_path, 
+            filename=file.filename.replace(".pdf", "-protected.pdf"),
+            media_type="application/pdf"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Encryption failed: {str(e)}")

@@ -83,7 +83,7 @@ export default function Footer() {
             </Link>
 
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              The unified creative operating system. Turn text and photos into cinematic videos with Omni 1.1, synthesize art with Nano Banana, and access 100+ in-browser utilities.
+              The unified creative operating system. Turn text and photos into cinematic videos with Botock Engine, synthesize art with Nano Banana, and access 100+ in-browser utilities.
             </p>
 
             {/* Official Social Icons */}

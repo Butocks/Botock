@@ -1522,3 +1522,16 @@ ToolRegistry.registerTool({
 
 
 
+ToolRegistry.registerTool({
+  id: "pdf-to-book",
+  name: "PDF to Book Viewer",
+  description: "Read your PDF files like a real book with side-by-side pages.",
+  category: "pdf",
+  seoTitle: "PDF to Book Viewer Online - Botock",
+  seoDescription: "Enjoy an immersive, side-by-side book reading experience right in your browser.",
+  endpoint: "/tools/pdf-to-book",
+  isClientSideOnly: true,
+  parameters: [
+    { name: "file", type: "file", description: "PDF document", required: true }
+  ]
+});
