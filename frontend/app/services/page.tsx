@@ -44,7 +44,7 @@ export default function ServicesPage() {
         "Supports platform development"
       ],
       ctaText: "Get Ad-Free",
-      ctaHref: "/signup?plan=tools",
+      ctaHref: "/waitlist?plan=tools",
       highlight: false,
     },
     {
@@ -58,7 +58,7 @@ export default function ServicesPage() {
         "Save generations in library"
       ],
       ctaText: "Buy Tokens",
-      ctaHref: "/signup?plan=pro",
+      ctaHref: "/waitlist?plan=pro",
       highlight: true,
       badge: "Self-Service",
     },

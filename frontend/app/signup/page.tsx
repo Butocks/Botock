@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "../../utils/supabase/client";
@@ -45,7 +46,14 @@ const COUNTRIES = [
   "Other",
 ];
 
-export default function SignUpPage() {
+function SignUpPageInner() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const planParam = searchParams.get("plan");
+  const nextParam = searchParams.get("next");
+  // After signup/login, redirect to waitlist if plan is specified, else to home
+  const postAuthRedirect = planParam ? `/waitlist?plan=${planParam}` : (nextParam || "/tools/video-generator");
+
   const [step, setStep] = useState<"form" | "otp">("form");
   const [formData, setFormData] = useState({
     name: "",
@@ -90,7 +98,7 @@ export default function SignUpPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${origin}/auth/callback?next=/tools/video-generator`,
+          redirectTo: `${origin}/auth/callback?next=${postAuthRedirect}`,
           queryParams: {
             access_type: "offline",
             prompt: "consent",
@@ -571,5 +579,16 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  );
+}
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#09090b]">
+        <RefreshCw className="w-6 h-6 animate-spin text-violet-500" />
+      </div>
+    }>
+      <SignUpPageInner />
+    </Suspense>
   );
 }
