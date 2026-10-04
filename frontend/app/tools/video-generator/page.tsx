@@ -562,7 +562,7 @@ export default function VideoGeneratorPage() {
       </div>
 
       {/* Pinned Bottom Input Dock */}
-      <div className="shrink-0 w-full bg-white/95 dark:bg-[#0c081a]/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/10 px-3 sm:px-6 py-2 sm:py-2.5 z-30 shadow-lg">
+      <div className="shrink-0 w-full bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/10 px-3 sm:px-6 py-2 sm:py-2.5 z-30 shadow-lg">
         <div className="max-w-3xl mx-auto flex flex-col gap-1.5 sm:gap-2">
           
           {/* Controls Chips Row */}
@@ -573,8 +573,8 @@ export default function VideoGeneratorPage() {
               onChange={(e) => setAspectRatio(e.target.value as any)}
               className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer"
             >
-              <option value="16:9" className="bg-white dark:bg-[#0c081a]">16:9 Landscape</option>
-              <option value="9:16" className="bg-white dark:bg-[#0c081a]">9:16 Portrait</option>
+              <option value="16:9" className="bg-white dark:bg-[#09090b]">16:9 Landscape</option>
+              <option value="9:16" className="bg-white dark:bg-[#09090b]">9:16 Portrait</option>
             </select>
 
             {/* Model Select */}
@@ -584,7 +584,7 @@ export default function VideoGeneratorPage() {
               className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer"
             >
               {VIDEO_MODELS.map((m) => (
-                <option key={m.id} value={m.id} className="bg-white dark:bg-[#0c081a]">{m.label}</option>
+                <option key={m.id} value={m.id} className="bg-white dark:bg-[#09090b]">{m.label}</option>
               ))}
             </select>
 
@@ -601,7 +601,7 @@ export default function VideoGeneratorPage() {
                   {allowed.map((sec) => {
                     const cost = currentModelObj?.durationCosts ? (currentModelObj.durationCosts as any)[sec] : 14;
                     return (
-                      <option key={sec} value={sec} className="bg-white dark:bg-[#0c081a]">
+                      <option key={sec} value={sec} className="bg-white dark:bg-[#09090b]">
                         {sec}s Video ({cost} cr)
                       </option>
                     );
@@ -695,7 +695,7 @@ export default function VideoGeneratorPage() {
       {/* Subscription Waitlist Modal */}
       {showSubModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#110d22] border border-slate-200 dark:border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
+          <div className="bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
             <button
               onClick={() => { setShowSubModal(false); setSubSubmitted(false); }}
               className="absolute top-4 right-4 text-slate-400 hover:text-white p-1"

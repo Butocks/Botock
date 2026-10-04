@@ -494,7 +494,7 @@ export default function ImageGeneratorPage() {
       </div>
 
       {/* Pinned Bottom Input Dock */}
-      <div className="shrink-0 w-full bg-white/95 dark:bg-[#0c081a]/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/10 px-3 sm:px-6 py-2 sm:py-2.5 z-30 shadow-lg">
+      <div className="shrink-0 w-full bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/10 px-3 sm:px-6 py-2 sm:py-2.5 z-30 shadow-lg">
         <div className="max-w-3xl mx-auto flex flex-col gap-1.5 sm:gap-2">
           
           {/* Controls Chips Row */}
@@ -506,7 +506,7 @@ export default function ImageGeneratorPage() {
               className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-amber-500 cursor-pointer"
             >
               {ASPECT_RATIOS.map((r) => (
-                <option key={r.id} value={r.id} className="bg-white dark:bg-[#0c081a]">{r.label}</option>
+                <option key={r.id} value={r.id} className="bg-white dark:bg-[#09090b]">{r.label}</option>
               ))}
             </select>
 
@@ -517,7 +517,7 @@ export default function ImageGeneratorPage() {
               className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-amber-500 cursor-pointer"
             >
               {IMAGE_MODELS.map((m) => (
-                <option key={m.id} value={m.id} className="bg-white dark:bg-[#0c081a]">{m.label}</option>
+                <option key={m.id} value={m.id} className="bg-white dark:bg-[#09090b]">{m.label}</option>
               ))}
             </select>
 
@@ -528,7 +528,7 @@ export default function ImageGeneratorPage() {
               className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-amber-500 cursor-pointer hidden sm:block"
             >
               {STYLE_PRESETS.map((s, idx) => (
-                <option key={idx} value={s.value} className="bg-white dark:bg-[#0c081a]">{s.label}</option>
+                <option key={idx} value={s.value} className="bg-white dark:bg-[#09090b]">{s.label}</option>
               ))}
             </select>
 
@@ -605,7 +605,7 @@ export default function ImageGeneratorPage() {
       {/* Subscription Waitlist Modal */}
       {showSubModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#110d22] border border-slate-200 dark:border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
+          <div className="bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/10 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
             <button
               onClick={() => { setShowSubModal(false); setSubSubmitted(false); }}
               className="absolute top-4 right-4 text-slate-400 hover:text-white p-1"

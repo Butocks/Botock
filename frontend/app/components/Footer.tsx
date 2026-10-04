@@ -93,7 +93,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <a
-                  href="https://facebook.com/botock"
+                  href="https://www.facebook.com/botockapp/"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Facebook"
@@ -105,7 +105,7 @@ export default function Footer() {
                 </a>
 
                 <a
-                  href="https://instagram.com/botock_ai"
+                  href="https://www.instagram.com/botockai/"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Instagram"
@@ -117,19 +117,7 @@ export default function Footer() {
                 </a>
 
                 <a
-                  href="https://linkedin.com/company/botock"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="LinkedIn"
-                  className="w-8 h-8 rounded-lg bg-slate-200/70 dark:bg-white/[0.04] border border-slate-300 dark:border-white/[0.08] hover:text-sky-600 dark:hover:text-sky-400 text-slate-600 dark:text-slate-400 flex items-center justify-center transition-colors"
-                >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                  </svg>
-                </a>
-
-                <a
-                  href="https://tiktok.com/@botock_ai"
+                  href="https://www.tiktok.com/@botockapp"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="TikTok"
@@ -141,14 +129,38 @@ export default function Footer() {
                 </a>
 
                 <a
-                  href="https://x.com/botock_ai"
+                  href="https://x.com/botockapp"
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label="X"
+                  aria-label="X (Twitter)"
                   className="w-8 h-8 rounded-lg bg-slate-200/70 dark:bg-white/[0.04] border border-slate-300 dark:border-white/[0.08] hover:text-black dark:hover:text-white text-slate-600 dark:text-slate-400 flex items-center justify-center transition-colors"
                 >
-                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </a>
+
+                <a
+                  href="https://www.reddit.com/user/botockapp/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Reddit"
+                  className="w-8 h-8 rounded-lg bg-slate-200/70 dark:bg-white/[0.04] border border-slate-300 dark:border-white/[0.08] hover:text-[#FF4500] dark:hover:text-[#FF4500] text-slate-600 dark:text-slate-400 flex items-center justify-center transition-colors"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M24 11.779c0-1.459-1.192-2.645-2.657-2.645-.715 0-1.363.275-1.84.734-1.734-1.227-4.118-2.01-6.75-2.121l1.45-6.732 4.673 1.053c.046 1.057.92 1.905 1.986 1.905 1.101 0 1.996-.895 1.996-1.996 0-1.102-.895-1.997-1.996-1.997-.905 0-1.671.603-1.899 1.432l-5.201-1.171c-.131-.03-.271.018-.356.124-.085.105-.111.247-.07.375l-1.644 7.643c-2.733.061-5.206.848-6.985 2.102-.486-.475-1.144-.766-1.874-.766-1.465 0-2.657 1.186-2.657 2.645 0 .973.535 1.812 1.332 2.271-.052.287-.078.583-.078.88 0 4.195 5.617 7.607 12.529 7.607 6.913 0 12.53-3.412 12.53-7.607 0-.294-.025-.587-.076-.87.785-.461 1.311-1.295 1.311-2.256zm-19.467.575c0-.687.56-1.245 1.25-1.245.312 0 .6.115.823.313-1.077.817-1.905 1.83-2.392 2.966-.464-.325-.75-.866-.75-1.472zm11.751 7.228c-1.299 1.302-4.191 1.341-4.29 1.341-.099 0-2.991-.04-4.291-1.342-.255-.255-.255-.668 0-.923.255-.256.668-.256.924 0 .927.93 2.684.978 3.367.978.683 0 2.44-.047 3.366-.977.256-.256.67-.256.925 0 .256.255.256.667 0 .923zm-5.467-2.955c-1.127 0-2.043-.918-2.043-2.046 0-1.128.916-2.045 2.043-2.045 1.127 0 2.044.917 2.044 2.045 0 1.128-.917 2.046-2.044 2.046zm6.837 0c-1.127 0-2.044-.918-2.044-2.046 0-1.128.917-2.045 2.044-2.045 1.127 0 2.044.917 2.044 2.045 0 1.128-.917 2.046-2.044 2.046zm.431-3.666c-.482-1.139-1.305-2.152-2.378-2.972.222-.196.509-.31.82-.31.688 0 1.247.558 1.247 1.245 0 .605-.284 1.146-.747 1.472z"/>
+                  </svg>
+                </a>
+                
+                <a
+                  href="https://www.youtube.com/@aibotock"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="YouTube"
+                  className="w-8 h-8 rounded-lg bg-slate-200/70 dark:bg-white/[0.04] border border-slate-300 dark:border-white/[0.08] hover:text-red-600 dark:hover:text-red-500 text-slate-600 dark:text-slate-400 flex items-center justify-center transition-colors"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                   </svg>
                 </a>
               </div>

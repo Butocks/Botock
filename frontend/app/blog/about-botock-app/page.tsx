@@ -5,9 +5,9 @@ import { ArrowLeft, Edit3, Image as ImageIcon, Video, FileText, CheckCircle2 } f
 
 export default function AboutBotockApp() {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0c081a]">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#09090b]">
       {/* Header */}
-      <div className="w-full bg-white dark:bg-[#110d22] border-b border-slate-200 dark:border-white/10 px-6 py-12 relative overflow-hidden">
+      <div className="w-full bg-white dark:bg-[#111114] border-b border-slate-200 dark:border-white/10 px-6 py-12 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
         <div className="max-w-4xl mx-auto">
           <Link href="/blog" className="inline-flex items-center text-xs font-bold text-slate-500 hover:text-amber-500 mb-6 transition-colors">

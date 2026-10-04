@@ -49,7 +49,7 @@ export default function DaddyPage() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center p-4">
-        <form onSubmit={handleLogin} className="bg-white dark:bg-[#110d22] border border-slate-200 dark:border-white/10 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center relative overflow-hidden">
+        <form onSubmit={handleLogin} className="bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/10 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-amber-500"></div>
           <Lock className="w-12 h-12 text-slate-800 dark:text-slate-200 mx-auto mb-4 opacity-50" />
           <h1 className="text-xl font-black text-slate-900 dark:text-white mb-6">Restricted Area</h1>
@@ -93,7 +93,7 @@ export default function DaddyPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-[#110d22] p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+        <div className="bg-white dark:bg-[#111114] p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
             <Users className="w-6 h-6" />
           </div>
@@ -103,7 +103,7 @@ export default function DaddyPage() {
           </div>
         </div>
         
-        <div className="bg-white dark:bg-[#110d22] p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+        <div className="bg-white dark:bg-[#111114] p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
             <ImageIcon className="w-6 h-6" />
           </div>
@@ -113,7 +113,7 @@ export default function DaddyPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#110d22] p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+        <div className="bg-white dark:bg-[#111114] p-6 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
             <Activity className="w-6 h-6" />
           </div>
@@ -124,7 +124,7 @@ export default function DaddyPage() {
         </div>
       </div>
       
-      <div className="bg-white dark:bg-[#110d22] p-8 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
+      <div className="bg-white dark:bg-[#111114] p-8 rounded-3xl border border-slate-200 dark:border-white/10 shadow-sm">
         <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Advanced Settings</h2>
         <p className="text-sm text-slate-500">Connected to Backend API: {stats?.message}</p>
         <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-600 text-sm font-semibold">
