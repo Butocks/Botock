@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 import Client from "./Client";
-import ToolEngine from "../ToolEngine";
+import { ToolRegistry } from "../ToolEngine";
 
-const tool = ToolEngine.getTool("pdf-to-book");
+const tool = ToolRegistry.getTool("pdf-to-book");
 
 export const metadata: Metadata = {
   title: tool?.seoTitle || "PDF to Book Viewer",

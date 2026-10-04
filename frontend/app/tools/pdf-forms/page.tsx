@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 import Client from "./Client";
-import ToolEngine from "../ToolEngine";
+import { ToolRegistry } from "../ToolEngine";
 
-const tool = ToolEngine.getTool("pdf-forms");
+const tool = ToolRegistry.getTool("pdf-forms");
 
 export const metadata: Metadata = {
   title: tool?.seoTitle || "Create Fillable PDF Forms",
