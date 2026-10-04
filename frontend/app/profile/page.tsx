@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
 import { getBackendUrl } from "../../utils/runtime-urls";
+import AdminConsole from "./AdminConsole";
 import {
   User as UserIcon,
   Mail,
@@ -543,51 +544,9 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Admin Dashboard (Hidden for normal users) */}
+          {/* Real Full Admin Console */}
           {isAdmin && (
-            <div className="p-6 sm:p-8 rounded-3xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/30 shadow-sm space-y-6">
-              <div>
-                <h2 className="text-base font-bold text-amber-600 dark:text-amber-500 flex items-center gap-2">
-                  <ShieldCheck className="w-5 h-5" />
-                  <span>Daddy Control Panel</span>
-                </h2>
-                <p className="text-xs text-amber-700/70 dark:text-amber-500/70 mt-1">
-                  You are viewing this because you have an Admin Role.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white/50 dark:bg-black/20 p-4 rounded-2xl border border-amber-500/20 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                    <Users className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-500">TOTAL USERS</p>
-                    <p className="text-xl font-black text-slate-900 dark:text-white">{adminStats?.users || 0}</p>
-                  </div>
-                </div>
-                
-                <div className="bg-white/50 dark:bg-black/20 p-4 rounded-2xl border border-amber-500/20 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                    <ImageIcon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-500">GENERATIONS</p>
-                    <p className="text-xl font-black text-slate-900 dark:text-white">{adminStats?.generations || 0}</p>
-                  </div>
-                </div>
-
-                <div className="bg-white/50 dark:bg-black/20 p-4 rounded-2xl border border-amber-500/20 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                    <Activity className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-500">SYSTEM STATUS</p>
-                    <p className="text-lg font-black text-emerald-500">Online</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AdminConsole />
           )}
 
           {/* Action buttons */}
