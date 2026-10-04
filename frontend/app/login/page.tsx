@@ -232,14 +232,7 @@ function LoginForm() {
           </Link>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-white/[0.06] text-center">
-          <Link
-            href="/admin/login"
-            className="text-[11px] text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
-          >
-            Admin Secure Access Portal →
-          </Link>
-        </div>
+
       </div>
     </div>
   );
