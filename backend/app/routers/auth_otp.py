@@ -167,6 +167,14 @@ DEFAULT_SETTINGS = {
         "free_daily_credits": 50,
         "free_daily_photos": 5,
         "subscribers_unlimited_photos": True,
+        "guest_limits": {
+            "enabled": True,
+            "max_videos_per_day": 1,
+            "video_model": "omni-1.1-flash-360p",
+            "video_duration": 4,
+            "max_images_per_day": 2,
+            "image_model": "nano-banana-2"
+        },
         "video_tokens": 1500,
         "video_model_costs": {
             "omni-1.1-flash-360p": 14,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import GuestCTA from "../../components/GuestCTA";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../utils/supabase/client";
@@ -231,7 +232,11 @@ export default function ImageGeneratorPage() {
     } catch (err: any) {
       setStatus("error");
       setProgressPercent(0);
-      setErrorMessage(err.message || "An unexpected error occurred.");
+      const msg = err.message || "An unexpected error occurred.";
+      setErrorMessage(msg);
+      if (!user && (msg.includes("Guest") || msg.includes("limit") || msg.includes("log in") || msg.includes("Unauthorized"))) {
+        setShowGuestCTA(true);
+      }
     }
   };
 
@@ -581,8 +586,7 @@ export default function ImageGeneratorPage() {
 
             {/* Right Action */}
             <div className="shrink-0 pr-0.5 pb-0.5">
-              {user ? (
-                <button
+              <button
                   type="button"
                   onClick={handleGenerate}
                   disabled={status === "generating" || status === "polling" || prompt.trim().length < 3}
@@ -591,15 +595,6 @@ export default function ImageGeneratorPage() {
                   <Sparkles className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Generate</span>
                 </button>
-              ) : (
-                <Link
-                  href="/login"
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Lock className="w-3 h-3" />
-                  <span>Sign In</span>
-                </Link>
-              )}
             </div>
 
           </div>
@@ -671,6 +666,7 @@ export default function ImageGeneratorPage() {
         </div>
       )}
 
+      <GuestCTA isOpen={showGuestCTA} onClose={() => setShowGuestCTA(false)} />
     </div>
   );
 }

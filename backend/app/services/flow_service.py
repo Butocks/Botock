@@ -619,9 +619,9 @@ class FlowService:
             raise Exception("Download media button not visible.")
 
         # Use global locators to avoid stale menu references
-        opt = page.locator('.cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]').filter(has_text=re.compile("720p|360p|Original", re.IGNORECASE)).first
+        opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button, .cdk-overlay-pane button').filter(has_text=re.compile("720p|360p|Original|Download", re.IGNORECASE)).first
         if not await opt.is_visible(timeout=3000):
-            opt = page.locator('.cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]').first
+            opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button').first
             
         if not await opt.is_visible(timeout=2000):
             raise Exception("Resolution option not found in download menu")
@@ -816,9 +816,9 @@ class FlowService:
                         await dl_btn.click()
                         await asyncio.sleep(1)
 
-                        opt = page.locator('.cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]').filter(has_text=re.compile("Original size|1K", re.IGNORECASE)).first
+                        opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button, .cdk-overlay-pane button').filter(has_text=re.compile("Original size|1K|Download", re.IGNORECASE)).first
                         if not await opt.is_visible(timeout=3000):
-                            opt = page.locator('.cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]').first
+                            opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button').first
 
                         async with page.expect_download(timeout=60000) as dl_info:
                             await opt.click(force=True)

@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.responses import FileResponse, Response
 from app.models.schemas import VideoGenerateRequest, VideoGenerateResponse, VideoStatusResponse, VideoListResponse
 from app.services.flow_service import FlowVideoService
-from app.middleware.auth import get_current_user, get_current_user_or_guest
+from app.middleware.auth import get_current_user, get_optional_user, get_current_user_or_guest
 from app.config import settings
 from app.services.distributed_queue import QueueFullError, queue
 from app.services.blob_storage import download_video as download_blob_video
@@ -39,6 +39,7 @@ current_queued_jobs = 0
 RATE_LIMIT_WINDOW = 600  # 10 minutes
 MAX_REQUESTS_PER_WINDOW = 5
 ip_request_history = defaultdict(list)
+guest_generation_history = defaultdict(list) # Stores timestamps of successful guest generations per IP
 
 
 def check_rate_limit(client_ip: str):
@@ -122,7 +123,29 @@ async def generate_video(
 
     # Sanitize prompt (strip extra whitespace, length checked by Pydantic)
     clean_prompt = request.prompt.strip()
-    is_pro = user.get("is_pro", False)
+    is_pro = user.get("is_pro", False) if user else False
+    is_guest = user is None
+    
+    from app.routers.auth_otp import get_platform_settings
+    settings_data = get_platform_settings()
+    guest_limits = settings_data.get("quotas", {}).get("guest_limits", {})
+    
+    if is_guest:
+        if not guest_limits.get("enabled", False):
+            raise HTTPException(status_code=401, detail="Guest generation is currently disabled. Please log in.")
+        
+        # Check daily guest limit
+        max_daily = guest_limits.get("max_videos_per_day", 1)
+        now = time.time()
+        one_day_ago = now - 86400
+        # Clean up old
+        guest_generation_history[client_ip] = [t for t in guest_generation_history[client_ip] if t > one_day_ago]
+        if len(guest_generation_history[client_ip]) >= max_daily:
+            raise HTTPException(status_code=429, detail="Guest daily video limit reached. Please log in to create more.")
+        
+        # Override requested model and duration with admin settings
+        request.model = guest_limits.get("video_model", "omni-1.1-flash-360p")
+        request.duration_seconds = guest_limits.get("video_duration", 4)
     is_guest = user.get("is_guest", False)
 
     # Queue limit: 1 user generating at a time, max 2 in queue, priority to subscribers
@@ -249,14 +272,14 @@ async def generate_video(
 
 
 @router.post("/close-session")
-async def close_session(user: dict = Depends(get_current_user)):
+async def close_session(user: dict = Depends(get_optional_user)):
     """Closes and resets active Flow AI project continuity to conserve server memory."""
     await flow_service.reset_session()
     return {"status": "success", "message": "Flow AI session gracefully closed."}
 
 
 @router.get("/credits")
-async def get_credits(user: dict = Depends(get_current_user)):
+async def get_credits(user: dict = Depends(get_optional_user)):
     """Returns the user's remaining daily credits and quota details."""
     from app.middleware.auth import get_user_credit_balance
     from app.routers.auth_otp import get_platform_settings
@@ -386,7 +409,7 @@ async def download_video(generation_id: str, user: dict = Depends(get_current_us
 
 
 @router.get("/list", response_model=VideoListResponse)
-async def list_videos(user: dict = Depends(get_current_user)):
+async def list_videos(user: dict = Depends(get_optional_user)):
     videos = []
     user_id = user["user_id"]
     for gen_id, data in video_statuses.items():
