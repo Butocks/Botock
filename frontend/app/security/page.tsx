@@ -17,7 +17,7 @@ import {
 export default function SecurityPage() {
   return (
     <div className="flex-1 flex flex-col py-12">
-      <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">

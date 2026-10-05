@@ -86,7 +86,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-xl border-b border-slate-200 dark:border-white/[0.08] transition-colors select-none">
-      <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 sm:h-22">
           {/* Brand Logo */}
           <div className="flex-shrink-0">
@@ -144,7 +144,7 @@ export default function Navbar() {
 
               {activeDropdown === "studios" && (
                 <div
-                  className="absolute left-1/2 -translate-x-1/2 mt-3 w-[740px] rounded-2xl bg-white dark:bg-[#0f0f13] border border-slate-200 dark:border-white/[0.1] shadow-2xl p-5 z-50 animate-fade-in"
+                  className="absolute left-1/2 -translate-x-1/2 mt-3 w-full max-w-[740px] rounded-2xl bg-white dark:bg-[#0f0f13] border border-slate-200 dark:border-white/[0.1] shadow-2xl p-5 z-50 animate-fade-in"
                   onMouseEnter={() => handleMouseEnter("studios")}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -266,7 +266,7 @@ export default function Navbar() {
 
               {activeDropdown === "tools" && (
                 <div
-                  className="absolute left-1/2 -translate-x-1/2 mt-3 w-[1120px] max-w-[95vw] rounded-2xl bg-white dark:bg-[#0f0f13] border border-slate-200 dark:border-white/[0.1] shadow-2xl p-6 z-50 animate-fade-in"
+                  className="absolute left-1/2 -translate-x-1/2 mt-3 w-full max-w-[1120px] max-w-[95vw] rounded-2xl bg-white dark:bg-[#0f0f13] border border-slate-200 dark:border-white/[0.1] shadow-2xl p-6 z-50 animate-fade-in"
                   onMouseEnter={() => handleMouseEnter("tools")}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -509,7 +509,7 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {isOpen && (
-        <div className="md:hidden bg-white dark:bg-[#0e0e12] border-b border-slate-200 dark:border-white/[0.1] px-4 pt-3 pb-6 space-y-3 animate-fade-in shadow-xl">
+        <div className="md:hidden w-full overflow-hidden bg-white dark:bg-[#0e0e12] border-b border-slate-200 dark:border-white/[0.1] px-4 pt-3 pb-6 space-y-3 animate-fade-in shadow-xl">
           <div className="text-[11px] uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400 px-2 pt-1">
             AI Studios
           </div>
@@ -588,7 +588,7 @@ export default function Navbar() {
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     {user.user_metadata?.full_name || user.email?.split("@")[0]}
                   </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">{user.email}</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-full">{user.email}</span>
                 </div>
                 {isUserVerified ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">

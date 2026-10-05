@@ -45,7 +45,7 @@ export default function ContactPage() {
 
   return (
     <div className="flex-1 flex flex-col py-12">
-      <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold mb-4">
             <Mail className="w-3.5 h-3.5" />

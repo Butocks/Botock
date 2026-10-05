@@ -1007,10 +1007,7 @@ const exportVideo = useCallback(async () => {
     revokeVideoUrl,
   ]);
 
-  const timelineMinWidth = Math.max(
-    720,
-    720 * zoom
-  );
+  const timelineMinWidth = Math.max(typeof window !== 'undefined' ? Math.min(window.innerWidth - 32, 720) : 720, 720 * zoom);
 
   return (
     <div className="w-full rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-white/[0.08] dark:bg-[#121215] sm:p-6">
@@ -1291,7 +1288,7 @@ const exportVideo = useCallback(async () => {
                   <div
                     ref={timelineRef}
                     onPointerDown={handleTimelinePointerDown}
-                    className="relative h-[128px] min-w-[720px] select-none cursor-crosshair"
+                    className="relative h-[128px]  select-none cursor-crosshair"
                     style={{
                       minWidth: `${timelineMinWidth}px`,
                     }}
@@ -1643,7 +1640,7 @@ const exportVideo = useCallback(async () => {
                   segments.length === 0 ||
                   keptDuration < MIN_SEGMENT_DURATION
                 }
-                className="flex min-w-[220px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex w-full max-w-[220px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isProcessing ? (
                   <>

@@ -33,7 +33,7 @@ export default function Footer() {
     <footer className="border-t border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#07050d] text-slate-600 dark:text-slate-300 mt-auto select-none transition-colors">
       {/* 1. Status Bar */}
       <div className="border-b border-slate-200 dark:border-white/[0.06] bg-white/50 dark:bg-white/[0.015]">
-        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
+        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm">
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -57,7 +57,7 @@ export default function Footer() {
       </div>
 
       {/* 2. Main Footer Links: Balanced 5-Column Grid */}
-      <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12 py-12 sm:py-14">
+      <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12 py-12 sm:py-14">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10 xl:gap-12">
           {/* Column 1: Brand & Socials */}
           <div className="space-y-4 lg:pr-4">

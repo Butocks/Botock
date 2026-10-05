@@ -128,13 +128,13 @@ export default function PDFToBookClient() {
             
             <div className="flex bg-white dark:bg-slate-900 shadow-2xl rounded overflow-hidden">
                {/* Left Page */}
-               <div className="w-[300px] md:w-[400px] lg:w-[450px] min-h-[400px] border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#1a1a1a] flex items-center justify-center relative overflow-hidden">
+               <div className="w-1/2 max-w-[300px] md:max-w-[400px] lg:max-w-[450px] min-h-[400px] border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-[#1a1a1a] flex items-center justify-center relative overflow-hidden">
                  <canvas ref={leftCanvasRef} className="max-w-full max-h-[80vh] object-contain shadow-[-5px_0_15px_rgba(0,0,0,0.1)] origin-right" />
                  {currentPage === 1 && <div className="absolute inset-0 bg-slate-100/50 dark:bg-black/50 backdrop-blur-[2px] flex items-center justify-center"><p className="text-slate-400 font-bold uppercase tracking-widest">Back Cover</p></div>}
                </div>
                
                {/* Right Page */}
-               <div className="w-[300px] md:w-[400px] lg:w-[450px] min-h-[400px] bg-white dark:bg-[#121215] flex items-center justify-center relative overflow-hidden">
+               <div className="w-1/2 max-w-[300px] md:max-w-[400px] lg:max-w-[450px] min-h-[400px] bg-white dark:bg-[#121215] flex items-center justify-center relative overflow-hidden">
                  <canvas ref={rightCanvasRef} className="max-w-full max-h-[80vh] object-contain shadow-[5px_0_15px_rgba(0,0,0,0.1)] origin-left" />
                  {(currentPage === 1 ? 1 : (currentPage % 2 === 0 ? currentPage + 1 : currentPage)) > numPages && (
                    <div className="absolute inset-0 bg-slate-50 dark:bg-[#1a1a1a] flex items-center justify-center">

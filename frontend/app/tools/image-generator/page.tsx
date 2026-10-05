@@ -407,7 +407,7 @@ export default function ImageGeneratorPage() {
 
         {/* Completed State */}
         {status === "completed" && imageUrl && (
-          <div className="w-full flex flex-col items-center space-y-3 max-w-xl">
+          <div className="w-full flex flex-col items-center space-y-3 w-full max-w-[1560px]l">
             <div className="relative rounded-2xl overflow-hidden bg-black/90 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-2xl p-2 max-h-[46vh]">
               <img
                 src={imageBlobUrl || imageUrl}
@@ -466,7 +466,7 @@ export default function ImageGeneratorPage() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Image Canvas Ready</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 w-full max-w-[1560px]s">
                 Your generated artwork will render right here. Enter a prompt below to synthesize artwork.
               </p>
             </div>
@@ -480,7 +480,7 @@ export default function ImageGeneratorPage() {
               <AlertCircle className="w-6 h-6" />
             </div>
             <h3 className="text-xs font-bold text-slate-900 dark:text-white">Generation Failed</h3>
-            <p className="text-xs text-red-500 dark:text-red-400 max-w-xs">{errorMessage || "Failed to generate image."}</p>
+            <p className="text-xs text-red-500 dark:text-red-400 w-full max-w-[1560px]s">{errorMessage || "Failed to generate image."}</p>
             <button
               type="button"
               onClick={() => setStatus("idle")}

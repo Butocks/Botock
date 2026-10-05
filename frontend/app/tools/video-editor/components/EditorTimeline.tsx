@@ -16,7 +16,7 @@ const TrackLane = React.memo(function TrackLane({ track, totalDuration, selected
   return (
     <div key={track.id} className="relative flex h-24 border-b border-slate-800 group">
       {/* Track Header (Sticky Left) */}
-      <div className="w-[150px] shrink-0 bg-slate-900/95 backdrop-blur border-r border-slate-800 p-2 flex flex-col justify-center gap-2 sticky left-0 z-20 group-hover:bg-slate-800/80 transition-colors">
+      <div className="w-[80px] md:w-[150px] shrink-0 bg-slate-900/95 backdrop-blur border-r border-slate-800 p-2 flex flex-col justify-center gap-2 sticky left-0 z-20 group-hover:bg-slate-800/80 transition-colors">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-200">{track.name}</span>
             <span className="text-[9px] font-mono text-slate-500 uppercase">{track.type}</span>
@@ -249,7 +249,7 @@ export default function EditorTimeline({
         style={{ minWidth: `${minWidth}px` }}
         onPointerDown={handleTrackPointerDown}
       >
-         <div className="w-[150px] shrink-0 border-r border-slate-800 h-full flex items-center px-4 bg-slate-900/90 backdrop-blur z-40 sticky left-0 cursor-default">
+         <div className="w-[80px] md:w-[150px] shrink-0 border-r border-slate-800 h-full flex items-center px-4 bg-slate-900/90 backdrop-blur z-40 sticky left-0 cursor-default">
            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Tracks</span>
          </div>
          <TimeRuler totalDuration={totalDuration} />

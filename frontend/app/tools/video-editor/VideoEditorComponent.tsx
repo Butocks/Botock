@@ -251,7 +251,7 @@ export default function VideoEditorComponent() {
   const currentMaxTime = allVideoClips.length > 0 ? allVideoClips[allVideoClips.length - 1].timelineStart + allVideoClips[allVideoClips.length - 1].duration : 0;
 
   return (
-    <div className="h-[calc(100vh-64px)] w-full bg-[#1e1e24] text-white flex flex-col overflow-hidden font-sans">
+    <div className="h-[100dvh] md:h-[calc(100vh-64px)] w-full bg-[#1e1e24] text-white flex flex-col overflow-hidden font-sans">
       {/* Header */}
       <header className="h-14 bg-[#141419] flex items-center justify-between px-4 shrink-0 border-b border-[#2b2b36]">
         <div className="flex items-center gap-4">
@@ -268,9 +268,9 @@ export default function VideoEditorComponent() {
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Left Toolbar */}
-        <div className="w-20 bg-[#141419] flex flex-col items-center py-4 gap-6 shrink-0 border-r border-[#2b2b36] overflow-y-auto overflow-x-hidden">
+        <div className="w-full md:w-20 bg-[#141419] flex flex-row md:flex-col items-center justify-around md:justify-start py-2 md:py-4 gap-2 md:gap-6 shrink-0 border-b md:border-r border-[#2b2b36] overflow-x-auto md:overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
           {SIDEBAR_ITEMS.map((item, i) => (
              <button key={i} className={`flex flex-col items-center gap-1.5 w-full ${i === 2 ? 'text-[#ff6b4a]' : 'text-gray-400 hover:text-gray-200'}`}>
                 <item.icon className="w-5 h-5" />
@@ -279,13 +279,13 @@ export default function VideoEditorComponent() {
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto md:overflow-hidden">
           
           {/* Top Panel: Media & Preview */}
-          <div className="flex-1 flex min-h-0">
+          <div className="flex-1 flex flex-col md:flex-row min-h-0 shrink-0">
              
              {/* Media Bin */}
-             <div className="w-[300px] bg-[#1e1e24] border-r border-[#2b2b36] flex flex-col min-h-0">
+             <div className="w-full md:w-[300px] bg-[#1e1e24] flex border-b md:border-r border-[#2b2b36] flex-col min-h-[150px] max-h-[150px] md:min-h-0 md:max-h-full">
                 <div className="p-4 border-b border-[#2b2b36]">
                    <h2 className="text-sm font-bold">Media Bin</h2>
                 </div>
@@ -356,7 +356,7 @@ export default function VideoEditorComponent() {
 
              {/* Inspector Area */}
              {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image") && (
-                 <div className="w-[280px] bg-[#141419] border-l border-[#2b2b36] flex flex-col min-h-0 overflow-y-auto shrink-0 shadow-xl">
+                 <div className="w-full md:w-[280px] flex bg-[#141419] border-t md:border-l border-[#2b2b36] flex-col min-h-[150px] max-h-[150px] md:min-h-0 overflow-y-auto shrink-0 shadow-xl md:max-h-full">
                     <TransformInspector 
                         clip={selectedClip} 
                         onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
