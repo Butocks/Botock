@@ -190,26 +190,42 @@ def combine_chunks(chunks, crossfade=10):
     if right is None: return left
     return left.append(right, crossfade=crossfade)
 
+
+from starlette.background import BackgroundTask
+import numpy as np
+
 @app.post("/api/convert/voice-changer")
 async def voice_changer(file: UploadFile = File(...), mode: str = Form(...)):
     if not file.filename.lower().endswith(('.mp3', '.wav', '.m4a')):
         raise HTTPException(status_code=400, detail="File must be an audio file (.mp3, .wav, .m4a)")
 
     try:
-        from pydub import AudioSegment
+        from pedalboard import Pedalboard, PitchShift, Gain, Reverb, Compressor, HighpassFilter, LowpassFilter
+        from pedalboard.io import AudioFile
     except ImportError:
-        raise HTTPException(status_code=500, detail="Audio library not installed on the server")
+        raise HTTPException(status_code=500, detail="Advanced audio library (pedalboard) not installed on the server")
 
+    # High-quality natural voice modes using pedalboard
+    # pitch is in semitones (e.g. -12 is one octave down)
     VOICE_MODES = {
-        "kid": {"pitch": 1.45, "speed": 1.05, "vol": 0},
-        "little_girl": {"pitch": 1.60, "speed": 1.10, "vol": 0},
-        "man_deep": {"pitch": 0.82, "speed": 1.0, "vol": 2},
-        "deep_villain": {"pitch": 0.70, "speed": 1.0, "vol": 3},
-        "man_old": {"pitch": 0.88, "speed": 0.85, "vol": 0},
-        "women": {"pitch": 1.30, "speed": 1.0, "vol": 0},
-        "old_women": {"pitch": 1.20, "speed": 0.85, "vol": 0},
-        "weak_man": {"pitch": 1.05, "speed": 0.90, "vol": -4},
-        "strict": {"pitch": 0.95, "speed": 1.05, "vol": 2},
+        "kid": {"pitch": 5, "vol": 1, "fx": []},
+        "little_girl": {"pitch": 7, "vol": 1, "fx": [HighpassFilter(cutoff_frequency_hz=300)]},
+        "man_deep": {"pitch": -4, "vol": 2, "fx": [Compressor(threshold_db=-20, ratio=2)]},
+        "deep_villain": {"pitch": -8, "vol": 3, "fx": [
+            Compressor(threshold_db=-20, ratio=4),
+            Reverb(room_size=0.3, damping=0.5, wet_level=0.15)
+        ]},
+        "man_old": {"pitch": -2, "vol": 0, "fx": [
+            LowpassFilter(cutoff_frequency_hz=3000),
+            Compressor(threshold_db=-15, ratio=1.5)
+        ]},
+        "women": {"pitch": 3, "vol": 0, "fx": []},
+        "old_women": {"pitch": 1, "vol": 0, "fx": [LowpassFilter(cutoff_frequency_hz=4000)]},
+        "weak_man": {"pitch": 1, "vol": -4, "fx": [
+            HighpassFilter(cutoff_frequency_hz=200),
+            LowpassFilter(cutoff_frequency_hz=5000)
+        ]},
+        "strict": {"pitch": -1, "vol": 2, "fx": [Compressor(threshold_db=-15, ratio=3)]},
     }
 
     if mode not in VOICE_MODES:
@@ -224,36 +240,42 @@ async def voice_changer(file: UploadFile = File(...), mode: str = Form(...)):
             in_f.write(audio_bytes)
             in_path = in_f.name
 
-        sound = AudioSegment.from_file(in_path)
-
-        # Modify audio
-        if params["vol"] != 0:
-            sound = sound + params["vol"]
-
-        if params["pitch"] != 1.0:
-            new_sample_rate = int(sound.frame_rate * params["pitch"])
-            sound = sound._spawn(sound.raw_data, overrides={'frame_rate': new_sample_rate}).set_frame_rate(sound.frame_rate)
-
-        target_stretch = params["pitch"] / params["speed"]
-
-        if target_stretch != 1.0:
-            chunk_ms = 50
-            crossfade_ms = 10
-            step_ms = (chunk_ms - crossfade_ms) / target_stretch
-
-            chunks = []
-            pos = 0.0
-            while pos < len(sound) - chunk_ms:
-                chunks.append(sound[int(pos):int(pos) + chunk_ms])
-                pos += step_ms
-
-            if chunks:
-                sound = combine_chunks(chunks, crossfade_ms)
-
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as out_f:
             out_path = out_f.name
 
-        sound.export(out_path, format="mp3")
+        # Read with pedalboard io
+        with AudioFile(in_path) as f:
+            audio = f.read(f.frames)
+            samplerate = f.samplerate
+
+        # Build pedalboard
+        plugins = [PitchShift(semitones=params["pitch"])]
+        if params["vol"] != 0:
+            plugins.append(Gain(gain_db=params["vol"]))
+
+        plugins.extend(params["fx"])
+
+        board = Pedalboard(plugins)
+
+        # Process audio (highly optimized C++ under the hood)
+        effected = board(audio, samplerate, reset=False)
+
+        # Write back to mp3
+        # pedalboard currently has limited mp3 export support in some builds, but let's try pydub for export if needed, or soundfile for wav.
+        # Actually pedalboard.io uses libsndfile and libav, so it supports common formats if compiled with them.
+        try:
+            with AudioFile(out_path, 'w', samplerate, effected.shape[0]) as f:
+                f.write(effected)
+        except Exception:
+            # Fallback to wav if mp3 export fails, or pydub
+            import soundfile as sf
+            wav_path = out_path.replace(".mp3", ".wav")
+            sf.write(wav_path, effected.T, samplerate)
+
+            from pydub import AudioSegment
+            snd = AudioSegment.from_file(wav_path)
+            snd.export(out_path, format="mp3")
+            os.remove(wav_path)
 
         # Clean up input file
         try:
