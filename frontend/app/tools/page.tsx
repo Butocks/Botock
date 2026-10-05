@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     canonical: "/tools",
   },
   openGraph: {
-    title: "All Free Online Creative & Productivity Tools | Botock",
+    title: "All Free Online Creative & Productivity Tools",
     description:
       "Explore 35+ free AI, PDF, image, and video utilities on Botock. Fast, client-side, zero server uploads, and instant processing.",
     url: "https://botock.app/tools",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "All Free Online Creative & Productivity Tools | Botock",
+    title: "All Free Online Creative & Productivity Tools",
     description:
       "Explore free AI video generation, image creation, PDF utilities, and video editing tools on Botock.",
     images: ["https://botock.app/og-image.jpg"],

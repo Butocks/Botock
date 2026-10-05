@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     canonical: "/tools/image-remove-bg",
   },
   openGraph: {
-    title: "AI Background Remover Online Free | Batch Background Removal | Botock",
+    title: "AI Background Remover Online Free | Batch Background Removal",
     description: "Remove backgrounds from photos and portraits instantly with high-precision AI. Download transparent PNGs with zero server uploads.",
     url: "https://botock.app/tools/image-remove-bg",
     siteName: "Botock",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Background Remover Online Free | Batch Background Removal | Botock",
+    title: "AI Background Remover Online Free | Batch Background Removal",
     description: "Remove backgrounds from photos and portraits instantly with high-precision AI. Download transparent PNGs with zero server uploads.",
     images: ["https://botock.app/og-image.jpg"],
   },

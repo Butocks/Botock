@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "/tools/subtitles",
   },
   openGraph: {
-    title: "Subtitle Editor & Converter Online Free | SRT to VTT | Botock",
+    title: "Subtitle Editor & Converter Online Free | SRT to VTT",
     description: "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
     url: "https://botock.app/tools/subtitles",
     siteName: "Botock",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Subtitle Editor & Converter Online Free | SRT to VTT | Botock",
+    title: "Subtitle Editor & Converter Online Free | SRT to VTT",
     description: "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
     images: ["https://botock.app/og-image.jpg"],
   },

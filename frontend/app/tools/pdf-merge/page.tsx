@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-merge",
   },
   openGraph: {
-    title: "Merge PDF Files Online Free | Combine Multiple PDFs | Botock",
+    title: "Merge PDF Files Online Free | Combine Multiple PDFs",
     description: "Combine multiple PDF documents into a single organized file with drag-and-drop page reordering. 100% client-side and secure.",
     url: "https://botock.app/tools/pdf-merge",
     siteName: "Botock",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Merge PDF Files Online Free | Combine Multiple PDFs | Botock",
+    title: "Merge PDF Files Online Free | Combine Multiple PDFs",
     description: "Combine multiple PDF documents into a single organized file with drag-and-drop page reordering. 100% client-side and secure.",
     images: ["https://botock.app/og-image.jpg"],
   },

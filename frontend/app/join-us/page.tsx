@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     canonical: "/join-us",
   },
   openGraph: {
-    title: "Careers & Join the Team | Botock",
+    title: "Careers & Join the Team",
     description:
       "Join the engineering, product, and AI research team at Botock. Help build the next-generation creative operating suite.",
     url: "https://botock.app/join-us",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Careers & Join the Team | Botock",
+    title: "Careers & Join the Team",
     description: "Build the future of generative media and client-side web tools with Botock.",
     images: ["https://botock.app/og-image.jpg"],
   },

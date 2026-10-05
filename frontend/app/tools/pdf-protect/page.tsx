@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-protect",
   },
   openGraph: {
-    title: "Password Protect PDF Online Free | 256-Bit AES Encryption | Botock",
+    title: "Password Protect PDF Online Free | 256-Bit AES Encryption",
     description: "Encrypt sensitive PDF documents with secure passwords directly in your browser. Prevents unauthorized opening and printing.",
     url: "https://botock.app/tools/pdf-protect",
     siteName: "Botock",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Password Protect PDF Online Free | 256-Bit AES Encryption | Botock",
+    title: "Password Protect PDF Online Free | 256-Bit AES Encryption",
     description: "Encrypt sensitive PDF documents with secure passwords directly in your browser. Prevents unauthorized opening and printing.",
     images: ["https://botock.app/og-image.jpg"],
   },

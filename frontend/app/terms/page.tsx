@@ -1,7 +1,8 @@
 import { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Botock",
+  title: "Terms of Service",
   description: "Terms of Service, Acceptable Use Policy, and Legal Agreements for Botock.app.",
   alternates: {
     canonical: "/terms",
@@ -88,7 +89,20 @@ export default function TermsOfServicePage() {
 
           <section>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">
-              7. Contact and Inquiries
+              7. Refunds and Cancellation Policy
+            </h2>
+            <p>
+              All purchases of platform credits, generative tokens, and custom digital development services are governed by our formal{" "}
+              <Link href="/refund" className="text-violet-600 dark:text-violet-400 font-bold hover:underline">
+                Refund &amp; Cancellation Policy
+              </Link>
+              . Unused accidental purchases reported within 7 days with zero consumption are eligible for full refund. Consumed generation credits, usage exceeding the 20% quota threshold, or custom client engineering projects that have progressed beyond initial planning approval are strictly non-refundable.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">
+              8. Contact and Inquiries
             </h2>
             <p>
               If you have any questions regarding these Terms of Service or wish to file a notice of infringement, please reach out to our legal and support team:

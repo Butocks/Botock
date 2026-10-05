@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "/tools/video-compress",
   },
   openGraph: {
-    title: "Compress Video Online Free | Reduce Video File Size | Botock",
+    title: "Compress Video Online Free | Reduce Video File Size",
     description: "Compress MP4, MOV, and WebM videos in your browser. Reduce file size for email and web sharing with optimal resolution.",
     url: "https://botock.app/tools/video-compress",
     siteName: "Botock",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Compress Video Online Free | Reduce Video File Size | Botock",
+    title: "Compress Video Online Free | Reduce Video File Size",
     description: "Compress MP4, MOV, and WebM videos in your browser. Reduce file size for email and web sharing with optimal resolution.",
     images: ["https://botock.app/og-image.jpg"],
   },

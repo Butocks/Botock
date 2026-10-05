@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-to-excel",
   },
   openGraph: {
-    title: "Convert PDF to Excel Online Free | Extract Tables to XLSX | Botock",
+    title: "Convert PDF to Excel Online Free | Extract Tables to XLSX",
     description: "Extract tables, balance sheets, and tabular data from PDF files into formatted Microsoft Excel (.xlsx) spreadsheets.",
     url: "https://botock.app/tools/pdf-to-excel",
     siteName: "Botock",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert PDF to Excel Online Free | Extract Tables to XLSX | Botock",
+    title: "Convert PDF to Excel Online Free | Extract Tables to XLSX",
     description: "Extract tables, balance sheets, and tabular data from PDF files into formatted Microsoft Excel (.xlsx) spreadsheets.",
     images: ["https://botock.app/og-image.jpg"],
   },

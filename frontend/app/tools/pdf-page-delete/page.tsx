@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-page-delete",
   },
   openGraph: {
-    title: "Delete PDF Pages Online Free | Remove Unwanted Pages | Botock",
+    title: "Delete PDF Pages Online Free | Remove Unwanted Pages",
     description: "Remove unwanted, blank, or confidential pages from any PDF document in your browser with real-time thumbnail selection.",
     url: "https://botock.app/tools/pdf-page-delete",
     siteName: "Botock",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Delete PDF Pages Online Free | Remove Unwanted Pages | Botock",
+    title: "Delete PDF Pages Online Free | Remove Unwanted Pages",
     description: "Remove unwanted, blank, or confidential pages from any PDF document in your browser with real-time thumbnail selection.",
     images: ["https://botock.app/og-image.jpg"],
   },

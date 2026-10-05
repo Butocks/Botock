@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     canonical: "/tools/image-resize",
   },
   openGraph: {
-    title: "Resize Image Online Free | Change Pixel Dimensions | Botock",
+    title: "Resize Image Online Free | Change Pixel Dimensions",
     description: "Resize photos and images in pixels or percentages while locking aspect ratio. Fast, free, and completely client-side.",
     url: "https://botock.app/tools/image-resize",
     siteName: "Botock",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Resize Image Online Free | Change Pixel Dimensions | Botock",
+    title: "Resize Image Online Free | Change Pixel Dimensions",
     description: "Resize photos and images in pixels or percentages while locking aspect ratio. Fast, free, and completely client-side.",
     images: ["https://botock.app/og-image.jpg"],
   },

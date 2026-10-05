@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-to-word",
   },
   openGraph: {
-    title: "Convert PDF to Word Online Free | Convert PDF to DOCX | Botock",
+    title: "Convert PDF to Word Online Free | Convert PDF to DOCX",
     description: "Transform PDF documents into editable Microsoft Word (.docx) documents with high formatting, table, and font accuracy.",
     url: "https://botock.app/tools/pdf-to-word",
     siteName: "Botock",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert PDF to Word Online Free | Convert PDF to DOCX | Botock",
+    title: "Convert PDF to Word Online Free | Convert PDF to DOCX",
     description: "Transform PDF documents into editable Microsoft Word (.docx) documents with high formatting, table, and font accuracy.",
     images: ["https://botock.app/og-image.jpg"],
   },

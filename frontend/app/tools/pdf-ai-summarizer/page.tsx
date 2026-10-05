@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-ai-summarizer",
   },
   openGraph: {
-    title: "AI PDF Summarizer | Botock",
+    title: "AI PDF Summarizer",
     description: "Extract executive summaries and key takeaways from PDF documents directly in your browser.",
     url: "https://botock.app/tools/pdf-ai-summarizer",
     siteName: "Botock",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI PDF Summarizer | Botock",
+    title: "AI PDF Summarizer",
     description: "Extract executive summaries and key takeaways from PDF documents directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

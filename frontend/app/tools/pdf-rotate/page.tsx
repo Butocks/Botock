@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-rotate",
   },
   openGraph: {
-    title: "Rotate PDF Pages Online Free | 90°, 180°, 270° Rotation | Botock",
+    title: "Rotate PDF Pages Online Free | 90°, 180°, 270° Rotation",
     description: "Rotate individual pages or entire PDF documents permanently. Fast in-browser processing with zero server uploads.",
     url: "https://botock.app/tools/pdf-rotate",
     siteName: "Botock",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rotate PDF Pages Online Free | 90°, 180°, 270° Rotation | Botock",
+    title: "Rotate PDF Pages Online Free | 90°, 180°, 270° Rotation",
     description: "Rotate individual pages or entire PDF documents permanently. Fast in-browser processing with zero server uploads.",
     images: ["https://botock.app/og-image.jpg"],
   },

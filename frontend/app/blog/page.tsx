@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     canonical: "/blog",
   },
   openGraph: {
-    title: "Blog & Creative AI Guides | Botock",
+    title: "Blog & Creative AI Guides",
     description:
       "Explore tutorials on AI video generation, prompt engineering, photo synthesis, and document manipulation.",
     url: "https://botock.app/blog",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Blog & Creative AI Guides | Botock",
+    title: "Blog & Creative AI Guides",
     description:
       "Explore tutorials on AI video generation, prompt engineering, and creative tools.",
     images: ["https://botock.app/og-image.jpg"],

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     canonical: "/services",
   },
   openGraph: {
-    title: "Services & Custom Generation Plans | Botock",
+    title: "Services & Custom Generation Plans",
     description:
       "Explore Botock service plans, ad-free access, and custom enterprise video generation tokens.",
     url: "https://botock.app/services",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Services & Custom Generation Plans | Botock",
+    title: "Services & Custom Generation Plans",
     description:
       "Explore Botock service plans, ad-free access, and custom enterprise video generation tokens.",
     images: ["https://botock.app/og-image.jpg"],

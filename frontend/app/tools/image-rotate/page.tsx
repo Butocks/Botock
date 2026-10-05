@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: "/tools/image-rotate",
   },
   openGraph: {
-    title: "Rotate & Flip Image Online Free | Botock",
+    title: "Rotate & Flip Image Online Free",
     description: "Rotate and flip photos directly in your browser with instant GPU canvas acceleration.",
     url: "https://botock.app/tools/image-rotate",
     siteName: "Botock",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rotate & Flip Image Online Free | Botock",
+    title: "Rotate & Flip Image Online Free",
     description: "Rotate and flip images directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

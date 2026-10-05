@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-forms",
   },
   openGraph: {
-    title: "Fill & Sign PDF Forms Online Free | AcroForms Tool | Botock",
+    title: "Fill & Sign PDF Forms Online Free | AcroForms Tool",
     description: "Interactively fill out PDF text fields, checkboxes, radio buttons, and sign documents online with 100% client-side privacy.",
     url: "https://botock.app/tools/pdf-forms",
     siteName: "Botock",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fill & Sign PDF Forms Online Free | AcroForms Tool | Botock",
+    title: "Fill & Sign PDF Forms Online Free | AcroForms Tool",
     description: "Interactively fill out PDF text fields, checkboxes, radio buttons, and sign documents online with 100% client-side privacy.",
     images: ["https://botock.app/og-image.jpg"],
   },

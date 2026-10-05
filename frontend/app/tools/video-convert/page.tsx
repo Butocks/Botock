@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: "/tools/video-convert",
   },
   openGraph: {
-    title: "Convert Video Format Online Free | Botock",
+    title: "Convert Video Format Online Free",
     description: "Convert video containers and formats directly in your browser with zero server uploads.",
     url: "https://botock.app/tools/video-convert",
     siteName: "Botock",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert Video Format Online Free | Botock",
+    title: "Convert Video Format Online Free",
     description: "Convert video containers and formats directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

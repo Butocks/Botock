@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     canonical: "/tools/video-editor",
   },
   openGraph: {
-    title: "Free Online Video Editor | In-Browser Studio | Botock",
+    title: "Free Online Video Editor | In-Browser Studio",
     description:
       "Edit videos online directly in your browser with multi-track timeline, trimming, splitting, and color presets.",
     url: "https://botock.app/tools/video-editor",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Free Online Video Editor | Botock",
+    title: "Free Online Video Editor",
     description:
       "In-browser multi-track video editing with 0ms lag and complete client-side privacy.",
     images: ["https://botock.app/og-image.jpg"],

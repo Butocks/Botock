@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     canonical: "/tools/organize-pdf",
   },
   openGraph: {
-    title: "Organize PDF Pages Online Free | Botock",
+    title: "Organize PDF Pages Online Free",
     description: "Visually reorder, rotate, duplicate, and delete PDF pages directly in your browser.",
     url: "https://botock.app/tools/organize-pdf",
     siteName: "Botock",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Organize PDF Pages Online Free | Botock",
+    title: "Organize PDF Pages Online Free",
     description: "Visually reorder, rotate, duplicate, and delete PDF pages directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

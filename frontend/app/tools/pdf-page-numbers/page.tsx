@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-page-numbers",
   },
   openGraph: {
-    title: "Add Page Numbers to PDF Online Free | Botock",
+    title: "Add Page Numbers to PDF Online Free",
     description: "Custom page numbers, headers, and footers in your PDF with instant browser processing.",
     url: "https://botock.app/tools/pdf-page-numbers",
     siteName: "Botock",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Add Page Numbers to PDF Online Free | Botock",
+    title: "Add Page Numbers to PDF Online Free",
     description: "Custom page numbers, headers, and footers in your PDF with instant browser processing.",
     images: ["https://botock.app/og-image.jpg"],
   },

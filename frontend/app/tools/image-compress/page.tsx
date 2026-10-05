@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     canonical: "/tools/image-compress",
   },
   openGraph: {
-    title: "Compress Image Online Free | Reduce File Size | Botock",
+    title: "Compress Image Online Free | Reduce File Size",
     description: "Compress JPG, PNG, WebP, and GIF images online without losing visible quality. Fast, client-side batch image compression.",
     url: "https://botock.app/tools/image-compress",
     siteName: "Botock",
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Compress Image Online Free | Reduce File Size | Botock",
+    title: "Compress Image Online Free | Reduce File Size",
     description: "Compress JPG, PNG, WebP, and GIF images online without losing visible quality. Fast, client-side batch image compression.",
     images: ["https://botock.app/og-image.jpg"],
   },

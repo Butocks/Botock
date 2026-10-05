@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "/tools/image-convert",
   },
   openGraph: {
-    title: "Convert Image Format Online Free | WebP, PNG, JPG | Botock",
+    title: "Convert Image Format Online Free | WebP, PNG, JPG",
     description: "Convert images between WebP, PNG, JPG, BMP, and GIF formats online in your browser with zero server uploads.",
     url: "https://botock.app/tools/image-convert",
     siteName: "Botock",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert Image Format Online Free | WebP, PNG, JPG | Botock",
+    title: "Convert Image Format Online Free | WebP, PNG, JPG",
     description: "Convert images between WebP, PNG, JPG, BMP, and GIF formats online in your browser with zero server uploads.",
     images: ["https://botock.app/og-image.jpg"],
   },

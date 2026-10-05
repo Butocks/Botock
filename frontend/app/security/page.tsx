@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     canonical: "/security",
   },
   openGraph: {
-    title: "Security & Privacy Architecture | Botock",
+    title: "Security & Privacy Architecture",
     description:
       "Learn about Botock's privacy-first architecture: client-side processing, automated purging, and zero data retention.",
     url: "https://botock.app/security",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Security & Privacy Architecture | Botock",
+    title: "Security & Privacy Architecture",
     description: "In-browser sandboxing and automated 24-hour file purging on Botock.",
     images: ["https://botock.app/og-image.jpg"],
   },

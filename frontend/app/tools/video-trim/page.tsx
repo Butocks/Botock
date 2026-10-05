@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "/tools/video-trim",
   },
   openGraph: {
-    title: "Trim Video Online Free | Fast Lossless Video Cutter | Botock",
+    title: "Trim Video Online Free | Fast Lossless Video Cutter",
     description: "Cut and trim video clips with frame-accurate precision in your browser. 0ms latency, zero uploads, instant export.",
     url: "https://botock.app/tools/video-trim",
     siteName: "Botock",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Trim Video Online Free | Fast Lossless Video Cutter | Botock",
+    title: "Trim Video Online Free | Fast Lossless Video Cutter",
     description: "Cut and trim video clips with frame-accurate precision in your browser. 0ms latency, zero uploads, instant export.",
     images: ["https://botock.app/og-image.jpg"],
   },

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     canonical: "/complaint",
   },
   openGraph: {
-    title: "Formal Complaint & Grievance Redressal | Botock",
+    title: "Formal Complaint & Grievance Redressal",
     description:
       "Submit formal complaints, content removal notices, or grievance reports to Botock.",
     url: "https://botock.app/complaint",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Formal Complaint Desk | Botock",
+    title: "Formal Complaint Desk",
     description: "Submit grievance reports or content removal notices to Botock.",
     images: ["https://botock.app/og-image.jpg"],
   },

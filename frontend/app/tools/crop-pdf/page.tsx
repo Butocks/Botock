@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: "/tools/crop-pdf",
   },
   openGraph: {
-    title: "Crop PDF Online Free | Trim PDF Margins | Botock",
+    title: "Crop PDF Online Free | Trim PDF Margins",
     description: "Visually crop PDF pages and trim margins directly in your browser with zero server uploads.",
     url: "https://botock.app/tools/crop-pdf",
     siteName: "Botock",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Crop PDF Online Free | Botock",
+    title: "Crop PDF Online Free",
     description: "Visually crop PDF pages and trim margins directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     canonical: "/tools/image-generator",
   },
   openGraph: {
-    title: "Free AI Image Generator | Text to Image Online | Botock",
+    title: "Free AI Image Generator | Text to Image Online",
     description:
       "Generate 8K photorealistic artwork, product visuals, and digital designs from text prompts with Botock.",
     url: "https://botock.app/tools/image-generator",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Free AI Image Generator | Botock",
+    title: "Free AI Image Generator",
     description:
       "Generate 8K photorealistic artwork and digital designs from text prompts with Botock.",
     images: ["https://botock.app/og-image.jpg"],

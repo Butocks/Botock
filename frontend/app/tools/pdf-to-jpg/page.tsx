@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-to-jpg",
   },
   openGraph: {
-    title: "Convert PDF to JPG Online Free | Botock",
+    title: "Convert PDF to JPG Online Free",
     description:
       "Convert PDF pages to JPG images in your browser with zero server uploads.",
     url: "https://botock.app/tools/pdf-to-jpg",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert PDF to JPG Online Free | Botock",
+    title: "Convert PDF to JPG Online Free",
     description: "Convert PDF pages to JPG images in your browser with zero server uploads.",
     images: ["https://botock.app/og-image.jpg"],
   },

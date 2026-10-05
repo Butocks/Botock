@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-to-book",
   },
   openGraph: {
-    title: "PDF to Booklet Viewer Online Free | Two-Page Reading | Botock",
+    title: "PDF to Booklet Viewer Online Free | Two-Page Reading",
     description: "View and read PDF documents in an immersive side-by-side booklet format with realistic pagination and reading controls.",
     url: "https://botock.app/tools/pdf-to-book",
     siteName: "Botock",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "PDF to Booklet Viewer Online Free | Two-Page Reading | Botock",
+    title: "PDF to Booklet Viewer Online Free | Two-Page Reading",
     description: "View and read PDF documents in an immersive side-by-side booklet format with realistic pagination and reading controls.",
     images: ["https://botock.app/og-image.jpg"],
   },

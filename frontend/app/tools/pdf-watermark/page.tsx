@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-watermark",
   },
   openGraph: {
-    title: "Watermark PDF Online Free | Add Text & Stamp Overlays | Botock",
+    title: "Watermark PDF Online Free | Add Text & Stamp Overlays",
     description: "Stamp custom copyright text, confidential marks, or logos onto PDF pages with custom opacity, position, and rotation.",
     url: "https://botock.app/tools/pdf-watermark",
     siteName: "Botock",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Watermark PDF Online Free | Add Text & Stamp Overlays | Botock",
+    title: "Watermark PDF Online Free | Add Text & Stamp Overlays",
     description: "Stamp custom copyright text, confidential marks, or logos onto PDF pages with custom opacity, position, and rotation.",
     images: ["https://botock.app/og-image.jpg"],
   },

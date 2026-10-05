@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "/tools/video-to-mp3",
   },
   openGraph: {
-    title: "Extract MP3 from Video Online Free | Lossless Audio Ripper | Botock",
+    title: "Extract MP3 from Video Online Free | Lossless Audio Ripper",
     description: "Extract crystal clear high-bitrate MP3 audio from any MP4, MOV, WebM, or MKV video file with zero server uploads.",
     url: "https://botock.app/tools/video-to-mp3",
     siteName: "Botock",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Extract MP3 from Video Online Free | Lossless Audio Ripper | Botock",
+    title: "Extract MP3 from Video Online Free | Lossless Audio Ripper",
     description: "Extract crystal clear high-bitrate MP3 audio from any MP4, MOV, WebM, or MKV video file with zero server uploads.",
     images: ["https://botock.app/og-image.jpg"],
   },

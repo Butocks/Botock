@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-compress",
   },
   openGraph: {
-    title: "Compress PDF Online Free | Reduce PDF File Size | Botock",
+    title: "Compress PDF Online Free | Reduce PDF File Size",
     description: "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
     url: "https://botock.app/tools/pdf-compress",
     siteName: "Botock",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Compress PDF Online Free | Reduce PDF File Size | Botock",
+    title: "Compress PDF Online Free | Reduce PDF File Size",
     description: "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
     images: ["https://botock.app/og-image.jpg"],
   },

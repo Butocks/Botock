@@ -70,6 +70,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/contact",
     "/privacy",
     "/terms",
+    "/refund",
     "/security",
     "/join-us",
     "/complaint",

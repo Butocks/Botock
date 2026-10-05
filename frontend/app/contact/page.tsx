@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     canonical: "/contact",
   },
   openGraph: {
-    title: "Contact Us & Support | Botock",
+    title: "Contact Us & Support",
     description:
       "Get in touch with the Botock team for technical assistance, partnerships, and customer support.",
     url: "https://botock.app/contact",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Contact Us & Support | Botock",
+    title: "Contact Us & Support",
     description: "Get in touch with the Botock support team.",
     images: ["https://botock.app/og-image.jpg"],
   },

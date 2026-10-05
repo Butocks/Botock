@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: "/tools/html-to-pdf",
   },
   openGraph: {
-    title: "Convert HTML to PDF Online Free | Botock",
+    title: "Convert HTML to PDF Online Free",
     description: "Render HTML templates, CSS styles, and web pages into PDF documents directly in your browser.",
     url: "https://botock.app/tools/html-to-pdf",
     siteName: "Botock",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert HTML to PDF Online Free | Botock",
+    title: "Convert HTML to PDF Online Free",
     description: "Render HTML and CSS templates to printable PDF documents directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

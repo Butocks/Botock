@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     canonical: "/tools/word-to-pdf",
   },
   openGraph: {
-    title: "Convert Word to PDF Online Free | DOCX to PDF Converter | Botock",
+    title: "Convert Word to PDF Online Free | DOCX to PDF Converter",
     description: "Convert Microsoft Word (.docx, .doc) files into clean, shareable PDF documents with layout and font preservation.",
     url: "https://botock.app/tools/word-to-pdf",
     siteName: "Botock",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert Word to PDF Online Free | DOCX to PDF Converter | Botock",
+    title: "Convert Word to PDF Online Free | DOCX to PDF Converter",
     description: "Convert Microsoft Word (.docx, .doc) files into clean, shareable PDF documents with layout and font preservation.",
     images: ["https://botock.app/og-image.jpg"],
   },

@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: "/tools/image-filters",
   },
   openGraph: {
-    title: "Photo Filters & Effects Online Free | Botock",
+    title: "Photo Filters & Effects Online Free",
     description: "Fine-tune brightness, contrast, saturation, and cinematic film presets directly in your browser.",
     url: "https://botock.app/tools/image-filters",
     siteName: "Botock",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Photo Filters & Effects Online Free | Botock",
+    title: "Photo Filters & Effects Online Free",
     description: "Fine-tune brightness, contrast, saturation, and cinematic film presets directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

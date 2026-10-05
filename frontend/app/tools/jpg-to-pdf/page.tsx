@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "/tools/jpg-to-pdf",
   },
   openGraph: {
-    title: "Convert JPG to PDF Online Free | Combine Images to PDF | Botock",
+    title: "Convert JPG to PDF Online Free | Combine Images to PDF",
     description: "Convert JPG, PNG, and WebP images into a single professional PDF document. Reorder pages and adjust margins in your browser.",
     url: "https://botock.app/tools/jpg-to-pdf",
     siteName: "Botock",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert JPG to PDF Online Free | Combine Images to PDF | Botock",
+    title: "Convert JPG to PDF Online Free | Combine Images to PDF",
     description: "Convert JPG, PNG, and WebP images into a single professional PDF document. Reorder pages and adjust margins in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

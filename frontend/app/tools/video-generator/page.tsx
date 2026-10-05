@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     canonical: "/tools/video-generator",
   },
   openGraph: {
-    title: "Free AI Video Generator | Text & Photo to Video Online | Botock",
+    title: "Free AI Video Generator | Text & Photo to Video Online",
     description:
       "Generate cinematic AI videos from text prompts and photos in seconds with Botock. High-definition rendering and free daily credits.",
     url: "https://botock.app/tools/video-generator",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Free AI Video Generator | Botock",
+    title: "Free AI Video Generator",
     description:
       "Generate cinematic AI videos from text prompts and photos in seconds with Botock.",
     images: ["https://botock.app/og-image.jpg"],

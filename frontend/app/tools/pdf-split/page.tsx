@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-split",
   },
   openGraph: {
-    title: "Split PDF Online Free | Extract Pages from PDF | Botock",
+    title: "Split PDF Online Free | Extract Pages from PDF",
     description: "Extract specific page ranges or split large PDF files into standalone documents with zero quality loss and complete privacy.",
     url: "https://botock.app/tools/pdf-split",
     siteName: "Botock",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Split PDF Online Free | Extract Pages from PDF | Botock",
+    title: "Split PDF Online Free | Extract Pages from PDF",
     description: "Extract specific page ranges or split large PDF files into standalone documents with zero quality loss and complete privacy.",
     images: ["https://botock.app/og-image.jpg"],
   },

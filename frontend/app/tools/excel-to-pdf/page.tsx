@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: "/tools/excel-to-pdf",
   },
   openGraph: {
-    title: "Convert Excel to PDF Online Free | Botock",
+    title: "Convert Excel to PDF Online Free",
     description: "Convert Excel spreadsheets to printable PDF documents directly in your browser with zero server uploads.",
     url: "https://botock.app/tools/excel-to-pdf",
     siteName: "Botock",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert Excel to PDF Online Free | Botock",
+    title: "Convert Excel to PDF Online Free",
     description: "Convert Excel spreadsheets to printable PDF documents directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     canonical: "/tools/video-to-gif",
   },
   openGraph: {
-    title: "Convert Video to GIF Online Free | Animated GIF Maker | Botock",
+    title: "Convert Video to GIF Online Free | Animated GIF Maker",
     description: "Convert video highlights from MP4, MOV, or WebM into high-quality looping animated GIFs with custom FPS and size.",
     url: "https://botock.app/tools/video-to-gif",
     siteName: "Botock",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert Video to GIF Online Free | Animated GIF Maker | Botock",
+    title: "Convert Video to GIF Online Free | Animated GIF Maker",
     description: "Convert video highlights from MP4, MOV, or WebM into high-quality looping animated GIFs with custom FPS and size.",
     images: ["https://botock.app/og-image.jpg"],
   },

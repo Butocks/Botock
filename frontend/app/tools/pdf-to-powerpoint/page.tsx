@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: "/tools/pdf-to-powerpoint",
   },
   openGraph: {
-    title: "Convert PDF to PowerPoint Online Free | Botock",
+    title: "Convert PDF to PowerPoint Online Free",
     description: "Convert PDF pages to Microsoft PowerPoint PPTX slides instantly in your browser.",
     url: "https://botock.app/tools/pdf-to-powerpoint",
     siteName: "Botock",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert PDF to PowerPoint Online Free | Botock",
+    title: "Convert PDF to PowerPoint Online Free",
     description: "Convert PDF documents to PowerPoint PPTX slides directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },
