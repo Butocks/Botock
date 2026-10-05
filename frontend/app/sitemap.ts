@@ -12,7 +12,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Core Hubs
     "/tools",
     "/blog",
-    "/services",
 
     // Flagship AI & Video Tools
     "/tools/video-generator",

@@ -47,11 +47,6 @@ export default function Footer() {
 
           <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-xs">
             <Link
-              href="/services"
-              className="text-violet-600 dark:text-violet-400 hover:underline font-bold transition-colors"
-            >
-              Get Pro →
-            </Link>
           </div>
         </div>
       </div>
@@ -202,11 +197,6 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/services"
-                  className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                >
-                  Credit Services Matrix
-                </Link>
               </li>
             </ul>
           </div>
@@ -359,11 +349,3 @@ export default function Footer() {
               <Link href="/blog" className="hover:text-slate-800 dark:hover:text-white transition-colors">Blog</Link>
               <Link href="/contact" className="hover:text-slate-800 dark:hover:text-white transition-colors">Contact</Link>
               <Link href="/security" className="hover:text-slate-800 dark:hover:text-white transition-colors">Security</Link>
-              <Link href="/services" className="hover:text-slate-800 dark:hover:text-white transition-colors">Services</Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-}

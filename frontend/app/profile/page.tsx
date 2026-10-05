@@ -25,7 +25,8 @@ import {
   Activity,
   Users,
   Image as ImageIcon,
-  KeyRound
+  KeyRound,
+  MessageSquare
 } from "lucide-react";
 
 const COUNTRIES = [
@@ -75,6 +76,8 @@ export default function ProfilePage() {
   const [adminVerifiedToken, setAdminVerifiedToken] = useState<string | null>(null);
   const [adminStats, setAdminStats] = useState<any>(null);
 
+
+
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 4000);
@@ -122,6 +125,8 @@ export default function ProfilePage() {
       }
 
       setLoading(false);
+
+
     });
   }, [router]);
 
@@ -433,6 +438,8 @@ export default function ProfilePage() {
               <span>Verify Email Now</span>
             </button>
           )}
+
+
         </div>
 
         {/* Unverified Warning Banner if applicable */}
@@ -706,6 +713,7 @@ export default function ProfilePage() {
           </div>
         </form>
       </div>
+
     </div>
   );
 }

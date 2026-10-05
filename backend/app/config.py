@@ -83,7 +83,9 @@ class Settings(BaseSettings):
     # Azure control plane only. Workers must never receive this value.
     AZURE_STORAGE_CONNECTION_STRING: str = ""
     AZURE_VIDEO_CONTAINER: str = "botock-videos"
+    AZURE_CHAT_CONTAINER: str = "botock-chat-attachments"
     MAX_WORKER_UPLOAD_BYTES: int = 100_000_000
+
     # Set true only for a platform where Chromium sandboxing is impossible.
     # The secure default is false.
     CHROMIUM_NO_SANDBOX: bool = False

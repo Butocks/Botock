@@ -108,10 +108,6 @@ function WaitlistContent() {
       <div className="w-full max-w-lg space-y-6">
 
         {/* Back */}
-        <Link href="/services" className="inline-flex items-center gap-2 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Services
-        </Link>
 
         {/* Plan Badge */}
         <div className={`inline-flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-br border ${colorMap[planInfo.color]} w-full`}>
