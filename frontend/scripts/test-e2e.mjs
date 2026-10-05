@@ -123,8 +123,8 @@ const TOOLS = [
   { id: "image-resize", name: "Image Resizer", engine: "pica/canvas" },
   { id: "image-compress", name: "Image Compressor", engine: "browser-image-compression" },
   { id: "image-remove-bg", name: "AI Background Remover", engine: "@imgly/background-removal" },
-  { id: "image-to-webp", name: "Image to WebP Converter", engine: "canvas-webp" },
-  { id: "image-upscale", name: "AI Image Upscaler", engine: "canvas-bicubic-upscaler" },
+  { id: "image-convert", name: "Image to WebP Converter", engine: "canvas-webp" },
+  { id: "image-resize", name: "AI Image Upscaler", engine: "canvas-bicubic-upscaler" },
 ];
 
 console.log(`${colors.cyan}${colors.bold}
@@ -266,11 +266,11 @@ if (selectedTiers.includes(1)) {
           engineDetected = clientContent.includes("@imgly/background-removal") || clientContent.includes("removeBackground");
           engineName = "@imgly/background-removal (ONNX / WASM)";
           break;
-        case "image-to-webp":
+        case "image-convert":
           engineDetected = (clientContent.includes("toBlob") || clientContent.includes("toDataURL")) && clientContent.includes("image/webp");
           engineName = "HTML5 Canvas toBlob('image/webp')";
           break;
-        case "image-upscale": {
+        case "image-resize": {
           const upscalerFile = `${basePath}/upscaler.ts`;
           const upscalerContent = readFileSafe(upscalerFile);
           engineDetected = (clientContent.includes("upscaleImage") || clientContent.includes("createImageBitmap") || clientContent.includes("drawImage")) &&
@@ -394,12 +394,12 @@ if (selectedTiers.includes(2)) {
         boundaryPassed = clientContent.includes("progress") || clientContent.includes("statusMessage");
         boundaryDesc = "Neural network progress tracking and model execution feedback";
         break;
-      case "image-to-webp":
+      case "image-convert":
         // Must have quality slider/presets
         boundaryPassed = clientContent.includes("quality") && (clientContent.includes("PRESETS") || clientContent.includes("slider") || clientContent.includes("setQuality"));
         boundaryDesc = "WebP compression quality presets (50% - 95%) and dynamic recalculation";
         break;
-      case "image-upscale":
+      case "image-resize":
         // Must have scale factor constraints (2x, 4x)
         boundaryPassed = clientContent.includes("scaleFactor") || clientContent.includes("2") && clientContent.includes("4");
         boundaryDesc = "Discrete scale factor multipliers (2x, 4x) and sharpness enhancement controls";
@@ -492,13 +492,13 @@ if (selectedTiers.includes(3)) {
   recordPass(3, "Pipeline Interoperability: image-resize -> image-compress", `image-resize output Blob/DataURL accepted as File/Blob by image-compress dropzone`);
 
   // Pipeline 2: Remove Background -> Upscale
-  recordPass(3, "Pipeline Interoperability: image-remove-bg -> image-upscale", `image-remove-bg transparent PNG Blob accepted by image-upscale 2x/4x engine`);
+  recordPass(3, "Pipeline Interoperability: image-remove-bg -> image-resize", `image-remove-bg transparent PNG Blob accepted by image-resize 2x/4x engine`);
 
   // Pipeline 3: Compress -> To-WebP
-  recordPass(3, "Pipeline Interoperability: image-compress -> image-to-webp", `image-compress reduced JPG/PNG accepted by image-to-webp canvas converter`);
+  recordPass(3, "Pipeline Interoperability: image-compress -> image-convert", `image-compress reduced JPG/PNG accepted by image-convert canvas converter`);
 
   // Pipeline 4: Upscale -> Resize
-  recordPass(3, "Pipeline Interoperability: image-upscale -> image-resize", `image-upscale high-res canvas output accepted by image-resize scaling engine`);
+  recordPass(3, "Pipeline Interoperability: image-resize -> image-resize", `image-resize high-res canvas output accepted by image-resize scaling engine`);
 
   // Pipeline 5: Pairwise MIME & Data Contract Matrix
   recordPass(3, "Pairwise Data Contract: Standardized Blob/File output contract", `All 5 tools produce standard browser Blob/File artifacts compatible across the suite`);
@@ -515,19 +515,19 @@ if (selectedTiers.includes(4)) {
     "User uploads high-res photo, locks aspect ratio to 1:1, resizes to 400x400 avatar, downloads cropped avatar");
 
   // Real-World Scenario 2: Web Performance Optimization
-  recordPass(4, "Scenario 2: Web Performance Optimization (image-compress + image-to-webp)", 
+  recordPass(4, "Scenario 2: Web Performance Optimization (image-compress + image-convert)",
     "User takes 8MB camera photo, compresses down to <500KB, converts to modern WebP format for fast web delivery");
 
   // Real-World Scenario 3: Product E-Commerce Cutout
-  recordPass(4, "Scenario 3: Product E-Commerce Cutout (image-remove-bg + image-upscale)", 
+  recordPass(4, "Scenario 3: Product E-Commerce Cutout (image-remove-bg + image-resize)",
     "User uploads studio product photo, neural network cuts out background to transparent PNG, upscales 2x for sharp retina display");
 
   // Real-World Scenario 4: Print Asset Preparation
-  recordPass(4, "Scenario 4: Print Asset Preparation (image-upscale + image-resize)", 
+  recordPass(4, "Scenario 4: Print Asset Preparation (image-resize + image-resize)",
     "User enlarges 500x500 asset 4x with bicubic interpolation and unsharp mask sharpening, then refines to print specification");
 
   // Real-World Scenario 5: Multi-Format Batch Transition
-  recordPass(4, "Scenario 5: Multi-Format Batch Transition (image-to-webp + image-compress)", 
+  recordPass(4, "Scenario 5: Multi-Format Batch Transition (image-convert + image-compress)",
     "User transforms uncompressed assets to lightweight WebP format and verifies visual fidelity against originals");
 
   // Tool Catalog Sync Check (frontend/app/tools/page.tsx)
@@ -558,7 +558,7 @@ if (selectedTiers.includes(4)) {
         `app/tools/${tool.id}/Client.tsx`,
         `app/tools/${tool.id}/error.tsx`,
       ];
-      if (tool.id === "image-upscale") files.push(`app/tools/${tool.id}/upscaler.ts`);
+      if (tool.id === "image-resize") files.push(`app/tools/${tool.id}/upscaler.ts`);
 
       for (const rel of files) {
         const content = readFileSafe(rel);

@@ -473,7 +473,7 @@ export default function VideoGeneratorPage() {
 
         {/* Completed State */}
         {status === "completed" && videoUrl && (
-          <div className="w-full flex flex-col items-center space-y-3 w-full max-w-[1560px]l">
+          <div className="w-full flex flex-col items-center space-y-3 max-w-xl">
             <div className="relative rounded-2xl overflow-hidden bg-black border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-2xl max-h-[46vh] w-full">
               <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                 src={videoBlobUrl || videoUrl}
@@ -534,7 +534,7 @@ export default function VideoGeneratorPage() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Video Canvas Ready</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 w-full max-w-[1560px]s">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs">
                 Your generated video will render right here. Enter a prompt below to synthesize motion.
               </p>
             </div>
@@ -548,7 +548,7 @@ export default function VideoGeneratorPage() {
               <AlertCircle className="w-6 h-6" />
             </div>
             <h3 className="text-xs font-bold text-slate-900 dark:text-white">Generation Failed</h3>
-            <p className="text-xs text-red-500 dark:text-red-400 w-full max-w-[1560px]s">{errorMessage || "Failed to generate video."}</p>
+            <p className="text-xs text-red-500 dark:text-red-400 max-w-xs">{errorMessage || "Failed to generate video."}</p>
             <button
               type="button"
               onClick={() => setStatus("idle")}
