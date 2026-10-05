@@ -2,10 +2,33 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.0.105", "192.168.*", "localhost", "127.0.0.1"],
+  compress: true,
+  images: {
+    formats: ["image/avif", "image/webp"],
+  },
   turbopack: {
     resolveAlias: {
       canvas: "./lib/shims/canvas.ts",
     },
+  },
+  async redirects() {
+    return [
+      {
+        source: "/terms-of-service",
+        destination: "/terms",
+        permanent: true,
+      },
+      {
+        source: "/terms-and-conditions",
+        destination: "/terms",
+        permanent: true,
+      },
+      {
+        source: "/tos",
+        destination: "/terms",
+        permanent: true,
+      },
+    ];
   },
   async rewrites() {
     // Do not ship a fallback Azure IP in the public build. A missing deployment

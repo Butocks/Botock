@@ -14,11 +14,15 @@ export default function ForgotPasswordPage() {
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   const [unverifiedAlert, setUnverifiedAlert] = useState<string | null>(null);
+  const [accountNotFound, setAccountNotFound] = useState(false);
+  const [googleAccountNotice, setGoogleAccountNotice] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
     setUnverifiedAlert(null);
+    setAccountNotFound(false);
+    setGoogleAccountNotice(null);
     setLoading(true);
 
     try {
@@ -31,7 +35,18 @@ export default function ForgotPasswordPage() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        if (res.status === 403 || String(data.detail).toLowerCase().includes("unverified")) {
+        const detailStr = String(data.detail || "");
+        if (res.status === 404 || detailStr.toLowerCase().includes("not found")) {
+          setAccountNotFound(true);
+          return;
+        }
+        if (detailStr.toLowerCase().includes("google") || detailStr.toLowerCase().includes("application password")) {
+          setGoogleAccountNotice(
+            data.detail || "This account is registered using Google Sign-In and does not have an application password. Please sign in using Google."
+          );
+          return;
+        }
+        if (res.status === 403 || detailStr.toLowerCase().includes("unverified")) {
           setUnverifiedAlert("Your account is unverified. Please email us at info@botock.app for assistance with your account recovery.");
           return;
         }
@@ -80,6 +95,50 @@ export default function ForgotPasswordPage() {
             Enter your registered email and we'll dispatch a 6-digit recovery OTP code.
           </p>
         </div>
+
+        {/* Account Not Found Alert */}
+        {accountNotFound && (
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-900 dark:text-rose-200 mb-6 space-y-3">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-rose-600 dark:text-rose-400">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+              <span>Account Not Found</span>
+            </div>
+            <p className="text-xs leading-relaxed font-medium">
+              No Botock account was found for <span className="font-bold">{email}</span>. Please verify your email address or create a free account.
+            </p>
+            <div className="pt-1 flex items-center gap-3">
+              <Link
+                href="/signup"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition-colors"
+              >
+                <span>Create New Account</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Google OAuth Only Notice */}
+        {googleAccountNotice && (
+          <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-900 dark:text-indigo-200 mb-6 space-y-3">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-indigo-500" />
+              <span>Google Account Detected</span>
+            </div>
+            <p className="text-xs leading-relaxed font-medium">
+              {googleAccountNotice}
+            </p>
+            <div className="pt-1">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-colors"
+              >
+                <span>Go to Google Sign In</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        )}
 
         {unverifiedAlert && (
           <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 mb-6 space-y-3">

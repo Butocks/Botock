@@ -1,25 +1,27 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import { FileArchive, ShieldCheck } from "lucide-react";
 import Client from "./Client";
 
 export const metadata: Metadata = {
-  title: "Compress PDF Online - Reduce PDF File Size Free - Botock",
-  description:
-    "Shrink and compress PDF file size securely in your browser. Downsample raster images and compact object streams locally with zero server uploads.",
-  keywords: [
-    "compress PDF",
-    "reduce PDF file size",
-    "shrink PDF online",
-    "PDF compressor free",
-    "client-side PDF compression",
-    "downsample PDF images",
-    "fast PDF reducer",
-    "private PDF compress",
-  ],
+  title: "Compress PDF Online Free | Reduce PDF File Size",
+  description: "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
+  alternates: {
+    canonical: "/tools/pdf-compress",
+  },
   openGraph: {
-    title: "Compress PDF Online - Reduce PDF File Size Free - Botock",
-    description:
-      "Compress PDF files securely in your browser. Downsample embedded images with zero file uploads for 100% privacy.",
+    title: "Compress PDF Online Free | Reduce PDF File Size | Botock",
+    description: "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
+    url: "https://botock.app/tools/pdf-compress",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Compress PDF Online Free | Reduce PDF File Size | Botock",
+    description: "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
+    images: ["https://botock.app/og-image.jpg"],
   },
 };
 
@@ -51,24 +53,77 @@ export default function PdfCompressPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "Botock PDF Compressor",
-            "operatingSystem": "Any",
-            "applicationCategory": "UtilitiesApplication",
-            "description":
-              "Browser-based PDF compression utility to downsample raster images and compact PDF document streams locally.",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD",
-            },
-          }),
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Compress PDF - Botock",
+        "url": "https://botock.app/tools/pdf-compress",
+        "description": "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Compress PDF",
+            "item": "https://botock.app/tools/pdf-compress",
+          },
+        ],
+      },
+    ],
+  }),
         }}
       />
 
       {/* Client Component */}
       <Client />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/pdf-merge"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Merge PDF
+          </Link>
+          <Link
+            href="/tools/pdf-split"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Split PDF
+          </Link>
+          <Link
+            href="/tools/pdf-to-word"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            PDF to Word
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

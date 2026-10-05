@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { FileText, Server } from "lucide-react";
@@ -14,40 +15,68 @@ const Client = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "PDF to Word Converter - Convert PDF to DOCX Online | Botock",
-  description:
-    "Convert PDF documents to editable Microsoft Word (DOCX) files online. Fast, secure, and preserves fonts, tables, and layouts.",
-  keywords: [
-    "PDF to Word",
-    "convert PDF to DOCX",
-    "PDF to Word converter online",
-    "editable Word from PDF",
-    "free PDF to Word",
-    "Botock document tools",
-    "PDF to Office converter",
-  ],
+  title: "Convert PDF to Word Online Free | Convert PDF to DOCX",
+  description: "Transform PDF documents into editable Microsoft Word (.docx) documents with high formatting, table, and font accuracy.",
+  alternates: {
+    canonical: "/tools/pdf-to-word",
+  },
   openGraph: {
-    title: "PDF to Word Converter - Convert PDF to DOCX Online | Botock",
-    description:
-      "Convert PDF documents to editable Microsoft Word (DOCX) files online. Fast, secure, and preserves formatting.",
+    title: "Convert PDF to Word Online Free | Convert PDF to DOCX | Botock",
+    description: "Transform PDF documents into editable Microsoft Word (.docx) documents with high formatting, table, and font accuracy.",
+    url: "https://botock.app/tools/pdf-to-word",
+    siteName: "Botock",
     type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Convert PDF to Word Online Free | Convert PDF to DOCX | Botock",
+    description: "Transform PDF documents into editable Microsoft Word (.docx) documents with high formatting, table, and font accuracy.",
+    images: ["https://botock.app/og-image.jpg"],
   },
 };
 
 export default function PdfToWordPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "PDF to Word Converter",
-    operatingSystem: "Web",
-    applicationCategory: "BusinessApplication",
-    description:
-      "Convert PDF documents into editable Microsoft Word DOCX files with high formatting accuracy.",
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "USD",
-    },
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "PDF to Word - Botock",
+        "url": "https://botock.app/tools/pdf-to-word",
+        "description": "Transform PDF documents into editable Microsoft Word (.docx) documents with high formatting, table, and font accuracy.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "PDF to Word",
+            "item": "https://botock.app/tools/pdf-to-word",
+          },
+        ],
+      },
+    ],
   };
 
   return (
@@ -82,6 +111,32 @@ export default function PdfToWordPage() {
 
       {/* Client Component */}
       <Client />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/word-to-pdf"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Word to PDF
+          </Link>
+          <Link
+            href="/tools/pdf-to-excel"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            PDF to Excel
+          </Link>
+          <Link
+            href="/tools/pdf-compress"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Compress PDF
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

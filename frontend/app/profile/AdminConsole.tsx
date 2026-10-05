@@ -93,10 +93,15 @@ interface PlanItem {
   ctaHref: string;
 }
 
-export default function AdminConsole() {
+interface AdminConsoleProps {
+  token?: string | null;
+  email?: string;
+}
+
+export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
   const router = useRouter();
-  const [adminToken, setAdminToken] = useState<string | null>(null);
-  const [adminEmail, setAdminEmail] = useState<string>("");
+  const [adminToken, setAdminToken] = useState<string | null>(token || null);
+  const [adminEmail, setAdminEmail] = useState<string>(email || "");
   const [activeTab, setActiveTab] = useState<
     "analytics" | "quotas" | "tool-usage" | "promotions" | "plans" | "subscriptions" | "complaints" | "jobs" | "blogs" | "tools" | "policies" | "email"
   >("analytics");
@@ -250,10 +255,13 @@ export default function AdminConsole() {
 
   // Check Session on mount
   useEffect(() => {
-    setAdminToken("i0crMqU5rxWp");
-    setAdminEmail("admin@botock.app");
-    loadAllData("i0crMqU5rxWp");
-  }, []);
+    const activeToken = token || "";
+    setAdminToken(activeToken);
+    if (email) setAdminEmail(email);
+    if (activeToken) {
+      loadAllData(activeToken);
+    }
+  }, [token, email]);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 
@@ -11,11 +12,24 @@ const ImageCropClient = dynamic(() => import("./ImageCropClient"), {
 });
 
 export const metadata: Metadata = {
-  title: "Crop & Resize Image Online - Botock",
-  description: "Quickly crop, resize, and edit your images securely in your browser without uploading to any server.",
+  title: "Crop Image Online Free | Custom & Preset Aspect Ratios",
+  description: "Crop photos and images online with pixel precision. Preset aspect ratios (16:9, 1:1, 4:5, 9:16) and custom boundaries.",
+  alternates: {
+    canonical: "/tools/image-crop",
+  },
   openGraph: {
-    title: "Crop Image Online - Botock",
-    description: "Secure, in-browser image cropping and resizing tool.",
+    title: "Crop Image Online Free | Custom & Preset Aspect Ratios | Botock",
+    description: "Crop photos and images online with pixel precision. Preset aspect ratios (16:9, 1:1, 4:5, 9:16) and custom boundaries.",
+    url: "https://botock.app/tools/image-crop",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Crop Image Online Free | Custom & Preset Aspect Ratios | Botock",
+    description: "Crop photos and images online with pixel precision. Preset aspect ratios (16:9, 1:1, 4:5, 9:16) and custom boundaries.",
+    images: ["https://botock.app/og-image.jpg"],
   },
 };
 
@@ -36,22 +50,76 @@ export default function ImageCropPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "Botock Image Cropper",
-            "operatingSystem": "Web Browser",
-            "applicationCategory": "MultimediaApplication",
-            "description": "Browser-based image cropping and resizing utility.",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
-            }
-          })
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Crop Image - Botock",
+        "url": "https://botock.app/tools/image-crop",
+        "description": "Crop photos and images online with pixel precision. Preset aspect ratios (16:9, 1:1, 4:5, 9:16) and custom boundaries.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Crop Image",
+            "item": "https://botock.app/tools/image-crop",
+          },
+        ],
+      },
+    ],
+  })
         }}
       />
 
       <ImageCropClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/image-resize"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Resize Image
+          </Link>
+          <Link
+            href="/tools/image-rotate"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Rotate Image
+          </Link>
+          <Link
+            href="/tools/image-filters"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Image Filters
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

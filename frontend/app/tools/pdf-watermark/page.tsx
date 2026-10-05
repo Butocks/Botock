@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 
@@ -11,11 +12,24 @@ const PDFWatermarkClient = dynamic(() => import("./PDFWatermarkClient"), {
 });
 
 export const metadata: Metadata = {
-  title: "Watermark PDF Online - Protect Documents - Botock",
-  description: "Add custom text stamps, copyright notices, and watermarks to all PDF pages client-side with zero server uploads.",
+  title: "Watermark PDF Online Free | Add Text & Stamp Overlays",
+  description: "Stamp custom copyright text, confidential marks, or logos onto PDF pages with custom opacity, position, and rotation.",
+  alternates: {
+    canonical: "/tools/pdf-watermark",
+  },
   openGraph: {
-    title: "Watermark PDF Online - Botock",
-    description: "Add custom copyright text or image stamps to protect documents.",
+    title: "Watermark PDF Online Free | Add Text & Stamp Overlays | Botock",
+    description: "Stamp custom copyright text, confidential marks, or logos onto PDF pages with custom opacity, position, and rotation.",
+    url: "https://botock.app/tools/pdf-watermark",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Watermark PDF Online Free | Add Text & Stamp Overlays | Botock",
+    description: "Stamp custom copyright text, confidential marks, or logos onto PDF pages with custom opacity, position, and rotation.",
+    images: ["https://botock.app/og-image.jpg"],
   },
 };
 
@@ -35,22 +49,76 @@ export default function PDFWatermarkPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "Botock PDF Watermarker",
-            "operatingSystem": "Web Browser",
-            "applicationCategory": "UtilitiesApplication",
-            "description": "Add text watermarks to PDF files in the browser.",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD",
-            },
-          }),
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Watermark PDF - Botock",
+        "url": "https://botock.app/tools/pdf-watermark",
+        "description": "Stamp custom copyright text, confidential marks, or logos onto PDF pages with custom opacity, position, and rotation.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Watermark PDF",
+            "item": "https://botock.app/tools/pdf-watermark",
+          },
+        ],
+      },
+    ],
+  }),
         }}
       />
 
       <PDFWatermarkClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/pdf-protect"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Protect PDF
+          </Link>
+          <Link
+            href="/tools/pdf-page-numbers"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Add Page Numbers
+          </Link>
+          <Link
+            href="/tools/pdf-merge"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Merge PDF
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

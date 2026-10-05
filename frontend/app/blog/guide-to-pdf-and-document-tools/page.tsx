@@ -1,11 +1,88 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, FileText, Lock, Unlock, FileCheck2, SplitSquareHorizontal } from "lucide-react";
 
+export const metadata: Metadata = {
+  title: "Streamlining Document Workflows with Client-Side PDF Tools",
+  description:
+    "Learn how to secure, merge, split, and convert PDF documents directly inside your browser with complete client-side confidentiality and zero server uploads.",
+  alternates: {
+    canonical: "/blog/guide-to-pdf-and-document-tools",
+  },
+  openGraph: {
+    title: "Streamlining Document Workflows with PDF Tools | Botock Blog",
+    description:
+      "Learn how to secure, merge, split, and convert PDF documents directly inside your browser with zero server uploads.",
+    url: "https://botock.app/blog/guide-to-pdf-and-document-tools",
+    type: "article",
+    publishedTime: "2026-10-04T00:00:00Z",
+    authors: ["Boto"],
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Streamlining Document Workflows with PDF Tools | Botock Blog",
+    description: "Learn how to secure, merge, and convert PDF documents on Botock.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+};
+
 export default function GuideToPDFTools() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        headline: "Streamlining Your Workflow with Botock's PDF Tools",
+        description:
+          "Learn how to secure, unlock, and split PDF documents directly inside your Botock creative workspace.",
+        author: {
+          "@type": "Person",
+          name: "Boto",
+        },
+        datePublished: "2026-10-04",
+        publisher: {
+          "@type": "Organization",
+          name: "Botock",
+          logo: {
+            "@type": "ImageObject",
+            url: "https://botock.app/logo.png",
+          },
+        },
+        mainEntityOfPage: "https://botock.app/blog/guide-to-pdf-and-document-tools",
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Blog",
+            item: "https://botock.app/blog",
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "PDF Tools Guide",
+            item: "https://botock.app/blog/guide-to-pdf-and-document-tools",
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#09090b]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header */}
       <div className="w-full bg-white dark:bg-[#111114] border-b border-slate-200 dark:border-white/10 px-6 py-16 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-rose-500"></div>

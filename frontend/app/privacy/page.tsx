@@ -1,8 +1,11 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Botock",
-  description: "Privacy Policy and Legal Terms for Botock.app",
+  title: "Privacy Policy",
+  description: "Privacy Policy, Client-Side Data Handling, and Security Commitments for Botock.app",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPolicyPage() {

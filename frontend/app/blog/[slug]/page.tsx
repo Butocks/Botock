@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const blog = await getBlog(slug);
 
   if (!blog) {
-    return { title: "Blog Not Found | Botock" };
+    return { title: "Blog Not Found" };
   }
 
   // Use the first attachment as OG Image if available
@@ -53,11 +53,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   return {
-    title: `${blog.title} | Botock AI Blog`,
+    title: blog.title,
     description: blog.excerpt,
+    alternates: {
+      canonical: `/blog/${slug}`,
+    },
     openGraph: {
       title: blog.title,
       description: blog.excerpt,
+      url: `https://botock.app/blog/${slug}`,
+      siteName: "Botock",
       type: "article",
       publishedTime: blog.date,
       authors: [blog.author || "Botock"],

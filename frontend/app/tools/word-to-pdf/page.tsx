@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { FileText, Server, ShieldCheck } from "lucide-react";
@@ -12,24 +13,24 @@ const Client = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "Word to PDF Converter - Convert DOCX & DOC to PDF Online | Botock",
-  description:
-    "Convert Microsoft Word DOCX and DOC documents into high-quality PDF files online. Fast, secure, and preserves formatting, styles, and layouts with backend processing.",
-  keywords: [
-    "Word to PDF",
-    "DOCX to PDF",
-    "DOC to PDF",
-    "convert Word to PDF online",
-    "free Word to PDF converter",
-    "DOCX converter",
-    "Word to PDF high quality",
-    "Botock Word to PDF",
-  ],
+  title: "Convert Word to PDF Online Free | DOCX to PDF Converter",
+  description: "Convert Microsoft Word (.docx, .doc) files into clean, shareable PDF documents with layout and font preservation.",
+  alternates: {
+    canonical: "/tools/word-to-pdf",
+  },
   openGraph: {
-    title: "Word to PDF Converter - Convert DOCX & DOC to PDF Online | Botock",
-    description:
-      "Convert Word DOCX and DOC documents to portable PDF files online with high fidelity.",
+    title: "Convert Word to PDF Online Free | DOCX to PDF Converter | Botock",
+    description: "Convert Microsoft Word (.docx, .doc) files into clean, shareable PDF documents with layout and font preservation.",
+    url: "https://botock.app/tools/word-to-pdf",
+    siteName: "Botock",
     type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Convert Word to PDF Online Free | DOCX to PDF Converter | Botock",
+    description: "Convert Microsoft Word (.docx, .doc) files into clean, shareable PDF documents with layout and font preservation.",
+    images: ["https://botock.app/og-image.jpg"],
   },
 };
 
@@ -60,18 +61,46 @@ export default function WordToPdfPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "Word to PDF Converter",
-            "operatingSystem": "Web",
-            "applicationCategory": "BusinessApplication",
-            "description": "Convert Microsoft Word DOCX and DOC documents into clean, portable PDF files online.",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD",
-            },
-          }),
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Word to PDF - Botock",
+        "url": "https://botock.app/tools/word-to-pdf",
+        "description": "Convert Microsoft Word (.docx, .doc) files into clean, shareable PDF documents with layout and font preservation.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Word to PDF",
+            "item": "https://botock.app/tools/word-to-pdf",
+          },
+        ],
+      },
+    ],
+  }),
         }}
       />
 
@@ -106,6 +135,32 @@ export default function WordToPdfPage() {
           <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
             Files are processed ephemerally in isolated temporary directories and automatically cleaned up immediately after conversion.
           </p>
+        </div>
+      </div>
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/pdf-to-word"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            PDF to Word
+          </Link>
+          <Link
+            href="/tools/excel-to-pdf"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Excel to PDF
+          </Link>
+          <Link
+            href="/tools/pdf-merge"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Merge PDF
+          </Link>
         </div>
       </div>
     </div>

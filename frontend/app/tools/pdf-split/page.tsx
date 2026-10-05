@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 
@@ -11,11 +12,24 @@ const PDFSplitClient = dynamic(() => import("./PDFSplitClient"), {
 });
 
 export const metadata: Metadata = {
-  title: "Split PDF Online - Extract Pages Free - Botock",
-  description: "Split PDF files into individual pages or extract custom page ranges directly in your browser. 100% private, client-side WASM processing.",
+  title: "Split PDF Online Free | Extract Pages from PDF",
+  description: "Extract specific page ranges or split large PDF files into standalone documents with zero quality loss and complete privacy.",
+  alternates: {
+    canonical: "/tools/pdf-split",
+  },
   openGraph: {
-    title: "Split PDF Online - Botock",
-    description: "Extract specific pages or separate PDF files in your browser with zero server uploads.",
+    title: "Split PDF Online Free | Extract Pages from PDF | Botock",
+    description: "Extract specific page ranges or split large PDF files into standalone documents with zero quality loss and complete privacy.",
+    url: "https://botock.app/tools/pdf-split",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Split PDF Online Free | Extract Pages from PDF | Botock",
+    description: "Extract specific page ranges or split large PDF files into standalone documents with zero quality loss and complete privacy.",
+    images: ["https://botock.app/og-image.jpg"],
   },
 };
 
@@ -35,22 +49,76 @@ export default function PDFSplitPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "Botock PDF Splitter",
-            "operatingSystem": "Web Browser",
-            "applicationCategory": "UtilitiesApplication",
-            "description": "Split PDF files into individual pages or ranges in the browser.",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD",
-            },
-          }),
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Split PDF - Botock",
+        "url": "https://botock.app/tools/pdf-split",
+        "description": "Extract specific page ranges or split large PDF files into standalone documents with zero quality loss and complete privacy.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Split PDF",
+            "item": "https://botock.app/tools/pdf-split",
+          },
+        ],
+      },
+    ],
+  }),
         }}
       />
 
       <PDFSplitClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/pdf-merge"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Merge PDF
+          </Link>
+          <Link
+            href="/tools/organize-pdf"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Organize PDF
+          </Link>
+          <Link
+            href="/tools/pdf-compress"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Compress PDF
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,44 +1,70 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import { Lock, ShieldCheck } from "lucide-react";
 import PdfProtectClient from "./Client";
 
 export const metadata: Metadata = {
-  title: "Password Protect PDF - 256-Bit AES Encryption | Botock",
-  description:
-    "Secure your PDF files with standard 256-bit AES password protection and encryption compliant with Adobe Acrobat.",
-  openGraph: {
-    title: "Password Protect PDF - Botock",
-    description:
-      "Encrypt and protect PDF documents with AES password security.",
-    type: "website",
+  title: "Password Protect PDF Online Free | 256-Bit AES Encryption",
+  description: "Encrypt sensitive PDF documents with secure passwords directly in your browser. Prevents unauthorized opening and printing.",
+  alternates: {
+    canonical: "/tools/pdf-protect",
   },
-  keywords: [
-    "protect pdf",
-    "password protect pdf",
-    "encrypt pdf online",
-    "free pdf locker",
-    "secure pdf",
-  ],
+  openGraph: {
+    title: "Password Protect PDF Online Free | 256-Bit AES Encryption | Botock",
+    description: "Encrypt sensitive PDF documents with secure passwords directly in your browser. Prevents unauthorized opening and printing.",
+    url: "https://botock.app/tools/pdf-protect",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Password Protect PDF Online Free | 256-Bit AES Encryption | Botock",
+    description: "Encrypt sensitive PDF documents with secure passwords directly in your browser. Prevents unauthorized opening and printing.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function PdfProtectPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Botock PDF Protect Tool",
-    "operatingSystem": "Any",
-    "applicationCategory": "UtilitiesApplication",
-    "description":
-      "Encrypt and password protect PDF documents locally in your browser.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-    },
-    "featureList": [
-      "Custom user password protection",
-      "WASM client-side document processing",
-      "100% Client-Side Privacy",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Password Protect PDF - Botock",
+        "url": "https://botock.app/tools/pdf-protect",
+        "description": "Encrypt sensitive PDF documents with secure passwords directly in your browser. Prevents unauthorized opening and printing.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Password Protect PDF",
+            "item": "https://botock.app/tools/pdf-protect",
+          },
+        ],
+      },
     ],
   };
 
@@ -63,6 +89,32 @@ export default function PdfProtectPage() {
       </div>
 
       <PdfProtectClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/pdf-merge"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Merge PDF
+          </Link>
+          <Link
+            href="/tools/pdf-watermark"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Watermark PDF
+          </Link>
+          <Link
+            href="/tools/pdf-forms"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            PDF Forms
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

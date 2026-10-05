@@ -17,38 +17,56 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://botock.app"),
   title: {
-    default: "Botock — All-in-One AI Video, Image Generator & Creative Tools",
+    default: "Botock | AI Video, Image & Productivity Tools",
     template: "%s | Botock",
   },
   description:
-    "Generate cinematic AI videos, photorealistic images, edit media in browser, and access 100+ free PDF, video, and image utilities with Botock.",
+    "Turn prompts and photos into cinematic AI videos, synthesize photorealistic images, edit media in-browser, and process PDF documents locally with Botock.",
   keywords: [
     "AI Video Generator",
-    "Free Text to Video AI",
+    "Text to Video AI",
     "Photo to Video AI",
     "AI Image Generator",
     "Online Video Editor",
-    "Free PDF Tools",
+    "Client-Side PDF Tools",
     "Image Converter",
     "Video Cutter",
-    "Botock AI",
+    "Botock",
   ],
-  authors: [{ name: "Botock Team" }],
+  authors: [{ name: "Botock Team", url: "https://botock.app" }],
   creator: "Botock",
+  publisher: "Botock",
+  alternates: {
+    canonical: "https://botock.app",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://botock.com",
-    title: "Botock — Next-Gen AI Video & Creative Utilities SaaS",
+    url: "https://botock.app",
+    title: "Botock | AI Video, Image & Productivity Tools",
     description:
-      "Turn prompts and photos into cinematic videos and stunning AI photos. 100+ free creative tools included.",
+      "Turn prompts and photos into cinematic AI videos, synthesize photorealistic images, edit media in-browser, and process PDF documents locally with Botock.",
     siteName: "Botock",
+    images: [
+      {
+        url: "https://botock.app/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Botock AI & Creative Tools Platform",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Botock — All-in-One AI Creative Suite",
-    description: "Generate cinematic AI videos and photos in seconds with Botock.",
+    title: "Botock | AI Video, Image & Productivity Tools",
+    description:
+      "Turn prompts and photos into cinematic AI videos, synthesize photorealistic images, and process documents with Botock.",
     creator: "@botock_ai",
+    images: ["https://botock.app/og-image.jpg"],
   },
   robots: {
     index: true,
@@ -70,17 +88,50 @@ export default function RootLayout({
 }) {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Botock",
-    applicationCategory: "MultimediaApplication",
-    operatingSystem: "Web",
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "USD",
-    },
-    description:
-      "All-in-one platform for AI Video Generation, Photo Generation, in-browser Video Studio, and 100+ multimedia tools.",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://botock.app/#organization",
+        name: "Botock",
+        url: "https://botock.app",
+        logo: {
+          "@type": "ImageObject",
+          url: "https://botock.app/logo.png",
+        },
+        sameAs: ["https://www.facebook.com/botockapp/"],
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://botock.app/#website",
+        name: "Botock",
+        url: "https://botock.app",
+        publisher: {
+          "@id": "https://botock.app/#organization",
+        },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: "https://botock.app/tools?search={search_term_string}",
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "Botock",
+        url: "https://botock.app",
+        applicationCategory: "MultimediaApplication",
+        operatingSystem: "Web",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+        description:
+          "Unified platform for AI Video Generation, Photo Generation, In-Browser Video Studio, and client-side multimedia utilities.",
+      },
+    ],
   };
 
   return (

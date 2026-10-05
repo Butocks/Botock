@@ -1,50 +1,70 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import { Music, ShieldCheck } from "lucide-react";
 import VideoToMp3Client from "./Client";
 
 export const metadata: Metadata = {
-  title: "Convert Video to MP3 Online Free - Audio Extractor - Botock",
-  description:
-    "Extract high-quality MP3 audio from any video (MP4, WebM, MOV, MKV) directly in your browser. 100% private, client-side WebAssembly audio extractor with zero server uploads.",
-  openGraph: {
-    title: "Convert Video to MP3 Online Free - Botock",
-    description:
-      "Extract crystal-clear MP3 audio from video files locally in your browser. High bitrates up to 320kbps, 100% private.",
-    type: "website",
+  title: "Extract MP3 from Video Online Free | Lossless Audio Ripper",
+  description: "Extract crystal clear high-bitrate MP3 audio from any MP4, MOV, WebM, or MKV video file with zero server uploads.",
+  alternates: {
+    canonical: "/tools/video-to-mp3",
   },
-  keywords: [
-    "video to mp3",
-    "extract audio from video",
-    "mp4 to mp3",
-    "audio extractor",
-    "convert video to audio",
-    "free video to mp3",
-    "browser mp3 converter",
-    "ffmpeg wasm audio",
-    "extract mp3 online",
-  ],
+  openGraph: {
+    title: "Extract MP3 from Video Online Free | Lossless Audio Ripper | Botock",
+    description: "Extract crystal clear high-bitrate MP3 audio from any MP4, MOV, WebM, or MKV video file with zero server uploads.",
+    url: "https://botock.app/tools/video-to-mp3",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Extract MP3 from Video Online Free | Lossless Audio Ripper | Botock",
+    description: "Extract crystal clear high-bitrate MP3 audio from any MP4, MOV, WebM, or MKV video file with zero server uploads.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function VideoToMp3Page() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Botock Video to MP3 Converter",
-    "operatingSystem": "Any",
-    "applicationCategory": "MultimediaApplication",
-    "description":
-      "Extract high-quality MP3 audio from any video file instantly in your browser with zero server uploads. Powered by client-side FFmpeg WebAssembly.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-    },
-    "featureList": [
-      "Ultra-fast video stripping with -vn flag",
-      "High bitrates: 320kbps, 192kbps, 128kbps, and VBR",
-      "Built-in audio player preview",
-      "Instant MP3 file download",
-      "100% Client-Side Privacy - Zero server uploads",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Extract MP3 Audio - Botock",
+        "url": "https://botock.app/tools/video-to-mp3",
+        "description": "Extract crystal clear high-bitrate MP3 audio from any MP4, MOV, WebM, or MKV video file with zero server uploads.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Extract MP3 Audio",
+            "item": "https://botock.app/tools/video-to-mp3",
+          },
+        ],
+      },
     ],
   };
 
@@ -73,6 +93,32 @@ export default function VideoToMp3Page() {
       />
 
       <VideoToMp3Client />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/video-trim"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Cutter
+          </Link>
+          <Link
+            href="/tools/video-convert"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Converter
+          </Link>
+          <Link
+            href="/tools/video-editor"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Editor
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

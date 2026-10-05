@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import Client from "./Client";
 import { ToolRegistry } from "../ToolEngine";
@@ -5,8 +6,25 @@ import { ToolRegistry } from "../ToolEngine";
 const tool = ToolRegistry.getTool("pdf-to-book");
 
 export const metadata: Metadata = {
-  title: tool?.seoTitle || "PDF to Book Viewer",
-  description: tool?.seoDescription || "Read your PDF files like a real book with side-by-side pages.",
+  title: "PDF to Booklet Viewer Online Free | Two-Page Reading",
+  description: "View and read PDF documents in an immersive side-by-side booklet format with realistic pagination and reading controls.",
+  alternates: {
+    canonical: "/tools/pdf-to-book",
+  },
+  openGraph: {
+    title: "PDF to Booklet Viewer Online Free | Two-Page Reading | Botock",
+    description: "View and read PDF documents in an immersive side-by-side booklet format with realistic pagination and reading controls.",
+    url: "https://botock.app/tools/pdf-to-book",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PDF to Booklet Viewer Online Free | Two-Page Reading | Botock",
+    description: "View and read PDF documents in an immersive side-by-side booklet format with realistic pagination and reading controls.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function PDFToBookPage() {
@@ -22,6 +40,32 @@ export default function PDFToBookPage() {
       </div>
 
       <Client />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/pdf-merge"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Merge PDF
+          </Link>
+          <Link
+            href="/tools/pdf-ai-summarizer"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            PDF AI Summarizer
+          </Link>
+          <Link
+            href="/tools/organize-pdf"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Organize PDF
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

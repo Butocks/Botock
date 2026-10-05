@@ -24,7 +24,8 @@ import {
   ArrowLeft,
   Activity,
   Users,
-  Image as ImageIcon
+  Image as ImageIcon,
+  KeyRound
 } from "lucide-react";
 
 const COUNTRIES = [
@@ -67,7 +68,11 @@ export default function ProfilePage() {
   // Admin Panel State
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [adminUnlockStep, setAdminUnlockStep] = useState<"passkey" | "otp">("passkey");
   const [adminUnlockPasskey, setAdminUnlockPasskey] = useState("");
+  const [adminOtpCode, setAdminOtpCode] = useState("");
+  const [adminSubmitting, setAdminSubmitting] = useState(false);
+  const [adminVerifiedToken, setAdminVerifiedToken] = useState<string | null>(null);
   const [adminStats, setAdminStats] = useState<any>(null);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
@@ -93,26 +98,87 @@ export default function ProfilePage() {
       setCountry(u.user_metadata?.country || "Pakistan");
       setIsVerified(Boolean(u.user_metadata?.is_verified ?? (u.app_metadata?.provider === "google")));
       
-      // Admin Check
-      if (userEmail === "butoameerali@gmail.com" || userEmail === "butoameerali@gmai.com" || u.user_metadata?.role === "admin") {
+      // Professional Admin Role Check (No hardcoded email in frontend code)
+      const userRole = u.app_metadata?.role || u.user_metadata?.role;
+      if (userRole === "admin") {
         setIsAdmin(true);
-        // Fetch Admin Stats silently
+      } else {
         try {
-          const res = await fetch("/api/proxy/api/admin/stats", {
-            headers: { "admin-api-key": "i0crMqU5rxWp" }
-          });
-          if (res.ok) {
-            const statsData = await res.json();
-            setAdminStats(statsData);
+          const backendUrl = await getBackendUrl();
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token;
+          if (token) {
+            const checkRes = await fetch(`${backendUrl}/api/admin/auth/check-status`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              if (checkData.is_admin) setIsAdmin(true);
+            }
           }
-        } catch (err) {
-          console.error("Admin stats fetch failed", err);
+        } catch {
+          // ignore
         }
       }
 
       setLoading(false);
     });
   }, [router]);
+
+  const handleAdminRequestOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUnlockPasskey.trim()) {
+      showToast("Please enter your admin passkey.", "error");
+      return;
+    }
+    setAdminSubmitting(true);
+    try {
+      const backendUrl = await getBackendUrl();
+      const res = await fetch(`${backendUrl}/api/admin/auth/verify-secret`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), secret: adminUnlockPasskey.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || "Invalid admin authorization passkey.");
+      }
+      setAdminUnlockStep("otp");
+      showToast(data.message || "Admin verification OTP dispatched to your email!", "success");
+    } catch (err: any) {
+      showToast(err.message || "Failed to authorize admin passkey.", "error");
+    } finally {
+      setAdminSubmitting(false);
+    }
+  };
+
+  const handleAdminVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (adminOtpCode.trim().length !== 6) {
+      showToast("Please enter the 6-digit OTP code.", "error");
+      return;
+    }
+    setAdminSubmitting(true);
+    try {
+      const backendUrl = await getBackendUrl();
+      const res = await fetch(`${backendUrl}/api/admin/auth/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), otp: adminOtpCode.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || "Invalid or expired admin verification code.");
+      }
+      setAdminVerifiedToken(data.admin_token);
+      setAdminUnlocked(true);
+      showToast("Admin Console unlocked successfully!", "success");
+    } catch (err: any) {
+      showToast(err.message || "Admin OTP verification failed.", "error");
+    } finally {
+      setAdminSubmitting(false);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -546,42 +612,78 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Real Full Admin Console */}
-          {isAdmin && !adminUnlocked && (
+          {/* Real Full Admin Console - Step 1: Passkey Verification */}
+          {isAdmin && !adminUnlocked && adminUnlockStep === "passkey" && (
             <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/30 shadow-sm flex flex-col items-center justify-center text-center space-y-4">
-              <ShieldCheck className="w-12 h-12 text-amber-500 opacity-50" />
+              <ShieldCheck className="w-12 h-12 text-amber-500 opacity-60" />
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Admin Console Locked</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Please enter your master passkey to unlock the control panel.</p>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Admin Console Authentication</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md">
+                  Please enter your Master Admin Passkey. A 6-digit confidential OTP will be dispatched to your admin email address to verify your identity.
+                </p>
               </div>
-              <div className="flex gap-2 w-full max-w-sm mt-4">
+              <div className="flex flex-col sm:flex-row gap-2 w-full max-w-sm mt-4">
                 <input
                   type="password"
                   value={adminUnlockPasskey}
                   onChange={(e) => setAdminUnlockPasskey(e.target.value)}
-                  placeholder="Enter Passkey..."
+                  placeholder="Enter Master Passkey..."
                   className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-amber-500 text-center"
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    if (adminUnlockPasskey === "i0crMqU5rxWp") {
-                      setAdminUnlocked(true);
-                      setToast({ type: "success", message: "Admin Panel Unlocked" });
-                    } else {
-                      setToast({ type: "error", message: "Incorrect Passkey" });
-                    }
-                  }}
-                  className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all cursor-pointer"
+                  disabled={adminSubmitting}
+                  onClick={handleAdminRequestOtp}
+                  className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  Unlock
+                  {adminSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Request OTP</span>
                 </button>
               </div>
             </div>
           )}
 
+          {/* Real Full Admin Console - Step 2: 6-Digit OTP Verification */}
+          {isAdmin && !adminUnlocked && adminUnlockStep === "otp" && (
+            <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/30 shadow-sm flex flex-col items-center justify-center text-center space-y-4">
+              <KeyRound className="w-12 h-12 text-amber-500 opacity-80" />
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Enter 6-Digit Admin Verification OTP</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md">
+                  Security code has been dispatched to your admin email. Please enter the 6-digit OTP code below to unlock the command center.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full max-w-sm mt-4">
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={adminOtpCode}
+                  onChange={(e) => setAdminOtpCode(e.target.value)}
+                  placeholder="6-Digit OTP..."
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-sm font-mono tracking-widest text-slate-900 dark:text-white outline-none focus:border-amber-500 text-center"
+                />
+                <button
+                  type="button"
+                  disabled={adminSubmitting}
+                  onClick={handleAdminVerifyOtp}
+                  className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {adminSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Verify & Unlock</span>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdminUnlockStep("passkey")}
+                className="text-[11px] text-slate-400 hover:text-slate-200 underline mt-2 cursor-pointer"
+              >
+                Back to Passkey Entry
+              </button>
+            </div>
+          )}
+
           {isAdmin && adminUnlocked && (
-            <AdminConsole />
+            <AdminConsole token={adminVerifiedToken} email={email} />
           )}
 
           {/* Action buttons */}

@@ -1,46 +1,70 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import { FileText, ShieldCheck } from "lucide-react";
 import JpgToPdfClient from "./Client";
 
 export const metadata: Metadata = {
-  title: "Convert JPG to PDF Online Free - Merge Images to PDF - Botock",
-  description:
-    "Convert JPG, PNG, and WebP images into a single PDF file directly in your browser. Customize page orientation, margins, and document sizes with 100% privacy and zero server uploads.",
-  openGraph: {
-    title: "Convert JPG to PDF Online Free - Botock",
-    description:
-      "Convert and merge JPG and PNG images into a PDF document in your browser.",
-    type: "website",
+  title: "Convert JPG to PDF Online Free | Combine Images to PDF",
+  description: "Convert JPG, PNG, and WebP images into a single professional PDF document. Reorder pages and adjust margins in your browser.",
+  alternates: {
+    canonical: "/tools/jpg-to-pdf",
   },
-  keywords: [
-    "jpg to pdf",
-    "png to pdf",
-    "image to pdf",
-    "convert photos to pdf",
-    "free jpg to pdf converter",
-    "combine images into pdf",
-  ],
+  openGraph: {
+    title: "Convert JPG to PDF Online Free | Combine Images to PDF | Botock",
+    description: "Convert JPG, PNG, and WebP images into a single professional PDF document. Reorder pages and adjust margins in your browser.",
+    url: "https://botock.app/tools/jpg-to-pdf",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Convert JPG to PDF Online Free | Combine Images to PDF | Botock",
+    description: "Convert JPG, PNG, and WebP images into a single professional PDF document. Reorder pages and adjust margins in your browser.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function JpgToPdfPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Botock JPG to PDF Converter",
-    "operatingSystem": "Any",
-    "applicationCategory": "UtilitiesApplication",
-    "description":
-      "Convert JPG, PNG, and WebP images into a single PDF document in the browser.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-    },
-    "featureList": [
-      "Custom page orientation (Portrait, Landscape, Auto)",
-      "Standard sizes (A4, US Letter, Fit to image)",
-      "Visual page reordering and margin control",
-      "100% Client-Side Privacy",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "JPG to PDF - Botock",
+        "url": "https://botock.app/tools/jpg-to-pdf",
+        "description": "Convert JPG, PNG, and WebP images into a single professional PDF document. Reorder pages and adjust margins in your browser.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "JPG to PDF",
+            "item": "https://botock.app/tools/jpg-to-pdf",
+          },
+        ],
+      },
     ],
   };
 
@@ -65,6 +89,32 @@ export default function JpgToPdfPage() {
       </div>
 
       <JpgToPdfClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/pdf-to-jpg"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            PDF to JPG
+          </Link>
+          <Link
+            href="/tools/pdf-merge"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Merge PDF
+          </Link>
+          <Link
+            href="/tools/pdf-compress"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Compress PDF
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

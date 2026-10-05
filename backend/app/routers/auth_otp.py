@@ -333,6 +333,11 @@ class UserOtpVerifyRequest(BaseModel):
     email: str
     otp: str
 
+class UserResetPasswordRequest(BaseModel):
+    email: str
+    otp: str
+    new_password: str
+
 class ComplaintSubmitRequest(BaseModel):
     email: str
     category: str
@@ -385,6 +390,15 @@ import secrets
 # ----------------------------------------------------
 # Admin Authentication Routes
 # ----------------------------------------------------
+@router.get("/api/admin/auth/check-status")
+async def check_admin_status(user: dict = Depends(get_current_user)):
+    email = user.get("email", "").strip().lower()
+    allowed_admins = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
+    is_role_admin = user.get("payload", {}).get("app_metadata", {}).get("role") == "admin"
+    is_admin = is_role_admin or (email in allowed_admins)
+    return {"is_admin": is_admin}
+
+
 @router.post("/api/admin/auth/verify-secret")
 async def verify_admin_secret(req: AdminSecretRequest, request: Request):
     email_clean = req.email.strip().lower()
@@ -1028,15 +1042,46 @@ async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
         
     email = req.email.strip().lower()
 
-    # DB Check for user verification
+    # 1. DB Check for user existence, Google OAuth-only status, and application password
     from app.middleware.auth import _rpc
-    is_verified_in_db = await _rpc("is_user_verified", {"p_email": email})
-    
-    if not is_verified_in_db:
-        raise HTTPException(
-            status_code=403,
-            detail="Your account is unverified. Please email us at info@botock.app for assistance with your account recovery."
-        )
+    try:
+        eligibility = await _rpc("check_password_reset_eligibility", {"p_email": email})
+        if isinstance(eligibility, dict):
+            status = eligibility.get("status")
+            if status == "not_found":
+                raise HTTPException(
+                    status_code=404,
+                    detail="Account not found. No account is registered with this email address. Please check your email or sign up."
+                )
+            elif status == "google_only":
+                raise HTTPException(
+                    status_code=400,
+                    detail="This account is registered using Google Sign-In and does not have an application password. Please sign in using Google."
+                )
+            elif status == "unverified":
+                raise HTTPException(
+                    status_code=403,
+                    detail="Your account is unverified. Please email us at info@botock.app for assistance with your account recovery."
+                )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.warning(f"check_password_reset_eligibility check: {exc}. Trying fallback...")
+        try:
+            is_verified_in_db = await _rpc("is_user_verified", {"p_email": email})
+            if not is_verified_in_db:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Account not found. No account is registered with this email address."
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Fallback verification check failed: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="Authentication service is temporarily unavailable. Please verify your Supabase API keys or try again shortly."
+            )
 
     # Anti-spam cooldown & hourly limit check
     check_otp_spam_protection(email, client_ip)
@@ -1087,8 +1132,55 @@ async def verify_user_forgot_otp(req: UserOtpVerifyRequest, request: Request):
         _write_json(OTP_STORE_FILE, otps)
         raise HTTPException(status_code=400, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
     
-    if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
     return {"success": True, "message": "Reset code verified. You may now update your password."}
+
+
+@router.post("/api/auth/reset-password")
+async def reset_user_password_with_otp(req: UserResetPasswordRequest, request: Request):
+    client_ip = request.client.host if request.client else "unknown"
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    else:
+        client_ip = request.client.host if request.client else "unknown" 
+        
+    is_locked, _ = check_lockout(client_ip)
+    if is_locked:
+        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
+        
+    email = req.email.strip().lower()
+    if len(req.new_password) < 6:
+        raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
+        
+    otps = _read_json(OTP_STORE_FILE, {})
+    stored = otps.get(f"user_forgot_{email}")
+    if not stored:
+        raise HTTPException(status_code=400, detail="No active password reset code found. Please request a new code.")
+    if time.time() > stored["expires_at"]:
+        if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
+        raise HTTPException(status_code=400, detail="Reset code expired. Please request a new code.")
+    
+    input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
+    if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
+        record_failed_attempt(client_ip)
+        stored["attempts_left"] -= 1
+        if stored["attempts_left"] <= 0:
+            if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
+            raise HTTPException(status_code=400, detail="Too many failed attempts. Code invalidated.")
+        otps[f"user_forgot_{email}"] = stored
+        _write_json(OTP_STORE_FILE, otps)
+        raise HTTPException(status_code=400, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
+    
+    # OTP is valid! Now update the password in database
+    from app.middleware.auth import _rpc
+    try:
+        await _rpc("admin_set_user_password", {"p_email": email, "p_password": req.new_password})
+    except Exception as e:
+        logger.error(f"Failed to update password in database: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update password in database. Please try again or contact support.")
+
+    # Invalidate OTP on successful password change
+    if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
+    return {"success": True, "message": "Password updated successfully! You may now sign in with your new password."}
 
 
 # ----------------------------------------------------

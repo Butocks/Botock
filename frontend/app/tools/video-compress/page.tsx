@@ -1,50 +1,70 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import { Minimize2, ShieldCheck } from "lucide-react";
 import VideoCompressClient from "./Client";
 
 export const metadata: Metadata = {
-  title: "Compress Video Online Free - Reduce Video File Size - Botock",
-  description:
-    "Reduce MP4 and WebM video file sizes in your browser using client-side H.264 compression without server uploads. 100% private, adjust CRF and resolution with instant savings.",
-  openGraph: {
-    title: "Compress Video Online Free - Botock",
-    description:
-      "Compress videos locally in your browser with smart CRF rate control and resolution scaling. 100% private, zero server uploads.",
-    type: "website",
+  title: "Compress Video Online Free | Reduce Video File Size",
+  description: "Compress MP4, MOV, and WebM videos in your browser. Reduce file size for email and web sharing with optimal resolution.",
+  alternates: {
+    canonical: "/tools/video-compress",
   },
-  keywords: [
-    "video compressor",
-    "compress video online",
-    "reduce video file size",
-    "compress mp4",
-    "free video compressor",
-    "browser video compressor",
-    "ffmpeg wasm compress",
-    "h264 crf compression",
-    "client-side video optimizer",
-  ],
+  openGraph: {
+    title: "Compress Video Online Free | Reduce Video File Size | Botock",
+    description: "Compress MP4, MOV, and WebM videos in your browser. Reduce file size for email and web sharing with optimal resolution.",
+    url: "https://botock.app/tools/video-compress",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Compress Video Online Free | Reduce Video File Size | Botock",
+    description: "Compress MP4, MOV, and WebM videos in your browser. Reduce file size for email and web sharing with optimal resolution.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function VideoCompressPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Botock Video Compressor",
-    "operatingSystem": "Any",
-    "applicationCategory": "MultimediaApplication",
-    "description":
-      "Shrink video file sizes in your browser using client-side FFmpeg WebAssembly. Configurable H.264 CRF quality levels and resolution downscaling with zero server uploads.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-    },
-    "featureList": [
-      "CRF quality presets: Light (24), Balanced (28), Heavy (32)",
-      "Smart resolution downscaling (Original, 1080p, 720p, 480p)",
-      "Real-time compression savings calculator",
-      "Ultrafast in-browser H.264 encoding",
-      "100% Client-Side Privacy - Zero server uploads",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Compress Video - Botock",
+        "url": "https://botock.app/tools/video-compress",
+        "description": "Compress MP4, MOV, and WebM videos in your browser. Reduce file size for email and web sharing with optimal resolution.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Compress Video",
+            "item": "https://botock.app/tools/video-compress",
+          },
+        ],
+      },
     ],
   };
 
@@ -73,6 +93,32 @@ export default function VideoCompressPage() {
       />
 
       <VideoCompressClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/video-convert"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Converter
+          </Link>
+          <Link
+            href="/tools/video-trim"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Cutter
+          </Link>
+          <Link
+            href="/tools/video-editor"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Editor
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

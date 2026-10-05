@@ -1,11 +1,89 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Film, Clock, Search, Wand2, ShieldAlert, Layers } from "lucide-react";
 
+export const metadata: Metadata = {
+  title: "The Ultimate Guide to AI Video Generation: Text to Video Masterclass",
+  description:
+    "Master AI video prompt engineering, camera movements, lighting, and timeline stitching. Turn 10-second AI video clips into professional cinematic videos.",
+  alternates: {
+    canonical: "/blog/guide-to-ai-video-generation",
+  },
+  openGraph: {
+    title: "The Ultimate Guide to AI Video Generation | Botock Blog",
+    description:
+      "Master AI video prompt engineering, camera movements, lighting, and timeline stitching.",
+    url: "https://botock.app/blog/guide-to-ai-video-generation",
+    type: "article",
+    publishedTime: "2026-10-04T00:00:00Z",
+    authors: ["Boto"],
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "The Ultimate Guide to AI Video Generation | Botock Blog",
+    description:
+      "Master AI video prompt engineering and camera movements with Botock.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+};
+
 export default function GuideToVideoGeneration() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        headline: "The Ultimate Guide to AI Video Generation: From Text to Masterpiece",
+        description:
+          "Learn the secrets of Text-to-Video and Image-to-Video. Discover how to write the perfect prompt and stitch clips into a masterpiece.",
+        author: {
+          "@type": "Person",
+          name: "Boto",
+        },
+        datePublished: "2026-10-04",
+        publisher: {
+          "@type": "Organization",
+          name: "Botock",
+          logo: {
+            "@type": "ImageObject",
+            url: "https://botock.app/logo.png",
+          },
+        },
+        mainEntityOfPage: "https://botock.app/blog/guide-to-ai-video-generation",
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Blog",
+            item: "https://botock.app/blog",
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "AI Video Guide",
+            item: "https://botock.app/blog/guide-to-ai-video-generation",
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#09090b]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header */}
       <div className="w-full bg-white dark:bg-[#111114] border-b border-slate-200 dark:border-white/10 px-6 py-16 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>

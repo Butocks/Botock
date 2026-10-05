@@ -1,46 +1,70 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import { Subtitles, ShieldCheck } from "lucide-react";
 import SubtitlesClient from "./Client";
 
 export const metadata: Metadata = {
-  title: "Subtitle Editor & Converter Online Free - SRT to VTT - Botock",
-  description:
-    "Convert, adjust timing offset, and edit SRT and VTT subtitles directly in your browser. 100% private, free subtitle tool with zero server uploads.",
-  openGraph: {
-    title: "Subtitle Editor & Converter Online Free - Botock",
-    description:
-      "Edit and convert SRT and VTT subtitles with time synchronization in your browser.",
-    type: "website",
+  title: "Subtitle Editor & Converter Online Free | SRT to VTT",
+  description: "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
+  alternates: {
+    canonical: "/tools/subtitles",
   },
-  keywords: [
-    "subtitle editor",
-    "srt to vtt",
-    "vtt to srt",
-    "subtitle converter",
-    "sync subtitles",
-    "free subtitle editor",
-  ],
+  openGraph: {
+    title: "Subtitle Editor & Converter Online Free | SRT to VTT | Botock",
+    description: "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
+    url: "https://botock.app/tools/subtitles",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Subtitle Editor & Converter Online Free | SRT to VTT | Botock",
+    description: "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function SubtitlesPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Botock Subtitle & Caption Tool",
-    "operatingSystem": "Any",
-    "applicationCategory": "MultimediaApplication",
-    "description":
-      "Convert and edit subtitle files between SRT and VTT with timestamp synchronization in the browser.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-    },
-    "featureList": [
-      "Convert between SRT and WebVTT",
-      "Timestamp synchronization & offset shift",
-      "Find & replace caption text",
-      "100% Client-Side Privacy",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Subtitle Editor - Botock",
+        "url": "https://botock.app/tools/subtitles",
+        "description": "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Subtitle Editor",
+            "item": "https://botock.app/tools/subtitles",
+          },
+        ],
+      },
     ],
   };
 
@@ -65,6 +89,32 @@ export default function SubtitlesPage() {
       </div>
 
       <SubtitlesClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/video-trim"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Cutter
+          </Link>
+          <Link
+            href="/tools/video-editor"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Editor
+          </Link>
+          <Link
+            href="/tools/video-to-mp3"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Extract MP3
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

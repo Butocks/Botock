@@ -447,7 +447,7 @@ export default function Navbar() {
 
                       {isUserAdmin && (
                         <Link
-                          href="/admin"
+                          href="/profile?tab=admin"
                           onClick={() => setProfileDropdownOpen(false)}
                           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer group"
                         >
@@ -615,7 +615,7 @@ export default function Navbar() {
 
                 {isUserAdmin && (
                   <Link
-                    href="/admin"
+                    href="/profile?tab=admin"
                     onClick={() => setIsOpen(false)}
                     className="py-2 px-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold text-xs flex items-center gap-1 border border-red-500/20"
                   >

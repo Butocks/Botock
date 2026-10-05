@@ -1,11 +1,88 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Image as ImageIcon, Zap, AlertCircle, ShieldAlert, Target } from "lucide-react";
 
+export const metadata: Metadata = {
+  title: "Mastering AI Photo Generation: Tips, Styles & FAQs",
+  description:
+    "Learn how to generate photorealistic images from text prompts, choose optimal aspect ratios, and navigate AI generation system speeds on Botock.",
+  alternates: {
+    canonical: "/blog/guide-to-photo-generation-and-faq",
+  },
+  openGraph: {
+    title: "Mastering AI Photo Generation & FAQs | Botock Blog",
+    description:
+      "Everything you need to know about generating stunning images with Nano Banana AI models.",
+    url: "https://botock.app/blog/guide-to-photo-generation-and-faq",
+    type: "article",
+    publishedTime: "2026-10-04T00:00:00Z",
+    authors: ["Boto"],
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mastering AI Photo Generation & FAQs | Botock Blog",
+    description: "Tips and best practices for AI photo generation on Botock.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+};
+
 export default function GuideToPhotoGeneration() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        headline: "Mastering AI Photo Generation & Important FAQs",
+        description:
+          "Everything you need to know about generating stunning images, understanding system speeds, and navigating content safety policies.",
+        author: {
+          "@type": "Person",
+          name: "Boto",
+        },
+        datePublished: "2026-10-04",
+        publisher: {
+          "@type": "Organization",
+          name: "Botock",
+          logo: {
+            "@type": "ImageObject",
+            url: "https://botock.app/logo.png",
+          },
+        },
+        mainEntityOfPage: "https://botock.app/blog/guide-to-photo-generation-and-faq",
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Blog",
+            item: "https://botock.app/blog",
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "Photo Generation Guide",
+            item: "https://botock.app/blog/guide-to-photo-generation-and-faq",
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#09090b]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header */}
       <div className="w-full bg-white dark:bg-[#111114] border-b border-slate-200 dark:border-white/10 px-6 py-16 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>

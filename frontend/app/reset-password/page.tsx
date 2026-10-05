@@ -78,25 +78,26 @@ function ResetPasswordForm() {
 
     try {
       const backendUrl = await getBackendUrl();
-      const verifyRes = await fetch(`${backendUrl}/api/auth/verify-forgot-otp`, {
+      const resetRes = await fetch(`${backendUrl}/api/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), otp: otp.trim() }),
+        body: JSON.stringify({
+          email: email.trim(),
+          otp: otp.trim(),
+          new_password: newPassword,
+        }),
       });
 
-      const verifyData = await verifyRes.json().catch(() => ({}));
-      if (!verifyRes.ok) {
-        throw new Error(verifyData.detail || "Invalid or expired recovery code.");
+      const resetData = await resetRes.json().catch(() => ({}));
+      if (!resetRes.ok) {
+        throw new Error(resetData.detail || "Failed to update password. Please check your OTP code.");
       }
 
-      // Supabase update user password or recovery
-      const { error: resetError } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-
-      if (resetError) {
-        // If no active session, trigger supabase recovery
-        await supabase.auth.resetPasswordForEmail(email.trim());
+      // Also sync password with active Supabase session if present
+      try {
+        await supabase.auth.updateUser({ password: newPassword });
+      } catch {
+        // Active session optional since backend already securely updated password in DB
       }
 
       setMessage({

@@ -1,11 +1,89 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Edit3, Image as ImageIcon, Video, FileText, CheckCircle2 } from "lucide-react";
 
+export const metadata: Metadata = {
+  title: "About Us: The Story Behind Botock",
+  description:
+    "Learn about Botock's mission to make generative AI video and creative multimedia tools universally accessible, private, and easy to use.",
+  alternates: {
+    canonical: "/blog/about-botock-app",
+  },
+  openGraph: {
+    title: "About Us: The Story Behind Botock | Botock Blog",
+    description:
+      "Learn about Botock's mission to make generative AI video and creative multimedia tools universally accessible.",
+    url: "https://botock.app/blog/about-botock-app",
+    type: "article",
+    publishedTime: "2026-10-04T00:00:00Z",
+    authors: ["Boto"],
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About Us: The Story Behind Botock | Botock Blog",
+    description:
+      "Learn about Botock's mission to make generative AI video and creative multimedia tools universally accessible.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+};
+
 export default function AboutBotockApp() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        headline: "About Us: The Story Behind Botock",
+        description:
+          "Botock was created by Boto with a simple idea: creative technology should be easier to access.",
+        author: {
+          "@type": "Person",
+          name: "Boto",
+        },
+        datePublished: "2026-10-04",
+        publisher: {
+          "@type": "Organization",
+          name: "Botock",
+          logo: {
+            "@type": "ImageObject",
+            url: "https://botock.app/logo.png",
+          },
+        },
+        mainEntityOfPage: "https://botock.app/blog/about-botock-app",
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Blog",
+            item: "https://botock.app/blog",
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "About Botock",
+            item: "https://botock.app/blog/about-botock-app",
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#09090b]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header */}
       <div className="w-full bg-white dark:bg-[#111114] border-b border-slate-200 dark:border-white/10 px-6 py-12 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>

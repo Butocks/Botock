@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 
@@ -11,11 +12,24 @@ const Client = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "Resize Image Online - Free & Fast Image Resizer - Botock",
-  description: "Resize JPG, PNG, and WEBP images online in your browser. Fast, free, client-side image scaling with exact pixel dimensions or percentage without uploading to any server.",
+  title: "Resize Image Online Free | Change Pixel Dimensions",
+  description: "Resize photos and images in pixels or percentages while locking aspect ratio. Fast, free, and completely client-side.",
+  alternates: {
+    canonical: "/tools/image-resize",
+  },
   openGraph: {
-    title: "Resize Image Online - Botock",
-    description: "Secure, in-browser image resizing tool. Maintain aspect ratio or scale by percentage with 100% privacy.",
+    title: "Resize Image Online Free | Change Pixel Dimensions | Botock",
+    description: "Resize photos and images in pixels or percentages while locking aspect ratio. Fast, free, and completely client-side.",
+    url: "https://botock.app/tools/image-resize",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Resize Image Online Free | Change Pixel Dimensions | Botock",
+    description: "Resize photos and images in pixels or percentages while locking aspect ratio. Fast, free, and completely client-side.",
+    images: ["https://botock.app/og-image.jpg"],
   },
 };
 
@@ -36,22 +50,76 @@ export default function ImageResizePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "Botock Image Resizer",
-            "operatingSystem": "Web Browser",
-            "applicationCategory": "MultimediaApplication",
-            "description": "Browser-based image resizing utility with pixel and percentage scaling.",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD",
-            },
-          }),
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Resize Image - Botock",
+        "url": "https://botock.app/tools/image-resize",
+        "description": "Resize photos and images in pixels or percentages while locking aspect ratio. Fast, free, and completely client-side.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Resize Image",
+            "item": "https://botock.app/tools/image-resize",
+          },
+        ],
+      },
+    ],
+  }),
         }}
       />
 
       <Client />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/image-crop"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Crop Image
+          </Link>
+          <Link
+            href="/tools/image-compress"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Compress Images
+          </Link>
+          <Link
+            href="/tools/image-convert"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Convert Image
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

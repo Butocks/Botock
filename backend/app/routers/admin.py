@@ -9,16 +9,33 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
-def verify_admin(admin_api_key: Optional[str] = Header(None)):
-    """Very strict API Key validation for local Admin Portal connecting to Prod."""
-    if not settings.ADMIN_LOGIN_SECRET or len(settings.ADMIN_LOGIN_SECRET) < 10:
-        logger.error("ADMIN_LOGIN_SECRET is missing or too weak.")
-        raise HTTPException(status_code=500, detail="Admin environment not properly configured.")
+import hmac
+import hashlib
+import time
+
+def verify_admin(
+    admin_api_key: Optional[str] = Header(None, alias="admin-api-key"),
+    x_admin_token: Optional[str] = Header(None, alias="x-admin-token"),
+):
+    """Validates either the master ADMIN_LOGIN_SECRET or a verified 2FA OTP admin token."""
+    key = admin_api_key or x_admin_token
+    if not key:
+        raise HTTPException(status_code=401, detail="Admin authorization required.")
         
-    if admin_api_key != settings.ADMIN_LOGIN_SECRET:
-        logger.warning("Failed admin access attempt with invalid key.")
-        raise HTTPException(status_code=403, detail="Invalid Admin API Key")
-    return True
+    # 1. Direct Master Secret Match
+    if settings.ADMIN_LOGIN_SECRET and hmac.compare_digest(key.strip(), settings.ADMIN_LOGIN_SECRET.strip()):
+        return True
+        
+    # 2. OTP Session Token Match
+    from app.routers.auth_otp import SESSION_TOKENS_FILE, _read_json
+    tokens = _read_json(SESSION_TOKENS_FILE, {})
+    hashed = hashlib.sha256(key.strip().encode()).hexdigest()
+    exp = tokens.get(hashed)
+    if exp and time.time() <= exp:
+        return True
+        
+    logger.warning("Failed admin access attempt with invalid or expired key/token.")
+    raise HTTPException(status_code=403, detail="Invalid or expired admin authorization.")
 
 class BlogUpdate(BaseModel):
     tool_id: str

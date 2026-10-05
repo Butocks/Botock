@@ -2,24 +2,38 @@
 node_modules/
 venv/
 backend/venv/
+.pnpm-store/
 
 # Next.js build output
 .next/
 out/
+dist/
+build/
 
-# Environment files
+# Environment files (CRITICAL: NEVER COMMIT SECRETS)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+*.env
+*.env.*
+!*.env.example
 backend/.env
-backend/.env.local
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
 # Session & credentials (CRITICAL: NEVER COMMIT)
 backend/session/
 session/
 *.session.json
+*.json.lock
+*.tmp.*
+admin_tokens.json
+admin_lockout.json
+otp_store.json
+otp_rate_limits.json
 
 # Video & debug storage
 backend/generated_videos/
@@ -29,19 +43,21 @@ backend/*.png
 backend/*.jpg
 backend/*.log
 *.log
+scratch/
 
 # Allow public images in frontend
 !frontend/public/**
+
+# Python cache & temporary files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
 
 # OS files
 .DS_Store
 Thumbs.db
 /botock-admin
-*.md
-!README.md
-*.png
-*.jpg
-*.html
-*.pyc
-__pycache__/
 botock-admin/

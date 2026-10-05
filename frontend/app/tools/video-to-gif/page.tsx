@@ -1,47 +1,70 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import { Film, ShieldCheck } from "lucide-react";
 import VideoToGifClient from "./Client";
 
 export const metadata: Metadata = {
-  title: "Convert Video to GIF Online Free - Fast Animated GIF Maker - Botock",
-  description:
-    "Convert MP4, WebM, and MOV videos to smooth animated GIFs in your browser. Custom framerate, resolution scaling, and clip trimming with zero server uploads.",
-  openGraph: {
-    title: "Convert Video to GIF Online Free - Botock",
-    description:
-      "Make high-quality animated GIFs from videos locally in your browser. 100% private, free, and fast.",
-    type: "website",
+  title: "Convert Video to GIF Online Free | Animated GIF Maker",
+  description: "Convert video highlights from MP4, MOV, or WebM into high-quality looping animated GIFs with custom FPS and size.",
+  alternates: {
+    canonical: "/tools/video-to-gif",
   },
-  keywords: [
-    "video to gif",
-    "mp4 to gif",
-    "convert video to gif",
-    "gif maker",
-    "free gif converter",
-    "browser gif maker",
-    "ffmpeg wasm gif",
-  ],
+  openGraph: {
+    title: "Convert Video to GIF Online Free | Animated GIF Maker | Botock",
+    description: "Convert video highlights from MP4, MOV, or WebM into high-quality looping animated GIFs with custom FPS and size.",
+    url: "https://botock.app/tools/video-to-gif",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Convert Video to GIF Online Free | Animated GIF Maker | Botock",
+    description: "Convert video highlights from MP4, MOV, or WebM into high-quality looping animated GIFs with custom FPS and size.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function VideoToGifPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Botock Video to GIF Converter",
-    "operatingSystem": "Any",
-    "applicationCategory": "MultimediaApplication",
-    "description":
-      "Convert video files to smooth animated GIFs with palette optimization directly in the browser.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-    },
-    "featureList": [
-      "Custom framerate (10-24 fps)",
-      "High quality Bayer dithering palette optimization",
-      "Resolution presets and custom range trimming",
-      "100% Client-Side Privacy",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Video to GIF - Botock",
+        "url": "https://botock.app/tools/video-to-gif",
+        "description": "Convert video highlights from MP4, MOV, or WebM into high-quality looping animated GIFs with custom FPS and size.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Video to GIF",
+            "item": "https://botock.app/tools/video-to-gif",
+          },
+        ],
+      },
     ],
   };
 
@@ -66,6 +89,32 @@ export default function VideoToGifPage() {
       </div>
 
       <VideoToGifClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/video-trim"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Cutter
+          </Link>
+          <Link
+            href="/tools/video-convert"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Converter
+          </Link>
+          <Link
+            href="/tools/video-editor"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Editor
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

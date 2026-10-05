@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Sparkles } from "lucide-react";
@@ -14,47 +15,68 @@ const ImageCompressClient = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "Compress Image Online - Reduce File Size Instantly - Botock",
-  description:
-    "Quickly compress JPG, PNG, and WebP images in your browser without losing quality. 100% private, client-side Web Worker image compression.",
-  openGraph: {
-    title: "Compress Image Online - Botock",
-    description:
-      "Secure, high-performance in-browser image compression tool. Free, zero server uploads, unlimited use.",
-    type: "website",
+  title: "Compress Image Online Free | Reduce File Size",
+  description: "Compress JPG, PNG, WebP, and GIF images online without losing visible quality. Fast, client-side batch image compression.",
+  alternates: {
+    canonical: "/tools/image-compress",
   },
-  keywords: [
-    "image compressor",
-    "compress jpg",
-    "compress png",
-    "compress webp",
-    "reduce image file size",
-    "browser image compression",
-    "client-side image optimizer"
-  ],
+  openGraph: {
+    title: "Compress Image Online Free | Reduce File Size | Botock",
+    description: "Compress JPG, PNG, WebP, and GIF images online without losing visible quality. Fast, client-side batch image compression.",
+    url: "https://botock.app/tools/image-compress",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Compress Image Online Free | Reduce File Size | Botock",
+    description: "Compress JPG, PNG, WebP, and GIF images online without losing visible quality. Fast, client-side batch image compression.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function ImageCompressPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Botock Image Compressor",
-    "operatingSystem": "Web Browser",
-    "applicationCategory": "MultimediaApplication",
-    "description":
-      "Free in-browser image compression tool. Drastically reduces JPG, PNG, and WebP image sizes securely without uploading files to remote servers.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-    },
-    "featureList": [
-      "Target maximum file size in MB or KB",
-      "Adjustable quality slider (1% to 100%)",
-      "Optional max dimension constraint",
-      "Multi-threaded Web Worker compression",
-      "Zero server uploads - 100% private"
-    ]
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Compress Images - Botock",
+        "url": "https://botock.app/tools/image-compress",
+        "description": "Compress JPG, PNG, WebP, and GIF images online without losing visible quality. Fast, client-side batch image compression.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Compress Images",
+            "item": "https://botock.app/tools/image-compress",
+          },
+        ],
+      },
+    ],
   };
 
   return (
@@ -80,6 +102,32 @@ export default function ImageCompressPage() {
       />
 
       <ImageCompressClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/image-convert"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Convert Image
+          </Link>
+          <Link
+            href="/tools/image-resize"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Resize Image
+          </Link>
+          <Link
+            href="/tools/image-remove-bg"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Remove Background
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Sparkles } from "lucide-react";
@@ -14,9 +15,25 @@ const Client = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "Remove Background from Image (Batch) - Botock",
-  description:
-    "Remove backgrounds from multiple images instantly using advanced AI. 100% free and fast.",
+  title: "AI Background Remover Online Free | Batch Background Removal",
+  description: "Remove backgrounds from photos and portraits instantly with high-precision AI. Download transparent PNGs with zero server uploads.",
+  alternates: {
+    canonical: "/tools/image-remove-bg",
+  },
+  openGraph: {
+    title: "AI Background Remover Online Free | Batch Background Removal | Botock",
+    description: "Remove backgrounds from photos and portraits instantly with high-precision AI. Download transparent PNGs with zero server uploads.",
+    url: "https://botock.app/tools/image-remove-bg",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Background Remover Online Free | Batch Background Removal | Botock",
+    description: "Remove backgrounds from photos and portraits instantly with high-precision AI. Download transparent PNGs with zero server uploads.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function ImageRemoveBGPage() {
@@ -37,7 +54,33 @@ export default function ImageRemoveBGPage() {
 
       <div className="bg-white dark:bg-[#1a1a22] border border-slate-200 dark:border-white/[0.05] rounded-[2rem] p-4 sm:p-8 shadow-2xl shadow-slate-200/50 dark:shadow-none relative z-10">
         <Client />
+            {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/image-compress"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Compress Images
+          </Link>
+          <Link
+            href="/tools/image-crop"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Crop Image
+          </Link>
+          <Link
+            href="/tools/image-generator"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            AI Image Studio
+          </Link>
+        </div>
       </div>
+    </div>
     </main>
   );
 }

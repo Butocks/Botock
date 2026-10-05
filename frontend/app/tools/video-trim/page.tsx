@@ -1,51 +1,70 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import { Scissors, ShieldCheck } from "lucide-react";
 import VideoTrimClient from "./Client";
 
 export const metadata: Metadata = {
-  title: "Trim Video Online Free - Fast Lossless Video Cutter - Botock",
-  description:
-    "Cut and trim video clips instantly in your browser using client-side FFmpeg WebAssembly. Fast lossless stream copy or frame-accurate cut. 100% private, no server uploads.",
-  openGraph: {
-    title: "Trim Video Online Free - Botock",
-    description:
-      "Secure, high-performance in-browser video trimming tool. 100% private, client-side WebAssembly execution.",
-    type: "website",
+  title: "Trim Video Online Free | Fast Lossless Video Cutter",
+  description: "Cut and trim video clips with frame-accurate precision in your browser. 0ms latency, zero uploads, instant export.",
+  alternates: {
+    canonical: "/tools/video-trim",
   },
-  keywords: [
-    "video trim",
-    "trim video online",
-    "cut video",
-    "video cutter",
-    "free video trimmer",
-    "lossless video trim",
-    "browser video editor",
-    "mp4 trim",
-    "ffmpeg wasm",
-    "client-side video cutter",
-  ],
+  openGraph: {
+    title: "Trim Video Online Free | Fast Lossless Video Cutter | Botock",
+    description: "Cut and trim video clips with frame-accurate precision in your browser. 0ms latency, zero uploads, instant export.",
+    url: "https://botock.app/tools/video-trim",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Trim Video Online Free | Fast Lossless Video Cutter | Botock",
+    description: "Cut and trim video clips with frame-accurate precision in your browser. 0ms latency, zero uploads, instant export.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function VideoTrimPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Botock Video Trimmer",
-    "operatingSystem": "Any",
-    "applicationCategory": "MultimediaApplication",
-    "description":
-      "Cut and trim video clips instantly in your browser using client-side FFmpeg WebAssembly. Fast lossless stream copy or frame-accurate re-encoding with zero server uploads.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-    },
-    "featureList": [
-      "Fast lossless stream-copy trimming",
-      "Frame-accurate re-encoding mode",
-      "Instant browser preview player",
-      "Millisecond time precision controls",
-      "100% Client-Side Privacy - Zero server uploads",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Video Cutter & Trimmer - Botock",
+        "url": "https://botock.app/tools/video-trim",
+        "description": "Cut and trim video clips with frame-accurate precision in your browser. 0ms latency, zero uploads, instant export.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Video Cutter & Trimmer",
+            "item": "https://botock.app/tools/video-trim",
+          },
+        ],
+      },
     ],
   };
 
@@ -74,6 +93,32 @@ export default function VideoTrimPage() {
       />
 
       <VideoTrimClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/video-editor"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video Editor
+          </Link>
+          <Link
+            href="/tools/video-to-mp3"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Extract MP3
+          </Link>
+          <Link
+            href="/tools/video-to-gif"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Video to GIF
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

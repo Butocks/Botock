@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 
@@ -11,11 +12,24 @@ const PDFRotateClient = dynamic(() => import("./PDFRotateClient"), {
 });
 
 export const metadata: Metadata = {
-  title: "Rotate PDF Pages Online - Free Tool - Botock",
-  description: "Rotate PDF pages 90, 180, or 270 degrees clockwise or counterclockwise securely in your browser.",
+  title: "Rotate PDF Pages Online Free | 90°, 180°, 270° Rotation",
+  description: "Rotate individual pages or entire PDF documents permanently. Fast in-browser processing with zero server uploads.",
+  alternates: {
+    canonical: "/tools/pdf-rotate",
+  },
   openGraph: {
-    title: "Rotate PDF Online - Botock",
-    description: "Rotate single pages or entire PDF documents client-side with zero server uploads.",
+    title: "Rotate PDF Pages Online Free | 90°, 180°, 270° Rotation | Botock",
+    description: "Rotate individual pages or entire PDF documents permanently. Fast in-browser processing with zero server uploads.",
+    url: "https://botock.app/tools/pdf-rotate",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rotate PDF Pages Online Free | 90°, 180°, 270° Rotation | Botock",
+    description: "Rotate individual pages or entire PDF documents permanently. Fast in-browser processing with zero server uploads.",
+    images: ["https://botock.app/og-image.jpg"],
   },
 };
 
@@ -35,22 +49,76 @@ export default function PDFRotatePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "Botock PDF Rotator",
-            "operatingSystem": "Web Browser",
-            "applicationCategory": "UtilitiesApplication",
-            "description": "Rotate PDF pages online in the browser.",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD",
-            },
-          }),
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Rotate PDF - Botock",
+        "url": "https://botock.app/tools/pdf-rotate",
+        "description": "Rotate individual pages or entire PDF documents permanently. Fast in-browser processing with zero server uploads.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Rotate PDF",
+            "item": "https://botock.app/tools/pdf-rotate",
+          },
+        ],
+      },
+    ],
+  }),
         }}
       />
 
       <PDFRotateClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/organize-pdf"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Organize PDF
+          </Link>
+          <Link
+            href="/tools/crop-pdf"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Crop PDF
+          </Link>
+          <Link
+            href="/tools/pdf-page-delete"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Delete PDF Pages
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

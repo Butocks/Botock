@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import Client from "./Client";
 import { ToolRegistry } from "../ToolEngine";
@@ -5,8 +6,25 @@ import { ToolRegistry } from "../ToolEngine";
 const tool = ToolRegistry.getTool("pdf-forms");
 
 export const metadata: Metadata = {
-  title: tool?.seoTitle || "Create Fillable PDF Forms",
-  description: tool?.seoDescription || "Add interactive AcroForm text fields and checkboxes to static PDFs.",
+  title: "Fill & Sign PDF Forms Online Free | AcroForms Tool",
+  description: "Interactively fill out PDF text fields, checkboxes, radio buttons, and sign documents online with 100% client-side privacy.",
+  alternates: {
+    canonical: "/tools/pdf-forms",
+  },
+  openGraph: {
+    title: "Fill & Sign PDF Forms Online Free | AcroForms Tool | Botock",
+    description: "Interactively fill out PDF text fields, checkboxes, radio buttons, and sign documents online with 100% client-side privacy.",
+    url: "https://botock.app/tools/pdf-forms",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Fill & Sign PDF Forms Online Free | AcroForms Tool | Botock",
+    description: "Interactively fill out PDF text fields, checkboxes, radio buttons, and sign documents online with 100% client-side privacy.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function PDFFormsPage() {
@@ -22,6 +40,32 @@ export default function PDFFormsPage() {
       </div>
 
       <Client />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/pdf-merge"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Merge PDF
+          </Link>
+          <Link
+            href="/tools/pdf-protect"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Protect PDF
+          </Link>
+          <Link
+            href="/tools/pdf-to-word"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            PDF to Word
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

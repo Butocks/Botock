@@ -1,5 +1,4 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ShieldCheck,
@@ -14,7 +13,59 @@ import {
   Zap,
 } from "lucide-react";
 
+export const metadata: Metadata = {
+  title: "Security & Privacy Architecture",
+  description:
+    "Learn about Botock's privacy-first architecture: in-browser WebAssembly sandboxing, automated 24-hour file purging, and zero data retention.",
+  alternates: {
+    canonical: "/security",
+  },
+  openGraph: {
+    title: "Security & Privacy Architecture | Botock",
+    description:
+      "Learn about Botock's privacy-first architecture: client-side processing, automated purging, and zero data retention.",
+    url: "https://botock.app/security",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Security & Privacy Architecture | Botock",
+    description: "In-browser sandboxing and automated 24-hour file purging on Botock.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+};
+
 export default function SecurityPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        name: "Botock Security & Trust Architecture",
+        url: "https://botock.app/security",
+        description: "Technical overview of Botock's client-side privacy and data protection policies.",
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Security",
+            item: "https://botock.app/security",
+          },
+        ],
+      },
+    ],
+  };
   return (
     <div className="flex-1 flex flex-col py-12">
       <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8">

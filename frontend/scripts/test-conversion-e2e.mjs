@@ -663,8 +663,8 @@ if (selectedTiers.includes(4)) {
 
     // Case B: NEXT_PUBLIC_API_URL with trailing slash
     assert.strictEqual(
-      resolveApiBase({ NEXT_PUBLIC_API_URL: "https://api.botock.com/" }),
-      "https://api.botock.com"
+      resolveApiBase({ NEXT_PUBLIC_API_URL: "https://api.botock.app/" }),
+      "https://api.botock.app"
     );
 
     // Case C: NEXT_PUBLIC_BACKEND_URL override

@@ -1,11 +1,88 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Scissors, Wand2, Layers, CheckCircle2 } from "lucide-react";
 
+export const metadata: Metadata = {
+  title: "The Magic of AI Image Editing & Background Removal",
+  description:
+    "Discover how to remove backgrounds with AI edge precision and utilize transparent PNGs for product photography, thumbnails, and marketing graphics.",
+  alternates: {
+    canonical: "/blog/guide-to-image-editing-and-background-removal",
+  },
+  openGraph: {
+    title: "AI Image Editing & Background Removal Guide | Botock Blog",
+    description:
+      "Learn how to seamlessly remove backgrounds and utilize transparent PNGs for thumbnails, e-commerce, and professional designs.",
+    url: "https://botock.app/blog/guide-to-image-editing-and-background-removal",
+    type: "article",
+    publishedTime: "2026-10-04T00:00:00Z",
+    authors: ["Boto"],
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Image Editing & Background Removal Guide | Botock Blog",
+    description: "Learn how to seamlessly remove backgrounds with Botock.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+};
+
 export default function GuideToImageEditing() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        headline: "The Magic of AI Image Editing & Background Removal",
+        description:
+          "Discover how to seamlessly remove backgrounds and utilize transparent PNGs for thumbnails, e-commerce, and professional presentations.",
+        author: {
+          "@type": "Person",
+          name: "Boto",
+        },
+        datePublished: "2026-10-04",
+        publisher: {
+          "@type": "Organization",
+          name: "Botock",
+          logo: {
+            "@type": "ImageObject",
+            url: "https://botock.app/logo.png",
+          },
+        },
+        mainEntityOfPage: "https://botock.app/blog/guide-to-image-editing-and-background-removal",
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Blog",
+            item: "https://botock.app/blog",
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "Background Removal Guide",
+            item: "https://botock.app/blog/guide-to-image-editing-and-background-removal",
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#09090b]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header */}
       <div className="w-full bg-white dark:bg-[#111114] border-b border-slate-200 dark:border-white/10 px-6 py-16 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>

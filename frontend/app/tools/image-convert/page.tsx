@@ -1,48 +1,70 @@
+import Link from "next/link";
 import { Metadata } from "next";
 import { Image as ImageIcon, ShieldCheck } from "lucide-react";
 import ImageConvertClient from "./Client";
 
 export const metadata: Metadata = {
-  title: "Convert Image Online Free - WebP, PNG, JPG Converter - Botock",
-  description:
-    "Batch convert images between WebP, PNG, and JPG directly in your browser. Fast, client-side, zero server uploads with customizable compression quality.",
-  openGraph: {
-    title: "Convert Image Online Free - Botock",
-    description:
-      "Batch convert images between WebP, PNG, and JPG with zero server uploads.",
-    type: "website",
+  title: "Convert Image Format Online Free | WebP, PNG, JPG",
+  description: "Convert images between WebP, PNG, JPG, BMP, and GIF formats online in your browser with zero server uploads.",
+  alternates: {
+    canonical: "/tools/image-convert",
   },
-  keywords: [
-    "image converter",
-    "png to webp",
-    "jpg to webp",
-    "png to jpg",
-    "webp to png",
-    "batch image converter",
-    "free image converter",
-  ],
+  openGraph: {
+    title: "Convert Image Format Online Free | WebP, PNG, JPG | Botock",
+    description: "Convert images between WebP, PNG, JPG, BMP, and GIF formats online in your browser with zero server uploads.",
+    url: "https://botock.app/tools/image-convert",
+    siteName: "Botock",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Convert Image Format Online Free | WebP, PNG, JPG | Botock",
+    description: "Convert images between WebP, PNG, JPG, BMP, and GIF formats online in your browser with zero server uploads.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function ImageConvertPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Botock Image Converter",
-    "operatingSystem": "Any",
-    "applicationCategory": "UtilitiesApplication",
-    "description":
-      "Convert images between WebP, PNG, and JPG formats locally in your browser.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-    },
-    "featureList": [
-      "Batch convert multiple images at once",
-      "Custom quality control slider",
-      "Transparency background fill for JPG",
-      "ZIP download for converted batch",
-      "100% Client-Side Privacy",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "Image Converter - Botock",
+        "url": "https://botock.app/tools/image-convert",
+        "description": "Convert images between WebP, PNG, JPG, BMP, and GIF formats online in your browser with zero server uploads.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Tools",
+            "item": "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Image Converter",
+            "item": "https://botock.app/tools/image-convert",
+          },
+        ],
+      },
     ],
   };
 
@@ -67,6 +89,32 @@ export default function ImageConvertPage() {
       </div>
 
       <ImageConvertClient />
+          {/* Related Tools Navigation */}
+      <div className="mt-12 pt-8 border-t border-border/40">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
+          Related Tools
+        </h3>
+        <div className="flex flex-wrap gap-2.5">
+          <Link
+            href="/tools/image-compress"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Compress Images
+          </Link>
+          <Link
+            href="/tools/jpg-to-pdf"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            JPG to PDF
+          </Link>
+          <Link
+            href="/tools/image-resize"
+            className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors"
+          >
+            Resize Image
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

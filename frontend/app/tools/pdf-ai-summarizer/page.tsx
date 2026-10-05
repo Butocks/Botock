@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Sparkles, FileText, Minimize2, CheckCircle2 } from "lucide-react";
 import ClientWrapper from "./ClientWrapper";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "AI PDF Document Summarizer & Intelligence Synthesizer | Botock",
+  title: "AI PDF Summarizer | Extract Key Takeaways Online Free",
   description:
     "Extract executive summaries, key directives, actionable obligations, and question-answer pairs from PDF documents directly in your browser with zero server uploads.",
   keywords: [
@@ -15,42 +17,140 @@ export const metadata: Metadata = {
     "botock tools",
   ],
   alternates: {
-    canonical: "https://botock.com/tools/pdf-ai-summarizer",
+    canonical: "/tools/pdf-ai-summarizer",
   },
   openGraph: {
-    title: "AI PDF Document Summarizer - Botock",
+    title: "AI PDF Summarizer | Botock",
     description: "Extract executive summaries and key takeaways from PDF documents directly in your browser.",
-    url: "https://botock.com/tools/pdf-ai-summarizer",
+    url: "https://botock.app/tools/pdf-ai-summarizer",
     siteName: "Botock",
     type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI PDF Summarizer | Botock",
+    description: "Extract executive summaries and key takeaways from PDF documents directly in your browser.",
+    images: ["https://botock.app/og-image.jpg"],
   },
 };
 
 export default function PdfAiSummarizerPage() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    name: "AI PDF Summarizer - Botock Tools",
-    url: "https://botock.com/tools/pdf-ai-summarizer",
-    description: "Summarize PDF documents and generate bullet points directly in your browser.",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "All",
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "USD",
-    },
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        name: "AI PDF Summarizer - Botock",
+        url: "https://botock.app/tools/pdf-ai-summarizer",
+        description: "Summarize PDF documents and generate bullet points directly in your browser.",
+        applicationCategory: "BusinessApplication",
+        operatingSystem: "All",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Tools",
+            item: "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "PDF AI Summarizer",
+            item: "https://botock.app/tools/pdf-ai-summarizer",
+          },
+        ],
+      },
+    ],
   };
 
   return (
-    <>
+    <div className="w-full min-h-screen flex flex-col">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ToolErrorBoundary toolName="AI PDF Summarizer">
-        <ClientWrapper />
-      </ToolErrorBoundary>
-    </>
+
+      {/* Semantic Top Navigation Breadcrumb */}
+      <section className="bg-slate-900/50 border-b border-border/40 py-2.5 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-muted-foreground">
+            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+            <span>/</span>
+            <Link href="/tools" className="hover:text-foreground transition-colors">Tools</Link>
+            <span>/</span>
+            <span className="text-foreground font-semibold">PDF AI Summarizer</span>
+          </nav>
+          <span className="flex items-center gap-1.5 text-emerald-400">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Private In-Browser Synthesis</span>
+          </span>
+        </div>
+      </section>
+
+      {/* Interactive Tool Component */}
+      <div className="flex-1">
+        <ToolErrorBoundary toolName="AI PDF Summarizer">
+          <ClientWrapper />
+        </ToolErrorBoundary>
+      </div>
+
+      {/* Structured SEO & Internal Link Footer Section */}
+      <section className="border-t border-border/40 bg-card/30 py-10 px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-foreground mb-2">
+              AI PDF Document Summarizer — Executive Summaries &amp; Key Directives
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-4xl">
+              Condense extensive legal agreements, financial disclosures, research papers, and technical manuals into crisp executive summaries. Generates actionable takeaways, bullet point digests, and structured sections in seconds.
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-border/40">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2.5">
+              Related PDF Utilities
+            </h3>
+            <div className="flex flex-wrap gap-2.5">
+              <Link
+                href="/tools/pdf-merge"
+                className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+              >
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                <span>Merge PDF</span>
+              </Link>
+              <Link
+                href="/tools/pdf-to-word"
+                className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+              >
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                <span>PDF to Word</span>
+              </Link>
+              <Link
+                href="/tools/pdf-compress"
+                className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+              >
+                <Minimize2 className="w-3.5 h-3.5 text-primary" />
+                <span>Compress PDF</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
