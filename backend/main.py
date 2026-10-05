@@ -175,3 +175,103 @@ async def protect_pdf(file: UploadFile = File(...), password: str = Form(...)):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Encryption failed: {str(e)}")
+
+from starlette.background import BackgroundTask
+
+def combine_chunks(chunks, crossfade=10):
+    if not chunks:
+        return None
+    if len(chunks) == 1:
+        return chunks[0]
+    mid = len(chunks) // 2
+    left = combine_chunks(chunks[:mid], crossfade)
+    right = combine_chunks(chunks[mid:], crossfade)
+    if left is None: return right
+    if right is None: return left
+    return left.append(right, crossfade=crossfade)
+
+@app.post("/api/convert/voice-changer")
+async def voice_changer(file: UploadFile = File(...), mode: str = Form(...)):
+    if not file.filename.lower().endswith(('.mp3', '.wav', '.m4a')):
+        raise HTTPException(status_code=400, detail="File must be an audio file (.mp3, .wav, .m4a)")
+
+    try:
+        from pydub import AudioSegment
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Audio library not installed on the server")
+
+    VOICE_MODES = {
+        "kid": {"pitch": 1.45, "speed": 1.05, "vol": 0},
+        "little_girl": {"pitch": 1.60, "speed": 1.10, "vol": 0},
+        "man_deep": {"pitch": 0.82, "speed": 1.0, "vol": 2},
+        "deep_villain": {"pitch": 0.70, "speed": 1.0, "vol": 3},
+        "man_old": {"pitch": 0.88, "speed": 0.85, "vol": 0},
+        "women": {"pitch": 1.30, "speed": 1.0, "vol": 0},
+        "old_women": {"pitch": 1.20, "speed": 0.85, "vol": 0},
+        "weak_man": {"pitch": 1.05, "speed": 0.90, "vol": -4},
+        "strict": {"pitch": 0.95, "speed": 1.05, "vol": 2},
+    }
+
+    if mode not in VOICE_MODES:
+        raise HTTPException(status_code=400, detail="Invalid voice mode selected")
+
+    params = VOICE_MODES[mode]
+
+    try:
+        audio_bytes = await file.read()
+
+        with tempfile.NamedTemporaryFile(suffix=os.path.splitext(file.filename)[1], delete=False) as in_f:
+            in_f.write(audio_bytes)
+            in_path = in_f.name
+
+        sound = AudioSegment.from_file(in_path)
+
+        # Modify audio
+        if params["vol"] != 0:
+            sound = sound + params["vol"]
+
+        if params["pitch"] != 1.0:
+            new_sample_rate = int(sound.frame_rate * params["pitch"])
+            sound = sound._spawn(sound.raw_data, overrides={'frame_rate': new_sample_rate}).set_frame_rate(sound.frame_rate)
+
+        target_stretch = params["pitch"] / params["speed"]
+
+        if target_stretch != 1.0:
+            chunk_ms = 50
+            crossfade_ms = 10
+            step_ms = (chunk_ms - crossfade_ms) / target_stretch
+
+            chunks = []
+            pos = 0.0
+            while pos < len(sound) - chunk_ms:
+                chunks.append(sound[int(pos):int(pos) + chunk_ms])
+                pos += step_ms
+
+            if chunks:
+                sound = combine_chunks(chunks, crossfade_ms)
+
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as out_f:
+            out_path = out_f.name
+
+        sound.export(out_path, format="mp3")
+
+        # Clean up input file
+        try:
+            os.remove(in_path)
+        except Exception:
+            pass
+
+        def cleanup_out():
+            try:
+                os.remove(out_path)
+            except Exception:
+                pass
+
+        return FileResponse(
+            out_path,
+            filename=file.filename.rsplit('.', 1)[0] + f"_{mode}.mp3",
+            media_type="audio/mpeg",
+            background=BackgroundTask(cleanup_out)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Voice conversion failed: {str(e)}")
