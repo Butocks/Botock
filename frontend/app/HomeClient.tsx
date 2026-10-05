@@ -648,7 +648,6 @@ export default function HomeClient() {
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
-                <Link
                   href="/tools"
                   className="px-8 py-4 rounded-xl bg-violet-800/50 hover:bg-violet-800 text-white border border-violet-400/30 font-bold text-sm transition-all shadow-lg hover:-translate-y-1 backdrop-blur-sm"
                 >
