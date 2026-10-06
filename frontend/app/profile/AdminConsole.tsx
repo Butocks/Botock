@@ -852,7 +852,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Multi-Block Blog</span>
+            <span>Knowledge Hub CMS</span>
           </button>
 
           <button
