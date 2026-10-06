@@ -640,19 +640,18 @@ export default function HomeClient() {
             
             <div className="relative z-10 max-w-3xl mx-auto">
               <h2 className="text-3xl sm:text-5xl font-black text-white mb-6 tracking-tight">
-                Start 100% Free. Upgrade for Commercial Power.
+                Your Complete Creative Studio. 100% Free.
               </h2>
               <p className="text-sm sm:text-base text-violet-100/90 mb-10 max-w-xl mx-auto font-medium leading-relaxed">
-                All 100+ utilities are free forever. Only upgrade when you need priority queues, 720p HD video renders, and unlimited generative AI studio access.
+                Access over 100+ utilities, AI Studios, and professional tools for completely free. Start creating your next masterpiece today.
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
-                <Link
                   href="/tools"
                   className="px-8 py-4 rounded-xl bg-violet-800/50 hover:bg-violet-800 text-white border border-violet-400/30 font-bold text-sm transition-all shadow-lg hover:-translate-y-1 backdrop-blur-sm"
                 >
-                  Explore 100+ Free Tools
+                  Explore Free Tools
                 </Link>
               </div>
             </div>

@@ -9,7 +9,7 @@ def test_admin_analytics_no_token():
     assert response.status_code == 401
 
 def test_admin_auth_empty_secret():
-    response = client.post("/api/admin/auth/verify-secret", json={"email": "admin@botock.com", "secret": ""})
+    response = client.post("/api/admin/auth/verify-secret", json={"email": "admin@botock.app", "secret": ""})
     assert response.status_code in [401, 403, 423]
 
 def test_image_generation_no_auth():
@@ -72,7 +72,7 @@ def test_ownership_cross_user_download():
 def test_admin_auth_invalid_secret_rate_limit():
     # Sending invalid secret multiple times should trigger rate limit and 423
     for _ in range(4):
-        response = client.post("/api/admin/auth/verify-secret", json={"email": "admin@botock.com", "secret": "wrong"})
+        response = client.post("/api/admin/auth/verify-secret", json={"email": "admin@botock.app", "secret": "wrong"})
     
     assert response.status_code == 423
 

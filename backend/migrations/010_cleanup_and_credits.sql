@@ -1,7 +1,4 @@
 -- Drop the Paddle subscription tables completely
-DROP TABLE IF EXISTS public.support_messages CASCADE;
-DROP TABLE IF EXISTS public.support_threads CASCADE;
-DROP TABLE IF EXISTS public.custom_video_orders CASCADE;
 DROP TABLE IF EXISTS public.user_subscriptions CASCADE;
 DROP TABLE IF EXISTS public.service_plans CASCADE;
 
@@ -21,3 +18,12 @@ INSERT INTO public.system_settings (id, guest_daily_credits, user_daily_credits,
 VALUES (1, 5, 50, 15, 5)
 ON CONFLICT (id) DO UPDATE SET 
     updated_at = now();
+
+-- RPC for getting settings
+CREATE OR REPLACE FUNCTION public.get_system_settings()
+RETURNS SETOF public.system_settings
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+    SELECT * FROM public.system_settings WHERE id = 1;
+$$;

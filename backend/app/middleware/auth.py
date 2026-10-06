@@ -74,6 +74,13 @@ def get_current_user(authorization: Optional[str] = Header(None), token_query: O
     is_pro = bool(metadata.get("is_pro") or metadata.get("subscription_status") == "active" or payload.get("role") == "pro")
     return {"user_id": payload["sub"], "email": payload.get("email", ""), "is_pro": is_pro, "is_guest": False, "payload": payload}
 
+def get_optional_user(authorization: Optional[str] = Header(None), token_query: Optional[str] = Query(None, alias="token")) -> Optional[dict]:
+    if not authorization and not token_query:
+        return None
+    try:
+        return get_current_user(authorization, token_query)
+    except HTTPException:
+        return None
 
 def get_current_user_or_guest(
     authorization: Optional[str] = Header(None),
@@ -185,3 +192,12 @@ async def check_daily_image_quota(user: dict = Depends(get_current_user)) -> dic
         "p_cost": int(settings.IMAGE_CREDIT_COST),
     })
     return user
+
+async def get_system_settings() -> dict:
+    try:
+        data = await _rpc("get_system_settings", {})
+        if data and len(data) > 0:
+            return data[0]
+        return {"guest_daily_credits": 5, "user_daily_credits": 50, "video_credit_cost": 15, "image_credit_cost": 5}
+    except Exception:
+        return {"guest_daily_credits": 5, "user_daily_credits": 50, "video_credit_cost": 15, "image_credit_cost": 5}

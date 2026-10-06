@@ -491,8 +491,7 @@ export default function VideoGeneratorClient() {
             {/* Notification Banner */}
             <div className="py-2 px-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-semibold text-xs flex items-center gap-2">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Your video is in your library</span>
-              <Link href="/tools/library" className="underline font-bold ml-1 hover:text-emerald-500">View Library &rarr;</Link>
+              <span>Your video has been generated successfully</span>
             </div>
 
             {/* Download & Action Buttons */}

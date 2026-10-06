@@ -251,26 +251,26 @@ export default function VideoEditorComponent() {
   const currentMaxTime = allVideoClips.length > 0 ? allVideoClips[allVideoClips.length - 1].timelineStart + allVideoClips[allVideoClips.length - 1].duration : 0;
 
   return (
-    <div className="h-[calc(100vh-64px)] w-full bg-[#1e1e24] text-white flex flex-col overflow-hidden font-sans">
+    <div className="h-[100dvh] md:h-[calc(100vh-64px)] w-full bg-[#1e1e24] text-white flex flex-col overflow-hidden font-sans">
       {/* Header */}
       <header className="h-14 bg-[#141419] flex items-center justify-between px-4 shrink-0 border-b border-[#2b2b36]">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <Link href="/tools/video-generator" className="text-gray-400 hover:text-white transition-colors">
             <Home className="w-5 h-5" />
           </Link>
           <h1 className="font-semibold text-sm tracking-wide">My Project</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
            <button className="text-gray-400 hover:text-white"><Settings className="w-5 h-5"/></button>
-           <button onClick={doExport} disabled={isExporting} className="bg-[#ff6b4a] hover:bg-[#ff856b] text-white px-6 py-1.5 rounded text-sm font-bold flex items-center gap-2 transition-colors disabled:opacity-50">
+           <button onClick={doExport} disabled={isExporting} className="bg-[#ff6b4a] hover:bg-[#ff856b] text-white px-3 md:px-6 py-1.5 rounded text-xs md:text-sm font-bold flex items-center gap-1 md:gap-2 transition-colors disabled:opacity-50">
              <Download className="w-4 h-4"/> {isExporting ? "Exporting..." : "EXPORT"}
            </button>
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Left Toolbar */}
-        <div className="w-20 bg-[#141419] flex flex-col items-center py-4 gap-6 shrink-0 border-r border-[#2b2b36] overflow-y-auto overflow-x-hidden">
+        <div className="w-full md:w-20 bg-[#141419] flex flex-row md:flex-col items-center justify-around md:justify-start py-2 md:py-4 gap-2 md:gap-6 shrink-0 border-b md:border-r border-[#2b2b36] overflow-x-auto md:overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
           {SIDEBAR_ITEMS.map((item, i) => (
              <button key={i} className={`flex flex-col items-center gap-1.5 w-full ${i === 2 ? 'text-[#ff6b4a]' : 'text-gray-400 hover:text-gray-200'}`}>
                 <item.icon className="w-5 h-5" />
@@ -279,13 +279,13 @@ export default function VideoEditorComponent() {
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden overflow-y-auto">
           
           {/* Top Panel: Media & Preview */}
-          <div className="flex-1 flex min-h-0">
+          <div className="flex flex-col md:flex-row flex-1 min-h-0">
              
              {/* Media Bin */}
-             <div className="w-[300px] bg-[#1e1e24] border-r border-[#2b2b36] flex flex-col min-h-0">
+             <div className="w-full md:w-[300px] bg-[#1e1e24] flex border-b md:border-r border-[#2b2b36] flex-col min-h-0 h-[250px] md:h-auto shrink-0">
                 <div className="p-4 border-b border-[#2b2b36]">
                    <h2 className="text-sm font-bold">Media Bin</h2>
                 </div>
@@ -356,7 +356,7 @@ export default function VideoEditorComponent() {
 
              {/* Inspector Area */}
              {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image") && (
-                 <div className="w-[280px] bg-[#141419] border-l border-[#2b2b36] flex flex-col min-h-0 overflow-y-auto shrink-0 shadow-xl">
+                 <div className="w-full md:w-[280px] flex bg-[#141419] border-t md:border-l md:border-t-0 border-[#2b2b36] flex-col min-h-0 h-[250px] md:h-auto overflow-y-auto shrink-0 shadow-xl">
                     <TransformInspector 
                         clip={selectedClip} 
                         onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
