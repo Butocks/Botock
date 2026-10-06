@@ -175,3 +175,125 @@ async def protect_pdf(file: UploadFile = File(...), password: str = Form(...)):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Encryption failed: {str(e)}")
+
+from starlette.background import BackgroundTask
+
+def combine_chunks(chunks, crossfade=10):
+    if not chunks:
+        return None
+    if len(chunks) == 1:
+        return chunks[0]
+    mid = len(chunks) // 2
+    left = combine_chunks(chunks[:mid], crossfade)
+    right = combine_chunks(chunks[mid:], crossfade)
+    if left is None: return right
+    if right is None: return left
+    return left.append(right, crossfade=crossfade)
+
+
+from starlette.background import BackgroundTask
+import numpy as np
+
+@app.post("/api/convert/voice-changer")
+async def voice_changer(file: UploadFile = File(...), mode: str = Form(...)):
+    if not file.filename.lower().endswith(('.mp3', '.wav', '.m4a')):
+        raise HTTPException(status_code=400, detail="File must be an audio file (.mp3, .wav, .m4a)")
+
+    try:
+        from pedalboard import Pedalboard, PitchShift, Gain, Reverb, Compressor, HighpassFilter, LowpassFilter
+        from pedalboard.io import AudioFile
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Advanced audio library (pedalboard) not installed on the server")
+
+    # High-quality natural voice modes using pedalboard
+    # pitch is in semitones (e.g. -12 is one octave down)
+    VOICE_MODES = {
+        "kid": {"pitch": 5, "vol": 1, "fx": []},
+        "little_girl": {"pitch": 7, "vol": 1, "fx": [HighpassFilter(cutoff_frequency_hz=300)]},
+        "man_deep": {"pitch": -4, "vol": 2, "fx": [Compressor(threshold_db=-20, ratio=2)]},
+        "deep_villain": {"pitch": -8, "vol": 3, "fx": [
+            Compressor(threshold_db=-20, ratio=4),
+            Reverb(room_size=0.3, damping=0.5, wet_level=0.15)
+        ]},
+        "man_old": {"pitch": -2, "vol": 0, "fx": [
+            LowpassFilter(cutoff_frequency_hz=3000),
+            Compressor(threshold_db=-15, ratio=1.5)
+        ]},
+        "women": {"pitch": 3, "vol": 0, "fx": []},
+        "old_women": {"pitch": 1, "vol": 0, "fx": [LowpassFilter(cutoff_frequency_hz=4000)]},
+        "weak_man": {"pitch": 1, "vol": -4, "fx": [
+            HighpassFilter(cutoff_frequency_hz=200),
+            LowpassFilter(cutoff_frequency_hz=5000)
+        ]},
+        "strict": {"pitch": -1, "vol": 2, "fx": [Compressor(threshold_db=-15, ratio=3)]},
+    }
+
+    if mode not in VOICE_MODES:
+        raise HTTPException(status_code=400, detail="Invalid voice mode selected")
+
+    params = VOICE_MODES[mode]
+
+    try:
+        audio_bytes = await file.read()
+
+        with tempfile.NamedTemporaryFile(suffix=os.path.splitext(file.filename)[1], delete=False) as in_f:
+            in_f.write(audio_bytes)
+            in_path = in_f.name
+
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as out_f:
+            out_path = out_f.name
+
+        # Read with pedalboard io
+        with AudioFile(in_path) as f:
+            audio = f.read(f.frames)
+            samplerate = f.samplerate
+
+        # Build pedalboard
+        plugins = [PitchShift(semitones=params["pitch"])]
+        if params["vol"] != 0:
+            plugins.append(Gain(gain_db=params["vol"]))
+
+        plugins.extend(params["fx"])
+
+        board = Pedalboard(plugins)
+
+        # Process audio (highly optimized C++ under the hood)
+        effected = board(audio, samplerate, reset=False)
+
+        # Write back to mp3
+        # pedalboard currently has limited mp3 export support in some builds, but let's try pydub for export if needed, or soundfile for wav.
+        # Actually pedalboard.io uses libsndfile and libav, so it supports common formats if compiled with them.
+        try:
+            with AudioFile(out_path, 'w', samplerate, effected.shape[0]) as f:
+                f.write(effected)
+        except Exception:
+            # Fallback to wav if mp3 export fails, or pydub
+            import soundfile as sf
+            wav_path = out_path.replace(".mp3", ".wav")
+            sf.write(wav_path, effected.T, samplerate)
+
+            from pydub import AudioSegment
+            snd = AudioSegment.from_file(wav_path)
+            snd.export(out_path, format="mp3")
+            os.remove(wav_path)
+
+        # Clean up input file
+        try:
+            os.remove(in_path)
+        except Exception:
+            pass
+
+        def cleanup_out():
+            try:
+                os.remove(out_path)
+            except Exception:
+                pass
+
+        return FileResponse(
+            out_path,
+            filename=file.filename.rsplit('.', 1)[0] + f"_{mode}.mp3",
+            media_type="audio/mpeg",
+            background=BackgroundTask(cleanup_out)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Voice conversion failed: {str(e)}")

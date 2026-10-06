@@ -21,3 +21,5 @@ Pillow>=10.0.0
 dnspython>=2.6.0
 pypdf>=4.0.1
 
+pedalboard>=0.9.25
+soundfile>=0.14.0
