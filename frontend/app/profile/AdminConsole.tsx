@@ -1289,7 +1289,7 @@ export default function AdminConsole() {
                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
                   <div>
                     <div className="text-sm font-bold text-white">Enable Discount Banner on Platform</div>
-                    <div className="text-xs text-slate-400">Toggles visibility on live /services and announcement bar</div>
+                    <div className="text-xs text-slate-400">Toggles visibility on announcement bar</div>
                   </div>
                   <button
                     onClick={() => setPromotions({ ...promotions, active: !promotions.active })}
@@ -1362,8 +1362,8 @@ export default function AdminConsole() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Subscription Plans & Feature Bundles</h2>
-                  <p className="text-xs text-slate-400 mt-1">Edit plan pricing and features displayed on /services</p>
+                  <h2 className="text-xl font-bold text-white">Guest & Registered User Credit Allowances</h2>
+                  <p className="text-xs text-slate-400 mt-1">Configure daily free generation credits for anonymous guests and authenticated users.</p>
                 </div>
                 <button
                   onClick={handleSavePlans}

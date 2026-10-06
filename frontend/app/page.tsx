@@ -173,7 +173,7 @@ export default function Home() {
         {/* Subtle glow background */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[300px] bg-blue-500/10 dark:bg-blue-600/10 blur-[140px] rounded-full pointer-events-none -z-10" />
 
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
           {/* Platform Tag */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/[0.04] border border-slate-300 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 text-xs font-semibold mb-6 shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -242,7 +242,7 @@ export default function Home() {
 
       {/* 2. Continuous Gliding Multi-Tool Ticker (Infinite Marquee) */}
       <section className="bg-slate-100/50 dark:bg-[#0b0b0f] border-b border-slate-200 dark:border-white/[0.06] py-3 transition-colors">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12 mb-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12 mb-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
             <Sparkles className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
             <span>Our Tools</span>
@@ -256,7 +256,7 @@ export default function Home() {
 
       {/* 3. Platform Architecture Pillars (Replacing all mock/fake numbers) */}
       <section className="py-12 bg-white dark:bg-[#09090b] border-b border-slate-200 dark:border-white/[0.06] transition-colors">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
             {/* Pillar 1: In-Browser Privacy */}
             <div className="rounded-2xl bg-slate-50 dark:bg-[#111114] p-6 border border-slate-200 dark:border-white/[0.08]">
@@ -315,7 +315,7 @@ export default function Home() {
 
       {/* 4. Top Used Tools (Replaces the Real AI Output Gallery as requested) */}
       <section className="py-16 bg-slate-50/50 dark:bg-[#0a0a0e] border-b border-slate-200 dark:border-white/[0.06] transition-colors">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
               <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase tracking-wider mb-1">
@@ -381,7 +381,7 @@ export default function Home() {
 
       {/* 5. Interactive Tools Showcase Slider */}
       <section className="py-16 bg-white dark:bg-[#09090b] border-b border-slate-200 dark:border-white/[0.06] transition-colors">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
           <div className="mb-8">
             <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
               <Sparkles className="w-3.5 h-3.5" />
@@ -404,7 +404,7 @@ export default function Home() {
 
       {/* 6. Four Core Creative Suites Breakdown */}
       <section className="py-16 bg-slate-50/50 dark:bg-[#09090b] transition-colors">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
           <div className="text-center mb-12">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-2">
               Everything in One Unified Workspace
@@ -584,7 +584,7 @@ export default function Home() {
 
       {/* 7. Top Blogs & Guides */}
       <section className="py-16 bg-slate-50/50 dark:bg-[#0a0a0e] border-t border-slate-200 dark:border-white/[0.06] transition-colors">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
               <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
@@ -624,7 +624,7 @@ export default function Home() {
 
       {/* 8. Modern CTA Banner */}
       <section className="py-20 bg-white dark:bg-[#09090b] transition-colors">
-        <div className="w-full max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
           <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-700 dark:from-violet-900 dark:to-indigo-950 px-6 py-16 sm:px-16 text-center shadow-2xl border border-violet-500/20">
             {/* Background elements */}
             <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/10 blur-3xl rounded-full pointer-events-none" />
@@ -632,19 +632,14 @@ export default function Home() {
             
             <div className="relative z-10 max-w-3xl mx-auto">
               <h2 className="text-3xl sm:text-5xl font-black text-white mb-6 tracking-tight">
-                Start 100% Free. Upgrade for Commercial Power.
+                100% Free. Limitless Commercial Power.
               </h2>
               <p className="text-sm sm:text-base text-violet-100/90 mb-10 max-w-xl mx-auto font-medium leading-relaxed">
-                All 100+ utilities are free forever. Only upgrade when you need priority queues, 720p HD video renders, and unlimited generative AI studio access.
+                All 100+ utilities are completely free and ad-supported. Enjoy high-quality 720p HD video renders, generous daily credits, and AI generative studios without ever needing a credit card.
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link
-                  href="/services"
-                  className="px-8 py-4 rounded-xl bg-white text-violet-900 hover:bg-slate-50 font-black text-sm transition-all shadow-xl hover:-translate-y-1 hover:shadow-2xl"
-                >
-                  View Pro Plans
-                </Link>
+
                 <Link
                   href="/tools"
                   className="px-8 py-4 rounded-xl bg-violet-800/50 hover:bg-violet-800 text-white border border-violet-400/30 font-bold text-sm transition-all shadow-lg hover:-translate-y-1 backdrop-blur-sm"

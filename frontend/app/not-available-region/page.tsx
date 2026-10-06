@@ -22,13 +22,13 @@ export default function NotAvailableRegionPage() {
           <div className="bg-surface-hover/50 border border-border/50 rounded-xl p-4 mb-8">
             <h3 className="text-sm font-semibold text-primary-light mb-1">Unlock Worldwide Access</h3>
             <p className="text-xs text-muted">
-              Upgrade to Premium to access FlickFlow from anywhere through our dedicated enterprise nodes.
+              Access to generative features from your region is currently not supported.
             </p>
           </div>
           
           <div className="flex flex-col gap-3">
             <button className="w-full py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-bold transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(139,92,246,0.5)]">
-              View Premium Plans
+              Learn More
             </button>
             <Link 
               href="/"

@@ -124,7 +124,7 @@ const TOOLS = [
   { id: "image-compress", name: "Image Compressor", engine: "browser-image-compression" },
   { id: "image-remove-bg", name: "AI Background Remover", engine: "@imgly/background-removal" },
   { id: "image-convert", name: "Image to WebP Converter", engine: "canvas-webp" },
-  { id: "image-resize", name: "AI Image Upscaler", engine: "canvas-bicubic-upscaler" },
+
 ];
 
 console.log(`${colors.cyan}${colors.bold}

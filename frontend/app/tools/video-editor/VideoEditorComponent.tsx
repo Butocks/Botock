@@ -254,15 +254,15 @@ export default function VideoEditorComponent() {
     <div className="h-[100dvh] md:h-[calc(100vh-64px)] w-full bg-[#1e1e24] text-white flex flex-col overflow-hidden font-sans">
       {/* Header */}
       <header className="h-14 bg-[#141419] flex items-center justify-between px-4 shrink-0 border-b border-[#2b2b36]">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <Link href="/tools/video-generator" className="text-gray-400 hover:text-white transition-colors">
             <Home className="w-5 h-5" />
           </Link>
           <h1 className="font-semibold text-sm tracking-wide">My Project</h1>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
            <button className="text-gray-400 hover:text-white"><Settings className="w-5 h-5"/></button>
-           <button onClick={doExport} disabled={isExporting} className="bg-[#ff6b4a] hover:bg-[#ff856b] text-white px-6 py-1.5 rounded text-sm font-bold flex items-center gap-2 transition-colors disabled:opacity-50">
+           <button onClick={doExport} disabled={isExporting} className="bg-[#ff6b4a] hover:bg-[#ff856b] text-white px-3 md:px-6 py-1.5 rounded text-xs md:text-sm font-bold flex items-center gap-1 md:gap-2 transition-colors disabled:opacity-50">
              <Download className="w-4 h-4"/> {isExporting ? "Exporting..." : "EXPORT"}
            </button>
         </div>
@@ -279,13 +279,13 @@ export default function VideoEditorComponent() {
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto md:overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden overflow-y-auto">
           
           {/* Top Panel: Media & Preview */}
-          <div className="flex-1 flex min-h-0">
+          <div className="flex flex-col md:flex-row flex-1 min-h-0">
              
              {/* Media Bin */}
-             <div className="w-full md:w-[300px] bg-[#1e1e24] flex border-b md:border-r border-[#2b2b36] flex-col min-h-[150px] max-h-[25vh] md:min-h-0 md:max-h-full shrink-0">
+             <div className="w-full md:w-[300px] bg-[#1e1e24] flex border-b md:border-r border-[#2b2b36] flex-col min-h-0 h-[250px] md:h-auto shrink-0">
                 <div className="p-4 border-b border-[#2b2b36]">
                    <h2 className="text-sm font-bold">Media Bin</h2>
                 </div>
@@ -356,7 +356,7 @@ export default function VideoEditorComponent() {
 
              {/* Inspector Area */}
              {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image") && (
-                 <div className="w-full md:w-[280px] flex bg-[#141419] border-t md:border-l border-[#2b2b36] flex-col min-h-[150px] max-h-[25vh] md:min-h-0 overflow-y-auto shrink-0 shadow-xl md:max-h-full">
+                 <div className="w-full md:w-[280px] flex bg-[#141419] border-t md:border-l md:border-t-0 border-[#2b2b36] flex-col min-h-0 h-[250px] md:h-auto overflow-y-auto shrink-0 shadow-xl">
                     <TransformInspector 
                         clip={selectedClip} 
                         onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
