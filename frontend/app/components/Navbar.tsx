@@ -231,7 +231,6 @@ export default function Navbar() {
                           Free AI Video & Image generation quota refreshed every 24 hours.
                         </p>
                       </div>
-                      <Link
                     </div>
                   </div>
                 </div>

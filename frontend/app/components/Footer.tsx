@@ -45,9 +45,7 @@ export default function Footer() {
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-xs">
-            <Link
-          </div>
+
         </div>
       </div>
 
