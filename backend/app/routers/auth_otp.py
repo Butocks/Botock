@@ -788,52 +788,10 @@ DEFAULT_BLOGS = [
     }
 ]
 
-@router.get("/api/public/blogs")
-async def list_public_blogs():
-    return _read_json(BLOGS_FILE, DEFAULT_BLOGS)
 
 
-@router.get("/api/public/blogs/{blog_id}")
-async def get_public_blog(blog_id: str):
-    blogs = _read_json(BLOGS_FILE, DEFAULT_BLOGS)
-    for b in blogs:
-        if b.get("id") == blog_id:
-            return b
-    raise HTTPException(status_code=404, detail="Blog post not found")
 
 
-@router.post("/api/admin/blogs")
-async def save_blog(
-    blog: BlogPostCreate,
-    admin_token: str = Depends(verify_admin_token),
-    _verified: bool = Depends(require_2step_verification),
-):
-    blogs = _read_json(BLOGS_FILE, DEFAULT_BLOGS)
-    if not blog.id:
-        slug = "-".join("".join(c if c.isalnum() else " " for c in blog.title).lower().split())
-        blog.id = slug or f"post-{int(time.time())}"
-        new_blog = blog.dict()
-        new_blog["date"] = time.strftime("%b %d, %Y")
-        blogs.insert(0, new_blog)
-    else:
-        for idx, b in enumerate(blogs):
-            if b["id"] == blog.id:
-                blogs[idx] = blog.dict()
-                break
-    _write_json(BLOGS_FILE, blogs)
-    return {"success": True, "blogs": blogs}
-
-
-@router.delete("/api/admin/blogs/{blog_id}")
-async def delete_blog(
-    blog_id: str,
-    admin_token: str = Depends(verify_admin_token),
-    _verified: bool = Depends(require_2step_verification),
-):
-    blogs = _read_json(BLOGS_FILE, DEFAULT_BLOGS)
-    blogs = [b for b in blogs if b["id"] != blog_id]
-    _write_json(BLOGS_FILE, blogs)
-    return {"success": True, "blogs": blogs}
 
 
 # ----------------------------------------------------

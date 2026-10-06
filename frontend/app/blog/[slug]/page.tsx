@@ -1,40 +1,67 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Clock, Calendar, User, Share2, Sparkles, CheckCircle2, ChevronRight, Search } from "lucide-react";
 
 interface BlogPost {
   id: string;
+  slug: string;
   title: string;
-  excerpt: string;
-  category: string;
+  h1?: string;
+  excerpt?: string;
+  content?: string;
+  featured_image?: string;
+  meta_title?: string;
+  meta_description?: string;
+  canonical_url?: string;
+  og_image?: string;
+  is_indexable?: boolean;
+  content_cluster?: string;
+  parent_id?: string;
+  tool_cta?: string;
+  status?: string;
+  published_at?: string;
+  updated_at?: string;
+  // legacy compat
+  category?: string;
   categoryLabel?: string;
   readTime?: string;
   date?: string;
   author?: string;
-  content?: string;
-  blocks?: Array<{
-    type: string;
-    content?: string;
-    url?: string;
-    caption?: string;
-  }>;
+  blocks?: Array<{ type: string; content?: string; url?: string; caption?: string }>;
+  parent?: { title: string; slug: string };
+  children?: Array<{ title: string; slug: string; excerpt?: string }>;
+  related?: Array<{ title: string; slug: string }>;
 }
 
-// Helper to fetch blog data server-side for Google SEO crawlers
+const BACKEND = (process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.botock.app").replace(/\/$/, "");
+
 async function getBlog(slug: string): Promise<BlogPost | null> {
   try {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.botock.app";
-    const res = await fetch(`${backendUrl.replace(/\/$/, "")}/api/public/blogs/${slug}`, {
+    const res = await fetch(`${BACKEND}/api/public/blogs/${encodeURIComponent(slug)}`, {
       next: { revalidate: 60 },
     });
+    if (res.status === 404) return null;
     if (!res.ok) return null;
     return await res.json();
-  } catch (err) {
-    console.error("Failed to load blog post for SEO:", err);
+  } catch {
     return null;
   }
 }
+
+async function getRedirect(slug: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${BACKEND}/api/public/blog-redirects/${encodeURIComponent(slug)}`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.new_slug ?? null;
+    }
+  } catch {}
+  return null;
+}
+
 
 // 1. DYNAMIC SEO METADATA FOR GOOGLE RANKING
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -42,38 +69,44 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const blog = await getBlog(slug);
 
   if (!blog) {
+    const newSlug = await getRedirect(slug);
+    if (newSlug) return { title: "Redirecting..." };
     return { title: "Blog Not Found" };
   }
 
   // Use the first attachment as OG Image if available
-  let ogImage = "https://botock.app/og-image.jpg";
-  if (blog.blocks) {
+  let ogImage = blog.og_image || blog.featured_image || "https://botock.app/og-image.jpg";
+  if (blog.blocks && ogImage === "https://botock.app/og-image.jpg") {
     const firstImg = blog.blocks.find(b => b.type === "attachment" && b.url);
     if (firstImg) ogImage = firstImg.url as string;
   }
 
   return {
-    title: blog.title,
-    description: blog.excerpt,
+    title: blog.meta_title || blog.title,
+    description: blog.meta_description || blog.excerpt,
     alternates: {
-      canonical: `/blog/${slug}`,
+      canonical: blog.canonical_url || `/blog/${slug}`,
     },
     openGraph: {
-      title: blog.title,
-      description: blog.excerpt,
+      title: blog.meta_title || blog.title,
+      description: blog.meta_description || blog.excerpt,
       url: `https://botock.app/blog/${slug}`,
       siteName: "Botock",
       type: "article",
       publishedTime: blog.date,
-      authors: [blog.author || "Botock"],
+      authors: [blog.author || "Botock Editorial"],
       images: [ogImage],
     },
     twitter: {
       card: "summary_large_image",
-      title: blog.title,
-      description: blog.excerpt,
+      title: blog.meta_title || blog.title,
+      description: blog.meta_description || blog.excerpt,
       images: [ogImage],
     },
+    robots: {
+      index: blog.is_indexable !== false,
+      follow: blog.is_indexable !== false,
+    }
   };
 }
 
@@ -82,30 +115,51 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const blog = await getBlog(slug);
 
   if (!blog) {
+    const newSlug = await getRedirect(slug);
+    if (newSlug) redirect(`/blog/${newSlug}`);
     notFound();
   }
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    "headline": blog.title,
-    "description": blog.excerpt,
-    "author": {
-      "@type": "Organization",
-      "name": blog.author || "Botock Editorial Team"
-    },
-    "datePublished": blog.date || new Date().toISOString().split("T")[0],
-    "publisher": {
-      "@type": "Organization",
-      "name": "Botock",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://botock.app/logo.png"
-      }
-    }
-  };
+  // BreadcrumbList JSON-LD
+  const breadcrumbItems = [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://botock.app/" },
+    { "@type": "ListItem", position: 2, name: "Blog", item: "https://botock.app/blog" }
+  ];
+  if (blog.parent) {
+    breadcrumbItems.push({ "@type": "ListItem", position: 3, name: blog.parent.title, item: `https://botock.app/blog/${blog.parent.slug}` });
+    breadcrumbItems.push({ "@type": "ListItem", position: 4, name: blog.title, item: `https://botock.app/blog/${slug}` });
+  } else {
+    breadcrumbItems.push({ "@type": "ListItem", position: 3, name: blog.title, item: `https://botock.app/blog/${slug}` });
+  }
 
-  const featuredImg = blog.blocks?.find(b => b.type === "attachment" && b.url);
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": blog.title,
+      "description": blog.excerpt,
+      "author": {
+        "@type": "Organization",
+        "name": blog.author || "Botock Editorial Team"
+      },
+      "datePublished": blog.date || new Date().toISOString().split("T")[0],
+      "publisher": {
+        "@type": "Organization",
+        "name": "Botock",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://botock.app/logo.png"
+        }
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": breadcrumbItems
+    }
+  ];
+
+  const featuredImgUrl = blog.featured_image || blog.blocks?.find(b => b.type === "attachment" && b.url)?.url;
 
   return (
     <article className="min-h-screen bg-slate-50 dark:bg-[#0a0a0c] text-slate-900 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -118,13 +172,20 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         
         {/* Search & Breadcrumb Header */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 border-b border-slate-200 dark:border-white/10 pb-6">
-          <nav className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <nav className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
             <Link href="/" className="hover:text-violet-500 transition-colors font-semibold">Botock Home</Link>
             <ChevronRight className="w-3.5 h-3.5" />
             <Link href="/blog" className="hover:text-violet-500 transition-colors font-semibold">Blog</Link>
             <ChevronRight className="w-3.5 h-3.5" />
+            {blog.parent && (
+              <>
+                <Link href={`/blog/${blog.parent.slug}`} className="hover:text-violet-500 transition-colors font-semibold truncate max-w-[120px]">{blog.parent.title}</Link>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </>
+            )}
             <span className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[150px]">{blog.title}</span>
           </nav>
+
           
           <form action="/blog" method="GET" className="relative w-full sm:w-64">
             <input 
@@ -182,12 +243,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         </header>
 
         {/* Featured Image */}
-        {featuredImg && (
+        {featuredImgUrl && (
           <div className="mb-12 rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl group">
-            {featuredImg.url?.endsWith(".mp4") || featuredImg.url?.endsWith(".webm") ? (
-              <video src={featuredImg.url} controls className="w-full h-auto max-h-[500px] object-cover" />
+            {featuredImgUrl.endsWith(".mp4") || featuredImgUrl.endsWith(".webm") ? (
+              <video src={featuredImgUrl} controls className="w-full h-auto max-h-[500px] object-cover" />
             ) : (
-              <img src={featuredImg.url} alt={featuredImg.caption || blog.title} className="w-full h-auto max-h-[500px] object-cover group-hover:scale-105 transition-transform duration-700" />
+              <img src={featuredImgUrl} alt={blog.title} className="w-full h-auto max-h-[500px] object-cover group-hover:scale-105 transition-transform duration-700" />
             )}
           </div>
         )}
@@ -203,7 +264,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                   if (b.content?.startsWith("# ")) return <h1 key={idx} className="text-3xl font-black mt-12 mb-6 text-slate-900 dark:text-white">{b.content.replace("# ", "")}</h1>;
                   return <p key={idx} className="whitespace-pre-wrap mb-6">{b.content}</p>;
                 }
-                if (b.type === "attachment" && b.url && b.url !== featuredImg?.url) { // Skip featured image
+                if (b.type === "attachment" && b.url && b.url !== featuredImgUrl) { // Skip featured image
                   return (
                     <figure key={idx} className="my-10 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg bg-slate-100 dark:bg-black/30 flex flex-col items-center">
                       {b.url.endsWith(".mp4") || b.url.endsWith(".webm") ? (
@@ -236,8 +297,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 return null;
               })
             ) : (
-              <div className="whitespace-pre-line">
-                {blog.content || blog.excerpt}
+              <div className="space-y-6">
+                {(blog.content || blog.excerpt || "").split('\n\n').filter(Boolean).map((block, idx) => {
+                  const trimmed = block.trim();
+                  if (trimmed.startsWith("### ")) return <h3 key={idx} className="text-xl font-bold mt-8 mb-4 text-slate-900 dark:text-white">{trimmed.replace("### ", "")}</h3>;
+                  if (trimmed.startsWith("## ")) return <h2 key={idx} className="text-2xl font-black mt-10 mb-4 text-slate-900 dark:text-white">{trimmed.replace("## ", "")}</h2>;
+                  if (trimmed.startsWith("# ")) return <h1 key={idx} className="text-3xl font-black mt-12 mb-6 text-slate-900 dark:text-white">{trimmed.replace("# ", "")}</h1>;
+                  return <p key={idx} className="whitespace-pre-wrap mb-6">{trimmed}</p>;
+                })}
               </div>
             )}
             
@@ -274,17 +341,47 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               </form>
             </div>
             
-            <div className="p-6 rounded-2xl bg-white dark:bg-[#121217] border border-slate-200 dark:border-slate-800 shadow-sm">
-              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
-                Related Topics
-              </h3>
-              <div className="flex flex-col gap-3 text-sm">
-                <Link href="/blog?q=ai+video" className="text-slate-600 dark:text-slate-400 hover:text-violet-600 font-semibold transition-colors">→ Cinematic AI Video Guides</Link>
-                <Link href="/blog?q=midjourney" className="text-slate-600 dark:text-slate-400 hover:text-violet-600 font-semibold transition-colors">→ Image Generation Tips</Link>
-                <Link href="/blog?q=prompt" className="text-slate-600 dark:text-slate-400 hover:text-violet-600 font-semibold transition-colors">→ Master Prompt Engineering</Link>
-                <Link href="/blog?q=update" className="text-slate-600 dark:text-slate-400 hover:text-violet-600 font-semibold transition-colors">→ Platform Feature Updates</Link>
+            {blog.children && blog.children.length > 0 && (
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#121217] border border-slate-200 dark:border-slate-800 shadow-sm">
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+                  In This Guide
+                </h3>
+                <div className="flex flex-col gap-3 text-sm">
+                  {blog.children.map(child => (
+                    <Link key={child.slug} href={`/blog/${child.slug}`} className="text-slate-600 dark:text-slate-400 hover:text-violet-600 font-semibold transition-colors leading-snug">
+                      <span className="text-violet-500 mr-2">→</span>{child.title}
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+            
+            {blog.related && blog.related.length > 0 && (
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#121217] border border-slate-200 dark:border-slate-800 shadow-sm">
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+                  Related Topics
+                </h3>
+                <div className="flex flex-col gap-3 text-sm">
+                  {blog.related.map(rel => (
+                    <Link key={rel.slug} href={`/blog/${rel.slug}`} className="text-slate-600 dark:text-slate-400 hover:text-violet-600 font-semibold transition-colors leading-snug">
+                      <span className="text-slate-400 mr-2">•</span>{rel.title}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {(!blog.children?.length && !blog.related?.length) && (
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#121217] border border-slate-200 dark:border-slate-800 shadow-sm">
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-2">
+                  Explore Botock
+                </h3>
+                <div className="flex flex-col gap-3 text-sm">
+                  <Link href="/blog" className="text-slate-600 dark:text-slate-400 hover:text-violet-600 font-semibold transition-colors">→ All AI Guides</Link>
+                  <Link href="/tools" className="text-slate-600 dark:text-slate-400 hover:text-violet-600 font-semibold transition-colors">→ View AI Tools</Link>
+                </div>
+              </div>
+            )}
           </aside>
         </div>
       </div>

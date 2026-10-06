@@ -194,7 +194,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
               </li>
             </ul>
           </div>
@@ -347,3 +346,10 @@ export default function Footer() {
               <Link href="/blog" className="hover:text-slate-800 dark:hover:text-white transition-colors">Blog</Link>
               <Link href="/contact" className="hover:text-slate-800 dark:hover:text-white transition-colors">Contact</Link>
               <Link href="/security" className="hover:text-slate-800 dark:hover:text-white transition-colors">Security</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}

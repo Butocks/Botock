@@ -30,6 +30,7 @@ import {
   Crown,
   Mail,
 } from "lucide-react";
+import BlogCMS from "./BlogCMS";
 
 interface BlockItem {
   type: "paragraph" | "attachment";
@@ -1827,153 +1828,8 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             </div>
           )}
 
-          {/* TAB 7: MULTI-BLOCK BLOG STUDIO */}
-          {activeTab === "blogs" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-bold text-white">Multi-Block Rich Blog Studio</h2>
-                <p className="text-xs text-slate-400 mt-1">Publish structured articles: Title + Attachment + Paragraph + Attachment + Paragraph</p>
-              </div>
-
-              {/* Blog Editor */}
-              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">Article Title</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Mastering Google Flow Video AI: Step-by-Step"
-                      value={blogTitle}
-                      onChange={(e) => setBlogTitle(e.target.value)}
-                      className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-xs text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">Short Excerpt / Summary</label>
-                    <input
-                      type="text"
-                      placeholder="Brief teaser for blog card..."
-                      value={blogExcerpt}
-                      onChange={(e) => setBlogExcerpt(e.target.value)}
-                      className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-xs text-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Blocks Builder */}
-                <div className="space-y-3 pt-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                      Article Content Blocks ({blogBlocks.length})
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setBlogBlocks([...blogBlocks, { type: "paragraph", content: "" }])}
-                        className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-indigo-400 hover:text-white"
-                      >
-                        + Add Paragraph (p)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBlogBlocks([...blogBlocks, { type: "attachment", url: "", caption: "" }])}
-                        className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-purple-400 hover:text-white"
-                      >
-                        + Add Attachment (Img)
-                      </button>
-                    </div>
-                  </div>
-
-                  {blogBlocks.map((b, bIdx) => (
-                    <div key={bIdx} className="p-4 rounded-xl bg-black/40 border border-slate-800 flex items-start gap-3">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-400 uppercase mt-2">
-                        {b.type}
-                      </span>
-                      <div className="flex-1 space-y-2">
-                        {b.type === "paragraph" ? (
-                          <textarea
-                            rows={3}
-                            placeholder="Write paragraph content..."
-                            value={b.content}
-                            onChange={(e) => {
-                              const updated = [...blogBlocks];
-                              updated[bIdx].content = e.target.value;
-                              setBlogBlocks(updated);
-                            }}
-                            className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-xs text-white leading-relaxed"
-                          />
-                        ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <input
-                              type="text"
-                              placeholder="Image / Attachment URL (https://...)"
-                              value={b.url}
-                              onChange={(e) => {
-                                const updated = [...blogBlocks];
-                                updated[bIdx].url = e.target.value;
-                                setBlogBlocks(updated);
-                              }}
-                              className="px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-xs text-white font-mono"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Caption / Description..."
-                              value={b.caption}
-                              onChange={(e) => {
-                                const updated = [...blogBlocks];
-                                updated[bIdx].caption = e.target.value;
-                                setBlogBlocks(updated);
-                              }}
-                              className="px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-xs text-white"
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = [...blogBlocks];
-                          updated.splice(bIdx, 1);
-                          setBlogBlocks(updated);
-                        }}
-                        className="text-slate-600 hover:text-red-400 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={handlePublishBlog}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Publish Blog Article (2-Step)</span>
-                </button>
-              </div>
-
-              {/* Published Blogs List */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Published Articles ({blogs.length})</h3>
-                {blogs.map((b) => (
-                  <div key={b.id} className="p-5 rounded-2xl bg-[#111116] border border-slate-800 flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-sm font-bold text-white">{b.title}</div>
-                      <div className="text-xs text-slate-500 mt-1">{b.author} • {b.date || "Recent"} • {b.blocks?.length || 0} blocks</div>
-                      <p className="text-xs text-slate-400 mt-2 max-w-2xl">{b.excerpt}</p>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteBlog(b.id)}
-                      className="p-2 text-slate-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* TAB 7: BLOG CMS */}
+          {activeTab === "blogs" && <BlogCMS />}
 
           {/* TAB 8: TOOL ACCESS RULES */}
           {activeTab === "tools" && (
