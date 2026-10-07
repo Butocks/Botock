@@ -163,6 +163,16 @@ async def generate_video(
     if selected_model not in ["omni-1.1-flash-360p", "omni-1.1-flash-720p"]:
         selected_model = "omni-1.1-flash-360p"
 
+    from app.routers.auth_otp import get_platform_settings
+    quotas = get_platform_settings().get("quotas", {})
+    
+    # Check Guest Video Lock
+    if is_guest and quotas.get("guest_video_locked", False):
+        raise HTTPException(
+            status_code=403,
+            detail="Guest video generation is currently locked by the administrator. Please log in or create an account to generate videos."
+        )
+
     # Guest restrictions
     if is_guest:
         duration_seconds = 4
@@ -174,9 +184,22 @@ async def generate_video(
             selected_model = "omni-1.1-flash-360p"
 
     # Admin quota checking (just count today's generations)
-    from app.routers.auth_otp import get_platform_settings
     from app.middleware.auth import _rpc
-    quotas = get_platform_settings().get("quotas", {})
+    
+    # Check Global Daily Video Limit
+    try:
+        global_stats = await _rpc("get_global_video_stats", {})
+        today_total = global_stats.get("today", 0) if isinstance(global_stats, dict) else 0
+        global_limit = int(quotas.get("global_daily_video_limit", 500))
+        if today_total >= global_limit and not is_pro:
+            raise HTTPException(
+                status_code=429,
+                detail=f"The global daily video generation limit ({global_limit}) has been reached for today. Pro subscribers can bypass this limit. Please try again tomorrow."
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Failed to check global video limit: {e}")
     daily_limit = int(quotas.get("free_daily_videos", 10)) # default 10 per day if not set
 
     # In distributed mode we reserve a queue position

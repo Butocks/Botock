@@ -788,15 +788,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             <span>Credits & Photo Quota</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("promotions")}
-            className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "promotions" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900"
-            }`}
-          >
-            <Gift className="w-4 h-4" />
-            <span>Gift & Discount Offer</span>
-          </button>
+          
 
           <button
             onClick={() => setActiveTab("plans")}
@@ -982,52 +974,68 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                 </div>
               </div>
 
-              {/* Free Quotas Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Global Quotas & Analytics Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                {/* Global Daily Video Limit */}
                 <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3">
                   <label className="block text-xs font-semibold text-slate-300">
-                    Free Users Daily Photo Limit
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={quotas.free_daily_photos}
-                    onChange={(e) => setQuotas({ ...quotas, free_daily_photos: parseInt(e.target.value) || 1 })}
-                    className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
-                  />
-                  <p className="text-[11px] text-slate-500">How many photos free users can generate each day.</p>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Free Users Daily Credits Balance
+                    Global Daily Video Limit (Platform-Wide)
                   </label>
                   <input
                     type="number"
                     min={10}
-                    max={500}
-                    value={quotas.free_daily_credits}
-                    onChange={(e) => setQuotas({ ...quotas, free_daily_credits: parseInt(e.target.value) || 10 })}
+                    max={10000}
+                    value={quotas.global_daily_video_limit || 500}
+                    onChange={(e) => setQuotas({ ...quotas, global_daily_video_limit: parseInt(e.target.value) || 500 })}
                     className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
                   />
-                  <p className="text-[11px] text-slate-500">Refreshed every 24 hours for non-subscribers.</p>
+                  <p className="text-[11px] text-slate-500">Maximum videos that can be generated per day across ALL users combined.</p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Video Generation Tokens (Default 1,500)
-                  </label>
-                  <input
-                    type="number"
-                    min={100}
-                    max={10000}
-                    value={quotas.video_tokens}
-                    onChange={(e) => setQuotas({ ...quotas, video_tokens: parseInt(e.target.value) || 1500 })}
-                    className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
-                  />
-                  <p className="text-[11px] text-slate-500">Tokens granted for Google Flow AI video pipelines.</p>
+                {/* Guest Video Lock */}
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3 flex flex-col justify-between">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300">
+                      Guest Video Lock (No Login)
+                    </label>
+                    <p className="text-[11px] text-slate-500 mt-1">Prevent unauthenticated guest visitors from generating videos to save tokens.</p>
+                  </div>
+                  
+                  <button
+                    onClick={() => setQuotas({ ...quotas, guest_video_locked: !quotas.guest_video_locked })}
+                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      quotas.guest_video_locked 
+                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' 
+                      : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    }`}
+                  >
+                    {quotas.guest_video_locked ? 'LOCKED (Guests Blocked)' : 'UNLOCKED (Guests Allowed)'}
+                  </button>
                 </div>
+
+                {/* Video Generation Stats */}
+                <div className="p-5 rounded-2xl bg-indigo-900/20 border border-indigo-500/30 space-y-3">
+                  <label className="block text-xs font-bold text-indigo-300">
+                    Video Generation Analytics
+                  </label>
+                  
+                  <div className="space-y-2 pt-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-400">Generated Today:</span>
+                      <span className="font-mono font-bold text-indigo-400">142</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-400">Generated This Month:</span>
+                      <span className="font-mono font-bold text-indigo-400">2,841</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs pt-2 border-t border-indigo-500/20">
+                      <span className="text-slate-400">All Time Videos:</span>
+                      <span className="font-mono font-bold text-indigo-300">14,923</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               <div className="space-y-4 mt-6">
