@@ -67,19 +67,10 @@ async def generate_image(
     
     generation_id = str(uuid.uuid4())
     
-    if not is_pro and not is_guest:
-        quotas = get_platform_settings().get("quotas", {})
-        limit = int(quotas.get("free_daily_photos", settings.FREE_DAILY_IMAGE_LIMIT))
-        await _rpc("consume_image_quota", {
-            "p_user_id": user["user_id"], "p_daily_limit": limit,
-            "p_cost": int(settings.IMAGE_CREDIT_COST)
-        })
-
-
-    selected_model = request.model or "nano-banana-2"
-    # Guard: Free users can only use nano-banana-lite or nano-banana-2
-    if not is_pro and selected_model not in ["nano-banana-lite", "nano-banana-2"]:
-        selected_model = "nano-banana-2"
+    # Unlimited generation via queue (No credits/quota deduction)
+    
+    # We enforce a single lightweight model to minimize costs
+    selected_model = "botockGen"
 
     allowed_aspect_ratios = ["16:9", "4:3", "1:1", "3:4", "9:16"]
     selected_ratio = request.aspect_ratio if request.aspect_ratio in allowed_aspect_ratios else "1:1"

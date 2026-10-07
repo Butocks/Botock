@@ -158,56 +158,29 @@ async def generate_video(
     if "baby songs" in clean_prompt.lower():
         logger.info(f"TESTING/TRAINING LOG: Baby songs prompt detected by user {user['user_id']}")
 
+    # Enforce Botock Engine Flash rules
     selected_model = request.model or "omni-1.1-flash-360p"
+    if selected_model not in ["omni-1.1-flash-360p", "omni-1.1-flash-720p"]:
+        selected_model = "omni-1.1-flash-360p"
 
-    # Veo models in Flow AI are strictly 8s and 720p
-    is_veo = "veo" in selected_model.lower()
-    if is_veo:
-        duration_seconds = 8
+    # Guest restrictions
+    if is_guest:
+        duration_seconds = 4
+        selected_model = "omni-1.1-flash-360p"
     else:
-        duration_seconds = request.duration_seconds if request.duration_seconds in [4, 6, 8, 10] else 8
+        # User restrictions
+        duration_seconds = 4 if request.duration_seconds <= 4 else 8
+        if duration_seconds == 8:
+            selected_model = "omni-1.1-flash-360p"
 
-    # Premium Gates
-    if not is_pro and is_veo:
-        raise HTTPException(
-            status_code=403,
-            detail="The Veo cinematic engine is reserved for Pro subscribers. Please upgrade to unlock photorealistic generation."
-        )
-        
-    if not is_pro and not is_veo and duration_seconds > 6:
-        raise HTTPException(
-            status_code=403,
-            detail="Video durations over 6 seconds require a Pro subscription. Please upgrade to create longer videos."
-        )
-
-    # Check available models and their exact duration-based costs
+    # Admin quota checking (just count today's generations)
     from app.routers.auth_otp import get_platform_settings
+    from app.middleware.auth import _rpc
     quotas = get_platform_settings().get("quotas", {})
-    duration_costs = quotas.get("video_duration_costs", {
-        "omni-1.1-flash-360p": {"4": 8, "6": 10, "8": 12, "10": 14},
-        "omni-1.1-flash-720p": {"4": 14, "6": 20, "8": 24, "10": 30},
-        "veo-3.1-lite": {"8": 20},
-        "veo-3.1-fast": {"8": 40},
-        "veo-3.1-quality": {"8": 120}
-    })
-    fallback_costs = quotas.get("video_model_costs", {
-        "omni-1.1-flash-360p": 14,
-        "omni-1.1-flash-720p": 30,
-        "veo-3.1-lite": 20,
-        "veo-3.1-fast": 40,
-        "veo-3.1-quality": 120
-    })
+    daily_limit = int(quotas.get("free_daily_videos", 10)) # default 10 per day if not set
 
-    model_durations = duration_costs.get(selected_model, {})
-    cost = model_durations.get(str(duration_seconds), fallback_costs.get(selected_model, 14))
-
-    # Calculate cost. In distributed mode we reserve a queue position before
-    # deducting, so a full queue can never consume a user's credits.
-    from app.middleware.auth import reserve_video_credit
-
-    # Aspect ratio validation (16:9 and 9:16 supported)
+    # In distributed mode we reserve a queue position
     aspect_ratio = "9:16" if "9:16" in str(request.aspect_ratio) else "16:9"
-
     generation_id = str(uuid.uuid4())
     
     if settings.DISTRIBUTED_QUEUE_ENABLED:
@@ -231,21 +204,20 @@ async def generate_video(
                 detail=f"Video queue is at capacity ({exc.limit} waiting jobs). Please try again shortly.",
             )
         try:
-            if not is_pro and not is_guest:
-                await reserve_video_credit(user["user_id"], generation_id, cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
+            # We no longer deduct credits, just add to queue
             if not await queue.activate(generation_id, user["user_id"]):
                 raise HTTPException(status_code=503, detail="Could not activate video generation. Please retry.")
         except Exception:
             await queue.cancel_reservation(generation_id, user["user_id"])
             raise
     else:
-        if not is_pro and not is_guest:
-            await reserve_video_credit(user["user_id"], generation_id, cost, int(quotas.get("free_daily_credits", settings.FREE_DAILY_CREDITS)))
         save_ownership(generation_id, user["user_id"])
+        
     video_statuses[generation_id] = {
         "user_id": user["user_id"],
         "status": "queued",
-        "message": f"Video generation queued in secure pipeline ({selected_model}, {duration_seconds}s)."
+        "message": f"Video generation queued in Botock Engine ({selected_model}, {duration_seconds}s)."
+    }, {duration_seconds}s)."
     }
     
     if not settings.DISTRIBUTED_QUEUE_ENABLED:

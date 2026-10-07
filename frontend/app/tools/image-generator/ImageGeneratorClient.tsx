@@ -40,9 +40,7 @@ const ASPECT_RATIOS = [
 ];
 
 const IMAGE_MODELS = [
-  { id: "nano-banana-2", label: "Nano Banana 2 (Standard)" },
-  { id: "nano-banana-pro", label: "Nano Banana Pro (2K Ultra HD)" },
-  { id: "nano-banana-lite", label: "Nano Banana 2 Lite (Speed)" },
+  { id: "botockGen", label: "BotockGen (Unlimited Free)" }
 ];
 
 const STYLE_PRESETS = [
@@ -65,7 +63,7 @@ export default function ImageGeneratorClient() {
 
   // Form State
   const [prompt, setPrompt] = useState("");
-  const [selectedModel, setSelectedModel] = useState("nano-banana-2");
+  const [selectedModel, setSelectedModel] = useState("botockGen");
   const [aspectRatio, setAspectRatio] = useState("1:1");
   const [selectedStyle, setSelectedStyle] = useState("");
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
@@ -80,8 +78,7 @@ export default function ImageGeneratorClient() {
   const [showGuestCTA, setShowGuestCTA] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageBlobUrl, setImageBlobUrl] = useState<string | null>(null);
-  const [dailyImagesLeft, setDailyImagesLeft] = useState(5);
-  const [guestId, setGuestId] = useState<string>("");
+    const [guestId, setGuestId] = useState<string>("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -228,8 +225,7 @@ export default function ImageGeneratorClient() {
       setGenerationId(data.generation_id);
       setStatus("polling");
       setProgressPercent(30);
-      setDailyImagesLeft((prev) => Math.max(0, prev - 1));
-    } catch (err: any) {
+          } catch (err: any) {
       setStatus("error");
       setProgressPercent(0);
       const msg = err.message || "An unexpected error occurred.";
