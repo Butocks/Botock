@@ -797,86 +797,84 @@ class FlowService:
 
                 # Flow images finish in ~15-35s. After 15s and no percentage, download image
                 if elapsed >= 15:
-                    logger.info(f"[{generation_id}] Checking if image finished...")
-                    dl_btn = page.locator('button[aria-label*="Download" i], button:has-text("Download"), button[aria-label*="Export" i], mat-icon:has-text("download")').first
-                    if not await dl_btn.is_visible():
-                        new_tile = None
-                        for img_el in await page.locator('img').all():
-                            try:
-                                src = await img_el.get_attribute("src") or ""
-                                if src and src not in existing_imgs:
-                                    box = await img_el.bounding_box()
-                                    if box and box['width'] > 50 and box['height'] > 50:
-                                        new_tile = img_el
-                                        break
-                            except: pass
-
-                        if new_tile:
-                            logger.info(f"[{generation_id}] Found new image tile! Clicking to open viewer...")
-                            await new_tile.click()
-                        else:
-                            logger.info(f"[{generation_id}] Waiting for new image tile to appear on canvas...")
-                            await page.mouse.click(250, 200)
-                        await asyncio.sleep(2)
-
+                    logger.info(f"[{generation_id}] Checking if image is rendered on canvas via JS deep search...")
                     
-                    
-                    more_vert = page.locator('button:has(mat-icon:has-text("more_vert")), mat-icon:has-text("more_vert")').first
-                    
-                    # 🚀 DIRECT EXTRACTION FALLBACK: If we found a new image but no download buttons appear
-                    if new_tile and not (await dl_btn.is_visible() or await more_vert.is_visible()):
-                        logger.info(f"[{generation_id}] Bypassing UI: Directly extracting image data from src...")
-                        try:
-                            src_url = await new_tile.get_attribute("src")
-                            if src_url:
-                                b64_data = await page.evaluate("""async (url) => {
-                                    const response = await fetch(url);
-                                    const blob = await response.blob();
-                                    return new Promise((resolve, reject) => {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => resolve(reader.result);
-                                        reader.onerror = reject;
-                                        reader.readAsDataURL(blob);
-                                    });
-                                }""", src_url)
-                                
-                                import base64
-                                header, encoded = b64_data.split(",", 1)
-                                with open(save_path, "wb") as img_file:
-                                    img_file.write(base64.b64decode(encoded))
-                                
-                                logger.info(f"[{generation_id}] Image successfully extracted via JS: {save_path}")
-                                found_img_url = save_path
-                                break
-                        except Exception as extract_err:
-                            logger.warning(f"[{generation_id}] Direct extraction failed: {extract_err}")
-
-                    if await dl_btn.is_visible() or await more_vert.is_visible():
-                        logger.info(f"[{generation_id}] Image viewer ready, attempting to download...")
+                    # 🚀 ULTIMATE JS FALLBACK: Walk all shadow DOMs and find the largest new image!
+                    largest_new_url = await page.evaluate("""(existingUrls) => {
+                        let largestSize = 0;
+                        let bestUrl = null;
                         
-                        if await dl_btn.is_visible():
-                            await dl_btn.click()
-                        else:
-                            await more_vert.click()
+                        function walk(node) {
+                            if (node.shadowRoot) walk(node.shadowRoot);
                             
-                        await asyncio.sleep(1)
+                            if (node.tagName === 'IMG' && node.src) {
+                                if (!existingUrls.includes(node.src)) {
+                                    let rect = node.getBoundingClientRect();
+                                    let size = rect.width * rect.height;
+                                    if (size > largestSize) { largestSize = size; bestUrl = node.src; }
+                                }
+                            }
+                            
+                            if (node.nodeType === 1) { 
+                                let style = window.getComputedStyle(node);
+                                if (style.backgroundImage && style.backgroundImage !== 'none') {
+                                    let urlMatch = style.backgroundImage.match(/url\(['"]?(.*?)['"]?\)/);
+                                    if (urlMatch) {
+                                        let bUrl = urlMatch[1];
+                                        if (!existingUrls.includes(bUrl)) {
+                                            let rect = node.getBoundingClientRect();
+                                            let size = rect.width * rect.height;
+                                            if (size > largestSize) { largestSize = size; bestUrl = bUrl; }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            node.childNodes.forEach(child => walk(child));
+                        }
+                        walk(document);
+                        return bestUrl;
+                    }""", existing_imgs)
 
-                        # Look for download option in the menu
-                        opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button, .cdk-overlay-pane button').filter(has_text=re.compile("Original size|1K|Download", re.IGNORECASE)).first
-                        if not await opt.is_visible(timeout=3000):
-                            opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button').first
-
-                        async with page.expect_download(timeout=60000) as dl_info:
-                            await opt.click(force=True)
-
-                        download = await dl_info.value
-                        await download.save_as(save_path)
-                        logger.info(f"[{generation_id}] Image saved: {save_path} ({os.path.getsize(save_path)} bytes)")
-                        found_img_url = save_path
-                        break
+                    if largest_new_url:
+                        logger.info(f"[{generation_id}] Found generated image URL! Bypassing UI to extract...")
+                        try:
+                            # 1. First try to fetch it as a blob
+                            b64_data = await page.evaluate("""async (url) => {
+                                const response = await fetch(url);
+                                const blob = await response.blob();
+                                return new Promise((resolve, reject) => {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => resolve(reader.result);
+                                    reader.onerror = reject;
+                                    reader.readAsDataURL(blob);
+                                });
+                            }""", largest_new_url)
+                            
+                            import base64
+                            header, encoded = b64_data.split(",", 1)
+                            with open(save_path, "wb") as img_file:
+                                img_file.write(base64.b64decode(encoded))
+                            
+                            logger.info(f"[{generation_id}] Image successfully extracted via JS: {save_path}")
+                            found_img_url = save_path
+                            break
+                        except Exception as extract_err:
+                            logger.warning(f"[{generation_id}] Fetch failed, trying direct download... Error: {extract_err}")
+                            
+                    await asyncio.sleep(2)
 
             if not found_img_url or not os.path.exists(save_path):
                 await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_img_timeout.png"))
+                
+                # DUMP DOM for debugging!
+                try:
+                    html_content = await page.content()
+                    with open(os.path.join(self.debug_dir, f"{generation_id}_dom.html"), "w", encoding="utf-8") as html_f:
+                        html_f.write(html_content)
+                except:
+                    pass
+
                 raise Exception("Image generation timed out waiting for image tile.")
 
             download_url = f"/api/image/download/{generation_id}"
