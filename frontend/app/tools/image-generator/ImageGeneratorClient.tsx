@@ -275,7 +275,7 @@ export default function ImageGeneratorClient() {
 
             const authenticatedUrl = token
               ? `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
-              : finalUrl;
+              : `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}guest_id=${encodeURIComponent(guestId)}`;
 
             setImageUrl(authenticatedUrl);
             setProgressPercent(100);

@@ -86,6 +86,7 @@ def get_current_user_or_guest(
     authorization: Optional[str] = Header(None),
     token_query: Optional[str] = Query(None, alias="token"),
     x_guest_id: Optional[str] = Header(None, alias="X-Guest-ID"),
+    guest_id_query: Optional[str] = Query(None, alias="guest_id"),
 ) -> dict:
     """Returns authenticated user if token present, or guest user object if unauthenticated."""
     if (authorization and authorization.strip()) or (token_query and token_query.strip()):
@@ -94,7 +95,7 @@ def get_current_user_or_guest(
         except HTTPException:
             pass
 
-    guest_id = (x_guest_id or "").strip()
+    guest_id = (x_guest_id or guest_id_query or "").strip()
     if not guest_id or len(guest_id) < 5:
         guest_id = "guest_anon_user"
 

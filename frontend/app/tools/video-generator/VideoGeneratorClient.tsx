@@ -229,24 +229,21 @@ export default function VideoGeneratorClient() {
             clearInterval(intervalId);
             setProgressPercent(100);
             setStatus("completed");
-            setVideoUrl(data.url);
             
-            // Add to library
-            const newItem = {
-              id: id,
-              title: (prompt || "Generated Video").slice(0, 35) + "...",
-              type: "video" as const,
-              url: data.url,
-              createdAt: new Date().toISOString(),
-              expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-              prompt: prompt || "Generated Video",
-            };
-            addToLibrary(newItem);
-            setActiveMedia(newItem);
+            let finalUrl = data.download_url || `/api/video/download/${id}`;
+            if (finalUrl.startsWith("/")) {
+              finalUrl = `${backendBaseUrl.replace(/\/$/, "")}${finalUrl}`;
+            }
+            
+            const authUrl = token
+              ? `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+              : gid ? `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}guest_id=${encodeURIComponent(gid)}` : finalUrl;
+              
+            setVideoUrl(authUrl);
             
             // Generate local blob url for caching
             try {
-              const videoReq = await fetch(data.url);
+              const videoReq = await fetch(authUrl, { headers });
               const blob = await videoReq.blob();
               setVideoBlobUrl(URL.createObjectURL(blob));
             } catch (e) { }
