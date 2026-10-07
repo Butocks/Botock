@@ -729,12 +729,13 @@ class FlowService:
                 await self._upload_ingredient(page, image_base64, generation_id)
 
             # Baseline: record existing image tiles before submitting
-            existing_imgs = await page.evaluate("""() => {
-                return Array.from(document.querySelectorAll('img'))
-                    .filter(i => (i.alt || '').toLowerCase().includes('image'))
-                    .map(i => i.src)
-                    .filter(Boolean);
-            }""")
+            # Use locator to pierce Shadow DOM for existing images
+            existing_imgs = []
+            for img_el in await page.locator('img').all():
+                try:
+                    src = await img_el.get_attribute("src") or ""
+                    if src: existing_imgs.append(src)
+                except: pass
 
             # Enter Prompt
             full_prompt = prompt.strip()
@@ -800,11 +801,15 @@ class FlowService:
                     dl_btn = page.locator('button[aria-label*="Download" i], button:has-text("Download"), button[aria-label*="Export" i], mat-icon:has-text("download")').first
                     if not await dl_btn.is_visible():
                         new_tile = None
-                        for img_el in await page.locator('img[alt*="image" i]').all():
-                            src = await img_el.get_attribute("src") or ""
-                            if src and src not in existing_imgs:
-                                new_tile = img_el
-                                break
+                        for img_el in await page.locator('img').all():
+                            try:
+                                src = await img_el.get_attribute("src") or ""
+                                if src and src not in existing_imgs:
+                                    box = await img_el.bounding_box()
+                                    if box and box['width'] > 50 and box['height'] > 50:
+                                        new_tile = img_el
+                                        break
+                            except: pass
 
                         if new_tile:
                             logger.info(f"[{generation_id}] Found new image tile! Clicking to open viewer...")
@@ -815,7 +820,37 @@ class FlowService:
                         await asyncio.sleep(2)
 
                     
+                    
                     more_vert = page.locator('button:has(mat-icon:has-text("more_vert")), mat-icon:has-text("more_vert")').first
+                    
+                    # 🚀 DIRECT EXTRACTION FALLBACK: If we found a new image but no download buttons appear
+                    if new_tile and not (await dl_btn.is_visible() or await more_vert.is_visible()):
+                        logger.info(f"[{generation_id}] Bypassing UI: Directly extracting image data from src...")
+                        try:
+                            src_url = await new_tile.get_attribute("src")
+                            if src_url:
+                                b64_data = await page.evaluate(f"""async (url) => {
+                                    const response = await fetch(url);
+                                    const blob = await response.blob();
+                                    return new Promise((resolve, reject) => {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => resolve(reader.result);
+                                        reader.onerror = reject;
+                                        reader.readAsDataURL(blob);
+                                    });
+                                }""", src_url)
+                                
+                                import base64
+                                header, encoded = b64_data.split(",", 1)
+                                with open(save_path, "wb") as img_file:
+                                    img_file.write(base64.b64decode(encoded))
+                                
+                                logger.info(f"[{generation_id}] Image successfully extracted via JS: {save_path}")
+                                found_img_url = save_path
+                                break
+                        except Exception as extract_err:
+                            logger.warning(f"[{generation_id}] Direct extraction failed: {extract_err}")
+
                     if await dl_btn.is_visible() or await more_vert.is_visible():
                         logger.info(f"[{generation_id}] Image viewer ready, attempting to download...")
                         
