@@ -829,7 +829,7 @@ class FlowService:
                         try:
                             src_url = await new_tile.get_attribute("src")
                             if src_url:
-                                b64_data = await page.evaluate(f"""async (url) => {
+                                b64_data = await page.evaluate("""async (url) => {
                                     const response = await fetch(url);
                                     const blob = await response.blob();
                                     return new Promise((resolve, reject) => {
