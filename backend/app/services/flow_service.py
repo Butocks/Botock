@@ -694,9 +694,12 @@ class FlowService:
                         await model_dropdown.click()
                         await asyncio.sleep(0.5)
                         
-                        target_model = page.locator('.mat-mdc-menu-content .mat-mdc-menu-item, .mat-mdc-menu-content [role="menuitem"]').filter(has_text="Nano Banana").first
-                        if not await target_model.is_visible():
-                            target_model = page.locator('.mat-mdc-menu-content .mat-mdc-menu-item, .mat-mdc-menu-content [role="menuitem"]').filter(has_text="Nano").first
+                        # If not pro, explicitly select the Lite version (Imagen 3 Lite)
+                        if not is_pro:
+                            target_model = page.locator('.mat-mdc-menu-content button, .mat-mdc-menu-item').filter(has_text=re.compile("lite", re.IGNORECASE)).first
+                        else:
+                            target_model = page.locator('.mat-mdc-menu-content button, .mat-mdc-menu-item').filter(has_text=re.compile("imagen 3", re.IGNORECASE)).first
+
                         if await target_model.is_visible():
                             await target_model.click()
                             await asyncio.sleep(0.5)
@@ -794,7 +797,7 @@ class FlowService:
                 # Flow images finish in ~15-35s. After 15s and no percentage, download image
                 if elapsed >= 15:
                     logger.info(f"[{generation_id}] Checking if image finished...")
-                    dl_btn = page.locator('button[aria-label*="Download" i]').first
+                    dl_btn = page.locator('button[aria-label*="Download" i], button:has-text("Download"), button[aria-label*="Export" i], mat-icon:has-text("download")').first
                     if not await dl_btn.is_visible():
                         new_tile = None
                         for img_el in await page.locator('img[alt*="image" i]').all():
@@ -811,11 +814,19 @@ class FlowService:
                             await page.mouse.click(250, 200)
                         await asyncio.sleep(2)
 
-                    if await dl_btn.is_visible():
-                        logger.info(f"[{generation_id}] Image viewer ready, downloading original resolution...")
-                        await dl_btn.click()
+                    
+                    more_vert = page.locator('button:has(mat-icon:has-text("more_vert")), mat-icon:has-text("more_vert")').first
+                    if await dl_btn.is_visible() or await more_vert.is_visible():
+                        logger.info(f"[{generation_id}] Image viewer ready, attempting to download...")
+                        
+                        if await dl_btn.is_visible():
+                            await dl_btn.click()
+                        else:
+                            await more_vert.click()
+                            
                         await asyncio.sleep(1)
 
+                        # Look for download option in the menu
                         opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button, .cdk-overlay-pane button').filter(has_text=re.compile("Original size|1K|Download", re.IGNORECASE)).first
                         if not await opt.is_visible(timeout=3000):
                             opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button').first
