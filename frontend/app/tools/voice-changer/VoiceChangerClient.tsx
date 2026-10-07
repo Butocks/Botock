@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { Upload, Mic, Play, Download, Settings2, Sparkles, AlertCircle } from "lucide-react";
-import { getBackendUrl } from "@/app/utils/runtime-urls";
+import { getBackendUrl } from "../../../utils/runtime-urls";
 
 const VOICE_MODES = [
   { id: "kid", label: "👦 Kid" },
