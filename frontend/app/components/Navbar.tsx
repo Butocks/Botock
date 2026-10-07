@@ -144,7 +144,7 @@ export default function Navbar() {
 
               {activeDropdown === "studios" && (
                 <div
-                  className="absolute left-1/2 -translate-x-1/2 mt-3 w-[740px] rounded-2xl bg-white dark:bg-[#0f0f13] border border-slate-200 dark:border-white/[0.1] shadow-2xl p-5 z-50 animate-fade-in"
+                  className="absolute left-1/2 -translate-x-1/2 mt-3 w-[850px] max-w-[95vw] rounded-2xl bg-white dark:bg-[#0f0f13] border border-slate-200 dark:border-white/[0.1] shadow-2xl p-5 z-50 animate-fade-in"
                   onMouseEnter={() => handleMouseEnter("studios")}
                   onMouseLeave={handleMouseLeave}
                 >
@@ -164,8 +164,8 @@ export default function Navbar() {
                         <div className="w-9 h-9 rounded-xl bg-violet-600/15 border border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 group-hover:scale-105 transition-transform flex-shrink-0 mt-0.5">
                           <Film className="w-4 h-4" />
                         </div>
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors flex items-center gap-1.5">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold truncate text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors flex items-center gap-1.5">
                             AI Video Generator
                             <span className="text-[9px] px-1.5 py-0.2 bg-violet-500/15 text-violet-600 dark:text-violet-300 rounded font-semibold border border-violet-500/30">HD</span>
                           </div>
@@ -183,8 +183,8 @@ export default function Navbar() {
                         <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:scale-105 transition-transform flex-shrink-0 mt-0.5">
                           <Scissors className="w-4 h-4" />
                         </div>
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-300 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold truncate text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-300 transition-colors">
                             Video Studio Editor
                           </div>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
@@ -192,7 +192,7 @@ export default function Navbar() {
                           </p>
                         </div>
                       </Link>
-                    </div>
+                    
 
 
                       <Link
@@ -203,8 +203,8 @@ export default function Navbar() {
                         <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform flex-shrink-0 mt-0.5">
                           <Mic className="w-4 h-4" />
                         </div>
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold truncate text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">
                             AI Voice Changer
                           </div>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
@@ -212,6 +212,7 @@ export default function Navbar() {
                           </p>
                         </div>
                       </Link>
+                    </div>
 
                     {/* Image Studio */}
                     <div className="col-span-4 space-y-2 border-l border-slate-200 dark:border-white/[0.08] pl-4">
@@ -228,8 +229,8 @@ export default function Navbar() {
                         <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform flex-shrink-0 mt-0.5">
                           <ImageIcon className="w-4 h-4" />
                         </div>
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold truncate text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
                             AI Image Generator
                             <span className="text-[9px] px-1.5 py-0.2 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded font-semibold border border-emerald-500/30">Free</span>
                           </div>
@@ -537,6 +538,15 @@ export default function Navbar() {
               <Scissors className="w-4 h-4 text-sky-500 dark:text-sky-400" />
               <span>Video Studio Editor</span>
             </Link>
+            <Link
+              href="/tools/voice-changer"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] cursor-pointer"
+            >
+              <Mic className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+              <span>AI Voice Changer</span>
+            </Link>
+
           </div>
 
           <div className="border-t border-slate-200 dark:border-white/[0.08] my-2" />
