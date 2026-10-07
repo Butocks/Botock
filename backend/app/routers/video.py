@@ -217,7 +217,6 @@ async def generate_video(
         "user_id": user["user_id"],
         "status": "queued",
         "message": f"Video generation queued in Botock Engine ({selected_model}, {duration_seconds}s)."
-    }, {duration_seconds}s)."
     }
     
     if not settings.DISTRIBUTED_QUEUE_ENABLED:
