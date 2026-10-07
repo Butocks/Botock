@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Mic, useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "../../utils/supabase/client";
 import {
   Mic, ChevronDown,
