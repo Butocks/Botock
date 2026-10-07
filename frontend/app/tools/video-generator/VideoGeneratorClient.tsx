@@ -233,10 +233,12 @@ export default function VideoGeneratorClient() {
             
             // Add to library
             const newItem = {
+              id: id,
+              title: (prompt || "Generated Video").slice(0, 35) + "...",
               type: "video" as const,
               url: data.url,
-              id: id,
-              timestamp: Date.now(),
+              createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
               prompt: prompt || "Generated Video",
             };
             addToLibrary(newItem);
@@ -267,7 +269,7 @@ export default function VideoGeneratorClient() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      {showGuestCTA && <GuestCTA onClose={() => setShowGuestCTA(false)} type="video" />}
+      {showGuestCTA && <GuestCTA isOpen={true} onClose={() => setShowGuestCTA(false)} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
