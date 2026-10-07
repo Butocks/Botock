@@ -85,8 +85,190 @@ export default function VideoGeneratorClient() {
         });
       }, 1100);
     }
-    return (
-    <div className="fixed inset-x-0 top-16 bottom-0 flex flex-col justify-between overflow-hidden bg-slate-50 dark:bg-[#07050e] text-slate-900 dark:text-white">
+    return () => clearInterval(timer);
+  }, [status]);
+
+  useEffect(() => {
+    const initUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user || null);
+      setAuthLoading(false);
+    };
+    initUser();
+  }, [supabase.auth]);
+
+  // Enforce limitations based on auth state
+  useEffect(() => {
+    if (!user) {
+      setDurationSeconds(4);
+      setResolution("360p");
+    } else {
+      if (durationSeconds === 8) {
+        setResolution("360p");
+      }
+    }
+  }, [user, durationSeconds, resolution]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        setErrorMessage("Image must be under 5MB.");
+        return;
+      }
+      setReferenceImage(file);
+      const url = URL.createObjectURL(file);
+      setReferencePreview(url);
+      setMode("photo-to-video");
+    }
+  };
+
+  const removeImage = () => {
+    setReferenceImage(null);
+    setReferencePreview(null);
+    if (!prompt) setMode("text-to-video");
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64String = (reader.result as string).split(",")[1];
+        resolve(base64String);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const startGeneration = async () => {
+    if (!prompt && !referenceImage) {
+      setErrorMessage("Please enter a prompt or upload an image.");
+      return;
+    }
+
+    setStatus("generating");
+    setProgressPercent(2);
+    setProgressText("Initializing secure generation environment...");
+    setErrorMessage("");
+    setVideoUrl(null);
+    setVideoBlobUrl(null);
+
+    try {
+      const backendBaseUrl = await getBackendUrl();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        headers["X-Guest-ID"] = guestId;
+      }
+
+      let imageBase64 = null;
+      if (referenceImage) {
+        setProgressText("Optimizing reference image...");
+        imageBase64 = await fileToBase64(referenceImage);
+      }
+
+      setProgressText("Deploying job to Botock Engine...");
+      
+      const payload = {
+        prompt: prompt || "Animate this image.",
+        model: `omni-1.1-flash-${resolution}`,
+        duration_seconds: durationSeconds,
+        aspect_ratio: aspectRatio,
+        motion_hint: motionHint || null,
+        image_base64: imageBase64,
+      };
+
+      const res = await fetch(`${backendBaseUrl}/api/video/generate`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Failed to start generation.");
+      }
+
+      const data = await res.json();
+      setGenerationId(data.generation_id);
+      setStatus("polling");
+      pollStatus(data.generation_id, token, guestId);
+    } catch (err: any) {
+      setErrorMessage(err.message || "An unexpected error occurred.");
+      setStatus("error");
+    }
+  };
+
+  const pollStatus = async (id: string, token?: string, gid?: string) => {
+    try {
+      const backendBaseUrl = await getBackendUrl();
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      else if (gid) headers["X-Guest-ID"] = gid;
+
+      let intervalId = setInterval(async () => {
+        try {
+          const res = await fetch(`${backendBaseUrl}/api/video/status/${id}`, { headers });
+          if (!res.ok) {
+            clearInterval(intervalId);
+            setStatus("error");
+            setErrorMessage("Failed to fetch generation status.");
+            return;
+          }
+          const data = await res.json();
+          if (data.status === "processing") {
+            setProgressText(data.message || "Processing in queue...");
+          } else if (data.status === "completed") {
+            clearInterval(intervalId);
+            setProgressPercent(100);
+            setStatus("completed");
+            setVideoUrl(data.url);
+            
+            // Add to library
+            const newItem = {
+              id: id,
+              title: (prompt || "Generated Video").slice(0, 35) + "...",
+              type: "video" as const,
+              url: data.url,
+              createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+              prompt: prompt || "Generated Video",
+            };
+            addToLibrary(newItem);
+            setActiveMedia(newItem);
+            
+            // Generate local blob url for caching
+            try {
+              const videoReq = await fetch(data.url);
+              const blob = await videoReq.blob();
+              setVideoBlobUrl(URL.createObjectURL(blob));
+            } catch (e) { }
+
+            if (!user) setShowGuestCTA(true);
+          } else if (data.status === "failed") {
+            clearInterval(intervalId);
+            setStatus("error");
+            setErrorMessage(data.error || "Generation failed. Please try again.");
+          }
+        } catch (e) {
+          // keep trying
+        }
+      }, 5000);
+    } catch (err: any) {
+      setStatus("error");
+      setErrorMessage(err.message);
+    }
+  };
+
+  return (
+    <div className="fixed inset-x-0 top-16 bottom-0 flex flex-col justify-between overflow-hidden bg-slate-50 dark:bg-[#07050e] text-slate-900 dark:text-white select-none">
       
       {/* Main Canvas Area */}
       <div className="flex-1 overflow-y-auto min-h-0 w-full max-w-4xl mx-auto px-4 py-4 sm:py-6 flex flex-col items-center justify-center">
@@ -131,7 +313,7 @@ export default function VideoGeneratorClient() {
                 playsInline
                 className="w-full h-full object-contain"
               />
-              <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-xs text-violet-300 font-bold border border-violet-500/30 flex items-center gap-1.5 shadow-md">
+              <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-xs text-violet-300 font-bold border border-violet-500/30 flex items-center gap-1.5 shadow-md pointer-events-none">
                 <Clock className="w-3.5 h-3.5 text-violet-400" />
                 <span>24h Expiry</span>
               </div>
@@ -190,7 +372,7 @@ export default function VideoGeneratorClient() {
 
       {/* Pinned Bottom Input Dock */}
       <div className="shrink-0 w-full bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/10 px-3 sm:px-6 py-2 sm:py-3 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <div className="max-w-4xl mx-auto flex flex-col gap-2">
+        <div className="max-w-3xl mx-auto flex flex-col gap-2">
           
           {/* Controls Chips Row */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
@@ -266,9 +448,9 @@ export default function VideoGeneratorClient() {
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe your scene in detail... (e.g. A cinematic drone shot over a neon city)"
+              placeholder="Describe your scene... (e.g. A cinematic drone shot over a neon city)"
               rows={1}
-              className="flex-1 bg-transparent resize-none outline-none py-2 px-2 text-sm sm:text-base text-slate-900 dark:text-white placeholder:text-slate-500 min-h-[44px] max-h-32"
+              className="flex-1 bg-transparent resize-none outline-none py-2 px-2 text-sm sm:text-base text-slate-900 dark:text-white placeholder:text-slate-500 min-h-[40px] max-h-32"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
