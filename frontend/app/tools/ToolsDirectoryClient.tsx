@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Film,
@@ -350,7 +351,7 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
   },
 ];
 
-export default function ToolsDirectoryClient() {
+function ToolsDirectoryInner() {
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -443,5 +444,14 @@ export default function ToolsDirectoryClient() {
 
       <AdBanner slotId="directory-bottom-ad" format="horizontal" />
     </div>
+  );
+}
+
+
+export default function ToolsDirectoryClient() {
+  return (
+    <Suspense fallback={<div className="min-h-[400px] flex items-center justify-center text-slate-500">Loading tools directory...</div>}>
+      <ToolsDirectoryInner />
+    </Suspense>
   );
 }

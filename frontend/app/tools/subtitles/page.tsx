@@ -4,14 +4,14 @@ import { Subtitles, ShieldCheck } from "lucide-react";
 import SubtitlesClient from "./Client";
 
 export const metadata: Metadata = {
-  title: "Subtitle Editor & Converter Online Free | SRT to VTT",
-  description: "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
+  title: "AI Auto-Generate Subtitles Online Free | Perfect Sync",
+  description: "Automatically generate perfectly synced subtitles from audio and video files using AI. Edit and convert subtitle files between SRT and WebVTT formats.",
   alternates: {
     canonical: "/tools/subtitles",
   },
   openGraph: {
-    title: "Subtitle Editor & Converter Online Free | SRT to VTT",
-    description: "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
+    title: "AI Auto-Generate Subtitles Online Free | Perfect Sync",
+    description: "Automatically generate perfectly synced subtitles from audio and video files using AI. Edit and convert subtitle files between SRT and WebVTT formats.",
     url: "https://botock.app/tools/subtitles",
     siteName: "Botock AI",
     type: "website",
@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Subtitle Editor & Converter Online Free | SRT to VTT",
-    description: "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
+    title: "AI Auto-Generate Subtitles Online Free | Perfect Sync",
+    description: "Automatically generate perfectly synced subtitles from audio and video files using AI. Edit and convert subtitle files between SRT and WebVTT formats.",
     images: ["https://botock.app/og-image.jpg"],
   },
 };
@@ -77,14 +77,14 @@ export default function SubtitlesPage() {
 
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 text-xs font-semibold mb-3">
-          <ShieldCheck className="w-3.5 h-3.5" /> 100% Client-Side • Private & Secure
+          <ShieldCheck className="w-3.5 h-3.5" /> 100% Client-Side AI • Private & Secure
         </div>
         <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-4 flex items-center justify-center gap-3">
           <Subtitles className="w-8 h-8 text-sky-500" />
-          Subtitle & Caption Editor
+          AI Subtitle Generator
         </h1>
         <p className="text-slate-600 dark:text-slate-400 max-w-xl mx-auto text-sm">
-          Convert subtitle files between SRT and VTT, synchronize misaligned audio cues with millisecond accuracy, and clean caption formatting.
+          Automatically extract perfectly synchronized subtitles from audio or video using AI right in your browser. Supports English, Spanish, Arabic, and more.
         </p>
       </div>
 

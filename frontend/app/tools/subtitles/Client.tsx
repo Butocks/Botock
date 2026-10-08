@@ -1,41 +1,136 @@
 "use client";
 
 import { copyToClipboard } from "@/lib/utils/clipboard";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Subtitles,
   Download,
-  Trash2,
-  Clock,
-  Sparkles,
   Copy,
   Check,
-  Search,
   Sliders,
-  CheckCircle2,
+  FileAudio,
+  Loader2,
 } from "lucide-react";
+
+// Formats ms to timestamp
+const formatMsToTimestamp = (ms: number, format: "srt" | "vtt"): string => {
+  const validMs = Math.max(0, ms);
+  const h = Math.floor(validMs / 3600000);
+  const m = Math.floor((validMs % 3600000) / 60000);
+  const s = Math.floor((validMs % 60000) / 1000);
+  const millis = Math.floor(validMs % 1000);
+
+  const pad = (n: number, z = 2) => String(n).padStart(z, "0");
+  const sep = format === "srt" ? "," : ".";
+
+  return `${pad(h)}:${pad(m)}:${pad(s)}${sep}${pad(millis, 3)}`;
+};
 
 export default function SubtitlesClient() {
   const [content, setContent] = useState("");
   const [fileName, setFileName] = useState("subtitles");
-  const [targetFormat, setTargetFormat] = useState<"srt" | "vtt">("vtt");
-  const [timeShiftMs, setTimeShiftMs] = useState<number>(0);
-  const [searchWord, setSearchWord] = useState("");
-  const [replaceWord, setReplaceWord] = useState("");
-  const [stripTags, setStripTags] = useState(false);
+  const [targetFormat, setTargetFormat] = useState<"srt" | "vtt">("srt");
   const [copied, setCopied] = useState(false);
+  
+  // AI State
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const [progress, setProgress] = useState<any>(null);
+  
+  const worker = useRef<Worker | null>(null);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  useEffect(() => {
+    if (!worker.current) {
+      worker.current = new Worker(new URL('./worker.ts', import.meta.url), {
+        type: 'module'
+      });
+      
+      worker.current.addEventListener('message', (e) => {
+        const { status, message, output, progress, error } = e.data;
+        
+        if (status === 'loading' || status === 'processing') {
+          setLoadingMessage(message);
+        } else if (status === 'progress') {
+          setProgress(progress);
+        } else if (status === 'done') {
+          setIsProcessing(false);
+          setLoadingMessage("");
+          if (output && output.chunks) {
+             generateSubtitlesFromChunks(output.chunks);
+          }
+        } else if (status === 'error') {
+          setIsProcessing(false);
+          setLoadingMessage("");
+          alert('Error: ' + error);
+        }
+      });
+    }
+    return () => {
+      worker.current?.terminate();
+    };
+  }, []);
+
+  const generateSubtitlesFromChunks = (chunks: any[]) => {
+    let srt = "";
+    chunks.forEach((chunk, index) => {
+      // whisper timestamps are in seconds
+      const startTimeMs = chunk.timestamp[0] * 1000;
+      const endTimeMs = chunk.timestamp[1] * 1000 || (chunk.timestamp[0] * 1000 + 2000);
+      
+      const startFmt = formatMsToTimestamp(startTimeMs, targetFormat);
+      const endFmt = formatMsToTimestamp(endTimeMs, targetFormat);
+      
+      srt += `${index + 1}\n`;
+      srt += `${startFmt} --> ${endFmt}\n`;
+      srt += `${chunk.text.trim()}\n\n`;
+    });
+    
+    if (targetFormat === 'vtt') {
+        srt = "WEBVTT\n\n" + srt;
+    }
+    
+    setContent(srt.trim());
+  };
+
+  const decodeAudio = async (file: File) => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+      sampleRate: 16000
+    });
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    return audioBuffer.getChannelData(0);
+  };
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
       const f = acceptedFiles[0];
       setFileName(f.name.replace(/\.[^/.]+$/, ""));
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        setContent(text || "");
-      };
-      reader.readAsText(f);
+      
+      if (f.type.startsWith('audio/') || f.type.startsWith('video/') || f.name.match(/\.(mp3|wav|ogg|mp4|webm|m4a)$/i)) {
+          // AI Transcription
+          try {
+              setIsProcessing(true);
+              setLoadingMessage("Decoding audio...");
+              const audioData = await decodeAudio(f);
+              setLoadingMessage("Sending to AI Model...");
+              worker.current?.postMessage({
+                  type: 'generate',
+                  audioData
+              });
+          } catch (e: any) {
+              alert("Could not read audio file: " + e.message);
+              setIsProcessing(false);
+          }
+      } else {
+          // Text format
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const text = e.target?.result as string;
+            setContent(text || "");
+          };
+          reader.readAsText(f);
+      }
     }
   }, []);
 
@@ -43,86 +138,16 @@ export default function SubtitlesClient() {
     onDrop,
     accept: {
       "text/*": [".srt", ".vtt", ".txt", ".sub", ".ass"],
+      "audio/*": [".mp3", ".wav", ".ogg", ".m4a"],
+      "video/*": [".mp4", ".webm"]
     },
     maxFiles: 1,
     multiple: false,
   });
 
-  const parseTimestampToMs = (str: string): number => {
-    // Matches 00:01:23,456 or 00:01:23.456
-    const clean = str.replace(",", ".");
-    const parts = clean.split(":");
-    if (parts.length === 3) {
-      const h = parseFloat(parts[0]);
-      const m = parseFloat(parts[1]);
-      const s = parseFloat(parts[2]);
-      return h * 3600000 + m * 60000 + s * 1000;
-    }
-    return 0;
-  };
-
-  const formatMsToTimestamp = (ms: number, format: "srt" | "vtt"): string => {
-    const validMs = Math.max(0, ms);
-    const h = Math.floor(validMs / 3600000);
-    const m = Math.floor((validMs % 3600000) / 60000);
-    const s = Math.floor((validMs % 60000) / 1000);
-    const millis = Math.floor(validMs % 1000);
-
-    const pad = (n: number, z = 2) => String(n).padStart(z, "0");
-    const sep = format === "srt" ? "," : ".";
-
-    return `${pad(h)}:${pad(m)}:${pad(s)}${sep}${pad(millis, 3)}`;
-  };
-
-  const getProcessedSubtitles = (): string => {
-    if (!content.trim()) return "";
-
-    let text = content;
-
-    // Search and replace
-    if (searchWord) {
-      text = text.replaceAll(searchWord, replaceWord);
-    }
-
-    // Strip HTML/styling tags
-    if (stripTags) {
-      text = text.replace(/<[^>]*>/g, "");
-    }
-
-    // Time shifting and format conversion
-    const isSourceVtt = text.includes("WEBVTT");
-    const lines = text.split(/\r?\n/);
-    const outputLines: string[] = [];
-
-    if (targetFormat === "vtt" && !isSourceVtt) {
-      outputLines.push("WEBVTT\n");
-    }
-
-    const timestampRegex = /(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/;
-
-    for (const line of lines) {
-      if (line.includes("WEBVTT") && targetFormat === "srt") {
-        continue; // Strip WEBVTT header for SRT
-      }
-
-      const match = line.match(timestampRegex);
-      if (match) {
-        const startMs = parseTimestampToMs(match[1]) + timeShiftMs;
-        const endMs = parseTimestampToMs(match[2]) + timeShiftMs;
-        const newStart = formatMsToTimestamp(startMs, targetFormat);
-        const newEnd = formatMsToTimestamp(endMs, targetFormat);
-        outputLines.push(`${newStart} --> ${newEnd}`);
-      } else {
-        outputLines.push(line);
-      }
-    }
-
-    return outputLines.join("\n").trim();
-  };
-
   const handleDownload = () => {
-    const result = getProcessedSubtitles();
-    const blob = new Blob([result], { type: "text/plain;charset=utf-8" });
+    if (!content) return;
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -132,7 +157,7 @@ export default function SubtitlesClient() {
   };
 
   const handleCopy = () => {
-    copyToClipboard(getProcessedSubtitles());
+    copyToClipboard(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -144,7 +169,7 @@ export default function SubtitlesClient() {
         <div className="lg:col-span-8 space-y-4">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Subtitle Text / File
+              AI Auto-Generate or Upload File
             </label>
             {content && (
               <button
@@ -159,23 +184,39 @@ export default function SubtitlesClient() {
 
           <div
             {...getRootProps()}
-            className={`border border-dashed rounded-2xl p-4 text-center cursor-pointer transition-colors ${
+            className={`border border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
               isDragActive
                 ? "border-sky-500 bg-sky-500/5"
                 : "border-slate-200 dark:border-white/[0.08] hover:border-sky-500/50 bg-slate-50 dark:bg-white/[0.01]"
             }`}
           >
             <input {...getInputProps()} />
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Drop an SRT or VTT file here, or type/paste captions below.
+            <FileAudio className="w-8 h-8 text-slate-400 mx-auto mb-3" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+               Drop Audio/Video to Auto-Generate AI Subtitles
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              Supports MP3, WAV, MP4. Perfect line sync across common languages. Or upload existing SRT/VTT.
             </p>
           </div>
+
+          {isProcessing && (
+              <div className="p-4 rounded-xl bg-sky-50 dark:bg-sky-500/10 border border-sky-100 dark:border-sky-500/20 text-center space-y-3">
+                  <Loader2 className="w-6 h-6 animate-spin text-sky-500 mx-auto" />
+                  <p className="text-sm font-bold text-sky-700 dark:text-sky-300">{loadingMessage}</p>
+                  {progress && progress.status === 'downloading' && (
+                      <div className="text-xs text-sky-600 dark:text-sky-400">
+                          Downloading Model: {progress.file} ({Math.round(progress.progress)}%)
+                      </div>
+                  )}
+              </div>
+          )}
 
           <textarea
             rows={12}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder={`1\n00:00:01,000 --> 00:00:04,000\nHello and welcome to Botock!\n\n2\n00:00:04,500 --> 00:00:07,000\nEdit and convert subtitles easily.`}
+            placeholder={`Your generated subtitles will appear here...`}
             className="w-full p-4 rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#18181b] text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
 
@@ -202,13 +243,13 @@ export default function SubtitlesClient() {
         <div className="lg:col-span-4 space-y-5 p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06]">
           <div className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
             <Sliders className="w-4 h-4 text-sky-500" />
-            <span>Tools & Format</span>
+            <span>Format Settings</span>
           </div>
 
           {/* Format */}
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Export Format
+              Output Format
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -234,58 +275,10 @@ export default function SubtitlesClient() {
                 SRT (SubRip)
               </button>
             </div>
-          </div>
-
-          {/* Time Sync / Offset */}
-          <div>
-            <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-              <span>Time Shift / Sync (ms)</span>
-              <span className="font-mono text-sky-500">{timeShiftMs > 0 ? `+${timeShiftMs}` : timeShiftMs}ms</span>
-            </div>
-            <input
-              type="number"
-              step={100}
-              value={timeShiftMs}
-              onChange={(e) => setTimeShiftMs(Number(e.target.value))}
-              placeholder="+500 or -1000 ms"
-              className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#18181b] text-xs font-medium"
-            />
-            <p className="text-[10px] text-slate-400 mt-1">
-              Synchronize subtitles by shifting all cue timings forward or backward.
+            <p className="text-[10px] text-slate-500 mt-2">
+                Format applies to newly generated subtitles or downloaded file.
             </p>
           </div>
-
-          {/* Find & Replace */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-              Find & Replace Text
-            </label>
-            <input
-              type="text"
-              value={searchWord}
-              onChange={(e) => setSearchWord(e.target.value)}
-              placeholder="Find word..."
-              className="w-full p-2 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#18181b] text-xs"
-            />
-            <input
-              type="text"
-              value={replaceWord}
-              onChange={(e) => setReplaceWord(e.target.value)}
-              placeholder="Replace with..."
-              className="w-full p-2 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#18181b] text-xs"
-            />
-          </div>
-
-          {/* Cleanup Options */}
-          <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-300">
-            <input
-              type="checkbox"
-              checked={stripTags}
-              onChange={(e) => setStripTags(e.target.checked)}
-              className="rounded text-sky-600 focus:ring-sky-500"
-            />
-            <span>Strip HTML & color tags</span>
-          </label>
         </div>
       </div>
     </div>
