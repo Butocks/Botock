@@ -4,6 +4,7 @@ import {
   buildCropFilter,
   buildTransformFilters,
   buildVolumeFilter,
+  buildDrawtextFilter
 } from "./ffmpegAdapters";
 import { EditorProject, TimelineClip, MediaBinItem } from "./types";
 
@@ -29,12 +30,37 @@ function buildClipVideoFilter(
   const speedFactor = (1 / Math.min(4, Math.max(0.25, clip.speed))).toFixed(4);
   const trim = `trim=start=${clip.sourceStart.toFixed(3)}:end=${clip.sourceEnd.toFixed(3)},setpts=${speedFactor}*PTS-STARTPTS`;
   
-  let filter = `[${inputIndex}:v]${trim}`;
-  if (clip.crop) filter += `,${buildCropFilter(clip.crop)}`;
-  if (clip.filters) filter += `,${buildColorFilter(clip.filters.brightness, clip.filters.contrast, clip.filters.saturation)}`;
-  filter += `,scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+  let filterParts = [`[${inputIndex}:v]${trim}`];
+
+  if (clip.chromaKey && clip.chromaKey.enabled) {
+    const c = clip.chromaKey;
+    filterParts.push(`colorkey=${c.color}:${c.similarity}:${c.blend}`);
+  }
+
+  if (clip.crop) {
+    filterParts.push(buildCropFilter(clip.crop));
+  }
+
+  if (clip.filters) {
+    filterParts.push(buildColorFilter(clip.filters.brightness, clip.filters.contrast, clip.filters.saturation));
+  }
+
+  if (clip.transform) {
+    const t = clip.transform;
+    if (t.rotation !== 0) {
+      filterParts.push(`rotate=a=${t.rotation}*PI/180:c=none`);
+    }
+    if (t.scaleX !== 1 || t.scaleY !== 1) {
+      filterParts.push(`scale=iw*${t.scaleX.toFixed(2)}:ih*${t.scaleY.toFixed(2)}`);
+    }
+    if (t.opacity < 100) {
+      filterParts.push(`format=rgba,colorchannelmixer=aa=${(t.opacity / 100).toFixed(2)}`);
+    }
+  }
+
+  filterParts.push(`scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2,setsar=1`);
   
-  return `${filter}[${label}]`;
+  return `${filterParts.join(",")}[${label}]`;
 }
 
 function buildClipAudioFilter(clip: TimelineClip, inputIndex: number, label: string, hasAudio: boolean): string {
@@ -61,13 +87,29 @@ export async function exportEditorProject(
   onProgress?.("Loading FFmpeg engine...");
   await ffmpeg.load();
 
-  // For Phase 1, we just concat all video track clips in order (flattening tracks basically)
-  // Proper multitrack compositing is for Phase 2/3.
   const allVideoClips: TimelineClip[] = [];
-  project.tracks.filter(t => t.type === "video").forEach(t => allVideoClips.push(...t.clips));
+  project.tracks.forEach(t => {
+      allVideoClips.push(...t.clips.filter(c => c.type === "video" || c.type === "image"));
+  });
   allVideoClips.sort((a, b) => a.timelineStart - b.timelineStart);
 
+  const textClips: TimelineClip[] = [];
+  project.tracks.forEach(t => {
+      textClips.push(...t.clips.filter(c => c.type === "text"));
+  });
+
   if (allVideoClips.length === 0) throw new Error("No video clips to export.");
+
+  if (textClips.length > 0) {
+    onProgress?.("Downloading fonts for text layers...");
+    try {
+       const res = await fetch("https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf");
+       const fontBuffer = await res.arrayBuffer();
+       await ffmpeg.writeFile("font.ttf", new Uint8Array(fontBuffer));
+    } catch(err) {
+       console.warn("Failed to load font", err);
+    }
+  }
 
   onProgress?.("Writing source files to FFmpeg VFS...");
   const usedSourceIds = Array.from(new Set(allVideoClips.map(c => c.sourceId)));
@@ -109,6 +151,25 @@ export async function exportEditorProject(
   const concatInputs = allVideoClips.map((_, i) => `[v${i}][a${i}]`).join("");
   filterParts.push(`${concatInputs}concat=n=${allVideoClips.length}:v=1:a=1[vconcat][aconcat]`);
   
+  let finalVideoOutput = "[vconcat]";
+  
+  textClips.forEach((tClip, index) => {
+     const nextOutput = `[vtext${index}]`;
+     const drawtext = buildDrawtextFilter({
+        text: tClip.text || "Text",
+        start: tClip.timelineStart,
+        end: tClip.timelineStart + tClip.duration,
+        anchor: "center",
+        fontSizePercent: tClip.fontSizePercent || 50,
+        color: (tClip.color || "#ffffff").replace("#", "0x"),
+        backgroundOpacity: 0,
+        videoHeight: targetH,
+        fontFile: "font.ttf"
+     });
+     filterParts.push(`${finalVideoOutput}${drawtext}${nextOutput}`);
+     finalVideoOutput = nextOutput;
+  });
+
   const filterComplex = filterParts.join(";");
 
   const inputArgs: string[] = [];
@@ -118,7 +179,7 @@ export async function exportEditorProject(
     "-y",
     ...inputArgs,
     "-filter_complex", filterComplex,
-    "-map", "[vconcat]",
+    "-map", finalVideoOutput,
     "-map", "[aconcat]",
     "-c:v", "libx264",
     "-preset", "ultrafast",
@@ -138,5 +199,6 @@ export async function exportEditorProject(
   } finally {
     for (const name of sourceInputNames.values()) { try { await ffmpeg.deleteFile(name); } catch {} }
     try { await ffmpeg.deleteFile(OUTPUT_NAME); } catch {}
+    try { await ffmpeg.deleteFile("font.ttf"); } catch {}
   }
 }
