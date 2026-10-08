@@ -107,6 +107,7 @@ export default function VideoEditorComponent() {
     const item = await mediaBin.addFile(file);
     const generated = await thumbs.generate(item.url, item.duration, 8);
     setThumbnailsBySource((prev) => ({ ...prev, [item.id]: generated }));
+    handleAddToTimeline(item);
   };
 
   const handleAddToTimeline = (item: MediaBinItem) => {
@@ -377,22 +378,30 @@ export default function VideoEditorComponent() {
 
 
              {/* Inspector Area */}
-             {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image" || selectedClip.type === "text") && (
-                 <div className="w-full md:w-[280px] flex bg-[#141419] border-t md:border-l md:border-t-0 border-[#2b2b36] flex-col min-h-0 h-[250px] md:h-auto overflow-y-auto shrink-0 shadow-xl">
-                    <TransformInspector 
-                        clip={selectedClip} 
-                        activeTab={activeTab}
-                        onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
-                        onBeginLive={() => timeline.beginLiveUpdate()}
-                        onCommitLive={() => timeline.commitLiveUpdate()}
-                        onUpdate={(patch) => {
-                            timeline.beginLiveUpdate();
-                            timeline.updateClipLive(selectedClip.id, patch);
-                            timeline.commitLiveUpdate();
-                        }}
-                    />
-                 </div>
-             )}
+             <div className="w-full md:w-[280px] flex bg-[#141419] border-t md:border-l md:border-t-0 border-[#2b2b36] flex-col min-h-0 h-[250px] md:h-auto overflow-y-auto shrink-0 shadow-xl">
+                {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image" || selectedClip.type === "text") ? (
+                   <TransformInspector 
+                       clip={selectedClip} 
+                       activeTab={activeTab}
+                       onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
+                       onBeginLive={() => timeline.beginLiveUpdate()}
+                       onCommitLive={() => timeline.commitLiveUpdate()}
+                       onUpdate={(patch) => {
+                           timeline.beginLiveUpdate();
+                           timeline.updateClipLive(selectedClip.id, patch);
+                           timeline.commitLiveUpdate();
+                       }}
+                   />
+                ) : (
+                   <div className="flex flex-col items-center justify-center h-full p-6 text-center text-slate-500">
+                      <div className="w-12 h-12 mb-4 rounded-full bg-slate-800 flex items-center justify-center">
+                         <Scissors className="w-6 h-6 text-slate-600" />
+                      </div>
+                      <p className="text-sm font-medium text-slate-400">No clip selected</p>
+                      <p className="text-xs mt-2">Click on a video clip in the timeline below to use {activeTab} tools.</p>
+                   </div>
+                )}
+             </div>
 
           </div>
 
