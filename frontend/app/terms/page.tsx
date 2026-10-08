@@ -89,14 +89,10 @@ export default function TermsOfServicePage() {
 
           <section>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">
-              7. Refunds and Cancellation Policy
+              7. Payment and Refunds
             </h2>
             <p>
-              Botock AI's online tools are provided completely free of charge. We do not sell platform credits, generative tokens, or subscriptions. For our enterprise clients who engage us for custom digital development services, payments are governed by our formal{" "}
-              <Link href="/refund" className="text-violet-600 dark:text-violet-400 font-bold hover:underline">
-                Refund &amp; Cancellation Policy
-              </Link>
-              .
+              Botock AI's online tools are provided completely free of charge. We do not sell platform credits, generative tokens, or subscriptions, and therefore no refund policy applies.
             </p>
           </section>
 

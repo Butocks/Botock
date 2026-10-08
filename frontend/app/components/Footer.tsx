@@ -316,11 +316,6 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/refund" className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                  Refund & Cancellation Policy
-                </Link>
-              </li>
-              <li>
                 <Link href="/security#compliance" className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                   Compliance & Disclosures
                 </Link>
