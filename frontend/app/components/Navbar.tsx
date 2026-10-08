@@ -236,7 +236,7 @@ export default function Navbar() {
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-bold truncate text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors flex items-center gap-1.5">
                             AI Image Generator
-                            <span className="text-[9px] px-1.5 py-0.2 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded font-semibold border border-emerald-500/30">Free</span>
+                            <span className="text-[9px] px-1.5 py-0.2 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded font-semibold border border-emerald-500/30">New</span>
                           </div>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
                             Nano Banana Lite, 2 & Pro in 5 aspect ratios
@@ -252,7 +252,7 @@ export default function Navbar() {
                           <Zap className="w-3 h-3" /> Daily Allowance
                         </div>
                         <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
-                          Free AI Video & Image generation quota refreshed every 24 hours.
+                          AI Video & Image generation quota refreshed every 24 hours.
                         </p>
                       </div>
                     </div>
@@ -295,7 +295,7 @@ export default function Navbar() {
                     <div className="space-y-1.5">
                       <div className="text-[10px] uppercase tracking-wider font-extrabold text-red-500 dark:text-red-400 px-1 mb-2 flex items-center gap-1.5">
                         <FileText className="w-3.5 h-3.5" />
-                        <span>PDF Suite (34 Tools)</span>
+                        <span>PDF Suite (Complete)</span>
                       </div>
                       <Link href="/tools/pdf-merge" onClick={() => setActiveDropdown(null)} className="block p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors">Merge PDF</Link>
                       <Link href="/tools/pdf-split" onClick={() => setActiveDropdown(null)} className="block p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors">Split PDF</Link>
@@ -309,7 +309,7 @@ export default function Navbar() {
                     <div className="space-y-1.5 border-l border-slate-200 dark:border-white/[0.08] pl-5">
                       <div className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400 px-1 mb-2 flex items-center gap-1.5">
                         <ImageIcon className="w-3.5 h-3.5" />
-                        <span>Image Suite (30 Tools)</span>
+                        <span>Image Suite (Essential)</span>
                       </div>
                       <Link href="/tools/image-remove-bg" onClick={() => setActiveDropdown(null)} className="block p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors">Remove Background (AI)</Link>
                       <Link href="/tools/image-convert" onClick={() => setActiveDropdown(null)} className="block p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors">Convert to WebP / PNG</Link>
@@ -323,7 +323,7 @@ export default function Navbar() {
                     <div className="space-y-1.5 border-l border-slate-200 dark:border-white/[0.08] pl-5">
                       <div className="text-[10px] uppercase tracking-wider font-extrabold text-purple-600 dark:text-purple-400 px-1 mb-2 flex items-center gap-1.5">
                         <Video className="w-3.5 h-3.5" />
-                        <span>Video Suite (25 Tools)</span>
+                        <span>Video Suite (Studio)</span>
                       </div>
                       <Link href="/tools/video-trim" onClick={() => setActiveDropdown(null)} className="block p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors">Video Cutter & Trimmer</Link>
                       <Link href="/tools/video-to-mp3" onClick={() => setActiveDropdown(null)} className="block p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors">Extract Audio to MP3</Link>
@@ -349,13 +349,13 @@ export default function Navbar() {
 
                   {/* Bottom Directory Link */}
                   <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.08] flex items-center justify-between">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">Over 100 browser-based multimedia tools available for free.</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Comprehensive browser-based multimedia tools.</span>
                     <Link
                       href="/tools"
                       onClick={() => setActiveDropdown(null)}
                       className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                      <span>Browse Complete 100+ Creative Directory with Live Search →</span>
+                      <span>Browse Complete Creative Directory with Live Search →</span>
                     </Link>
                   </div>
                 </div>
@@ -422,7 +422,7 @@ export default function Navbar() {
                           )}
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 dark:bg-violet-600/10 border border-violet-200/60 dark:border-violet-500/20 text-violet-600 dark:text-violet-300 text-[10px] font-bold">
                             <Zap className="w-3.5 h-3.5 fill-violet-500 text-violet-500" />
-                            <span>Free Quota Active</span>
+                            <span>Quota Active</span>
                           </span>
                         </div>
                       </div>

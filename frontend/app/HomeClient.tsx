@@ -48,7 +48,7 @@ const TOP_USED_TOOLS = [
     name: "AI Video Generator",
     desc: "Generate 4–10s realistic scenes from text prompts and photos via Cinematic AI AI.",
     category: "AI Studio",
-    badge: "Daily Free",
+    badge: "Daily Credits",
     badgeColor: "bg-violet-500/15 text-violet-600 dark:text-violet-300 border-violet-500/20",
     href: "/tools/video-generator",
     icon: Film,
@@ -200,7 +200,7 @@ export default function HomeClient() {
               className="px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-100 dark:text-zinc-950 font-bold text-xs sm:text-sm transition-all shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
             >
               <Layers className="w-4 h-4 text-blue-400 dark:text-blue-600" />
-              Explore All 100+ Tools
+              Explore All Tools
             </Link>
             <Link
               href="/tools/video-generator"
@@ -221,19 +221,19 @@ export default function HomeClient() {
           {/* Core Categories Bar */}
           <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 max-w-4xl mx-auto gap-4 pt-8 border-t border-slate-200 dark:border-white/[0.06] text-center">
             <div className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04]">
-              <div className="text-2xl font-black text-slate-900 dark:text-white">34 Tools</div>
+              <div className="text-2xl font-black text-slate-900 dark:text-white">Complete Suite</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">PDF Suite (Merge, OCR, Encrypt)</div>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04]">
-              <div className="text-2xl font-black text-slate-900 dark:text-white">30 Tools</div>
+              <div className="text-2xl font-black text-slate-900 dark:text-white">Essential Suite</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Image Suite (Remove BG, WebP)</div>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04]">
-              <div className="text-2xl font-black text-slate-900 dark:text-white">25 Tools</div>
+              <div className="text-2xl font-black text-slate-900 dark:text-white">Studio Suite</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Video Suite (Editor, Cutter, MP3)</div>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04]">
-              <div className="text-2xl font-black text-violet-600 dark:text-violet-400">Daily Free</div>
+              <div className="text-2xl font-black text-violet-600 dark:text-violet-400">Daily Quota</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">3 AI Videos + 5 AI Images</div>
             </div>
           </div>
@@ -248,7 +248,7 @@ export default function HomeClient() {
             <span>Our Tools</span>
           </span>
           <Link href="/tools" className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1">
-            <span>View All 100+ Tools →</span>
+            <span>View All Tools →</span>
           </Link>
         </div>
         <ToolGlideTicker />
@@ -311,10 +311,10 @@ export default function HomeClient() {
                 <Sparkles className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-                Free Daily Quotas
+                Daily Quotas
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Every registered user receives 3 free video clips (Botock Engine) and 5 free images (Nano Banana) refreshed automatically every 24 hours.
+                Every registered user receives 3 video clips (Botock Engine) and 5 images (Nano Banana) refreshed automatically every 24 hours.
               </p>
             </div>
           </div>
@@ -434,7 +434,7 @@ export default function HomeClient() {
                     PDF Suite
                   </h3>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/20">
-                    34 Tools
+                    Complete Suite
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
@@ -475,7 +475,7 @@ export default function HomeClient() {
                     Video Suite
                   </h3>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/20">
-                    25 Tools
+                    Studio Suite
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
@@ -516,7 +516,7 @@ export default function HomeClient() {
                     Image Suite
                   </h3>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20">
-                    30 Tools
+                    Essential Suite
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
@@ -566,11 +566,11 @@ export default function HomeClient() {
                 <div className="space-y-1.5 mb-5 border-t border-slate-100 dark:border-white/[0.06] pt-3">
                   <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                     <CheckCircle2 className="w-3 h-3 text-violet-500" />
-                    <span>3 Free Daily Video Generations</span>
+                    <span>3 Daily Video Generations</span>
                   </div>
                   <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                     <CheckCircle2 className="w-3 h-3 text-violet-500" />
-                    <span>5 Free Daily Image Generations</span>
+                    <span>5 Daily Image Generations</span>
                   </div>
                   <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                     <CheckCircle2 className="w-3 h-3 text-violet-500" />
@@ -640,10 +640,10 @@ export default function HomeClient() {
             
             <div className="relative z-10 max-w-3xl mx-auto">
               <h2 className="text-3xl sm:text-5xl font-black text-white mb-6 tracking-tight">
-                Your Complete Creative Studio. 100% Free.
+                Your Complete Creative Studio.
               </h2>
               <p className="text-sm sm:text-base text-violet-100/90 mb-10 max-w-xl mx-auto font-medium leading-relaxed">
-                Access over 100+ utilities, AI Studios, and professional tools for completely free. Start creating your next masterpiece today.
+                Access comprehensive utilities, AI Studios, and professional tools. Start creating your next masterpiece today.
               </p>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -651,7 +651,7 @@ export default function HomeClient() {
                   href="/tools"
                   className="px-8 py-4 rounded-xl bg-violet-800/50 hover:bg-violet-800 text-white border border-violet-400/30 font-bold text-sm transition-all shadow-lg hover:-translate-y-1 backdrop-blur-sm"
                 >
-                  Explore Free Tools
+                  Explore All Tools
                 </Link>
               </div>
             </div>

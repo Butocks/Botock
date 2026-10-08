@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://botock.app"),
   title: {
-    default: "Botock AI | Free Video Generator & Image Tools",
+    default: "Botock AI | Cinematic Video Generator & Tools",
     template: "%s | Botock AI",
   },
   description:
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://botock.app",
-    title: "Botock AI | Free Video Generator & Image Tools",
+    title: "Botock AI | Cinematic Video Generator & Tools",
     description:
       "Botock is your all-in-one AI platform for generating cinematic AI videos, images, and processing documents locally in the browser.",
     siteName: "Botock AI",
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Botock AI | Free Video Generator & Image Tools",
+    title: "Botock AI | Cinematic Video Generator & Tools",
     description:
       "Generate cinematic AI videos from text and photos, synthesize photorealistic artwork, and process documents with Botock AI.",
     creator: "@botock_ai",
