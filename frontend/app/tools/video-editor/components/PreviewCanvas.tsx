@@ -167,7 +167,18 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
             const crop = clip.crop || { x: 0, y: 0, width: 1, height: 1 };
             const f = clip.filters || { brightness: 0, contrast: 1, saturation: 1 };
             
-            const pxX = (t.x / 100) * canvas.width;
+            let animScale = 1;
+            let animPanX = 0;
+            if (clip.effects && clip.effects.length > 0) {
+               const eff = clip.effects[0].type;
+               const progress = Math.min(1, Math.max(0, elapsed / clip.duration));
+               if (eff === "zoom-in") animScale = 1 + (0.5 * progress);
+               if (eff === "zoom-out") animScale = 1.5 - (0.5 * progress);
+               if (eff === "pan-left") animPanX = (canvas.width * 0.1) * progress;
+               if (eff === "pan-right") animPanX = -(canvas.width * 0.1) * progress;
+            }
+
+            const pxX = (t.x / 100) * canvas.width + animPanX;
             const pxY = (t.y / 100) * canvas.height;
             
             const intrinsicW = el instanceof HTMLVideoElement ? el.videoWidth : (el instanceof HTMLImageElement ? el.width : 0);
@@ -176,6 +187,7 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
             if (clip.type === "text" && clip.text) {
                 ctx.translate(pxX, pxY);
                 ctx.rotate((t.rotation * Math.PI) / 180);
+                ctx.scale(animScale, animScale);
                 ctx.globalAlpha = t.opacity / 100;
                 ctx.font = `bold ${clip.fontSizePercent || 50}px sans-serif`;
                 ctx.fillStyle = clip.color || "#ffffff";
@@ -201,6 +213,7 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
 
                 ctx.translate(pxX, pxY);
                 ctx.rotate((t.rotation * Math.PI) / 180);
+                ctx.scale(animScale, animScale);
                 ctx.globalAlpha = t.opacity / 100;
                 
                 // Apply Filters

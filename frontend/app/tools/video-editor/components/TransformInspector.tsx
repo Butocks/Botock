@@ -356,7 +356,27 @@ export default function TransformInspector({ clip, activeTab = "Edit", onUpdate,
   const renderEffects = () => (
      <>
        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4">Effects & Animation</h3>
-       <p className="text-xs text-slate-400 mb-4">Keyframe animations and advanced effects are coming soon!</p>
+       <div className="space-y-4">
+          <div className="space-y-2">
+            <span className="text-slate-400 text-xs">Animation (Pan & Zoom)</span>
+            <select 
+               value={clip.effects?.[0]?.type || "none"}
+               onChange={(e) => {
+                  const val = e.target.value;
+                  onUpdateLive({ effects: val === "none" ? [] : [{ id: Date.now().toString(), type: val }] });
+                  onCommitLive();
+               }}
+               className="w-full bg-slate-800 border border-slate-700 text-white rounded p-2 text-sm outline-none focus:border-violet-500"
+            >
+               <option value="none">None</option>
+               <option value="zoom-in">Zoom In</option>
+               <option value="zoom-out">Zoom Out</option>
+               <option value="pan-left">Pan Left</option>
+               <option value="pan-right">Pan Right</option>
+            </select>
+            <p className="text-[10px] text-slate-500 mt-2">Applies a dynamic movement effect over the duration of the clip.</p>
+          </div>
+       </div>
      </>
   );
 
