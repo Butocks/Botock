@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Compress Video Online Free | Reduce Video File Size",
     description: "Compress MP4, MOV, and WebM videos in your browser. Reduce file size for email and web sharing with optimal resolution.",
     url: "https://botock.app/tools/video-compress",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -31,7 +31,7 @@ export default function VideoCompressPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Compress Video - Botock",
+        "name": "Compress Video - Botock AI",
         "url": "https://botock.app/tools/video-compress",
         "description": "Compress MP4, MOV, and WebM videos in your browser. Reduce file size for email and web sharing with optimal resolution.",
         "applicationCategory": "UtilitiesApplication",

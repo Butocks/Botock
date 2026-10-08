@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Password Protect PDF Online Free | 256-Bit AES Encryption",
     description: "Encrypt sensitive PDF documents with secure passwords directly in your browser. Prevents unauthorized opening and printing.",
     url: "https://botock.app/tools/pdf-protect",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -31,7 +31,7 @@ export default function PdfProtectPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Password Protect PDF - Botock",
+        "name": "Password Protect PDF - Botock AI",
         "url": "https://botock.app/tools/pdf-protect",
         "description": "Encrypt sensitive PDF documents with secure passwords directly in your browser. Prevents unauthorized opening and printing.",
         "applicationCategory": "UtilitiesApplication",

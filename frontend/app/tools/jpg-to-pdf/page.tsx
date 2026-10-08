@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Convert JPG to PDF Online Free | Combine Images to PDF",
     description: "Convert JPG, PNG, and WebP images into a single professional PDF document. Reorder pages and adjust margins in your browser.",
     url: "https://botock.app/tools/jpg-to-pdf",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -31,7 +31,7 @@ export default function JpgToPdfPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "JPG to PDF - Botock",
+        "name": "JPG to PDF - Botock AI",
         "url": "https://botock.app/tools/jpg-to-pdf",
         "description": "Convert JPG, PNG, and WebP images into a single professional PDF document. Reorder pages and adjust margins in your browser.",
         "applicationCategory": "UtilitiesApplication",

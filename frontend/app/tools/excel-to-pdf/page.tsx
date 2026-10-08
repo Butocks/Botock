@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "Convert Excel to PDF Online Free",
     description: "Convert Excel spreadsheets to printable PDF documents directly in your browser with zero server uploads.",
     url: "https://botock.app/tools/excel-to-pdf",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -41,7 +41,7 @@ export default function ExcelToPdfPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Excel to PDF Converter - Botock",
+        name: "Excel to PDF Converter - Botock AI",
         url: "https://botock.app/tools/excel-to-pdf",
         description: "Convert Excel spreadsheets to clean PDF documents directly in your browser.",
         applicationCategory: "BusinessApplication",

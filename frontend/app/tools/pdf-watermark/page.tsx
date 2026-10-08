@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title: "Watermark PDF Online Free | Add Text & Stamp Overlays",
     description: "Stamp custom copyright text, confidential marks, or logos onto PDF pages with custom opacity, position, and rotation.",
     url: "https://botock.app/tools/pdf-watermark",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -53,7 +53,7 @@ export default function PDFWatermarkPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Watermark PDF - Botock",
+        "name": "Watermark PDF - Botock AI",
         "url": "https://botock.app/tools/pdf-watermark",
         "description": "Stamp custom copyright text, confidential marks, or logos onto PDF pages with custom opacity, position, and rotation.",
         "applicationCategory": "UtilitiesApplication",

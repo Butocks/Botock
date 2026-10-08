@@ -4,26 +4,26 @@ import { Film, Scissors, Sparkles, BookOpen, Music, CheckCircle2 } from "lucide-
 import VideoGeneratorClient from "./VideoGeneratorClient";
 
 export const metadata: Metadata = {
-  title: "Free AI Video Generator | Text & Photo to Video Online",
+  title: "Botock AI Video Generator | Free Text & Photo to Video",
   description:
-    "Generate cinematic AI videos from text prompts and photos in seconds with Botock. High-definition rendering, multi-model support, in-browser preview, and free daily credits.",
+    "Generate cinematic AI videos from text prompts and photos in seconds with Botock AI Video Generator. High-definition rendering, in-browser preview, and free daily credits.",
   alternates: {
     canonical: "/tools/video-generator",
   },
   openGraph: {
-    title: "Free AI Video Generator | Text & Photo to Video Online",
+    title: "Botock AI Video Generator | Free Text & Photo to Video Online",
     description:
-      "Generate cinematic AI videos from text prompts and photos in seconds with Botock. High-definition rendering and free daily credits.",
+      "Generate cinematic AI videos from text prompts and photos in seconds with Botock AI. High-definition rendering and free daily credits.",
     url: "https://botock.app/tools/video-generator",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Free AI Video Generator",
+    title: "Botock AI Video Generator",
     description:
-      "Generate cinematic AI videos from text prompts and photos in seconds with Botock.",
+      "Generate cinematic AI videos from text prompts and photos in seconds with Botock AI.",
     images: ["https://botock.app/og-image.jpg"],
   },
 };
@@ -143,6 +143,7 @@ export default function VideoGeneratorPage() {
             </p>
           </div>
 
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-border/40">
             <div>
               <h2 className="text-base font-bold text-foreground mb-2 flex items-center gap-2">
@@ -173,7 +174,50 @@ export default function VideoGeneratorPage() {
             </div>
           </div>
 
-          {/* Related Tools Internal Links */}
+          {/* Extended Enterprise-Grade SEO Content */}
+          <div className="pt-10 border-t border-border/40 space-y-12">
+            <div className="space-y-4">
+              <h2 className="text-2xl sm:text-3xl font-black text-foreground">
+                Why Botock AI is the Ultimate AI Video Generator
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-4xl">
+                Botock AI democratizes cinematic production. Whether you're a content creator, marketer, or filmmaker, our powerful cloud infrastructure processes text and image inputs instantly. Our custom <strong>Cinematic Engine</strong> understands complex spatial concepts, lighting physics, and dramatic camera movements (like panning, dollying, and zooming) to produce ultra-realistic, broadcast-quality clips that rival expensive studio productions.
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <h2 className="text-xl sm:text-2xl font-black text-foreground">
+                Frequently Asked Questions
+              </h2>
+              <div className="space-y-4">
+                <details className="group border border-border/40 rounded-xl bg-card/50 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-4 text-foreground font-semibold">
+                    How do I create an AI video with Botock?
+                  </summary>
+                  <p className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">
+                    Choose between Text-to-Video or Photo-to-Video mode, enter a descriptive prompt or upload a reference photo, select your desired duration and aspect ratio, and click Generate Video. The AI will render the scene in minutes.
+                  </p>
+                </details>
+                <details className="group border border-border/40 rounded-xl bg-card/50 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-4 text-foreground font-semibold">
+                    Is Botock's AI Video Generator free?
+                  </summary>
+                  <p className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">
+                    Yes, every registered user receives 3 free video clips daily, refreshed automatically every 24 hours. No hidden fees or forced subscriptions to try our flagship cinematic engine.
+                  </p>
+                </details>
+                <details className="group border border-border/40 rounded-xl bg-card/50 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-4 text-foreground font-semibold">
+                    Can I use the generated videos commercially?
+                  </summary>
+                  <p className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">
+                    Yes! Videos generated on Botock AI belong to you. You can use them for YouTube Shorts, Instagram Reels, TikToks, marketing campaigns, and client projects without any restrictive watermarks.
+                  </p>
+                </details>
+              </div>
+            </div>
+          </div>
+{/* Related Tools Internal Links */}
           <div className="pt-6 border-t border-border/40">
             <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">
               Related Creative Tools

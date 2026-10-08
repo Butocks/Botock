@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title: "Add Page Numbers to PDF Online Free",
     description: "Custom page numbers, headers, and footers in your PDF with instant browser processing.",
     url: "https://botock.app/tools/pdf-page-numbers",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -42,7 +42,7 @@ export default function PdfPageNumbersPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Add Page Numbers to PDF - Botock",
+        name: "Add Page Numbers to PDF - Botock AI",
         url: "https://botock.app/tools/pdf-page-numbers",
         description: "Add page numbers, headers, and footers to PDF documents directly inside your browser.",
         applicationCategory: "BusinessApplication",

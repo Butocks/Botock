@@ -22,8 +22,6 @@ export default function Footer() {
   const pathname = usePathname();
   if (pathname === "/tools/video-editor") return null;
 
-  const pathname = usePathname();
-
   // The user requested: "is page may footer lena kei zaroorat nhi 1 page kafi hai scrol nhi ho responive rakho"
   if (
     pathname?.startsWith("/tools/image-generator") ||

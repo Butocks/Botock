@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Convert Video to GIF Online Free | Animated GIF Maker",
     description: "Convert video highlights from MP4, MOV, or WebM into high-quality looping animated GIFs with custom FPS and size.",
     url: "https://botock.app/tools/video-to-gif",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -31,7 +31,7 @@ export default function VideoToGifPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Video to GIF - Botock",
+        "name": "Video to GIF - Botock AI",
         "url": "https://botock.app/tools/video-to-gif",
         "description": "Convert video highlights from MP4, MOV, or WebM into high-quality looping animated GIFs with custom FPS and size.",
         "applicationCategory": "UtilitiesApplication",

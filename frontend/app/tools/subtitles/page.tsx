@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Subtitle Editor & Converter Online Free | SRT to VTT",
     description: "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
     url: "https://botock.app/tools/subtitles",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -31,7 +31,7 @@ export default function SubtitlesPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Subtitle Editor - Botock",
+        "name": "Subtitle Editor - Botock AI",
         "url": "https://botock.app/tools/subtitles",
         "description": "Generate, edit, and convert subtitle files between SRT and WebVTT formats with synchronized timing and real-time preview.",
         "applicationCategory": "UtilitiesApplication",

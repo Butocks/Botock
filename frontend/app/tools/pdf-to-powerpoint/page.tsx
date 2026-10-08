@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "Convert PDF to PowerPoint Online Free",
     description: "Convert PDF pages to Microsoft PowerPoint PPTX slides instantly in your browser.",
     url: "https://botock.app/tools/pdf-to-powerpoint",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -41,7 +41,7 @@ export default function PdfToPowerpointPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "PDF to PowerPoint Converter - Botock",
+        name: "PDF to PowerPoint Converter - Botock AI",
         url: "https://botock.app/tools/pdf-to-powerpoint",
         description: "Convert PDF documents to Microsoft PowerPoint PPTX presentations directly in your browser.",
         applicationCategory: "BusinessApplication",

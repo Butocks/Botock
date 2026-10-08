@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "Convert HTML to PDF Online Free",
     description: "Render HTML templates, CSS styles, and web pages into PDF documents directly in your browser.",
     url: "https://botock.app/tools/html-to-pdf",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -41,7 +41,7 @@ export default function HtmlToPdfPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "HTML to PDF Converter - Botock",
+        name: "HTML to PDF Converter - Botock AI",
         url: "https://botock.app/tools/html-to-pdf",
         description: "Render HTML and CSS templates to printable PDF documents directly in your browser.",
         applicationCategory: "BusinessApplication",

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Extract MP3 from Video Online Free | Lossless Audio Ripper",
     description: "Extract crystal clear high-bitrate MP3 audio from any MP4, MOV, WebM, or MKV video file with zero server uploads.",
     url: "https://botock.app/tools/video-to-mp3",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -31,7 +31,7 @@ export default function VideoToMp3Page() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Extract MP3 Audio - Botock",
+        "name": "Extract MP3 Audio - Botock AI",
         "url": "https://botock.app/tools/video-to-mp3",
         "description": "Extract crystal clear high-bitrate MP3 audio from any MP4, MOV, WebM, or MKV video file with zero server uploads.",
         "applicationCategory": "UtilitiesApplication",

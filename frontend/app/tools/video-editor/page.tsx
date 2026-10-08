@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     description:
       "Edit videos online directly in your browser with multi-track timeline, trimming, splitting, and color presets.",
     url: "https://botock.app/tools/video-editor",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -44,7 +44,7 @@ export default function VideoEditorPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Online Video Editor - Botock",
+        name: "Online Video Editor - Botock AI",
         url: "https://botock.app/tools/video-editor",
         description:
           "Edit videos online directly in your browser with multi-track timeline, trimming, and effects.",

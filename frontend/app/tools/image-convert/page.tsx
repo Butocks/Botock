@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Convert Image Format Online Free | WebP, PNG, JPG",
     description: "Convert images between WebP, PNG, JPG, BMP, and GIF formats online in your browser with zero server uploads.",
     url: "https://botock.app/tools/image-convert",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -31,7 +31,7 @@ export default function ImageConvertPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Image Converter - Botock",
+        "name": "Image Converter - Botock AI",
         "url": "https://botock.app/tools/image-convert",
         "description": "Convert images between WebP, PNG, JPG, BMP, and GIF formats online in your browser with zero server uploads.",
         "applicationCategory": "UtilitiesApplication",

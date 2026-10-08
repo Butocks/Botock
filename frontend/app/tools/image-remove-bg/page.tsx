@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title: "AI Background Remover Online Free | Batch Background Removal",
     description: "Remove backgrounds from photos and portraits instantly with high-precision AI. Download transparent PNGs with zero server uploads.",
     url: "https://botock.app/tools/image-remove-bg",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -37,8 +37,36 @@ export const metadata: Metadata = {
 };
 
 export default function ImageRemoveBGPage() {
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "AI Background Remover - Botock AI",
+      "url": "https://botock.app/tools/image-remove-bg",
+      "description": "Remove backgrounds from photos instantly with AI. Download transparent PNGs with zero server uploads.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "All",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://botock.app" },
+        { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://botock.app/tools" },
+        { "@type": "ListItem", "position": 3, "name": "AI Background Remover", "item": "https://botock.app/tools/image-remove-bg" }
+      ]
+    }
+  ]
+};
+
   return (
     <main className="max-w-5xl mx-auto px-4 py-8 sm:py-12 relative">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-100 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400 text-xs font-bold mb-4">
           <Sparkles className="w-4 h-4" />

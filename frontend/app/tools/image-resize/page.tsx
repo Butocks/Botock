@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title: "Resize Image Online Free | Change Pixel Dimensions",
     description: "Resize photos and images in pixels or percentages while locking aspect ratio. Fast, free, and completely client-side.",
     url: "https://botock.app/tools/image-resize",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -54,7 +54,7 @@ export default function ImageResizePage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Resize Image - Botock",
+        "name": "Resize Image - Botock AI",
         "url": "https://botock.app/tools/image-resize",
         "description": "Resize photos and images in pixels or percentages while locking aspect ratio. Fast, free, and completely client-side.",
         "applicationCategory": "UtilitiesApplication",

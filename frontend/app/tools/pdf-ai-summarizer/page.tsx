@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "AI PDF Summarizer",
     description: "Extract executive summaries and key takeaways from PDF documents directly in your browser.",
     url: "https://botock.app/tools/pdf-ai-summarizer",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -41,7 +41,7 @@ export default function PdfAiSummarizerPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "AI PDF Summarizer - Botock",
+        name: "AI PDF Summarizer - Botock AI",
         url: "https://botock.app/tools/pdf-ai-summarizer",
         description: "Summarize PDF documents and generate bullet points directly in your browser.",
         applicationCategory: "BusinessApplication",

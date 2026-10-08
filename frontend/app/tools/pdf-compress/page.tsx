@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Compress PDF Online Free | Reduce PDF File Size",
     description: "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
     url: "https://botock.app/tools/pdf-compress",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -57,7 +57,7 @@ export default function PdfCompressPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Compress PDF - Botock",
+        "name": "Compress PDF - Botock AI",
         "url": "https://botock.app/tools/pdf-compress",
         "description": "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
         "applicationCategory": "UtilitiesApplication",

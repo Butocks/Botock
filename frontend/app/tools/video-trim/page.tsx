@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Trim Video Online Free | Fast Lossless Video Cutter",
     description: "Cut and trim video clips with frame-accurate precision in your browser. 0ms latency, zero uploads, instant export.",
     url: "https://botock.app/tools/video-trim",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -31,7 +31,7 @@ export default function VideoTrimPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Video Cutter & Trimmer - Botock",
+        "name": "Video Cutter & Trimmer - Botock AI",
         "url": "https://botock.app/tools/video-trim",
         "description": "Cut and trim video clips with frame-accurate precision in your browser. 0ms latency, zero uploads, instant export.",
         "applicationCategory": "UtilitiesApplication",

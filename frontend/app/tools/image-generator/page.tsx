@@ -6,16 +6,16 @@ import ImageGeneratorClient from "./ImageGeneratorClient";
 export const metadata: Metadata = {
   title: "Free AI Image Generator | Text to Image Online",
   description:
-    "Generate 8K photorealistic artwork, product visuals, and digital designs from text prompts with Botock. Powered by Nano Banana AI with 5 free images daily.",
+    "Generate 8K photorealistic artwork, product visuals, and digital designs from text prompts with Botock AI. Powered by Nano Banana AI with 5 free images daily.",
   alternates: {
     canonical: "/tools/image-generator",
   },
   openGraph: {
     title: "Free AI Image Generator | Text to Image Online",
     description:
-      "Generate 8K photorealistic artwork, product visuals, and digital designs from text prompts with Botock.",
+      "Generate 8K photorealistic artwork, product visuals, and digital designs from text prompts with Botock AI.",
     url: "https://botock.app/tools/image-generator",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Free AI Image Generator",
     description:
-      "Generate 8K photorealistic artwork and digital designs from text prompts with Botock.",
+      "Generate 8K photorealistic artwork and digital designs from text prompts with Botock AI.",
     images: ["https://botock.app/og-image.jpg"],
   },
 };
@@ -128,7 +128,74 @@ export default function ImageGeneratorPage() {
 
       {/* Interactive Generator App */}
       <div className="flex-1">
-        <ImageGeneratorClient />
+  
+      <ImageGeneratorClient />
+
+      {/* --- Rich Enterprise SEO Content Section --- */}
+      <section className="mt-20 pt-12 border-t border-slate-200 dark:border-white/[0.05] space-y-12">
+        <div className="space-y-4">
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+            The Ultimate AI Image Generator — Free & High Quality
+          </h2>
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+            Botock AI's Image Studio uses state-of-the-art diffusion models to transform your text prompts into photorealistic images, digital art, and illustrations. Whether you need marketing assets, concept art, or social media posts, our <strong>Nano Banana Engine</strong> delivers stunning 4K visuals instantly. No watermark, no complicated settings—just pure creative freedom directly in your browser.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05]">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Text to Image Mastery</h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              Describe your vision in natural language. Our AI understands artistic styles, lighting conditions, and complex compositions to generate exactly what you imagine.
+            </p>
+          </div>
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05]">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Multiple Aspect Ratios</h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              Generate images perfectly sized for your needs. Choose 1:1 for Instagram, 16:9 for YouTube thumbnails, or 9:16 for TikTok and Reels with a single click.
+            </p>
+          </div>
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05]">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Commercial Use Ready</h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              Every image you generate is yours to keep. Use them for client projects, advertising, merchandise, and web design without worrying about copyright strikes.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+            Frequently Asked Questions
+          </h2>
+          <div className="space-y-4">
+            <details className="group border border-slate-200 dark:border-white/[0.05] rounded-xl bg-white dark:bg-[#141419] [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-4 text-slate-900 dark:text-white font-semibold">
+                How many free images can I generate daily?
+              </summary>
+              <p className="px-4 pb-4 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                Registered users get 5 free high-resolution image generations every 24 hours. The quota resets automatically, allowing you to create fresh content daily.
+              </p>
+            </details>
+            <details className="group border border-slate-200 dark:border-white/[0.05] rounded-xl bg-white dark:bg-[#141419] [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-4 text-slate-900 dark:text-white font-semibold">
+                Can I use the images for my business?
+              </summary>
+              <p className="px-4 pb-4 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                Absolutely. You have full commercial rights to all images generated through Botock AI's platform.
+              </p>
+            </details>
+            <details className="group border border-slate-200 dark:border-white/[0.05] rounded-xl bg-white dark:bg-[#141419] [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-4 text-slate-900 dark:text-white font-semibold">
+                How do I get the best results?
+              </summary>
+              <p className="px-4 pb-4 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                Be specific in your prompts. Describe the subject, background, lighting (e.g., 'cinematic lighting', 'golden hour'), and style (e.g., 'oil painting', 'hyper-realistic photography').
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
       </div>
 
       {/* Structured SEO & Internal Link Footer Section */}

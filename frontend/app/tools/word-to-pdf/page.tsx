@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     title: "Convert Word to PDF Online Free | DOCX to PDF Converter",
     description: "Convert Microsoft Word (.docx, .doc) files into clean, shareable PDF documents with layout and font preservation.",
     url: "https://botock.app/tools/word-to-pdf",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -65,7 +65,7 @@ export default function WordToPdfPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Word to PDF - Botock",
+        "name": "Word to PDF - Botock AI",
         "url": "https://botock.app/tools/word-to-pdf",
         "description": "Convert Microsoft Word (.docx, .doc) files into clean, shareable PDF documents with layout and font preservation.",
         "applicationCategory": "UtilitiesApplication",

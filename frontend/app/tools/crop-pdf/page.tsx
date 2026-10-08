@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "Crop PDF Online Free | Trim PDF Margins",
     description: "Visually crop PDF pages and trim margins directly in your browser with zero server uploads.",
     url: "https://botock.app/tools/crop-pdf",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -41,7 +41,7 @@ export default function CropPdfPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Crop PDF - Botock",
+        name: "Crop PDF - Botock AI",
         url: "https://botock.app/tools/crop-pdf",
         description: "Crop PDF margins and trim pages visually directly in your browser with zero server uploads.",
         applicationCategory: "BusinessApplication",

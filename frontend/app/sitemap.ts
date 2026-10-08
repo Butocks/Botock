@@ -57,6 +57,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/tools/video-to-gif",
     "/tools/video-to-mp3",
     "/tools/video-trim",
+    "/tools/voice-changer",
 
     // Blog Articles
     "/blog/about-botock-app",

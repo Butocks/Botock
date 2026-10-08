@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "Convert Video Format Online Free",
     description: "Convert video containers and formats directly in your browser with zero server uploads.",
     url: "https://botock.app/tools/video-convert",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -41,7 +41,7 @@ export default function VideoConvertPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Video Format Converter - Botock",
+        name: "Video Format Converter - Botock AI",
         url: "https://botock.app/tools/video-convert",
         description: "Convert video containers and formats directly in your browser using WebAssembly FFmpeg.",
         applicationCategory: "MultimediaApplication",

@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "Rotate & Flip Image Online Free",
     description: "Rotate and flip photos directly in your browser with instant GPU canvas acceleration.",
     url: "https://botock.app/tools/image-rotate",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -41,7 +41,7 @@ export default function ImageRotatePage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Rotate & Flip Image - Botock",
+        name: "Rotate & Flip Image - Botock AI",
         url: "https://botock.app/tools/image-rotate",
         description: "Rotate and flip images directly in your browser.",
         applicationCategory: "MultimediaApplication",

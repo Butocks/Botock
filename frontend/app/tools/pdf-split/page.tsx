@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title: "Split PDF Online Free | Extract Pages from PDF",
     description: "Extract specific page ranges or split large PDF files into standalone documents with zero quality loss and complete privacy.",
     url: "https://botock.app/tools/pdf-split",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -53,7 +53,7 @@ export default function PDFSplitPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Split PDF - Botock",
+        "name": "Split PDF - Botock AI",
         "url": "https://botock.app/tools/pdf-split",
         "description": "Extract specific page ranges or split large PDF files into standalone documents with zero quality loss and complete privacy.",
         "applicationCategory": "UtilitiesApplication",

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     title: "Convert PDF to Excel Online Free | Extract Tables to XLSX",
     description: "Extract tables, balance sheets, and tabular data from PDF files into formatted Microsoft Excel (.xlsx) spreadsheets.",
     url: "https://botock.app/tools/pdf-to-excel",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -65,7 +65,7 @@ export default function PdfToExcelPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "PDF to Excel - Botock",
+        "name": "PDF to Excel - Botock AI",
         "url": "https://botock.app/tools/pdf-to-excel",
         "description": "Extract tables, balance sheets, and tabular data from PDF files into formatted Microsoft Excel (.xlsx) spreadsheets.",
         "applicationCategory": "UtilitiesApplication",

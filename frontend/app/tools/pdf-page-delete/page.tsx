@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title: "Delete PDF Pages Online Free | Remove Unwanted Pages",
     description: "Remove unwanted, blank, or confidential pages from any PDF document in your browser with real-time thumbnail selection.",
     url: "https://botock.app/tools/pdf-page-delete",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -53,7 +53,7 @@ export default function PDFPageDeletePage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Delete PDF Pages - Botock",
+        "name": "Delete PDF Pages - Botock AI",
         "url": "https://botock.app/tools/pdf-page-delete",
         "description": "Remove unwanted, blank, or confidential pages from any PDF document in your browser with real-time thumbnail selection.",
         "applicationCategory": "UtilitiesApplication",

@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title: "Convert PDF to Word Online Free | Convert PDF to DOCX",
     description: "Transform PDF documents into editable Microsoft Word (.docx) documents with high formatting, table, and font accuracy.",
     url: "https://botock.app/tools/pdf-to-word",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -42,7 +42,7 @@ export default function PdfToWordPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "PDF to Word - Botock",
+        "name": "PDF to Word - Botock AI",
         "url": "https://botock.app/tools/pdf-to-word",
         "description": "Transform PDF documents into editable Microsoft Word (.docx) documents with high formatting, table, and font accuracy.",
         "applicationCategory": "UtilitiesApplication",

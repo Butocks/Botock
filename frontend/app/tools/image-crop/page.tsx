@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title: "Crop Image Online Free | Custom & Preset Aspect Ratios",
     description: "Crop photos and images online with pixel precision. Preset aspect ratios (16:9, 1:1, 4:5, 9:16) and custom boundaries.",
     url: "https://botock.app/tools/image-crop",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -54,7 +54,7 @@ export default function ImageCropPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Crop Image - Botock",
+        "name": "Crop Image - Botock AI",
         "url": "https://botock.app/tools/image-crop",
         "description": "Crop photos and images online with pixel precision. Preset aspect ratios (16:9, 1:1, 4:5, 9:16) and custom boundaries.",
         "applicationCategory": "UtilitiesApplication",

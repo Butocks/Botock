@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     title: "Organize PDF Pages Online Free",
     description: "Visually reorder, rotate, duplicate, and delete PDF pages directly in your browser.",
     url: "https://botock.app/tools/organize-pdf",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -43,7 +43,7 @@ export default function OrganizePdfPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Organize PDF - Botock",
+        name: "Organize PDF - Botock AI",
         url: "https://botock.app/tools/organize-pdf",
         description: "Visual PDF page organizer to reorder, rotate, duplicate, and remove pages in your browser.",
         applicationCategory: "BusinessApplication",

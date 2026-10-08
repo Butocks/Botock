@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title: "Compress Image Online Free | Reduce File Size",
     description: "Compress JPG, PNG, WebP, and GIF images online without losing visible quality. Fast, client-side batch image compression.",
     url: "https://botock.app/tools/image-compress",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -42,7 +42,7 @@ export default function ImageCompressPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Compress Images - Botock",
+        "name": "Compress Images - Botock AI",
         "url": "https://botock.app/tools/image-compress",
         "description": "Compress JPG, PNG, WebP, and GIF images online without losing visible quality. Fast, client-side batch image compression.",
         "applicationCategory": "UtilitiesApplication",

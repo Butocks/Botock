@@ -251,180 +251,181 @@ export default function VideoEditorComponent() {
   const currentMaxTime = allVideoClips.length > 0 ? allVideoClips[allVideoClips.length - 1].timelineStart + allVideoClips[allVideoClips.length - 1].duration : 0;
 
   return (
-    <div className="h-full w-full bg-[#1e1e24] text-white flex flex-col overflow-hidden font-sans">
-      {/* Top Header (10%) */}
-      <header className="h-[10dvh] min-h-[50px] bg-[#141419] flex items-center justify-between px-4 shrink-0 border-b border-[#2b2b36] z-50">
-        <div className="flex items-center gap-4">
-          
-          {/* File Dropdown */}
-          <div className="relative group">
-            <button className="flex items-center gap-1.5 text-gray-300 hover:text-white font-semibold text-sm px-3 py-1.5 rounded hover:bg-white/10 transition-colors">
-              <span>File</span>
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-            <div className="absolute top-full left-0 mt-1 w-40 bg-[#1e1e24] border border-[#2b2b36] rounded-md shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col py-1">
-              <label className="px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#2b2b36] cursor-pointer flex items-center gap-2">
-                <Upload className="w-4 h-4" /> Import Media
-                <input type="file" multiple className="hidden" accept="video/*,image/*,audio/*" onChange={(e) => {
-                   if (e.target.files) Array.from(e.target.files).forEach(handleMediaBinUpload);
-                }} />
-              </label>
-              <button onClick={doExport} disabled={isExporting} className="px-4 py-2 text-sm text-left text-gray-300 hover:text-white hover:bg-[#2b2b36] flex items-center gap-2">
-                <Download className="w-4 h-4" /> Export Video
-              </button>
-            </div>
-          </div>
-
-          {/* Aspect Ratio Selector */}
-          <div className="h-6 w-px bg-[#2b2b36]"></div>
-          <select 
-            className="bg-[#1e1e24] border border-[#2b2b36] text-white text-xs px-3 py-1.5 rounded outline-none focus:border-[#ff6b4a]"
-            onChange={(e) => {
-              const [w, h] = e.target.value.split(':').map(Number);
-              const targetHeight = 1080;
-              const targetWidth = Math.round((w / h) * targetHeight);
-              timeline.updateProjectSettings(targetWidth, targetHeight, 30);
-            }}
-          >
-            <option value="16:9">16:9 (Landscape)</option>
-            <option value="9:16">9:16 (Vertical)</option>
-            <option value="1:1">1:1 (Square)</option>
-            <option value="4:3">4:3 (Standard)</option>
-            <option value="3:4">3:4 (Portrait)</option>
-          </select>
+    <div className="h-[100dvh] md:h-[calc(100vh-64px)] w-full bg-[#1e1e24] text-white flex flex-col overflow-hidden font-sans">
+      {/* Header */}
+      <header className="h-14 bg-[#141419] flex items-center justify-between px-4 shrink-0 border-b border-[#2b2b36]">
+        <div className="flex items-center gap-2 md:gap-4">
+          <Link href="/tools/video-generator" className="text-gray-400 hover:text-white transition-colors">
+            <Home className="w-5 h-5" />
+          </Link>
+          <h1 className="font-semibold text-sm tracking-wide">My Project</h1>
         </div>
-
-        <div className="flex items-center gap-4">
-           <button onClick={doExport} disabled={isExporting} className="bg-[#ff6b4a] hover:bg-[#ff856b] text-white px-6 py-1.5 rounded text-sm font-bold flex items-center gap-2 transition-colors disabled:opacity-50">
+        <div className="flex items-center gap-2 md:gap-4">
+           <button className="text-gray-400 hover:text-white"><Settings className="w-5 h-5"/></button>
+           <button onClick={doExport} disabled={isExporting} className="bg-[#ff6b4a] hover:bg-[#ff856b] text-white px-3 md:px-6 py-1.5 rounded text-xs md:text-sm font-bold flex items-center gap-1 md:gap-2 transition-colors disabled:opacity-50">
              <Download className="w-4 h-4"/> {isExporting ? "Exporting..." : "EXPORT"}
            </button>
         </div>
       </header>
 
-      {/* Middle Section (70% height relative to screen) */}
-      <div className="flex flex-1 min-h-0 relative">
-        
-        {/* Left Toolbar / Panel (20% Width) */}
-        <div className="w-[80px] md:w-[20%] bg-[#141419] flex flex-col border-r border-[#2b2b36] overflow-hidden">
-           <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col min-h-0">
-             <div className="p-2 md:p-4 border-b border-[#2b2b36] sticky top-0 bg-[#141419] z-10 flex flex-col md:flex-row justify-between items-center gap-2">
-                <h2 className="hidden md:block text-sm font-bold text-gray-200">Media Library</h2>
-                <Film className="md:hidden w-5 h-5 text-gray-400" />
-                <label className="text-[#ff6b4a] text-[10px] md:text-xs cursor-pointer hover:underline text-center">
-                  + Add
-                  <input type="file" multiple className="hidden" accept="video/*,image/*,audio/*" onChange={(e) => {
-                     if (e.target.files) Array.from(e.target.files).forEach(handleMediaBinUpload);
-                  }} />
-                </label>
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
+        {/* Left Toolbar */}
+        <div className="w-full md:w-20 bg-[#141419] flex flex-row md:flex-col items-center justify-around md:justify-start py-2 md:py-4 gap-2 md:gap-6 shrink-0 border-b md:border-r border-[#2b2b36] overflow-x-auto md:overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
+          {SIDEBAR_ITEMS.map((item, i) => (
+             <button key={i} className={`flex flex-col items-center gap-1.5 w-full ${i === 2 ? 'text-[#ff6b4a]' : 'text-gray-400 hover:text-gray-200'}`}>
+                <item.icon className="w-5 h-5" />
+                <span className="text-[10px] text-center w-full">{item.label}</span>
+             </button>
+          ))}
+        </div>
+
+        <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden overflow-y-auto">
+          
+          {/* Top Panel: Media & Preview */}
+          <div className="flex flex-col md:flex-row flex-1 min-h-0">
+             
+             {/* Media Bin */}
+             <div className="w-full md:w-[300px] bg-[#1e1e24] flex border-b md:border-r border-[#2b2b36] flex-col min-h-0 h-[250px] md:h-auto shrink-0">
+                <div className="p-4 border-b border-[#2b2b36]">
+                   <h2 className="text-sm font-bold">Media Bin</h2>
+                </div>
+                <div className="flex-1 overflow-auto">
+                   <MediaBin 
+                     items={mediaBin.items} 
+                     onUpload={handleMediaBinUpload} 
+                     onAddToTimeline={handleAddToTimeline}
+                   />
+
+                </div>
              </div>
-             <div className="flex-1 p-2">
-                <MediaBin 
-                  items={mediaBin.items} 
-                  onUpload={handleMediaBinUpload} 
-                  onAddToTimeline={handleAddToTimeline}
+
+             {/* Preview Area */}
+             <div className="flex-1 bg-black relative flex flex-col min-w-0">
+                <div className="absolute top-4 left-4 bg-black/60 px-3 py-1 rounded text-xs font-semibold z-10 backdrop-blur-md border border-white/10">
+                   Video Preview
+                </div>
+                
+                {/* Result Overlay */}
+                {resultUrl && !isExporting && (
+                  <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center gap-4 backdrop-blur-sm">
+                    <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+                    <h3 className="text-xl font-bold">Export Complete!</h3>
+                    <a href={resultUrl} download="botock-video.mp4" className="bg-[#ff6b4a] px-6 py-2 rounded font-bold">Download MP4</a>
+                    <button onClick={() => setResultUrl(null)} className="text-gray-400 underline">Close</button>
+                  </div>
+                )}
+                {isExporting && (
+                  <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center gap-4 backdrop-blur-sm">
+                    <div className="w-8 h-8 border-4 border-[#ff6b4a] border-t-transparent rounded-full animate-spin" />
+                    <h3 className="text-sm font-bold text-[#ff6b4a]">{exportStage || "Processing..."}</h3>
+                  </div>
+                )}
+
+                <div className="flex-1 relative w-full h-full flex items-center justify-center overflow-hidden bg-[#0a0a0c] p-4" onClick={togglePlay}>
+                   <div className="relative max-w-full max-h-full" style={{ aspectRatio: `${timeline.project.width} / ${timeline.project.height}` }}>
+                      <PreviewCanvas 
+                        project={timeline.project} 
+                        mediaItems={mediaBin.items} 
+                        currentTime={currentTime} 
+                        isPlaying={isPlaying} 
+                      />
+                      {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image") && (
+                         <TransformOverlay 
+                            clip={selectedClip} 
+                            project={timeline.project}
+                            mediaItem={mediaBin.items.find(m => m.id === selectedClip.sourceId)}
+                            onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
+                            onCommitLive={() => timeline.commitLiveUpdate()}
+                         />
+                      )}
+                   </div>
+                </div>
+
+                {/* Player Controls */}
+                <div className="h-14 bg-[#141419] flex items-center justify-center gap-6 px-4 border-t border-[#2b2b36]">
+                   <button onClick={() => seekTo(0)} className="text-gray-400 hover:text-white"><div className="w-3 h-3 border-l-2 border-current flex items-center"><Play className="w-3 h-3 fill-current rotate-180"/></div></button>
+                   <button onClick={() => seekTo(currentTime - 5)} className="text-gray-400 hover:text-white"><Play className="w-4 h-4 fill-current rotate-180"/></button>
+                   <button onClick={togglePlay} className="text-white bg-[#2b2b36] p-2 rounded-full hover:bg-white hover:text-black transition-colors">
+                      {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+                   </button>
+                   <button onClick={() => seekTo(currentTime + 5)} className="text-gray-400 hover:text-white"><Play className="w-4 h-4 fill-current"/></button>
+                   <button onClick={() => seekTo(currentMaxTime)} className="text-gray-400 hover:text-white"><div className="w-3 h-3 border-r-2 border-current flex items-center justify-end"><Play className="w-3 h-3 fill-current"/></div></button>
+                </div>
+             </div>
+
+
+             {/* Inspector Area */}
+             {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image") && (
+                 <div className="w-full md:w-[280px] flex bg-[#141419] border-t md:border-l md:border-t-0 border-[#2b2b36] flex-col min-h-0 h-[250px] md:h-auto overflow-y-auto shrink-0 shadow-xl">
+                    <TransformInspector 
+                        clip={selectedClip} 
+                        onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
+                        onBeginLive={() => timeline.beginLiveUpdate()}
+                        onCommitLive={() => timeline.commitLiveUpdate()}
+                        onUpdate={(patch) => {
+                            timeline.beginLiveUpdate();
+                            timeline.updateClipLive(selectedClip.id, patch);
+                            timeline.commitLiveUpdate();
+                        }}
+                    />
+                 </div>
+             )}
+
+          </div>
+
+          {/* Bottom Panel: Timeline */}
+          <div className="h-[250px] bg-[#1e1e24] flex flex-col shrink-0 border-t border-[#2b2b36]">
+             
+             {/* Timeline Toolbar */}
+             <div className="h-10 bg-[#141419] flex items-center justify-between px-4 border-b border-[#2b2b36]">
+                <div className="flex items-center gap-4 text-xs font-mono text-gray-400">
+                   <button onClick={timeline.undo} disabled={!timeline.canUndo} className="hover:text-white disabled:opacity-30 flex items-center gap-1"><Undo2 className="w-3.5 h-3.5"/> Undo</button>
+                   <button onClick={timeline.redo} disabled={!timeline.canRedo} className="hover:text-white disabled:opacity-30 flex items-center gap-1"><Redo2 className="w-3.5 h-3.5"/> Redo</button>
+                   <span className="w-px h-4 bg-gray-700 mx-2"></span>
+                   <button onClick={() => timeline.splitAt(currentTime)} className="hover:text-white flex items-center gap-1"><Scissors className="w-3.5 h-3.5"/> Split</button>
+                   <button onClick={() => timeline.selectedClipId && timeline.deleteClip(timeline.selectedClipId)} disabled={!timeline.selectedClipId} className="hover:text-red-400 disabled:opacity-30 flex items-center gap-1"><Trash2 className="w-3.5 h-3.5"/> Delete</button>
+                </div>
+                <div className="flex items-center gap-4 text-xs">
+                   <div className="flex items-center font-mono gap-1">
+                      <span id="editor-time-display" className="text-white">{fmtTime(currentTime)}</span>
+                      <span className="text-gray-600">/</span>
+                      <span className="text-gray-500">{fmtTime(currentMaxTime)}</span>
+                   </div>
+                   <div className="flex items-center gap-2">
+                      <ZoomOut className="w-3.5 h-3.5 text-gray-500" />
+                      <input
+                        type="range" min="0.1" max="3" step="0.1" value={zoom}
+                        onChange={(e) => setZoom(parseFloat(e.target.value))}
+                        className="w-24 accent-[#ff6b4a] h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer"
+                      />
+                      <ZoomIn className="w-3.5 h-3.5 text-gray-500" />
+                   </div>
+                </div>
+             </div>
+
+             {/* Timeline Track Engine */}
+             <div className="flex-1 relative overflow-hidden bg-[#1a1a20]">
+                <EditorTimeline
+                  project={timeline.project}
+                  mediaItems={mediaBin.items}
+                  currentTime={currentTime}
+                  selectedClipId={timeline.selectedClipId}
+                  onSelectClip={timeline.setSelectedClipId}
+                  onSeek={seekTo}
+                  onSplit={(t) => timeline.splitAt(t)}
+                  onEdgeBegin={timeline.beginLiveUpdate}
+                  onEdgeLive={timeline.updateClipEdgeLive}
+                  onEdgeCommit={timeline.commitLiveUpdate}
+                  zoom={zoom}
+                  thumbnailsBySource={thumbnailsBySource}
+                  waveformsBySource={waveformsBySource}
                 />
              </div>
-             
-             {activeClip && (
-               <div className="p-4 border-t border-[#2b2b36] bg-[#1e1e24]">
-                 <h2 className="text-sm font-bold text-gray-200 mb-2">Transform</h2>
-                 <TransformInspector 
-                   clip={activeClip} 
-                   onChange={(updates) => timeline.updateClip(activeClip.id, updates)} 
-                   onDelete={() => timeline.removeClip(activeClip.id)} 
-                 />
-               </div>
-             )}
-           </div>
-        </div>
 
-        {/* Video Preview Canvas (80% Width) */}
-        <div className="flex-1 bg-black relative flex flex-col min-w-0">
-           {/* Result Overlay */}
-           {resultUrl && !isExporting && (
-             <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center gap-4 backdrop-blur-sm">
-               <CheckCircle2 className="w-12 h-12 text-emerald-500" />
-               <h3 className="text-xl font-bold">Export Complete!</h3>
-               <a href={resultUrl} download="botock-video.mp4" className="bg-[#ff6b4a] px-6 py-2 rounded font-bold">Download MP4</a>
-               <button onClick={() => setResultUrl(null)} className="text-gray-400 underline">Close</button>
-             </div>
-           )}
-           {isExporting && (
-             <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center gap-4 backdrop-blur-sm">
-               <div className="w-8 h-8 border-4 border-[#ff6b4a] border-t-transparent rounded-full animate-spin" />
-               <h3 className="text-sm font-bold text-[#ff6b4a]">{exportStage || "Processing..."}</h3>
-             </div>
-           )}
+          </div>
 
-           <div className="flex-1 relative w-full h-full flex items-center justify-center overflow-hidden bg-[#0a0a0c] p-4" onClick={togglePlay}>
-              <div className="relative max-w-full max-h-full shadow-2xl ring-1 ring-white/10" style={{ aspectRatio: `${timeline.project.width} / ${timeline.project.height}` }}>
-                 <PreviewCanvas 
-                   project={timeline.project} 
-                   mediaItems={mediaBin.items} 
-                   currentTime={currentTime} 
-                   isPlaying={isPlaying} 
-                   videoRef={videoRef} 
-                 />
-                 {activeClip && activeItem && activeItem.type !== "audio" && (
-                    <TransformOverlay 
-                      clip={activeClip} 
-                      project={timeline.project} 
-                      onChange={(updates) => timeline.updateClip(activeClip.id, updates)} 
-                    />
-                 )}
-              </div>
-           </div>
-
-           {/* Playback Controls Overlay */}
-           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#141419]/80 backdrop-blur rounded-full px-6 py-2 flex items-center gap-6 border border-white/10">
-              <button onClick={(e) => { e.stopPropagation(); setCurrentTime(0); }} className="text-gray-400 hover:text-white">
-                 <Undo2 className="w-4 h-4" />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); togglePlay(); }} className="w-10 h-10 rounded-full bg-[#ff6b4a] text-white flex items-center justify-center hover:bg-[#ff856b] transition-transform active:scale-95">
-                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-1" />}
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setCurrentTime(currentMaxTime); }} className="text-gray-400 hover:text-white">
-                 <Redo2 className="w-4 h-4" />
-              </button>
-           </div>
         </div>
       </div>
-
-      {/* Bottom Timeline (20% Height) */}
-      <div className="h-[25dvh] min-h-[200px] w-full bg-[#141419] flex flex-col shrink-0 border-t border-[#2b2b36] z-10 overflow-hidden relative">
-         <div className="h-8 px-4 flex items-center justify-between border-b border-[#2b2b36] bg-[#1a1a21]">
-            <div className="flex items-center gap-4">
-               <button onClick={() => timeline.addTrack("video")} className="text-[10px] uppercase font-bold text-gray-400 hover:text-white flex items-center gap-1"><Plus className="w-3 h-3"/> Add Video Track</button>
-               <button onClick={() => timeline.addTrack("audio")} className="text-[10px] uppercase font-bold text-gray-400 hover:text-white flex items-center gap-1"><Plus className="w-3 h-3"/> Add Audio Track</button>
-            </div>
-            <div className="text-[10px] font-mono text-gray-400 flex items-center gap-4">
-               <span id="editor-time-display">00:00.0</span>
-               <div className="flex items-center gap-2">
-                 <ZoomOut className="w-3 h-3" />
-                 <input type="range" min="0.5" max="5" step="0.1" value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} className="w-20" />
-                 <ZoomIn className="w-3 h-3" />
-               </div>
-            </div>
-         </div>
-         
-         <div className="flex-1 overflow-hidden">
-           <EditorTimeline 
-             project={timeline.project} 
-             currentTime={currentTime} 
-             onTimeChange={handleTimeChange} 
-             onClipSelect={timeline.selectClip} 
-             selectedClipId={timeline.selectedClipId} 
-             onClipMove={timeline.updateClipTime} 
-             onClipTrim={timeline.updateClipTime} 
-             zoom={zoom} 
-             thumbnails={thumbnailsBySource} 
-             waveforms={waveformsBySource}
-             mediaItems={mediaBin.items}
-             onTrackDelete={timeline.removeTrack}
-           />
-         </div>
     </div>
   );
 }

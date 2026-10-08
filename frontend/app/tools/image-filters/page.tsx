@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "Photo Filters & Effects Online Free",
     description: "Fine-tune brightness, contrast, saturation, and cinematic film presets directly in your browser.",
     url: "https://botock.app/tools/image-filters",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -41,7 +41,7 @@ export default function ImageFiltersPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Photo Filters & Effects - Botock",
+        name: "Photo Filters & Effects - Botock AI",
         url: "https://botock.app/tools/image-filters",
         description: "Fine-tune photo brightness, contrast, saturation, and cinematic film presets directly in your browser.",
         applicationCategory: "MultimediaApplication",

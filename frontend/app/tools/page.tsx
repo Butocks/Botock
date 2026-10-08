@@ -2,26 +2,26 @@ import type { Metadata } from "next";
 import ToolsDirectoryClient from "./ToolsDirectoryClient";
 
 export const metadata: Metadata = {
-  title: "All Free Online Creative & Productivity Tools",
+  title: "Botock AI Tools | Free Video Generator & PDF Utilities",
   description:
-    "Explore 35+ free AI, PDF, image, and video utilities on Botock. Merge PDFs, convert media, edit video in browser, and generate cinematic AI content with client-side privacy.",
+    "Explore 35+ free AI, PDF, image, and video utilities on Botock AI. Generate cinematic AI video, merge PDFs, convert media, and edit video in your browser.",
   alternates: {
     canonical: "/tools",
   },
   openGraph: {
-    title: "All Free Online Creative & Productivity Tools",
+    title: "Botock AI Tools | Free Video Generator & PDF Utilities",
     description:
-      "Explore 35+ free AI, PDF, image, and video utilities on Botock. Fast, client-side, zero server uploads, and instant processing.",
+      "Explore 35+ free AI, PDF, image, and video utilities on Botock AI. Fast, client-side, zero server uploads, and instant processing.",
     url: "https://botock.app/tools",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "All Free Online Creative & Productivity Tools",
+    title: "Botock AI Tools Directory",
     description:
-      "Explore free AI video generation, image creation, PDF utilities, and video editing tools on Botock.",
+      "Explore free AI video generation, image creation, PDF utilities, and video editing tools on Botock AI.",
     images: ["https://botock.app/og-image.jpg"],
   },
 };

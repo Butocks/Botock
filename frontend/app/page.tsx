@@ -2,33 +2,33 @@ import type { Metadata } from "next";
 import HomeClient from "./HomeClient";
 
 export const metadata: Metadata = {
-  title: "Botock | AI Video, Image & Productivity Tools",
+  title: "Botock AI | Free Video Generator & Image Tools",
   description:
-    "Generate cinematic AI videos from text and photos, synthesize photorealistic artwork, edit videos in-browser, and process PDF documents locally with Botock.",
+    "Generate cinematic AI videos from text and photos, synthesize photorealistic artwork, edit videos in-browser, and process PDF documents locally with Botock AI.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Botock | AI Video, Image & Productivity Tools",
+    title: "Botock AI | Free Video Generator & Image Tools",
     description:
-      "Generate cinematic AI videos from text and photos, synthesize photorealistic artwork, edit videos in-browser, and process PDF documents locally with Botock.",
+      "Generate cinematic AI videos from text and photos, synthesize photorealistic artwork, edit videos in-browser, and process PDF documents locally with Botock AI.",
     url: "https://botock.app",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: [
       {
         url: "https://botock.app/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Botock Creative Platform",
+        alt: "Botock AI Creative Platform",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Botock | AI Video, Image & Productivity Tools",
+    title: "Botock AI | Free Video Generator & Image Tools",
     description:
-      "Generate cinematic AI videos from text and photos, synthesize photorealistic artwork, edit videos in-browser, and process PDF documents locally.",
+      "Generate cinematic AI videos from text and photos, synthesize photorealistic artwork, edit videos in-browser, and process PDF documents locally with Botock AI.",
     images: ["https://botock.app/og-image.jpg"],
   },
 };

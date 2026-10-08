@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     description:
       "Convert PDF pages to JPG images in your browser with zero server uploads.",
     url: "https://botock.app/tools/pdf-to-jpg",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },

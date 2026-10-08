@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     title: "Rotate PDF Pages Online Free | 90°, 180°, 270° Rotation",
     description: "Rotate individual pages or entire PDF documents permanently. Fast in-browser processing with zero server uploads.",
     url: "https://botock.app/tools/pdf-rotate",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -53,7 +53,7 @@ export default function PDFRotatePage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        "name": "Rotate PDF - Botock",
+        "name": "Rotate PDF - Botock AI",
         "url": "https://botock.app/tools/pdf-rotate",
         "description": "Rotate individual pages or entire PDF documents permanently. Fast in-browser processing with zero server uploads.",
         "applicationCategory": "UtilitiesApplication",

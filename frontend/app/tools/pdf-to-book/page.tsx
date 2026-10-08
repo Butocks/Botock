@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     title: "PDF to Booklet Viewer Online Free | Two-Page Reading",
     description: "View and read PDF documents in an immersive side-by-side booklet format with realistic pagination and reading controls.",
     url: "https://botock.app/tools/pdf-to-book",
-    siteName: "Botock",
+    siteName: "Botock AI",
     type: "website",
     images: ["https://botock.app/og-image.jpg"],
   },
@@ -28,8 +28,36 @@ export const metadata: Metadata = {
 };
 
 export default function PDFToBookPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        "name": "PDF to Booklet Viewer - Botock AI",
+        "url": "https://botock.app/tools/pdf-to-book",
+        "description": "View and read PDF documents in an immersive side-by-side booklet format with realistic pagination and reading controls.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "All",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://botock.app" },
+          { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://botock.app/tools" },
+          { "@type": "ListItem", "position": 3, "name": "PDF to Booklet Viewer", "item": "https://botock.app/tools/pdf-to-book" }
+        ]
+      }
+    ]
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <div className="text-center space-y-4">
         <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">
           {tool?.name || "PDF to Book"}
