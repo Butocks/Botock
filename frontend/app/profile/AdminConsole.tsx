@@ -145,6 +145,8 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
     subscribers_total: 0,
     mrr: "$0",
   });
+  
+  const [videoStats, setVideoStats] = useState({ today: 0, this_month: 0, all_time: 0 });
 
 
 
@@ -316,6 +318,14 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
       });
       if (resAnalytics.ok) {
         setAnalytics(await resAnalytics.json());
+      }
+      
+      const resStats = await fetch(`${backendUrl}/api/admin/stats`, {
+        headers: { "x-admin-token": token },
+      });
+      if (resStats.ok) {
+        const statsData = await resStats.json();
+        if (statsData.video_stats) setVideoStats(statsData.video_stats);
       }
 
       // 6. Subscription Requests
@@ -1023,15 +1033,15 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                   <div className="space-y-2 pt-2">
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-400">Generated Today:</span>
-                      <span className="font-mono font-bold text-indigo-400">142</span>
+                      <span className="font-mono font-bold text-indigo-400">{videoStats.today.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                       <span className="text-slate-400">Generated This Month:</span>
-                      <span className="font-mono font-bold text-indigo-400">2,841</span>
+                      <span className="font-mono font-bold text-indigo-400">{videoStats.this_month.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs pt-2 border-t border-indigo-500/20">
                       <span className="text-slate-400">All Time Videos:</span>
-                      <span className="font-mono font-bold text-indigo-300">14,923</span>
+                      <span className="font-mono font-bold text-indigo-300">{videoStats.all_time.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

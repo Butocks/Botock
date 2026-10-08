@@ -45,10 +45,13 @@ class BlogUpdate(BaseModel):
 @router.get("/stats", dependencies=[Depends(verify_admin)])
 async def get_stats():
     """Fetch high-level platform stats."""
+    from app.services.stats_service import get_video_stats
+    video_stats = get_video_stats()
     return {
         "status": "success",
         "users": 1337,
-        "generations": 42069,
+        "generations": video_stats.get("all_time", 0),
+        "video_stats": video_stats,
         "message": "Admin API connected successfully!"
     }
 

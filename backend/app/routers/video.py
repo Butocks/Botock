@@ -184,12 +184,12 @@ async def generate_video(
             selected_model = "omni-1.1-flash-360p"
 
     # Admin quota checking (just count today's generations)
-    from app.middleware.auth import _rpc
+    from app.services.stats_service import get_video_stats, record_video_generation
     
     # Check Global Daily Video Limit
     try:
-        global_stats = await _rpc("get_global_video_stats", {})
-        today_total = global_stats.get("today", 0) if isinstance(global_stats, dict) else 0
+        global_stats = get_video_stats()
+        today_total = global_stats.get("today", 0)
         global_limit = int(quotas.get("global_daily_video_limit", 500))
         if today_total >= global_limit and not is_pro:
             raise HTTPException(
