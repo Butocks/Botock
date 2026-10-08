@@ -14,6 +14,7 @@ import {
   Mail,
   Briefcase,
   AlertCircle,
+  Music,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
@@ -207,7 +208,7 @@ export default function Footer() {
             <ul className="space-y-3 text-xs sm:text-sm">
               <li>
                 <Link
-                  href="/tools?cat=pdf"
+                  href="/features/pdf-suite"
                   className="text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors flex items-center gap-1.5"
                 >
                   <FileText className="w-3.5 h-3.5 text-rose-500" />
@@ -216,7 +217,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/tools?cat=image"
+                  href="/features/image-tools"
                   className="text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5"
                 >
                   <ImageIcon className="w-3.5 h-3.5 text-emerald-500" />
@@ -225,11 +226,11 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/tools?cat=video"
-                  className="text-slate-500 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 transition-colors flex items-center gap-1.5"
+                  href="/features/audio-tools"
+                  className="text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors flex items-center gap-1.5"
                 >
-                  <Video className="w-3.5 h-3.5 text-sky-500" />
-                  <span>Video Suite (25)</span>
+                  <Music className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Audio Suite (15)</span>
                 </Link>
               </li>
               <li>
