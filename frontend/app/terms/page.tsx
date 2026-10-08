@@ -52,7 +52,7 @@ export default function TermsOfServicePage() {
               3. User Accounts and Verification
             </h2>
             <p>
-              Certain advanced generative features and quota allocations require account registration. You agree to provide accurate, current, and complete information during registration and to maintain the security of your authentication credentials. You are responsible for all activities that occur under your account.
+              Our online tools are 100% free of charge and require no sign-up or registration. You can access and use our utilities immediately without creating an account.
             </p>
           </section>
 
@@ -64,7 +64,7 @@ export default function TermsOfServicePage() {
             <ul className="list-disc pl-5 space-y-2">
               <li>Generate, upload, or disseminate harmful, unlawful, defamatory, abusive, or sexually explicit material.</li>
               <li>Violate any third-party intellectual property, privacy, or publicity rights.</li>
-              <li>Attempt to reverse-engineer, exploit, or bypass platform quota enforcement or security controls.</li>
+              <li>Attempt to reverse-engineer, exploit, or bypass platform security controls.</li>
               <li>Deploy automated scrapers, bots, or unauthorized API querying against our infrastructure.</li>
             </ul>
           </section>
@@ -92,11 +92,11 @@ export default function TermsOfServicePage() {
               7. Refunds and Cancellation Policy
             </h2>
             <p>
-              All purchases of platform credits, generative tokens, and custom digital development services are governed by our formal{" "}
+              Botock AI's online tools are provided completely free of charge. We do not sell platform credits, generative tokens, or subscriptions. For our enterprise clients who engage us for custom digital development services, payments are governed by our formal{" "}
               <Link href="/refund" className="text-violet-600 dark:text-violet-400 font-bold hover:underline">
                 Refund &amp; Cancellation Policy
               </Link>
-              . Unused accidental purchases reported within 7 days with zero consumption are eligible for full refund. Consumed generation credits, usage exceeding the 20% quota threshold, or custom client engineering projects that have progressed beyond initial planning approval are strictly non-refundable.
+              .
             </p>
           </section>
 
