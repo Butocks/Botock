@@ -28,9 +28,14 @@ function buildClipVideoFilter(
   targetH: number
 ): string {
   const speedFactor = (1 / Math.min(4, Math.max(0.25, clip.speed))).toFixed(4);
-  const trim = `trim=start=${clip.sourceStart.toFixed(3)}:end=${clip.sourceEnd.toFixed(3)},setpts=${speedFactor}*PTS-STARTPTS`;
+  let trim = `trim=start=${clip.sourceStart.toFixed(3)}:end=${clip.sourceEnd.toFixed(3)},setpts=(${speedFactor}*(PTS-STARTPTS))+${clip.timelineStart.toFixed(3)}/TB`;
   
-  let filterParts = [`[${inputIndex}:v]${trim}`];
+  if (clip.type === "image") {
+     // Images only have 1 frame. Loop them infinitely before trimming to source duration
+     trim = `loop=loop=-1:size=1,${trim}`;
+  }
+  
+  const filterParts = [`[${inputIndex}:v]${trim}`];
 
   if (clip.chromaKey && clip.chromaKey.enabled) {
     const c = clip.chromaKey;
@@ -43,6 +48,28 @@ function buildClipVideoFilter(
 
   if (clip.filters) {
     filterParts.push(buildColorFilter(clip.filters.brightness, clip.filters.contrast, clip.filters.saturation));
+  }
+
+  if (clip.effects && clip.effects.length > 0) {
+    const eff = clip.effects[0].type;
+    // zoom-in, zoom-out, pan-left, pan-right
+    // A simplified zoom/pan using ffmpeg's 'zoompan' or 'scale/crop'.
+    // scale+crop with time evaluation is better and more precise.
+    const dur = clip.duration.toFixed(3);
+    if (eff === "zoom-in") {
+      filterParts.push(`scale=w='iw*(1+0.5*min(1,t/${dur}))':h='ih*(1+0.5*min(1,t/${dur}))':eval=frame,crop=w=iw/(1+0.5*min(1,t/${dur})):h=ih/(1+0.5*min(1,t/${dur})):x='(iw-ow)/2':y='(ih-oh)/2'`);
+    } else if (eff === "zoom-out") {
+      filterParts.push(`scale=w='iw*(1.5-0.5*min(1,t/${dur}))':h='ih*(1.5-0.5*min(1,t/${dur}))':eval=frame,crop=w=iw/(1.5-0.5*min(1,t/${dur})):h=ih/(1.5-0.5*min(1,t/${dur})):x='(iw-ow)/2':y='(ih-oh)/2'`);
+    } else if (eff === "pan-left") {
+      // Crop a bit smaller and pan across the original
+      filterParts.push(`crop=w='iw*0.9':h=ih:x='(iw*0.1)*min(1,t/${dur})':y=0`);
+    } else if (eff === "pan-right") {
+      filterParts.push(`crop=w='iw*0.9':h=ih:x='(iw*0.1)*(1-min(1,t/${dur}))':y=0`);
+    } else if (eff === "fade-in") {
+      filterParts.push(`format=yuva420p,fade=t=in:st=0:d=1:alpha=1`);
+    } else if (eff === "fade-out") {
+      filterParts.push(`format=yuva420p,fade=t=out:st=${(clip.duration - 1).toFixed(3)}:d=1:alpha=1`);
+    }
   }
 
   if (clip.transform) {
@@ -68,14 +95,24 @@ function buildClipAudioFilter(clip: TimelineClip, inputIndex: number, label: str
   const atempo = buildAtempoFilter(speed);
   const muted = clip.audio?.muted ?? false;
   const volPct = clip.audio?.volumePercent ?? 100;
+  const fadeIn = clip.audio?.fadeInSeconds ?? 0;
+  const fadeOut = clip.audio?.fadeOutSeconds ?? 0;
   
   if (!hasAudio || muted || volPct === 0) {
     const dur = (clip.sourceEnd - clip.sourceStart) / speed;
-    return `anullsrc=r=44100:cl=stereo,atrim=end=${dur.toFixed(3)}[${label}]`;
+    return `anullsrc=r=44100:cl=stereo,atrim=end=${dur.toFixed(3)},adelay=${Math.round(clip.timelineStart * 1000)}|${Math.round(clip.timelineStart * 1000)}[${label}]`;
+  }
+  
+  let fadeStr = "";
+  if (fadeIn > 0) fadeStr += `,afade=t=in:st=0:d=${fadeIn.toFixed(3)}`;
+  if (fadeOut > 0) {
+    const dur = (clip.sourceEnd - clip.sourceStart) / speed;
+    const outStart = Math.max(0, dur - fadeOut);
+    fadeStr += `,afade=t=out:st=${outStart.toFixed(3)}:d=${fadeOut.toFixed(3)}`;
   }
   
   const trim = `atrim=start=${clip.sourceStart.toFixed(3)}:end=${clip.sourceEnd.toFixed(3)},asetpts=PTS-STARTPTS`;
-  return `[${inputIndex}:a]${trim},${atempo},${buildVolumeFilter(volPct)}[${label}]`;
+  return `[${inputIndex}:a]${trim},${atempo},${buildVolumeFilter(volPct)}${fadeStr},adelay=${Math.round(clip.timelineStart * 1000)}|${Math.round(clip.timelineStart * 1000)}[${label}]`;
 }
 
 export async function exportEditorProject(
@@ -88,17 +125,21 @@ export async function exportEditorProject(
   await ffmpeg.load();
 
   const allVideoClips: TimelineClip[] = [];
+  const allAudioClips: TimelineClip[] = [];
+  
   project.tracks.forEach(t => {
       allVideoClips.push(...t.clips.filter(c => c.type === "video" || c.type === "image"));
+      allAudioClips.push(...t.clips.filter(c => c.type === "audio"));
   });
   allVideoClips.sort((a, b) => a.timelineStart - b.timelineStart);
+  allAudioClips.sort((a, b) => a.timelineStart - b.timelineStart);
 
   const textClips: TimelineClip[] = [];
   project.tracks.forEach(t => {
       textClips.push(...t.clips.filter(c => c.type === "text"));
   });
 
-  if (allVideoClips.length === 0) throw new Error("No video clips to export.");
+  if (allVideoClips.length === 0 && allAudioClips.length === 0) throw new Error("No media clips to export.");
 
   if (textClips.length > 0) {
     onProgress?.("Downloading fonts for text layers...");
@@ -112,7 +153,7 @@ export async function exportEditorProject(
   }
 
   onProgress?.("Writing source files to FFmpeg VFS...");
-  const usedSourceIds = Array.from(new Set(allVideoClips.map(c => c.sourceId)));
+  const usedSourceIds = Array.from(new Set([...allVideoClips, ...allAudioClips].map(c => c.sourceId)));
   const sourceInputIndex = new Map<string, number>();
   const sourceInputNames = new Map<string, string>();
   const sourceHasAudio = new Map<string, boolean>();
@@ -141,17 +182,40 @@ export async function exportEditorProject(
   const targetH = project.height;
   const filterParts: string[] = [];
 
+  let maxDuration = 0;
+  project.tracks.forEach(t => t.clips.forEach(c => {
+    if (c.timelineStart + c.duration > maxDuration) maxDuration = c.timelineStart + c.duration;
+  }));
+  if (maxDuration === 0) maxDuration = 5;
+
+  filterParts.push(`color=c=black:s=${targetW}x${targetH}:d=${maxDuration}:r=${project.fps}[bg0]`);
+  filterParts.push(`anullsrc=r=44100:cl=stereo:d=${maxDuration}[abg0]`);
+
+  let currentV = "[bg0]";
+
   allVideoClips.forEach((clip, index) => {
     const inputIdx = sourceInputIndex.get(clip.sourceId)!;
-    const hasAudio = sourceHasAudio.get(clip.sourceId) || false;
     filterParts.push(buildClipVideoFilter(clip, inputIdx, `v${index}`, targetW, targetH));
+    filterParts.push(`${currentV}[v${index}]overlay=eof_action=pass:enable='between(t,${clip.timelineStart.toFixed(3)},${(clip.timelineStart + clip.duration).toFixed(3)})'[bg${index + 1}]`);
+    currentV = `[bg${index + 1}]`;
+  });
+
+  const allAudioSources = [...allVideoClips, ...allAudioClips];
+  allAudioSources.forEach((clip, index) => {
+    const inputIdx = sourceInputIndex.get(clip.sourceId)!;
+    const hasAudio = sourceHasAudio.get(clip.sourceId) || false;
     filterParts.push(buildClipAudioFilter(clip, inputIdx, `a${index}`, hasAudio));
   });
 
-  const concatInputs = allVideoClips.map((_, i) => `[v${i}][a${i}]`).join("");
-  filterParts.push(`${concatInputs}concat=n=${allVideoClips.length}:v=1:a=1[vconcat][aconcat]`);
+  if (allAudioSources.length > 0) {
+    const audioInputs = allAudioSources.map((_, i) => `[a${i}]`).join("");
+    // Use normalize=0 so volume isn't reduced, dropout_transition=0 to keep it from fading
+    filterParts.push(`[abg0]${audioInputs}amix=inputs=${allAudioSources.length + 1}:duration=first:dropout_transition=0:normalize=0[aconcat]`);
+  } else {
+    filterParts.push(`[abg0]acopy[aconcat]`);
+  }
   
-  let finalVideoOutput = "[vconcat]";
+  let finalVideoOutput = currentV;
   
   textClips.forEach((tClip, index) => {
      const nextOutput = `[vtext${index}]`;
@@ -159,7 +223,8 @@ export async function exportEditorProject(
         text: tClip.text || "Text",
         start: tClip.timelineStart,
         end: tClip.timelineStart + tClip.duration,
-        anchor: "center",
+        xPercent: tClip.transform?.x ?? 50,
+        yPercent: tClip.transform?.y ?? 50,
         fontSizePercent: tClip.fontSizePercent || 50,
         color: (tClip.color || "#ffffff").replace("#", "0x"),
         backgroundOpacity: 0,

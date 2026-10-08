@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { 
   EditorProject, 
   TimelineTrack, 
@@ -183,6 +183,11 @@ export function useEditorTimeline() {
         const clip = track.clips.find(c => c.id === clipId);
         if (clip) {
           Object.assign(clip, patch);
+          if (patch.speed !== undefined) {
+             const newSpeed = clampNum(patch.speed, 0.25, 4);
+             clip.speed = newSpeed;
+             clip.duration = (clip.sourceEnd - clip.sourceStart) / newSpeed;
+          }
           break;
         }
       }
@@ -260,6 +265,28 @@ export function useEditorTimeline() {
       return prev.slice(0, -1);
     });
   }, []);
+
+  useEffect(() => {
+    const handleUpdateProject = (e: any) => {
+      setProject(prev => {
+        pushHistory(prev);
+        const next = cloneProject(prev);
+        if (e.detail.width) next.width = e.detail.width;
+        if (e.detail.height) next.height = e.detail.height;
+        if (e.detail.fps) next.fps = e.detail.fps;
+        return next;
+      });
+    };
+    const handleDeleteTrack = (e: any) => {
+      deleteTrack(e.detail.id);
+    };
+    window.addEventListener('editor-delete-track', handleDeleteTrack);
+    window.addEventListener('editor-update-project', handleUpdateProject);
+    return () => {
+       window.removeEventListener('editor-update-project', handleUpdateProject);
+       window.removeEventListener('editor-delete-track', handleDeleteTrack);
+    };
+  }, [pushHistory, deleteTrack]);
 
   return {
     project,

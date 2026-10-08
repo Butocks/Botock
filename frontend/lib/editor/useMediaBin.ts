@@ -5,18 +5,29 @@ import { MediaBinItem } from "./types";
 
 function readVideoMeta(file: File): Promise<{ duration: number; width: number; height: number }> {
   return new Promise((resolve) => {
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.onloadedmetadata = () => {
+    if (file.type.startsWith("image/")) {
+      const img = new Image();
+      img.onload = () => {
+         resolve({ duration: 5, width: img.width, height: img.height }); // default 5s duration for images
+         URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => resolve({ duration: 5, width: 1280, height: 720 });
+      img.src = URL.createObjectURL(file);
+      return;
+    }
+
+    const media = document.createElement(file.type.startsWith("audio/") ? "audio" : "video");
+    media.preload = "metadata";
+    media.onloadedmetadata = () => {
       resolve({
-        duration: Number.isFinite(video.duration) ? video.duration : 0,
-        width: video.videoWidth || 1280,
-        height: video.videoHeight || 720,
+        duration: Number.isFinite(media.duration) ? media.duration : 0,
+        width: (media as HTMLVideoElement).videoWidth || 1280,
+        height: (media as HTMLVideoElement).videoHeight || 720,
       });
-      URL.revokeObjectURL(video.src);
+      URL.revokeObjectURL(media.src);
     };
-    video.onerror = () => resolve({ duration: 0, width: 1280, height: 720 });
-    video.src = URL.createObjectURL(file);
+    media.onerror = () => resolve({ duration: 0, width: 1280, height: 720 });
+    media.src = URL.createObjectURL(file);
   });
 }
 

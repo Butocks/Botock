@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo } from "react";
-import { Scissors, MousePointer2, ZoomIn, ZoomOut, MoveHorizontal, Undo2, Redo2, Settings, Eye, EyeOff, Lock, Unlock, Volume2, VolumeX, SquareSplitHorizontal as SplitSquareHorizontal } from "lucide-react";
+import { Scissors, MousePointer2, ZoomIn, ZoomOut, MoveHorizontal, Undo2, Redo2, Settings, Eye, EyeOff, Lock, Unlock, Volume2, VolumeX, Trash2, SquareSplitHorizontal as SplitSquareHorizontal } from "lucide-react";
 import { EditorProject, MediaBinItem } from "@/lib/editor/types";
 
 function fmt(t: number) {
@@ -30,6 +30,9 @@ const TrackLane = React.memo(function TrackLane({ track, totalDuration, selected
             </button>
             <button className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors">
               {track.muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            </button>
+            <button onClick={() => window.dispatchEvent(new CustomEvent('editor-delete-track', { detail: { id: track.id } }))} className="p-1 hover:bg-red-900/50 rounded text-slate-500 hover:text-red-400 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
       </div>

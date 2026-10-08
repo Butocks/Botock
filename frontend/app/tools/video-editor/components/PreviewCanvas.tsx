@@ -155,6 +155,23 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
             if (el && (el instanceof HTMLVideoElement || el instanceof HTMLAudioElement)) {
                el.playbackRate = clip.speed || 1;
                
+               const isMuted = clip.audio?.muted ?? false;
+               const baseVolume = clip.audio?.volumePercent ?? 100;
+               const fadeIn = clip.audio?.fadeInSeconds ?? 0;
+               const fadeOut = clip.audio?.fadeOutSeconds ?? 0;
+               
+               let currentVolume = baseVolume / 100;
+               
+               if (fadeIn > 0 && elapsed < fadeIn) {
+                   currentVolume = currentVolume * (elapsed / fadeIn);
+               }
+               if (fadeOut > 0 && elapsed > clip.duration - fadeOut) {
+                   currentVolume = currentVolume * (1 - (elapsed - (clip.duration - fadeOut)) / fadeOut);
+               }
+               
+               el.muted = isMuted;
+               el.volume = isMuted ? 0 : Math.min(1, Math.max(0, currentVolume));
+               
                if (playing) {
                   // If video is not advancing naturally (e.g. browser suspended it), force it.
                   // We check if it's drifting by > 0.1s. If it is, we force it. 
@@ -175,7 +192,7 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
 
             // Draw to Canvas
             ctx.save();
-            const t = clip.transform || { x: 50, y: 50, width: 100, height: 100, rotation: 0, scaleX: 1, scaleY: 1, opacity: 100 };
+            const t = clip.transform ? { ...clip.transform } : { x: 50, y: 50, width: 100, height: 100, rotation: 0, scaleX: 1, scaleY: 1, opacity: 100 };
             const crop = clip.crop || { x: 0, y: 0, width: 1, height: 1 };
             const f = clip.filters || { brightness: 0, contrast: 1, saturation: 1 };
             
@@ -188,6 +205,11 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
                if (eff === "zoom-out") animScale = 1.5 - (0.5 * progress);
                if (eff === "pan-left") animPanX = (canvas.width * 0.1) * progress;
                if (eff === "pan-right") animPanX = -(canvas.width * 0.1) * progress;
+               
+               let effectOpacity = 1;
+               if (eff === "fade-in") effectOpacity = Math.min(1, Math.max(0, elapsed / 1.0));
+               if (eff === "fade-out") effectOpacity = Math.max(0, Math.min(1, 1 - (elapsed - (clip.duration - 1)) / 1.0));
+               t.opacity = t.opacity * effectOpacity;
             }
 
             const pxX = (t.x / 100) * canvas.width + animPanX;

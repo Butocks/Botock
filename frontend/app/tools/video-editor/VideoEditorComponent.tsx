@@ -111,16 +111,27 @@ export default function VideoEditorComponent() {
   };
 
   const handleAddToTimeline = (item: MediaBinItem) => {
-    const vTrack = timeline.project.tracks.find(t => t.type === "video");
-    if (!vTrack) return;
-    const lastClip = vTrack.clips[vTrack.clips.length - 1];
+    const isAudio = item.file.type.startsWith("audio/");
+    const isImage = item.file.type.startsWith("image/");
+    const trackType = isAudio ? "audio" : "video";
+    const clipType = isAudio ? "audio" : (isImage ? "image" : "video");
+    
+    const targetTrack = timeline.project.tracks.find(t => t.type === trackType);
+    if (!targetTrack) {
+        timeline.addTrack(trackType, trackType === "audio" ? "Audio Track" : "Video Track");
+        // Re-find the track after state update? No, state update is asynchronous.
+        // We'll just alert or wait for user to add track manually if none exists,
+        // but project starts with V1 and A1 so they should exist.
+        return;
+    }
+    const lastClip = targetTrack.clips[targetTrack.clips.length - 1];
     const startTime = lastClip ? lastClip.timelineStart + lastClip.duration : 0;
-    timeline.addClip(vTrack.id, item.id, "video", startTime, item.duration);
+    timeline.addClip(targetTrack.id, item.id, clipType, startTime, item.duration);
   };
 
   useEffect(() => {
     const handleAddText = (e: any) => {
-      let vTrack = timeline.project.tracks.find(t => t.type === "video");
+    const vTrack = timeline.project.tracks.find(t => t.type === "video");
       if (vTrack) {
          timeline.addClip(vTrack.id, "text_source", "text", currentTime, 3);
          // Find the newly added clip in the next render to select it, or just let the user click it.
@@ -277,10 +288,28 @@ export default function VideoEditorComponent() {
           <Link href="/tools/video-generator" className="text-gray-400 hover:text-white transition-colors">
             <Home className="w-5 h-5" />
           </Link>
-          <h1 className="font-semibold text-sm tracking-wide">My Project</h1>
+          <h1 className="font-semibold text-sm tracking-wide hidden md:block">My Project</h1>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
-           <button className="text-gray-400 hover:text-white"><Settings className="w-5 h-5"/></button>
+           <select 
+              value={`${timeline.project.width}x${timeline.project.height}`}
+              onChange={(e) => {
+                 const [w, h] = e.target.value.split("x").map(Number);
+                 timeline.beginLiveUpdate();
+                 // Note: we need a way to update the project properties. 
+                 // Since there isn't a direct updateProject function exposed by useEditorTimeline, we can use the state patch approach or we can just add a helper.
+                 // Actually, useEditorTimeline returns project and setProject? No.
+                 // Let's dispatch a custom event and add a listener, or just use a helper if we have one.
+                 // Wait, we can just add an updateProject method to useEditorTimeline.
+                 window.dispatchEvent(new CustomEvent('editor-update-project', { detail: { width: w, height: h } }));
+              }}
+              className="bg-[#2b2b36] border border-gray-700 text-white rounded px-2 py-1.5 text-xs focus:outline-none"
+           >
+              <option value="1280x720">16:9 (Landscape)</option>
+              <option value="720x1280">9:16 (Vertical)</option>
+              <option value="1080x1080">1:1 (Square)</option>
+              <option value="1080x1350">4:5 (Portrait)</option>
+           </select>
            <button onClick={doExport} disabled={isExporting} className="bg-[#ff6b4a] hover:bg-[#ff856b] text-white px-3 md:px-6 py-1.5 rounded text-xs md:text-sm font-bold flex items-center gap-1 md:gap-2 transition-colors disabled:opacity-50">
              <Download className="w-4 h-4"/> {isExporting ? "Exporting..." : "EXPORT"}
            </button>
@@ -352,7 +381,7 @@ export default function VideoEditorComponent() {
                         currentTime={currentTime} 
                         isPlaying={isPlaying} 
                       />
-                      {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image") && (
+                      {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image" || selectedClip.type === "text") && (
                          <TransformOverlay 
                             clip={selectedClip} 
                             project={timeline.project}
@@ -416,6 +445,9 @@ export default function VideoEditorComponent() {
                    <span className="w-px h-4 bg-gray-700 mx-2"></span>
                    <button onClick={() => timeline.splitAt(currentTime)} className="hover:text-white flex items-center gap-1"><Scissors className="w-3.5 h-3.5"/> Split</button>
                    <button onClick={() => timeline.selectedClipId && timeline.deleteClip(timeline.selectedClipId)} disabled={!timeline.selectedClipId} className="hover:text-red-400 disabled:opacity-30 flex items-center gap-1"><Trash2 className="w-3.5 h-3.5"/> Delete</button>
+                   <span className="w-px h-4 bg-gray-700 mx-2"></span>
+                   <button onClick={() => timeline.addTrack("video", `V${timeline.project.tracks.length + 1}`)} className="hover:text-white flex items-center gap-1"><Plus className="w-3.5 h-3.5"/> Video Track</button>
+                   <button onClick={() => timeline.addTrack("audio", `A${timeline.project.tracks.length + 1}`)} className="hover:text-white flex items-center gap-1"><Plus className="w-3.5 h-3.5"/> Audio Track</button>
                 </div>
                 <div className="flex items-center gap-4 text-xs">
                    <div className="flex items-center font-mono gap-1">

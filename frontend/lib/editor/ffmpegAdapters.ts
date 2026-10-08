@@ -69,7 +69,8 @@ export function buildDrawtextFilter(params: {
   text: string;
   start: number;
   end: number;
-  anchor: "top" | "center" | "bottom";
+  xPercent: number;
+  yPercent: number;
   fontSizePercent: number;
   color: string;
   backgroundOpacity: number;
@@ -77,13 +78,6 @@ export function buildDrawtextFilter(params: {
   fontFile: string;
 }): string {
   const fontSize = Math.max(10, Math.round((params.fontSizePercent / 100) * params.videoHeight));
-
-  const yExpr =
-    params.anchor === "top"
-      ? `h*0.08`
-      : params.anchor === "bottom"
-      ? `h-th-h*0.08`
-      : `(h-th)/2`;
 
   const boxColor = params.backgroundOpacity > 0 ? `black@${params.backgroundOpacity.toFixed(2)}` : "black@0.0";
 
@@ -95,8 +89,8 @@ export function buildDrawtextFilter(params: {
     `box=${params.backgroundOpacity > 0 ? 1 : 0}`,
     `boxcolor=${boxColor}`,
     `boxborderw=12`,
-    `x=(w-tw)/2`,
-    `y=${yExpr}`,
+    `x='(w-tw)*${(params.xPercent / 100).toFixed(4)}'`,
+    `y='(h-th)*${(params.yPercent / 100).toFixed(4)}'`,
     `enable='between(t,${params.start.toFixed(2)},${params.end.toFixed(2)})'`,
   ].join(":");
 }

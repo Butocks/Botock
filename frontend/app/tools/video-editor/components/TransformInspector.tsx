@@ -172,6 +172,30 @@ export default function TransformInspector({ clip, activeTab = "Edit", onUpdate,
               className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
             />
           </div>
+          <div>
+            <div className="flex justify-between text-xs text-slate-400 mb-1">
+              <span>Fade In</span>
+              <span>{clip.audio?.fadeInSeconds?.toFixed(1) || "0.0"}s</span>
+            </div>
+            <input
+              type="range" min="0" max="5" step="0.1" value={clip.audio?.fadeInSeconds ?? 0}
+              onChange={(e) => onUpdateLive({ audio: { ...clip.audio, fadeInSeconds: parseFloat(e.target.value) } as any })}
+              onPointerUp={onCommitLive}
+              className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between text-xs text-slate-400 mb-1">
+              <span>Fade Out</span>
+              <span>{clip.audio?.fadeOutSeconds?.toFixed(1) || "0.0"}s</span>
+            </div>
+            <input
+              type="range" min="0" max="5" step="0.1" value={clip.audio?.fadeOutSeconds ?? 0}
+              onChange={(e) => onUpdateLive({ audio: { ...clip.audio, fadeOutSeconds: parseFloat(e.target.value) } as any })}
+              onPointerUp={onCommitLive}
+              className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+            />
+          </div>
         </div>
       </>
     );
@@ -342,12 +366,25 @@ export default function TransformInspector({ clip, activeTab = "Edit", onUpdate,
 
   const renderTrim = () => (
     <>
-      <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4">Trim</h3>
+      <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest mb-4">Trim & Speed</h3>
       <p className="text-xs text-slate-400 mb-4">Drag the edges of the clip in the timeline below to trim.</p>
-      <div className="space-y-2">
+      <div className="space-y-4">
          <div className="flex justify-between text-xs">
            <span className="text-slate-400">Duration</span>
            <span className="text-white font-mono">{clip.duration.toFixed(2)}s</span>
+         </div>
+         <div className="space-y-2">
+           <div className="flex justify-between text-xs">
+             <span className="text-slate-400">Speed</span>
+             <span className="text-white font-mono">{clip.speed.toFixed(2)}x</span>
+           </div>
+           <input 
+             type="range" min="0.25" max="4" step="0.25" value={clip.speed}
+             onPointerDown={handleSliderStart}
+             onPointerUp={handleSliderEnd}
+             onChange={e => onUpdateLive({ speed: parseFloat(e.target.value) })}
+             className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-violet-500"
+           />
          </div>
       </div>
     </>
@@ -373,8 +410,10 @@ export default function TransformInspector({ clip, activeTab = "Edit", onUpdate,
                <option value="zoom-out">Zoom Out</option>
                <option value="pan-left">Pan Left</option>
                <option value="pan-right">Pan Right</option>
+               <option value="fade-in">Fade In</option>
+               <option value="fade-out">Fade Out</option>
             </select>
-            <p className="text-[10px] text-slate-500 mt-2">Applies a dynamic movement effect over the duration of the clip.</p>
+            <p className="text-[10px] text-slate-500 mt-2">Applies a dynamic movement or fade effect over the duration of the clip.</p>
           </div>
        </div>
      </>
