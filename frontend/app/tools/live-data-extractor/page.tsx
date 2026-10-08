@@ -126,21 +126,6 @@ export default function LiveDataExtractorPage() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
-              Bypassing Bot Detection with User-Agents
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              If you are using tools like Python (Requests) or Node.js (Playwright/Puppeteer) to scrape the URLs generated above, you will quickly be blocked. Platforms detect missing headers. Always ensure you pass a realistic <strong>User-Agent</strong> header to disguise your script as a real browser.
-            </p>
-            <div className="p-4 rounded-xl bg-slate-900 text-slate-300 font-mono text-xs overflow-x-auto shadow-inner border border-slate-800">
-              <pre>{`// Latest Google Chrome (Windows) User-Agent
-"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-
-// Official Googlebot (Crawler)
-"Mozilla/5.0 (compatible; Googlebot/2.1; +http://google.com)"`}</pre>
-            </div>
-          </div>
 
         </div>
       </section>
