@@ -307,11 +307,12 @@ export default function VideoEditorComponent() {
       <div className="flex flex-1 min-h-0 relative">
         
         {/* Left Toolbar / Panel (20% Width) */}
-        <div className="w-[20%] bg-[#141419] flex flex-col border-r border-[#2b2b36] overflow-hidden">
+        <div className="w-[80px] md:w-[20%] bg-[#141419] flex flex-col border-r border-[#2b2b36] overflow-hidden">
            <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col min-h-0">
-             <div className="p-4 border-b border-[#2b2b36] sticky top-0 bg-[#141419] z-10 flex justify-between items-center">
-                <h2 className="text-sm font-bold text-gray-200">Media Library</h2>
-                <label className="text-[#ff6b4a] text-xs cursor-pointer hover:underline">
+             <div className="p-2 md:p-4 border-b border-[#2b2b36] sticky top-0 bg-[#141419] z-10 flex flex-col md:flex-row justify-between items-center gap-2">
+                <h2 className="hidden md:block text-sm font-bold text-gray-200">Media Library</h2>
+                <Film className="md:hidden w-5 h-5 text-gray-400" />
+                <label className="text-[#ff6b4a] text-[10px] md:text-xs cursor-pointer hover:underline text-center">
                   + Add
                   <input type="file" multiple className="hidden" accept="video/*,image/*,audio/*" onChange={(e) => {
                      if (e.target.files) Array.from(e.target.files).forEach(handleMediaBinUpload);
@@ -340,7 +341,7 @@ export default function VideoEditorComponent() {
         </div>
 
         {/* Video Preview Canvas (80% Width) */}
-        <div className="w-[80%] bg-black relative flex flex-col min-w-0">
+        <div className="flex-1 bg-black relative flex flex-col min-w-0">
            {/* Result Overlay */}
            {resultUrl && !isExporting && (
              <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center gap-4 backdrop-blur-sm">

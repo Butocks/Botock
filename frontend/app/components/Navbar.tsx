@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useRef } from "react";
@@ -26,6 +27,9 @@ import ThemeToggle from "./ThemeToggle";
 import FirstLoginModal from "./FirstLoginModal";
 
 export default function Navbar() {
+  const pathname = usePathname();
+  if (pathname === "/tools/video-editor") return null;
+
   const [isOpen, setIsOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);

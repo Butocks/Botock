@@ -78,6 +78,14 @@ const nextConfig: NextConfig = {
             value: "camera=(), microphone=(), geolocation=()",
           },
           {
+            key: "Cross-Origin-Opener-Policy",
+            value: "same-origin",
+          },
+          {
+            key: "Cross-Origin-Embedder-Policy",
+            value: "require-corp",
+          },
+          {
             // Next.js needs inline bootstrap styles/scripts. All other
             // resource classes are restricted to known safe schemes.
             key: "Content-Security-Policy",
