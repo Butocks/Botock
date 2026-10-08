@@ -226,7 +226,7 @@ export default function GuideToVideoGeneration() {
           <p className="text-slate-600 dark:text-slate-400 mb-6">
             Now that you understand the mechanics of text-to-video, image-to-video, and how to string clips together, the only limit is your imagination.
           </p>
-          <Link href="/tools?cat=video" className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-95">
+          <Link href="/tools/video-generator" className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-95">
             Open Video Studio
           </Link>
         </div>

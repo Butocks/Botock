@@ -176,7 +176,7 @@ export default function GuideToPhotoGeneration() {
           <p className="text-slate-600 dark:text-slate-400 mb-6">
             Put these prompt techniques to the test and generate your next masterpiece.
           </p>
-          <Link href="/tools?cat=image" className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-500/25 active:scale-95">
+          <Link href="/tools/image-generator" className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-all shadow-lg shadow-emerald-500/25 active:scale-95">
             Open Photo Studio
           </Link>
         </div>

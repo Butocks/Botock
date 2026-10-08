@@ -1,58 +1,13 @@
-import type { NextConfig } from "next";
+with open('frontend/next.config.ts', 'r') as f:
+    content = f.read()
 
-const nextConfig: NextConfig = {
-  allowedDevOrigins: ["192.168.0.105", "192.168.*", "localhost", "127.0.0.1"],
-  compress: true,
-  images: {
-    formats: ["image/avif", "image/webp"],
-  },
-  turbopack: {
-    resolveAlias: {
-      canvas: "./lib/shims/canvas.ts",
-    },
-  },
-  async redirects() {
-    return [
-      {
-        source: "/terms-of-service",
-        destination: "/terms",
-        permanent: true,
-      },
-      {
-        source: "/terms-and-conditions",
-        destination: "/terms",
-        permanent: true,
-      },
-      {
-        source: "/tos",
-        destination: "/terms",
-        permanent: true,
-      },
-      {
-        source: "/refund-policy",
-        destination: "/refund",
-        permanent: true,
-      },
-      {
-        source: "/cancellation-policy",
-        destination: "/refund",
-        permanent: true,
-      },
-    ];
-  },
-  async rewrites() {
-    // Do not ship a fallback Azure IP in the public build. A missing deployment
-    // secret must fail closed instead of silently proxying user data elsewhere.
-    const backendUrl = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
-    if (!backendUrl) return [];
-    return [
-      {
-        source: "/api/proxy/:path*",
-        destination: `${backendUrl.replace(/\/$/, '')}/:path*`,
-      },
-    ];
-  },
-  async headers() {
+import re
+
+# Find the start and end of async headers()
+headers_pattern = r'async headers\(\) \{[\s\S]*?\},\n\s*\}\;'
+match = re.search(headers_pattern, content)
+
+new_headers = """async headers() {
     return [
       {
         source: "/(.*)",
@@ -102,6 +57,9 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-};
+};"""
 
-export default nextConfig;
+content = re.sub(headers_pattern, new_headers, content)
+
+with open('frontend/next.config.ts', 'w') as f:
+    f.write(content)
