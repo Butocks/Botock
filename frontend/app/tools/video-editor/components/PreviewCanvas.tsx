@@ -9,6 +9,18 @@ interface Props {
   minWidth?: number;
 }
 
+declare global {
+  interface Window {
+    chromaCanvas?: HTMLCanvasElement;
+    chromaCtx?: CanvasRenderingContext2D;
+  }
+}
+
+if (typeof window !== "undefined" && !window.chromaCanvas) {
+  window.chromaCanvas = document.createElement("canvas");
+  window.chromaCtx = window.chromaCanvas.getContext("2d", { willReadFrequently: true }) || undefined;
+}
+
 export default function PreviewCanvas({ project, mediaItems, currentTime, isPlaying }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const poolRef = useRef<HTMLDivElement>(null);
@@ -229,7 +241,48 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
                        const sw = intrinsicW * crop.width;
                        const sh = intrinsicH * crop.height;
                        
-                       ctx.drawImage(el as any, sx, sy, sw, sh, -finalW / 2, -finalH / 2, finalW, finalH);
+                       if (clip.chromaKey && clip.chromaKey.enabled && window.chromaCtx) {
+                           const cc = window.chromaCanvas!;
+                           const cCtx = window.chromaCtx!;
+                           // Limit resolution for performance if needed, but finalW/finalH is usually ok
+                           cc.width = finalW;
+                           cc.height = finalH;
+                           cCtx.clearRect(0, 0, finalW, finalH);
+                           cCtx.drawImage(el as any, sx, sy, sw, sh, 0, 0, finalW, finalH);
+                           
+                           // Apply Chroma Key
+                           if (finalW > 0 && finalH > 0) {
+                              const frame = cCtx.getImageData(0, 0, finalW, finalH);
+                              const data = frame.data;
+                              const hex = clip.chromaKey.color;
+                              const targetR = parseInt(hex.slice(1,3), 16) || 0;
+                              const targetG = parseInt(hex.slice(3,5), 16) || 255;
+                              const targetB = parseInt(hex.slice(5,7), 16) || 0;
+                              
+                              const sim = (clip.chromaKey.similarity || 0.3) * 255;
+                              const blnd = (clip.chromaKey.blend || 0.1) * 255;
+
+                              for (let i = 0; i < data.length; i += 4) {
+                                const r = data[i];
+                                const g = data[i + 1];
+                                const blue = data[i + 2];
+                                
+                                const diff = Math.sqrt((r - targetR)**2 + (g - targetG)**2 + (blue - targetB)**2);
+                                
+                                if (diff < sim) {
+                                  data[i + 3] = 0;
+                                } else if (blnd > 0 && diff < sim + blnd) {
+                                  const alpha = (diff - sim) / blnd;
+                                  data[i + 3] = data[i + 3] * alpha;
+                                }
+                              }
+                              cCtx.putImageData(frame, 0, 0);
+                           }
+                           
+                           ctx.drawImage(cc, -finalW / 2, -finalH / 2, finalW, finalH);
+                       } else {
+                           ctx.drawImage(el as any, sx, sy, sw, sh, -finalW / 2, -finalH / 2, finalW, finalH);
+                       }
                    }
                 } catch(e) {
                    // Ignore drawImage errors during rapid seek
