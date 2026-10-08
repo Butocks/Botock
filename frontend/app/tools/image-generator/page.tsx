@@ -6,7 +6,7 @@ import ImageGeneratorClient from "./ImageGeneratorClient";
 export const metadata: Metadata = {
   title: "Free AI Image Generator | Text to Image Online",
   description:
-    "Generate 8K photorealistic artwork, product visuals, and digital designs from text prompts with Botock AI. Powered by Nano Banana AI with 5 free images daily.",
+    "Generate 8K photorealistic artwork, product visuals, and digital designs from text prompts with Botock AI. Powered by Nano Banana AI with unlimited free images daily.",
   alternates: {
     canonical: "/tools/image-generator",
   },
@@ -85,7 +85,7 @@ export default function ImageGeneratorPage() {
             name: "How many free images can I generate each day?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Every registered user receives 5 free AI image generation credits per day, refreshed automatically every 24 hours.",
+              text: "every user receives 5 free AI image generation credits per day, refreshed automatically every 24 hours.",
             },
           },
         ],
@@ -173,7 +173,7 @@ export default function ImageGeneratorPage() {
                 How many free images can I generate daily?
               </summary>
               <p className="px-4 pb-4 text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Registered users get 5 free high-resolution image generations every 24 hours. The quota resets automatically, allowing you to create fresh content daily.
+                Users get unlimited free high-resolution image generations with no restrictions. The quota resets automatically, allowing you to create fresh content daily.
               </p>
             </details>
             <details className="group border border-slate-200 dark:border-white/[0.05] rounded-xl bg-white dark:bg-[#141419] [&_summary::-webkit-details-marker]:hidden">

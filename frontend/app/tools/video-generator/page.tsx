@@ -6,14 +6,14 @@ import VideoGeneratorClient from "./VideoGeneratorClient";
 export const metadata: Metadata = {
   title: "Botock AI Video Generator | Free Text & Photo to Video",
   description:
-    "Generate cinematic AI videos from text prompts and photos in seconds with Botock AI Video Generator. High-definition rendering, in-browser preview, and free daily credits.",
+    "Generate cinematic AI videos from text prompts and photos in seconds with Botock AI Video Generator. High-definition rendering, in-browser preview, and completely free and unlimited.",
   alternates: {
     canonical: "/tools/video-generator",
   },
   openGraph: {
     title: "Botock AI Video Generator | Free Text & Photo to Video Online",
     description:
-      "Generate cinematic AI videos from text prompts and photos in seconds with Botock AI. High-definition rendering and free daily credits.",
+      "Generate cinematic AI videos from text prompts and photos in seconds with Botock AI. High-definition rendering and completely free and unlimited.",
     url: "https://botock.app/tools/video-generator",
     siteName: "Botock AI",
     type: "website",
@@ -85,7 +85,7 @@ export default function VideoGeneratorPage() {
             name: "Is Botock's AI Video Generator free?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Yes, every registered user receives 3 free video clips daily, refreshed automatically every 24 hours.",
+              text: "Yes, every user receives unlimited free video clips daily, with absolutely no charges.",
             },
           },
         ],
@@ -113,7 +113,7 @@ export default function VideoGeneratorPage() {
           <div className="flex items-center gap-4 text-muted-foreground">
             <span className="flex items-center gap-1.5 text-emerald-400">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>3 Free Daily Clips</span>
+              <span>Unlimited Free Video Generation</span>
             </span>
             <Link
               href="/blog/guide-to-ai-video-generation"
@@ -203,7 +203,7 @@ export default function VideoGeneratorPage() {
                     Is Botock's AI Video Generator free?
                   </summary>
                   <p className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">
-                    Yes, every registered user receives 3 free video clips daily, refreshed automatically every 24 hours. No hidden fees or forced subscriptions to try our flagship cinematic engine.
+                    Yes, every user receives unlimited free video clips daily, with absolutely no charges. No hidden fees or forced subscriptions to try our flagship cinematic engine.
                   </p>
                 </details>
                 <details className="group border border-border/40 rounded-xl bg-card/50 [&_summary::-webkit-details-marker]:hidden">

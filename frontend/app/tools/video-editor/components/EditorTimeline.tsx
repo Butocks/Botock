@@ -80,7 +80,7 @@ const TrackLane = React.memo(function TrackLane({ track, totalDuration, selected
                 )}
 
                 <div className="absolute left-3 top-1 rounded bg-black/60 px-1.5 py-0.5 font-mono text-[9px] text-white truncate max-w-[80%] backdrop-blur-sm pointer-events-none">
-                  {clip.type === "video" ? "Video" : "Audio"} • {fmt(clip.duration)}
+                  {clip.type === "video" ? "Video" : clip.type === "text" ? "Text" : "Audio"} • {fmt(clip.duration)}
                 </div>
               </div>
             );

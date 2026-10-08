@@ -148,6 +148,7 @@ export function createClip(
     audio: type === "video" || type === "audio" ? { ...DEFAULT_AUDIO_SETTINGS } : undefined,
     transform: type === "video" || type === "image" || type === "text" ? { ...DEFAULT_TRANSFORM } : undefined,
     filters: type === "video" || type === "image" ? { ...DEFAULT_FILTERS } : undefined,
+    text: type === "text" ? "New Text" : undefined,
   };
 }
 

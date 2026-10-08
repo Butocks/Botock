@@ -58,6 +58,8 @@ export default function VideoEditorComponent() {
   }, []);
   const [zoom, setZoom] = useState(1);
   const [thumbnailsBySource, setThumbnailsBySource] = useState<Record<string, string[]>>({});
+  const [activeTab, setActiveTab] = useState("Edit");
+
 
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultSize, setResultSize] = useState<number | null>(null);
@@ -114,6 +116,22 @@ export default function VideoEditorComponent() {
     const startTime = lastClip ? lastClip.timelineStart + lastClip.duration : 0;
     timeline.addClip(vTrack.id, item.id, "video", startTime, item.duration);
   };
+
+  useEffect(() => {
+    const handleAddText = (e: any) => {
+      let vTrack = timeline.project.tracks.find(t => t.type === "video");
+      if (vTrack) {
+         timeline.addClip(vTrack.id, "text_source", "text", currentTime, 3);
+         // Find the newly added clip in the next render to select it, or just let the user click it.
+         // Wait, we need to update its text immediately.
+         setTimeout(() => {
+           // Hacky way to dispatch an update if needed, but default text is empty. We could set a default.
+         }, 100);
+      }
+    };
+    window.addEventListener('editor-add-text', handleAddText);
+    return () => window.removeEventListener('editor-add-text', handleAddText);
+  }, [timeline, currentTime]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -235,16 +253,16 @@ export default function VideoEditorComponent() {
   };
 
   const SIDEBAR_ITEMS = [
-    { icon: Home, label: "Home" },
-    { icon: Sparkles, label: "Animate" },
-    { icon: Scissors, label: "Edit" },
-    { icon: Scissors, label: "Trim" },
-    { icon: Crop, label: "Crop" },
-    { icon: Ghost, label: "Effects" },
-    { icon: Filter, label: "Filters" },
-    { icon: Layers, label: "Chroma Key" },
-    { icon: Volume2, label: "Volume" },
-    { icon: Type, label: "Text" },
+    { icon: Home, label: "Home", id: "Home" },
+    { icon: Sparkles, label: "Animate", id: "Animate" },
+    { icon: Scissors, label: "Edit", id: "Edit" },
+    { icon: Scissors, label: "Trim", id: "Trim" },
+    { icon: Crop, label: "Crop", id: "Crop" },
+    { icon: Ghost, label: "Effects", id: "Effects" },
+    { icon: Filter, label: "Filters", id: "Filters" },
+    { icon: Layers, label: "Chroma Key", id: "Chroma Key" },
+    { icon: Volume2, label: "Volume", id: "Volume" },
+    { icon: Type, label: "Text", id: "Text" },
   ];
 
   const selectedClip = timeline.project.tracks.flatMap(t => t.clips).find(c => c.id === timeline.selectedClipId);
@@ -271,8 +289,12 @@ export default function VideoEditorComponent() {
       <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Left Toolbar */}
         <div className="w-full md:w-20 bg-[#141419] flex flex-row md:flex-col items-center justify-around md:justify-start py-2 md:py-4 gap-2 md:gap-6 shrink-0 border-b md:border-r border-[#2b2b36] overflow-x-auto md:overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
-          {SIDEBAR_ITEMS.map((item, i) => (
-             <button key={i} className={`flex flex-col items-center gap-1.5 w-full ${i === 2 ? 'text-[#ff6b4a]' : 'text-gray-400 hover:text-gray-200'}`}>
+          {SIDEBAR_ITEMS.map((item) => (
+             <button 
+               key={item.id} 
+               onClick={() => setActiveTab(item.id)}
+               className={`flex flex-col items-center gap-1.5 w-full ${activeTab === item.id ? 'text-[#ff6b4a]' : 'text-gray-400 hover:text-gray-200'}`}
+             >
                 <item.icon className="w-5 h-5" />
                 <span className="text-[10px] text-center w-full">{item.label}</span>
              </button>
@@ -355,10 +377,11 @@ export default function VideoEditorComponent() {
 
 
              {/* Inspector Area */}
-             {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image") && (
+             {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image" || selectedClip.type === "text") && (
                  <div className="w-full md:w-[280px] flex bg-[#141419] border-t md:border-l md:border-t-0 border-[#2b2b36] flex-col min-h-0 h-[250px] md:h-auto overflow-y-auto shrink-0 shadow-xl">
                     <TransformInspector 
                         clip={selectedClip} 
+                        activeTab={activeTab}
                         onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
                         onBeginLive={() => timeline.beginLiveUpdate()}
                         onCommitLive={() => timeline.commitLiveUpdate()}

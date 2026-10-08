@@ -134,13 +134,13 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           const isActiveClip = currT >= clip.timelineStart && currT < clip.timelineStart + clip.duration;
           const el = mediaPool.current[clip.id];
           
-          if (!el) return;
+          if (!el && clip.type !== "text") return;
 
           if (isActiveClip) {
             const elapsed = currT - clip.timelineStart;
             const sourceTime = clip.sourceStart + (elapsed * clip.speed);
 
-            if (el instanceof HTMLVideoElement || el instanceof HTMLAudioElement) {
+            if (el && (el instanceof HTMLVideoElement || el instanceof HTMLAudioElement)) {
                el.playbackRate = clip.speed || 1;
                
                if (playing) {
@@ -164,36 +164,69 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
             // Draw to Canvas
             ctx.save();
             const t = clip.transform || { x: 50, y: 50, width: 100, height: 100, rotation: 0, scaleX: 1, scaleY: 1, opacity: 100 };
+            const crop = clip.crop || { x: 0, y: 0, width: 1, height: 1 };
+            const f = clip.filters || { brightness: 0, contrast: 1, saturation: 1 };
+            
             const pxX = (t.x / 100) * canvas.width;
             const pxY = (t.y / 100) * canvas.height;
             
             const intrinsicW = el instanceof HTMLVideoElement ? el.videoWidth : (el instanceof HTMLImageElement ? el.width : 0);
             const intrinsicH = el instanceof HTMLVideoElement ? el.videoHeight : (el instanceof HTMLImageElement ? el.height : 0);
             
-            if (intrinsicW > 0 && intrinsicH > 0) {
+            if (clip.type === "text" && clip.text) {
+                ctx.translate(pxX, pxY);
+                ctx.rotate((t.rotation * Math.PI) / 180);
+                ctx.globalAlpha = t.opacity / 100;
+                ctx.font = `bold ${clip.fontSizePercent || 50}px sans-serif`;
+                ctx.fillStyle = clip.color || "#ffffff";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                
+                // Add some basic shadow for visibility
+                ctx.shadowColor = "rgba(0,0,0,0.8)";
+                ctx.shadowBlur = 4;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+                
+                ctx.fillText(clip.text, 0, 0);
+                
+                ctx.shadowColor = "transparent"; // reset
+            } else if (intrinsicW > 0 && intrinsicH > 0) {
                 const scaleFit = Math.min(canvas.width / intrinsicW, canvas.height / intrinsicH);
                 const baseW = intrinsicW * scaleFit;
                 const baseH = intrinsicH * scaleFit;
                 
-                const finalW = baseW * (t.width / 100) * t.scaleX;
-                const finalH = baseH * (t.height / 100) * t.scaleY;
+                const finalW = baseW * (t.width / 100) * t.scaleX * crop.width;
+                const finalH = baseH * (t.height / 100) * t.scaleY * crop.height;
 
                 ctx.translate(pxX, pxY);
                 ctx.rotate((t.rotation * Math.PI) / 180);
                 ctx.globalAlpha = t.opacity / 100;
                 
+                // Apply Filters
+                const b = Math.round(100 + f.brightness * 100);
+                const c = Math.round(f.contrast * 100);
+                const s = Math.round(f.saturation * 100);
+                ctx.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+                
                 try {
                    if (!(el instanceof HTMLAudioElement)) {
-                       ctx.drawImage(el as any, -finalW / 2, -finalH / 2, finalW, finalH);
+                       const sx = intrinsicW * crop.x;
+                       const sy = intrinsicH * crop.y;
+                       const sw = intrinsicW * crop.width;
+                       const sh = intrinsicH * crop.height;
+                       
+                       ctx.drawImage(el as any, sx, sy, sw, sh, -finalW / 2, -finalH / 2, finalW, finalH);
                    }
                 } catch(e) {
                    // Ignore drawImage errors during rapid seek
                 }
+                ctx.filter = "none"; // reset
             }
             ctx.restore();
           } else {
             // Clip is not active (out of bounds)
-            if ((el instanceof HTMLVideoElement || el instanceof HTMLAudioElement) && !el.paused) {
+            if (el && (el instanceof HTMLVideoElement || el instanceof HTMLAudioElement) && !el.paused) {
                el.pause();
             }
           }
