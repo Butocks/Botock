@@ -1,0 +1,236 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { getBackendUrl } from "../../utils/runtime-urls";
+import { Mail, ArrowRight, RefreshCw, AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
+
+export default function ForgotPasswordPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+
+  const [unverifiedAlert, setUnverifiedAlert] = useState<string | null>(null);
+  const [accountNotFound, setAccountNotFound] = useState(false);
+  const [googleAccountNotice, setGoogleAccountNotice] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+    setUnverifiedAlert(null);
+    setAccountNotFound(false);
+    setGoogleAccountNotice(null);
+    setLoading(true);
+
+    try {
+      const backendUrl = await getBackendUrl();
+      const res = await fetch(`${backendUrl}/api/auth/forgot-password-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detailStr = String(data.detail || "");
+        if (res.status === 404 || detailStr.toLowerCase().includes("not found")) {
+          setAccountNotFound(true);
+          return;
+        }
+        if (detailStr.toLowerCase().includes("google") || detailStr.toLowerCase().includes("application password")) {
+          setGoogleAccountNotice(
+            data.detail || "This account is registered using Google Sign-In and does not have an application password. Please sign in using Google."
+          );
+          return;
+        }
+        if (res.status === 403 || detailStr.toLowerCase().includes("unverified")) {
+          setUnverifiedAlert("Your account is unverified. Please email us at info@botock.app for assistance with your account recovery.");
+          return;
+        }
+        throw new Error(data.detail || "Failed to dispatch password recovery code.");
+      }
+
+      setMessage({
+        type: "success",
+        text: `Password recovery code dispatched to ${email}. Redirecting to code verification...`,
+      });
+
+      setTimeout(() => {
+        router.push(`/reset-password?email=${encodeURIComponent(email.trim())}`);
+      }, 1200);
+    } catch (err: any) {
+      setMessage({ type: "error", text: err.message || "Failed to initiate recovery." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-[calc(100vh-10rem)] flex items-center justify-center px-4 py-12 transition-colors">
+      <div className="w-full max-w-md bg-white dark:bg-[#121215] p-8 rounded-3xl border border-slate-200 dark:border-white/[0.08] shadow-xl">
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center gap-3 mb-4 group">
+            <div className="relative w-10 h-10 flex items-center justify-center">
+              <Image
+                src="/logo.png"
+                alt="Botock Logo"
+                width={40}
+                height={40}
+                style={{ width: "auto", height: "auto" }}
+                className="object-contain group-hover:scale-105 transition-transform"
+                priority
+              />
+            </div>
+            <span className="font-black text-2xl tracking-tight text-slate-900 dark:text-white">
+              Botock
+            </span>
+          </Link>
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            Reset Your Password
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Enter your registered email and we'll dispatch a 6-digit recovery OTP code.
+          </p>
+        </div>
+
+        {/* Account Not Found Alert */}
+        {accountNotFound && (
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-900 dark:text-rose-200 mb-6 space-y-3">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-rose-600 dark:text-rose-400">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+              <span>Account Not Found</span>
+            </div>
+            <p className="text-xs leading-relaxed font-medium">
+              No Botock account was found for <span className="font-bold">{email}</span>. Please verify your email address or create a free account.
+            </p>
+            <div className="pt-1 flex items-center gap-3">
+              <Link
+                href="/signup"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition-colors"
+              >
+                <span>Create New Account</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Google OAuth Only Notice */}
+        {googleAccountNotice && (
+          <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-900 dark:text-indigo-200 mb-6 space-y-3">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-indigo-500" />
+              <span>Google Account Detected</span>
+            </div>
+            <p className="text-xs leading-relaxed font-medium">
+              {googleAccountNotice}
+            </p>
+            <div className="pt-1">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-colors"
+              >
+                <span>Go to Google Sign In</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {unverifiedAlert && (
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 mb-6 space-y-3">
+            <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+              <span>Recovery Assistance Required</span>
+            </div>
+            <p className="text-xs leading-relaxed font-medium">
+              Your account is unverified. Please email us at{" "}
+              <a
+                href="mailto:info@botock.app?subject=Account%20Recovery%20Assistance"
+                className="font-bold underline text-amber-600 dark:text-amber-400 hover:opacity-80"
+              >
+                info@botock.app
+              </a>{" "}
+              for assistance with your account recovery.
+            </p>
+            <div className="pt-1">
+              <a
+                href="mailto:info@botock.app?subject=Account%20Recovery%20Assistance"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-md transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Email Support (info@botock.app)</span>
+              </a>
+            </div>
+          </div>
+        )}
+
+        {message && (
+          <div
+            className={`p-3.5 rounded-xl text-xs mb-4 flex items-start gap-2 ${
+              message.type === "error"
+                ? "bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400"
+                : "bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+            }`}
+          >
+            {message.type === "error" ? (
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            )}
+            <span className="leading-relaxed">{message.text}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              Registered Email Address
+            </label>
+            <div className="relative">
+              <input
+                type="email"
+                required
+                placeholder="name@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full text-xs py-3 px-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-300 dark:border-white/[0.1] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-xs transition-all shadow-lg shadow-violet-600/30 active:scale-95 cursor-pointer flex items-center justify-center gap-2 mt-2"
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Dispatching Code...</span>
+              </>
+            ) : (
+              <>
+                <span>Send 6-Digit Recovery OTP</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center text-xs text-slate-500 dark:text-slate-400">
+          Remember your password?{" "}
+          <Link
+            href="/login"
+            className="font-bold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
+          >
+            Return to Sign In
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}

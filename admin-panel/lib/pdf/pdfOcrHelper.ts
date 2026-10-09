@@ -1,0 +1,286 @@
+import * as pdfjsLib from "pdfjs-dist";
+import { createWorker, type Worker as TesseractWorker } from "tesseract.js";
+
+// Ensure PDF.js worker is configured on client side
+if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+
+export interface OCRPageResult {
+  pageNumber: number;
+  text: string;
+  confidence: number;
+}
+
+export interface OCRProgress {
+  currentPage: number;
+  totalPages: number;
+  status: string;
+  progress: number; // 0 to 100
+}
+
+/**
+ * Renders a specific PDF page to an off-screen HTML5 Canvas at the requested scale (default 2.0x / 144 DPI).
+ * Fills white background to ensure transparent pages render with high contrast for OCR.
+ */
+export async function renderPdfPageToCanvas(
+  pdfDoc: pdfjsLib.PDFDocumentProxy,
+  pageNum: number,
+  scale: number = 2.0
+): Promise<HTMLCanvasElement> {
+  if (typeof window === "undefined") {
+    throw new Error("renderPdfPageToCanvas can only be executed in a browser environment.");
+  }
+
+  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+
+  const page = await pdfDoc.getPage(pageNum);
+  const viewport = page.getViewport({ scale });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
+
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    throw new Error("Failed to obtain 2D rendering context for PDF page canvas.");
+  }
+
+  // Draw solid white background before rendering PDF vectors and text
+  context.fillStyle = "#FFFFFF";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  await page.render({
+    canvasContext: context,
+    viewport,
+  }).promise;
+
+  return canvas;
+}
+
+/**
+ * Extracts OCR text and confidence score from a rendered canvas using Tesseract.js.
+ * Can reuse an existing Tesseract worker or instantiate a one-off worker.
+ */
+export async function extractTextFromPage(
+  canvas: HTMLCanvasElement,
+  language: string = "eng",
+  progressCallback?: (progress: number, status: string) => void,
+  existingWorker?: TesseractWorker
+): Promise<{ text: string; confidence: number }> {
+  let worker = existingWorker;
+  const isTemporaryWorker = !worker;
+
+  if (!worker) {
+    worker = await createWorker(language, 1, {
+      logger: (m) => {
+        if (progressCallback && m.progress !== undefined) {
+          progressCallback(Math.round(m.progress * 100), m.status || "processing");
+        }
+      },
+    });
+  }
+
+  try {
+    const result = await worker.recognize(canvas);
+    return {
+      text: (result.data.text || "").trim(),
+      confidence: Math.round(result.data.confidence || 0),
+    };
+  } finally {
+    if (isTemporaryWorker && worker) {
+      await worker.terminate();
+    }
+  }
+}
+
+/**
+ * High-level orchestration function for processing an entire PDF file with OCR.
+ * Sequentially renders each page to canvas, runs OCR with a shared Tesseract worker,
+ * reclaims canvas memory immediately after each page, and aggregates results.
+ */
+export async function processPdfOcr(
+  fileOrBuffer: File | Blob | ArrayBuffer | Uint8Array,
+  language: string = "eng",
+  onProgress?: (progress: OCRProgress) => void,
+  cancelSignal?: { cancelled: boolean },
+  targetPages?: number[]
+): Promise<{ pages: OCRPageResult[]; fullText: string }> {
+  if (typeof window === "undefined") {
+    throw new Error("processPdfOcr can only be executed in a browser environment.");
+  }
+
+  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+
+  let arrayBuffer: ArrayBuffer;
+  if (fileOrBuffer instanceof ArrayBuffer) {
+    arrayBuffer = fileOrBuffer;
+  } else if (fileOrBuffer instanceof Uint8Array) {
+    arrayBuffer = fileOrBuffer.buffer.slice(
+      fileOrBuffer.byteOffset,
+      fileOrBuffer.byteOffset + fileOrBuffer.byteLength
+    ) as ArrayBuffer;
+  } else {
+    arrayBuffer = await fileOrBuffer.arrayBuffer();
+  }
+
+  onProgress?.({
+    currentPage: 0,
+    totalPages: 0,
+    status: "Loading PDF document...",
+    progress: 0,
+  });
+
+  let pdfDoc: pdfjsLib.PDFDocumentProxy;
+  try {
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(arrayBuffer),
+      cMapUrl: "https://unpkg.com/pdfjs-dist@3.11.174/cmaps/",
+      cMapPacked: true,
+    });
+    pdfDoc = await loadingTask.promise;
+  } catch (loadErr: unknown) {
+    if (
+      loadErr &&
+      typeof loadErr === "object" &&
+      "name" in loadErr &&
+      loadErr.name === "PasswordException"
+    ) {
+      throw new Error(
+        "This PDF is password-protected. Please unlock or remove the password before extracting text."
+      );
+    }
+    throw loadErr;
+  }
+
+  const totalPages = pdfDoc.numPages;
+  if (totalPages === 0) {
+    return { pages: [], fullText: "" };
+  }
+
+  // BOTOCK-102: Agar targetPages pass kiye gaye hon toh sirf woh process karein, warna saare pages
+  const pagesToProcess =
+    targetPages && targetPages.length > 0
+      ? targetPages.filter((p) => p >= 1 && p <= totalPages)
+      : Array.from({ length: totalPages }, (_, i) => i + 1);
+
+  if (pagesToProcess.length === 0) {
+    return { pages: [], fullText: "" };
+  }
+
+  onProgress?.({
+    currentPage: 0,
+    totalPages,
+    status: `Initializing OCR engine for language '${language}'...`,
+    progress: 5,
+  });
+
+  // Single worker instance reused for all pages
+  const worker = await createWorker(language, 1, {
+    logger: () => {},
+  });
+
+  const pages: OCRPageResult[] = [];
+  const totalToProcess = pagesToProcess.length;
+
+  try {
+    for (let i = 0; i < totalToProcess; i++) {
+      if (cancelSignal?.cancelled) {
+        break;
+      }
+
+      const p = pagesToProcess[i];
+      const pageBaseProgress = Math.round((i / totalToProcess) * 90) + 5;
+
+      // ── Fast Path: Check if page already has digital text layer ──
+      const pdfPage = await pdfDoc.getPage(p);
+      const textContent = await pdfPage.getTextContent();
+      const directText = textContent.items
+        .map((item: any) => (item && typeof item.str === "string" ? item.str : ""))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      // If page already has rich digital text (> 30 chars), extract instantly without heavy OCR
+      if (directText.length > 30) {
+        pages.push({
+          pageNumber: p,
+          text: directText,
+          confidence: 100,
+        });
+        onProgress?.({
+          currentPage: p,
+          totalPages,
+          status: `Extracted digital text from page ${p} of ${totalPages}...`,
+          progress: pageBaseProgress + Math.round((0.9 / totalToProcess) * 90),
+        });
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        continue;
+      }
+
+      // ── Scanned Page Fallback: Render canvas and run Tesseract OCR ──
+      onProgress?.({
+        currentPage: p,
+        totalPages,
+        status: `Rendering page ${p} of ${totalPages}...`,
+        progress: pageBaseProgress,
+      });
+
+      // Optimized scale: 1.5 provides high-fidelity OCR with ~44% fewer pixels than 2.0 (1.8x faster)
+      const canvas = await renderPdfPageToCanvas(pdfDoc, p, 1.5);
+
+      if (cancelSignal?.cancelled) {
+        canvas.width = 0;
+        canvas.height = 0;
+        break;
+      }
+
+      onProgress?.({
+        currentPage: p,
+        totalPages,
+        status: `Extracting text from page ${p} of ${totalPages}...`,
+        progress: Math.min(95, pageBaseProgress + Math.round((0.5 / totalToProcess) * 90)),
+      });
+
+      const pageResult = await extractTextFromPage(canvas, language, undefined, worker);
+
+      pages.push({
+        pageNumber: p,
+        text: pageResult.text,
+        confidence: pageResult.confidence,
+      });
+
+      // Deallocate canvas backing store immediately
+      canvas.width = 0;
+      canvas.height = 0;
+
+      // Yield event loop
+      await new Promise((resolve) => setTimeout(resolve, 15));
+    }
+
+    onProgress?.({
+      currentPage: totalPages,
+      totalPages,
+      status: "OCR text extraction completed.",
+      progress: 100,
+    });
+
+    const fullText = pages.map((p) => p.text).join("\n\n");
+    return { pages, fullText };
+  } finally {
+    await worker.terminate();
+  }
+}
+
+export default {
+  renderPdfPageToCanvas,
+  extractTextFromPage,
+  processPdfOcr,
+};
