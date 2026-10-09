@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
 import { getBackendUrl } from "../../utils/runtime-urls";
-import AdminConsole from "./AdminConsole";
 import {
   User as UserIcon,
   Mail,
@@ -619,79 +618,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Real Full Admin Console - Step 1: Passkey Verification */}
-          {isAdmin && !adminUnlocked && adminUnlockStep === "passkey" && (
-            <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/30 shadow-sm flex flex-col items-center justify-center text-center space-y-4">
-              <ShieldCheck className="w-12 h-12 text-amber-500 opacity-60" />
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Admin Console Authentication</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md">
-                  Please enter your Master Admin Passkey. A 6-digit confidential OTP will be dispatched to your admin email address to verify your identity.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 w-full max-w-sm mt-4">
-                <input
-                  type="password"
-                  value={adminUnlockPasskey}
-                  onChange={(e) => setAdminUnlockPasskey(e.target.value)}
-                  placeholder="Enter Master Passkey..."
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-amber-500 text-center"
-                />
-                <button
-                  type="button"
-                  disabled={adminSubmitting}
-                  onClick={handleAdminRequestOtp}
-                  className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {adminSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
-                  <span>Request OTP</span>
-                </button>
-              </div>
-            </div>
-          )}
 
-          {/* Real Full Admin Console - Step 2: 6-Digit OTP Verification */}
-          {isAdmin && !adminUnlocked && adminUnlockStep === "otp" && (
-            <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/30 shadow-sm flex flex-col items-center justify-center text-center space-y-4">
-              <KeyRound className="w-12 h-12 text-amber-500 opacity-80" />
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Enter 6-Digit Admin Verification OTP</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-md">
-                  Security code has been dispatched to your admin email. Please enter the 6-digit OTP code below to unlock the command center.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 w-full max-w-sm mt-4">
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={adminOtpCode}
-                  onChange={(e) => setAdminOtpCode(e.target.value)}
-                  placeholder="6-Digit OTP..."
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-sm font-mono tracking-widest text-slate-900 dark:text-white outline-none focus:border-amber-500 text-center"
-                />
-                <button
-                  type="button"
-                  disabled={adminSubmitting}
-                  onClick={handleAdminVerifyOtp}
-                  className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {adminSubmitting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
-                  <span>Verify & Unlock</span>
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAdminUnlockStep("passkey")}
-                className="text-[11px] text-slate-400 hover:text-slate-200 underline mt-2 cursor-pointer"
-              >
-                Back to Passkey Entry
-              </button>
-            </div>
-          )}
-
-          {isAdmin && adminUnlocked && (
-            <AdminConsole token={adminVerifiedToken} email={email} />
-          )}
 
           {/* Action buttons */}
           <div className="flex items-center justify-end gap-3 pt-2">
