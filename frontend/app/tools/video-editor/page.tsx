@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Scissors, Film, Sparkles, Music, CheckCircle2 } from "lucide-react";
+import { Suspense } from "react";
 import VideoEditorComponent from "./VideoEditorComponent";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
@@ -105,7 +106,9 @@ export default function VideoEditorPage() {
       {/* Editor Container - Takes full viewport height minus scroll */}
       <div className="w-full h-[100dvh] shrink-0 border-b border-[#2b2b36]">
         <ToolErrorBoundary toolName="Video Editor">
-          <VideoEditorComponent />
+          <Suspense fallback={<div className="flex h-full items-center justify-center text-slate-500">Loading Video Editor...</div>}>
+            <VideoEditorComponent />
+          </Suspense>
         </ToolErrorBoundary>
       </div>
     

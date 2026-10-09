@@ -136,15 +136,15 @@ export default function VideoEditorComponent() {
   };
 
   useEffect(() => {
-    const handleAddText = (e: any) => {
-    const vTrack = timeline.project.tracks.find(t => t.type === "video");
+    const handleAddText = (e: Event) => {
+      const customEvent = e as CustomEvent<{ text?: string }>;
+      const vTrack = timeline.project.tracks.find(t => t.type === "video");
       if (vTrack) {
-         timeline.addClip(vTrack.id, "text_source", "text", currentTime, 3);
-         // Find the newly added clip in the next render to select it, or just let the user click it.
-         // Wait, we need to update its text immediately.
-         setTimeout(() => {
-           // Hacky way to dispatch an update if needed, but default text is empty. We could set a default.
-         }, 100);
+         const newClipId = timeline.addClip(vTrack.id, "text_source", "text", currentTime, 3);
+         if (customEvent.detail?.text) {
+           timeline.updateClipLive(newClipId, { text: customEvent.detail.text });
+           timeline.commitLiveUpdate();
+         }
       }
     };
     window.addEventListener('editor-add-text', handleAddText);
