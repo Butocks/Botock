@@ -97,8 +97,8 @@ export default function TransformInspector({ clip, onUpdateLive, onBeginLive, on
              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Volume</h4>
              <span className="text-xs text-gray-300">{vol}%</span>
           </div>
-          <input type="range" min="0" max="500" value={vol} onPointerDown={handleSliderStart} onPointerUp={handleSliderEnd} onChange={e => onUpdateLive({ audio: { ...clip.audio, volumePercent: parseFloat(e.target.value) } })} className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]" />
-          <button onClick={() => onUpdate({ audio: { ...clip.audio, muted: !isMuted } })} className={`mt-4 w-full py-1.5 rounded text-xs font-bold transition-colors ${isMuted ? 'bg-red-500/20 text-red-500' : 'bg-[#2b2b36] text-white hover:bg-gray-700'}`}>
+          <input type="range" min="0" max="500" value={vol} onPointerDown={handleSliderStart} onPointerUp={handleSliderEnd} onChange={e => onUpdateLive({ audio: { ...(clip.audio || { volumePercent: 100, muted: false, fadeInSeconds: 0, fadeOutSeconds: 0 }), volumePercent: parseFloat(e.target.value) } })} className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]" />
+          <button onClick={() => onUpdate({ audio: { ...(clip.audio || { volumePercent: 100, muted: false, fadeInSeconds: 0, fadeOutSeconds: 0 }), muted: !isMuted } })} className={`mt-4 w-full py-1.5 rounded text-xs font-bold transition-colors ${isMuted ? 'bg-red-500/20 text-red-500' : 'bg-[#2b2b36] text-white hover:bg-gray-700'}`}>
              {isMuted ? "Unmute Audio" : "Mute Audio"}
           </button>
         </div>
@@ -107,21 +107,21 @@ export default function TransformInspector({ clip, onUpdateLive, onBeginLive, on
              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Fade In</h4>
              <span className="text-xs text-gray-300">{fadeI.toFixed(1)}s</span>
           </div>
-          <input type="range" min="0" max="5" step="0.1" value={fadeI} onPointerDown={handleSliderStart} onPointerUp={handleSliderEnd} onChange={e => onUpdateLive({ audio: { ...clip.audio, fadeInSeconds: parseFloat(e.target.value) } })} className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]" />
+          <input type="range" min="0" max="5" step="0.1" value={fadeI} onPointerDown={handleSliderStart} onPointerUp={handleSliderEnd} onChange={e => onUpdateLive({ audio: { ...(clip.audio || { volumePercent: 100, muted: false, fadeInSeconds: 0, fadeOutSeconds: 0 }), fadeInSeconds: parseFloat(e.target.value) } })} className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]" />
         </div>
         <div>
           <div className="flex justify-between items-center mb-2">
              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Fade Out</h4>
              <span className="text-xs text-gray-300">{fadeO.toFixed(1)}s</span>
           </div>
-          <input type="range" min="0" max="5" step="0.1" value={fadeO} onPointerDown={handleSliderStart} onPointerUp={handleSliderEnd} onChange={e => onUpdateLive({ audio: { ...clip.audio, fadeOutSeconds: parseFloat(e.target.value) } })} className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]" />
+          <input type="range" min="0" max="5" step="0.1" value={fadeO} onPointerDown={handleSliderStart} onPointerUp={handleSliderEnd} onChange={e => onUpdateLive({ audio: { ...(clip.audio || { volumePercent: 100, muted: false, fadeInSeconds: 0, fadeOutSeconds: 0 }), fadeOutSeconds: parseFloat(e.target.value) } })} className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]" />
         </div>
       </div>
     );
   };
 
   const renderEffects = () => {
-    const eff = clip.effects?.[0] || { type: "none", intensity: 1, duration: 1 };
+    const eff = clip.effects?.[0] || { id: "eff-" + Date.now(), type: "none", intensity: 1, duration: 1 };
     
     return (
       <div className="space-y-6 p-4">
@@ -153,7 +153,7 @@ export default function TransformInspector({ clip, onUpdateLive, onBeginLive, on
         <div>
           <h4 className="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider mt-6">Chroma Key (Green Screen)</h4>
           <label className="flex items-center gap-2 mb-3 text-xs text-white">
-            <input type="checkbox" checked={clip.chromaKey?.enabled || false} onChange={e => onUpdate({ chromaKey: { ...(clip.chromaKey || { color: "#00ff00", similarity: 0.3, blend: 0.1 }), enabled: e.target.checked } })} />
+            <input type="checkbox" checked={clip.chromaKey?.enabled || false} onChange={e => onUpdate({ chromaKey: { ...(clip.chromaKey || { color: "#00ff00", similarity: 0.3, blend: 0.1, spillReduction: 0 }), enabled: e.target.checked } })} />
             Enable Chroma Key
           </label>
           {clip.chromaKey?.enabled && (

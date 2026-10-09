@@ -376,7 +376,7 @@ export default function VideoEditorComponent() {
                 {selectedClip && (selectedClip.type === "video" || selectedClip.type === "image" || selectedClip.type === "text") ? (
                    <TransformInspector 
                        clip={selectedClip} 
-                       activeTab={activeTab}
+                       
                        onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
                        onBeginLive={() => timeline.beginLiveUpdate()}
                        onCommitLive={() => timeline.commitLiveUpdate()}
@@ -392,7 +392,7 @@ export default function VideoEditorComponent() {
                          <Scissors className="w-6 h-6 text-slate-600" />
                       </div>
                       <p className="text-sm font-medium text-slate-400">No clip selected</p>
-                      <p className="text-xs mt-2">Click on a video clip in the timeline below to use {activeTab} tools.</p>
+                      <p className="text-xs mt-2">Click on a video clip in the timeline below to use {""} tools.</p>
                    </div>
                 )}
              </div>
