@@ -65,32 +65,6 @@ export default function VideoEditorComponent() {
 
   
 
-      if (t) {
-      if (t.toLowerCase() === "aspect") return "Crop";
-      const match = SIDEBAR_ITEMS_IDS.find(id => id.toLowerCase() === t.toLowerCase());
-      if (match) return match;
-    }
-    return "Edit";
-  });
-
-  useEffect(() => {
-    const t = searchParams.get("tool");
-    if (t) {
-      if (t.toLowerCase() === "aspect" && activeTab !== "Crop") {
-        setActiveTab("Crop");
-      } else {
-        const match = SIDEBAR_ITEMS_IDS.find(id => id.toLowerCase() === t.toLowerCase());
-        if (match && match !== activeTab) {
-          setActiveTab(match);
-        }
-      }
-    }
-  }, [searchParams]);
-
-      const params = new URLSearchParams(searchParams.toString());
-    params.set("tool", tabId.toLowerCase());
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  };
 
 
   const [resultUrl, setResultUrl] = useState<string | null>(null);
