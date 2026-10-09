@@ -735,7 +735,8 @@ class FlowService:
                 try:
                     src = await img_el.get_attribute("src") or ""
                     if src: existing_imgs.append(src)
-                except: pass
+                except Exception as ex:
+                    logger.debug(f"[{generation_id}] Failed to get image source: {ex}")
 
             # Enter Prompt
             full_prompt = prompt.strip()
