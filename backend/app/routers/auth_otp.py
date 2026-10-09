@@ -1,3 +1,4 @@
+import asyncio
 import hmac
 import os
 import json
@@ -18,6 +19,7 @@ from app.middleware.auth import get_current_user
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Auth & Admin Operations"])
+otp_lock = asyncio.Lock()
 
 # Paths
 LOCKOUT_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "admin_lockout.json")
@@ -468,36 +470,36 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
     if is_locked:
         raise HTTPException(status_code=423, detail="Account restricted for 24 hours.")
 
-    otps = _read_json(OTP_STORE_FILE, {})
-    stored = otps.get(email_clean)
-    if not stored:
-        raise HTTPException(status_code=400, detail="No active OTP found. Please request a new code.")
+    async with otp_lock:
+        otps = _read_json(OTP_STORE_FILE, {})
+        stored = otps.get(email_clean)
+        if not stored:
+            raise HTTPException(status_code=400, detail="No active OTP found. Please request a new code.")
 
-    # Check expiration (10 min)
-    if time.time() > stored["expires_at"]:
-        if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
-        record_failed_attempt(client_ip)
-        raise HTTPException(status_code=400, detail="OTP expired. The 10-minute window has lapsed.")
-
-    # Check OTP match
-    input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
-    if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
-        stored["attempts_left"] -= 1
-        if stored["attempts_left"] <= 0:
+        # Check expiration (10 min)
+        if time.time() > stored["expires_at"]:
             if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
-            _, locked_now, secs = record_failed_attempt(client_ip)
-            if locked_now:
-                raise HTTPException(status_code=423, detail="Exceeded 3 failed cycles. Account restricted for 24 hours.")
-            raise HTTPException(status_code=400, detail="Code expired after 3 failed attempts. Please request a new OTP.")
-        
-        otps[email_clean] = stored
-        
-        _write_json(OTP_STORE_FILE, otps)
-        
-        raise HTTPException(status_code=400, detail=f"Invalid verification code. {stored['attempts_left']} attempt(s) remaining.")
+            record_failed_attempt(client_ip)
+            raise HTTPException(status_code=400, detail="OTP expired. The 10-minute window has lapsed.")
 
-    # Success: Issue admin session token (valid 24 hours)
-    if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
+        # Check OTP match
+        input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
+        if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
+            stored["attempts_left"] -= 1
+            if stored["attempts_left"] <= 0:
+                if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
+                _, locked_now, secs = record_failed_attempt(client_ip)
+                if locked_now:
+                    raise HTTPException(status_code=423, detail="Exceeded 3 failed cycles. Account restricted for 24 hours.")
+                raise HTTPException(status_code=400, detail="Code expired after 3 failed attempts. Please request a new OTP.")
+            
+            otps[email_clean] = stored
+            _write_json(OTP_STORE_FILE, otps)
+            
+            raise HTTPException(status_code=400, detail=f"Invalid verification code. {stored['attempts_left']} attempt(s) remaining.")
+
+        # Success: Issue admin session token (valid 24 hours)
+        if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
     admin_token = "adm_" + secrets.token_hex(32)
     hashed_token = hashlib.sha256(admin_token.encode()).hexdigest()
     tokens = _read_json(SESSION_TOKENS_FILE, {})
