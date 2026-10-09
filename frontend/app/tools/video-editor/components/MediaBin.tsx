@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef } from "react";
-import { Film, Plus, Upload } from "lucide-react";
-import React from "react";
+import { Film, Plus, Upload, Mic, Square } from "lucide-react";
+import React, { useState } from "react";
 import { MediaBinItem } from "@/lib/editor/types";
 
 function fmt(t: number) {
@@ -20,6 +20,34 @@ interface MediaBinProps {
 
 export default React.memo(function MediaBin({ items, onUpload, onAddToTimeline }: MediaBinProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: "audio/webm" });
+        const file = new File([blob], `Voiceover_${new Date().toLocaleTimeString().replace(/:/g, "-")}.webm`, { type: "audio/webm" });
+        onUpload(file);
+        stream.getTracks().forEach(t => t.stop());
+        setIsRecording(false);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Mic access denied", err);
+      alert("Microphone access denied. Please allow microphone permissions.");
+    }
+  };
 
   return (
     <div className="glass-card rounded-2xl border border-border/50 p-4">
@@ -27,16 +55,24 @@ export default React.memo(function MediaBin({ items, onUpload, onAddToTimeline }
         <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
           <Film className="w-3.5 h-3.5 text-primary" /> Media Bin
         </h4>
-        <button
-          onClick={() => inputRef.current?.click()}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/20 transition-colors"
-        >
-          <Upload className="w-3 h-3" /> Import Video
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleRecording}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${isRecording ? "bg-red-500/20 text-red-500 hover:bg-red-500/30 animate-pulse" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+          >
+            {isRecording ? <><Square className="w-3 h-3 fill-current" /> Stop</> : <><Mic className="w-3 h-3" /> Record Voice</>}
+          </button>
+          <button
+            onClick={() => inputRef.current?.click()}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-bold hover:bg-primary/20 transition-colors"
+          >
+            <Upload className="w-3 h-3" /> Import Media
+          </button>
+        </div>
         <input
           ref={inputRef}
           type="file"
-          accept="video/mp4,video/webm,video/quicktime,video/x-matroska"
+          accept="video/*,audio/*,image/*"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];

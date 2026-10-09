@@ -448,6 +448,19 @@ export default function VideoEditorComponent() {
                    <span className="w-px h-4 bg-gray-700 mx-2"></span>
                    <button onClick={() => timeline.addTrack("video", `V${timeline.project.tracks.length + 1}`)} className="hover:text-white flex items-center gap-1"><Plus className="w-3.5 h-3.5"/> Video Track</button>
                    <button onClick={() => timeline.addTrack("audio", `A${timeline.project.tracks.length + 1}`)} className="hover:text-white flex items-center gap-1"><Plus className="w-3.5 h-3.5"/> Audio Track</button>
+                   <label className="hover:text-white flex items-center gap-1 cursor-pointer">
+                     <Type className="w-3.5 h-3.5"/> Import .SRT
+                     <input type="file" accept=".srt" className="hidden" onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                           if (ev.target?.result) timeline.importSRT(ev.target.result as string);
+                        };
+                        reader.readAsText(file);
+                        e.target.value = "";
+                     }}/>
+                   </label>
                 </div>
                 <div className="flex items-center gap-4 text-xs">
                    <div className="flex items-center font-mono gap-1">

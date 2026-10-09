@@ -48,6 +48,45 @@ export function useEditorTimeline() {
     });
   }, [pushHistory]);
 
+  const importSRT = useCallback((srtText: string) => {
+    setProject(prev => {
+      pushHistory(prev);
+      const next = cloneProject(prev);
+      const track = createTrack("video", "Captions");
+      next.tracks.push(track);
+      
+      const blocks = srtText.trim().replace(/\r\n/g, "\n").split("\n\n");
+      blocks.forEach(block => {
+          const lines = block.split("\n");
+          if (lines.length >= 3) {
+              const timeLine = lines[1];
+              const textLines = lines.slice(2).join("\n");
+              const times = timeLine.split(" --> ");
+              if (times.length === 2) {
+                  const parseTime = (ts: string) => {
+                      const p = ts.split(/[:,]/);
+                      if (p.length !== 4) return 0;
+                      return parseInt(p[0]) * 3600 + parseInt(p[1]) * 60 + parseInt(p[2]) + parseInt(p[3]) / 1000;
+                  };
+                  const start = parseTime(times[0]);
+                  const end = parseTime(times[1]);
+                  if (end > start) {
+                      const clip = createClip(track.id, "text_source", "text", start, end - start);
+                      clip.text = textLines;
+                      if (clip.transform) {
+                          clip.transform.y = 80;
+                          clip.transform.x = 50;
+                      }
+                      clip.fontSizePercent = 5;
+                      track.clips.push(clip);
+                  }
+              }
+          }
+      });
+      return next;
+    });
+  }, [pushHistory]);
+
   const deleteTrack = useCallback((trackId: string) => {
     setProject(prev => {
       pushHistory(prev);
@@ -293,6 +332,7 @@ export function useEditorTimeline() {
     selectedClipId,
     setSelectedClipId,
     addTrack,
+    importSRT,
     deleteTrack,
     updateTrack,
     addClip,
