@@ -107,18 +107,19 @@ export function useEditorTimeline() {
   }, [pushHistory]);
 
   const addClip = useCallback((trackId: string, sourceId: string, type: TimelineClip["type"], timelineStart: number, sourceDuration: number) => {
+    const clip = createClip(sourceId, trackId, type, timelineStart, sourceDuration);
     setProject(prev => {
       pushHistory(prev);
       const next = cloneProject(prev);
       const track = next.tracks.find(t => t.id === trackId);
       if (track) {
-         const clip = createClip(sourceId, trackId, type, timelineStart, sourceDuration);
          track.clips.push(clip);
          track.clips.sort((a, b) => a.timelineStart - b.timelineStart);
-         setSelectedClipId(clip.id);
       }
       return next;
     });
+    setSelectedClipId(clip.id);
+    return clip.id;
   }, [pushHistory]);
 
   const deleteClip = useCallback((clipId: string) => {
