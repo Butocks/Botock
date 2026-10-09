@@ -42,6 +42,9 @@ export interface AudioSettings {
 export interface Effect {
   id: string;
   type: string;
+  intensity?: number;
+  duration?: number;
+  direction?: string;
 }
 
 // Stub for Phase 7

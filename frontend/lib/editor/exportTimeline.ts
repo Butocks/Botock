@@ -26,16 +26,18 @@ function buildClipVideoFilter(
   label: string,
   targetW: number,
   targetH: number
-): string {
+): { filterStr: string, overlayX: string, overlayY: string } {
   const speedFactor = (1 / Math.min(4, Math.max(0.25, clip.speed))).toFixed(4);
   let trim = `trim=start=${clip.sourceStart.toFixed(3)}:end=${clip.sourceEnd.toFixed(3)},setpts=(${speedFactor}*(PTS-STARTPTS))+${clip.timelineStart.toFixed(3)}/TB`;
   
   if (clip.type === "image") {
-     // Images only have 1 frame. Loop them infinitely before trimming to source duration
      trim = `loop=loop=-1:size=1,${trim}`;
   }
   
   const filterParts = [`[${inputIndex}:v]${trim}`];
+
+  // Convert to RGBA early for transparent processing
+  filterParts.push(`format=rgba`);
 
   if (clip.chromaKey && clip.chromaKey.enabled) {
     const c = clip.chromaKey;
@@ -50,44 +52,60 @@ function buildClipVideoFilter(
     filterParts.push(buildColorFilter(clip.filters.brightness, clip.filters.contrast, clip.filters.saturation));
   }
 
+  const t_rel = `(t-${clip.timelineStart.toFixed(3)})`;
+  const prog = `min(1,max(0,${t_rel}/${clip.duration.toFixed(3)}))`;
+
+  let animScale = `1`;
+  let animPanX = `0`;
+  let animOpacity = `1`;
+
   if (clip.effects && clip.effects.length > 0) {
-    const eff = clip.effects[0].type;
-    // zoom-in, zoom-out, pan-left, pan-right
-    // A simplified zoom/pan using ffmpeg's 'zoompan' or 'scale/crop'.
-    // scale+crop with time evaluation is better and more precise.
-    const dur = clip.duration.toFixed(3);
-    if (eff === "zoom-in") {
-      filterParts.push(`scale=w='iw*(1+0.5*min(1,t/${dur}))':h='ih*(1+0.5*min(1,t/${dur}))':eval=frame,crop=w=iw/(1+0.5*min(1,t/${dur})):h=ih/(1+0.5*min(1,t/${dur})):x='(iw-ow)/2':y='(ih-oh)/2'`);
-    } else if (eff === "zoom-out") {
-      filterParts.push(`scale=w='iw*(1.5-0.5*min(1,t/${dur}))':h='ih*(1.5-0.5*min(1,t/${dur}))':eval=frame,crop=w=iw/(1.5-0.5*min(1,t/${dur})):h=ih/(1.5-0.5*min(1,t/${dur})):x='(iw-ow)/2':y='(ih-oh)/2'`);
-    } else if (eff === "pan-left") {
-      // Crop a bit smaller and pan across the original
-      filterParts.push(`crop=w='iw*0.9':h=ih:x='(iw*0.1)*min(1,t/${dur})':y=0`);
-    } else if (eff === "pan-right") {
-      filterParts.push(`crop=w='iw*0.9':h=ih:x='(iw*0.1)*(1-min(1,t/${dur}))':y=0`);
-    } else if (eff === "fade-in") {
-      filterParts.push(`format=yuva420p,fade=t=in:st=0:d=1:alpha=1`);
-    } else if (eff === "fade-out") {
-      filterParts.push(`format=yuva420p,fade=t=out:st=${(clip.duration - 1).toFixed(3)}:d=1:alpha=1`);
+    const effect = clip.effects[0];
+    const eff = effect.type;
+    const dur = effect.duration || 1.0;
+    // Scale progress by dur (if dur is 2, effect finishes when t_rel reaches 2)
+    const e_prog = `min(1,max(0,${t_rel}/${dur.toFixed(3)}))`;
+    
+    if (eff === "zoom-in") animScale = `(1+0.5*${e_prog})`;
+    else if (eff === "zoom-out") animScale = `(1.5-0.5*${e_prog})`;
+    else if (eff === "pan-left") animPanX = `(${targetW}*0.1*${e_prog})`;
+    else if (eff === "pan-right") animPanX = `(-${targetW}*0.1*${e_prog})`;
+    else if (eff === "fade-in") animOpacity = `min(1,max(0,${t_rel}/${dur.toFixed(3)}))`;
+    else if (eff === "fade-out") {
+        const out_start = Math.max(0, clip.duration - dur);
+        const out_rel = `(t-${(clip.timelineStart + out_start).toFixed(3)})`;
+        animOpacity = `max(0,min(1,1-${out_rel}/${dur.toFixed(3)}))`;
     }
   }
 
-  if (clip.transform) {
-    const t = clip.transform;
-    if (t.rotation !== 0) {
-      filterParts.push(`rotate=a=${t.rotation}*PI/180:c=none`);
-    }
-    if (t.scaleX !== 1 || t.scaleY !== 1) {
-      filterParts.push(`scale=iw*${t.scaleX.toFixed(2)}:ih*${t.scaleY.toFixed(2)}`);
-    }
-    if (t.opacity < 100) {
-      filterParts.push(`format=rgba,colorchannelmixer=aa=${(t.opacity / 100).toFixed(2)}`);
-    }
-  }
-
-  filterParts.push(`scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2,setsar=1`);
+  const tForm = clip.transform || { x: 50, y: 50, width: 100, height: 100, rotation: 0, scaleX: 1, scaleY: 1, opacity: 100 };
   
-  return `${filterParts.join(",")}[${label}]`;
+  filterParts.push(`scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease`);
+
+  const finalScaleX = (tForm.width / 100) * tForm.scaleX;
+  const finalScaleY = (tForm.height / 100) * tForm.scaleY;
+  
+  if (finalScaleX !== 1 || finalScaleY !== 1 || animScale !== `1`) {
+     filterParts.push(`scale=w='iw*${finalScaleX.toFixed(4)}*${animScale}':h='ih*${finalScaleY.toFixed(4)}*${animScale}':eval=frame`);
+  }
+
+  if (tForm.rotation !== 0) {
+     filterParts.push(`rotate=a=${tForm.rotation}*PI/180:c=none:ow='hypot(iw,ih)':oh='hypot(iw,ih)'`);
+  }
+
+  const baseOpacity = tForm.opacity / 100;
+  if (baseOpacity < 1 || animOpacity !== `1`) {
+     filterParts.push(`colorchannelmixer=aa='${baseOpacity}*${animOpacity}'`);
+  }
+
+  filterParts.push(`setsar=1`);
+  
+  const filterStr = `${filterParts.join(",")}[${label}]`;
+
+  const overlayX = `(${targetW}*${(tForm.x / 100).toFixed(4)} - w/2 + ${animPanX})`;
+  const overlayY = `(${targetH}*${(tForm.y / 100).toFixed(4)} - h/2)`;
+
+  return { filterStr, overlayX, overlayY };
 }
 
 function buildClipAudioFilter(clip: TimelineClip, inputIndex: number, label: string, hasAudio: boolean): string {
@@ -124,24 +142,37 @@ export async function exportEditorProject(
   onProgress?.("Loading FFmpeg engine...");
   await ffmpeg.load();
 
-  const allVideoClips: TimelineClip[] = [];
-  const allAudioClips: TimelineClip[] = [];
+  const allVideoClips: (TimelineClip & { trackMuted: boolean, trackHidden: boolean })[] = [];
+  const allAudioClips: (TimelineClip & { trackMuted: boolean, trackHidden: boolean })[] = [];
   
   project.tracks.forEach(t => {
-      allVideoClips.push(...t.clips.filter(c => c.type === "video" || c.type === "image"));
-      allAudioClips.push(...t.clips.filter(c => c.type === "audio"));
+      const isHidden = t.hidden ?? false;
+      const isMuted = t.muted ?? false;
+      t.clips.forEach(c => {
+         const exportClip = { ...c, trackMuted: isMuted, trackHidden: isHidden };
+         if (c.type === "video" || c.type === "image") allVideoClips.push(exportClip);
+         if (c.type === "audio") allAudioClips.push(exportClip);
+      });
   });
-  allVideoClips.sort((a, b) => a.timelineStart - b.timelineStart);
-  allAudioClips.sort((a, b) => a.timelineStart - b.timelineStart);
+  
+  // Filter out hidden video clips
+  const visibleVideoClips = allVideoClips.filter(c => !c.trackHidden);
+  visibleVideoClips.sort((a, b) => a.timelineStart - b.timelineStart);
+  
+  const allAudioSources = [...allVideoClips, ...allAudioClips].filter(c => !c.trackMuted);
+  allAudioSources.sort((a, b) => a.timelineStart - b.timelineStart);
 
-  const textClips: TimelineClip[] = [];
+  const textClips: (TimelineClip & { trackHidden: boolean })[] = [];
   project.tracks.forEach(t => {
-      textClips.push(...t.clips.filter(c => c.type === "text"));
+      t.clips.forEach(c => {
+         if (c.type === "text") textClips.push({ ...c, trackHidden: t.hidden ?? false });
+      });
   });
+  const visibleTextClips = textClips.filter(c => !c.trackHidden);
 
-  if (allVideoClips.length === 0 && allAudioClips.length === 0) throw new Error("No media clips to export.");
+  if (visibleVideoClips.length === 0 && allAudioSources.length === 0 && visibleTextClips.length === 0) throw new Error("No media clips to export.");
 
-  if (textClips.length > 0) {
+  if (visibleTextClips.length > 0) {
     onProgress?.("Downloading fonts for text layers...");
     try {
        const res = await fetch("https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf");
@@ -153,7 +184,7 @@ export async function exportEditorProject(
   }
 
   onProgress?.("Writing source files to FFmpeg VFS...");
-  const usedSourceIds = Array.from(new Set([...allVideoClips, ...allAudioClips].map(c => c.sourceId)));
+  const usedSourceIds = Array.from(new Set([...visibleVideoClips, ...allAudioSources].map(c => c.sourceId)));
   const sourceInputIndex = new Map<string, number>();
   const sourceInputNames = new Map<string, string>();
   const sourceHasAudio = new Map<string, boolean>();
@@ -163,7 +194,8 @@ export async function exportEditorProject(
     const item = mediaBin.getItem(sourceId);
     if (!item) throw new Error(`Missing media for clip`);
     
-    const name = `botock_editor_src_${i}.mp4`;
+        const ext = item.file.name.split('.').pop() || 'mp4';
+    const name = `botock_editor_src_${i}.${ext}`;
     await ffmpeg.writeFile(name, new Uint8Array(await item.file.arrayBuffer()));
     sourceInputIndex.set(sourceId, i);
     sourceInputNames.set(sourceId, name);
@@ -193,14 +225,14 @@ export async function exportEditorProject(
 
   let currentV = "[bg0]";
 
-  allVideoClips.forEach((clip, index) => {
+  visibleVideoClips.forEach((clip, index) => {
     const inputIdx = sourceInputIndex.get(clip.sourceId)!;
-    filterParts.push(buildClipVideoFilter(clip, inputIdx, `v${index}`, targetW, targetH));
-    filterParts.push(`${currentV}[v${index}]overlay=eof_action=pass:enable='between(t,${clip.timelineStart.toFixed(3)},${(clip.timelineStart + clip.duration).toFixed(3)})'[bg${index + 1}]`);
+    const res = buildClipVideoFilter(clip, inputIdx, `v${index}`, targetW, targetH);
+    filterParts.push(res.filterStr);
+    filterParts.push(`${currentV}[v${index}]overlay=x='${res.overlayX}':y='${res.overlayY}':eof_action=pass:enable='between(t,${clip.timelineStart.toFixed(3)},${(clip.timelineStart + clip.duration).toFixed(3)})'[bg${index + 1}]`);
     currentV = `[bg${index + 1}]`;
   });
 
-  const allAudioSources = [...allVideoClips, ...allAudioClips];
   allAudioSources.forEach((clip, index) => {
     const inputIdx = sourceInputIndex.get(clip.sourceId)!;
     const hasAudio = sourceHasAudio.get(clip.sourceId) || false;
@@ -217,7 +249,7 @@ export async function exportEditorProject(
   
   let finalVideoOutput = currentV;
   
-  textClips.forEach((tClip, index) => {
+  visibleTextClips.forEach((tClip, index) => {
      const nextOutput = `[vtext${index}]`;
      const drawtext = buildDrawtextFilter({
         text: tClip.text || "Text",

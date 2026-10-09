@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Film,
@@ -352,8 +352,39 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
 ];
 
 function ToolsDirectoryInner() {
-  const [activeCategory, setActiveCategory] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [activeCategory, setActiveCategory] = useState<string>(searchParams.get("cat") || "all");
+  const [searchQuery, setSearchQuery] = useState<string>(searchParams.get("search") || "");
+
+  useEffect(() => {
+    const cat = searchParams.get("cat") || "all";
+    if (cat !== activeCategory) {
+      setActiveCategory(cat);
+    }
+    const search = searchParams.get("search") || "";
+    if (search !== searchQuery) {
+      setSearchQuery(search);
+    }
+  }, [searchParams]);
+
+  const handleCategoryChange = (cat: string) => {
+    setActiveCategory(cat);
+    const params = new URLSearchParams(searchParams.toString());
+    if (cat === "all") params.delete("cat");
+    else params.set("cat", cat);
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    const params = new URLSearchParams(searchParams.toString());
+    if (!val.trim()) params.delete("search");
+    else params.set("search", val);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const categories = [
     { id: "all", label: `All Tools (${IMPLEMENTED_TOOLS.length})` },
@@ -380,7 +411,7 @@ function ToolsDirectoryInner() {
           type="text"
           placeholder="Search any tool (e.g. video cutter, PDF merge, background remover)..."
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           aria-label="Search tools"
           className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-card border border-border/60 text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/50 shadow-sm"
         />
@@ -391,8 +422,8 @@ function ToolsDirectoryInner() {
         {categories.map((c) => (
           <button
             key={c.id}
-            onClick={() => setActiveCategory(c.id)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+            onClick={() => handleCategoryChange(c.id)}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeCategory === c.id
                 ? "bg-primary text-white shadow-sm"
                 : "border border-border/50 bg-card/40 hover:bg-card text-muted-foreground hover:text-foreground"

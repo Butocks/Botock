@@ -199,16 +199,22 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
             let animScale = 1;
             let animPanX = 0;
             if (clip.effects && clip.effects.length > 0) {
-               const eff = clip.effects[0].type;
-               const progress = Math.min(1, Math.max(0, elapsed / clip.duration));
+               const effect = clip.effects[0];
+               const eff = effect.type;
+               const dur = effect.duration || 1.0;
+               const progress = Math.min(1, Math.max(0, elapsed / dur));
+               
                if (eff === "zoom-in") animScale = 1 + (0.5 * progress);
                if (eff === "zoom-out") animScale = 1.5 - (0.5 * progress);
                if (eff === "pan-left") animPanX = (canvas.width * 0.1) * progress;
                if (eff === "pan-right") animPanX = -(canvas.width * 0.1) * progress;
                
                let effectOpacity = 1;
-               if (eff === "fade-in") effectOpacity = Math.min(1, Math.max(0, elapsed / 1.0));
-               if (eff === "fade-out") effectOpacity = Math.max(0, Math.min(1, 1 - (elapsed - (clip.duration - 1)) / 1.0));
+               if (eff === "fade-in") effectOpacity = Math.min(1, Math.max(0, elapsed / dur));
+               if (eff === "fade-out") {
+                  const out_start = Math.max(0, clip.duration - dur);
+                  effectOpacity = Math.max(0, Math.min(1, 1 - (elapsed - out_start) / dur));
+               }
                t.opacity = t.opacity * effectOpacity;
             }
 

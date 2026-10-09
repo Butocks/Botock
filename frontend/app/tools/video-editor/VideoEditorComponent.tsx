@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, CheckCircle2, Download, Play, Pause, Upload, ZoomIn, ZoomOut, Scissors, Trash2, Copy, Undo2, Redo2, Plus, Home, Film, Sparkles, Filter, Settings, Type, Volume2, Crop, Ghost, Layers
@@ -58,7 +59,38 @@ export default function VideoEditorComponent() {
   }, []);
   const [zoom, setZoom] = useState(1);
   const [thumbnailsBySource, setThumbnailsBySource] = useState<Record<string, string[]>>({});
-  const [activeTab, setActiveTab] = useState("Edit");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  
+
+      if (t) {
+      if (t.toLowerCase() === "aspect") return "Crop";
+      const match = SIDEBAR_ITEMS_IDS.find(id => id.toLowerCase() === t.toLowerCase());
+      if (match) return match;
+    }
+    return "Edit";
+  });
+
+  useEffect(() => {
+    const t = searchParams.get("tool");
+    if (t) {
+      if (t.toLowerCase() === "aspect" && activeTab !== "Crop") {
+        setActiveTab("Crop");
+      } else {
+        const match = SIDEBAR_ITEMS_IDS.find(id => id.toLowerCase() === t.toLowerCase());
+        if (match && match !== activeTab) {
+          setActiveTab(match);
+        }
+      }
+    }
+  }, [searchParams]);
+
+      const params = new URLSearchParams(searchParams.toString());
+    params.set("tool", tabId.toLowerCase());
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
 
   const [resultUrl, setResultUrl] = useState<string | null>(null);
@@ -264,18 +296,7 @@ export default function VideoEditorComponent() {
     }
   };
 
-  const SIDEBAR_ITEMS = [
-    { icon: Home, label: "Home", id: "Home" },
-    { icon: Sparkles, label: "Animate", id: "Animate" },
-    { icon: Scissors, label: "Edit", id: "Edit" },
-    { icon: Scissors, label: "Trim", id: "Trim" },
-    { icon: Crop, label: "Crop", id: "Crop" },
-    { icon: Ghost, label: "Effects", id: "Effects" },
-    { icon: Filter, label: "Filters", id: "Filters" },
-    { icon: Layers, label: "Chroma Key", id: "Chroma Key" },
-    { icon: Volume2, label: "Volume", id: "Volume" },
-    { icon: Type, label: "Text", id: "Text" },
-  ];
+  
 
   const selectedClip = timeline.project.tracks.flatMap(t => t.clips).find(c => c.id === timeline.selectedClipId);
   const currentMaxTime = allVideoClips.length > 0 ? allVideoClips[allVideoClips.length - 1].timelineStart + allVideoClips[allVideoClips.length - 1].duration : 0;
@@ -291,25 +312,7 @@ export default function VideoEditorComponent() {
           <h1 className="font-semibold text-sm tracking-wide hidden md:block">My Project</h1>
         </div>
         <div className="flex items-center gap-2 md:gap-4">
-           <select 
-              value={`${timeline.project.width}x${timeline.project.height}`}
-              onChange={(e) => {
-                 const [w, h] = e.target.value.split("x").map(Number);
-                 timeline.beginLiveUpdate();
-                 // Note: we need a way to update the project properties. 
-                 // Since there isn't a direct updateProject function exposed by useEditorTimeline, we can use the state patch approach or we can just add a helper.
-                 // Actually, useEditorTimeline returns project and setProject? No.
-                 // Let's dispatch a custom event and add a listener, or just use a helper if we have one.
-                 // Wait, we can just add an updateProject method to useEditorTimeline.
-                 window.dispatchEvent(new CustomEvent('editor-update-project', { detail: { width: w, height: h } }));
-              }}
-              className="bg-[#2b2b36] border border-gray-700 text-white rounded px-2 py-1.5 text-xs focus:outline-none"
-           >
-              <option value="1280x720">16:9 (Landscape)</option>
-              <option value="720x1280">9:16 (Vertical)</option>
-              <option value="1080x1080">1:1 (Square)</option>
-              <option value="1080x1350">4:5 (Portrait)</option>
-           </select>
+           
            <button onClick={doExport} disabled={isExporting} className="bg-[#ff6b4a] hover:bg-[#ff856b] text-white px-3 md:px-6 py-1.5 rounded text-xs md:text-sm font-bold flex items-center gap-1 md:gap-2 transition-colors disabled:opacity-50">
              <Download className="w-4 h-4"/> {isExporting ? "Exporting..." : "EXPORT"}
            </button>
@@ -317,19 +320,7 @@ export default function VideoEditorComponent() {
       </header>
 
       <div className="flex flex-col md:flex-row flex-1 min-h-0">
-        {/* Left Toolbar */}
-        <div className="w-full md:w-20 bg-[#141419] flex flex-row md:flex-col items-center justify-around md:justify-start py-2 md:py-4 gap-2 md:gap-6 shrink-0 border-b md:border-r border-[#2b2b36] overflow-x-auto md:overflow-x-hidden overflow-y-hidden md:overflow-y-auto">
-          {SIDEBAR_ITEMS.map((item) => (
-             <button 
-               key={item.id} 
-               onClick={() => setActiveTab(item.id)}
-               className={`flex flex-col items-center gap-1.5 w-full ${activeTab === item.id ? 'text-[#ff6b4a]' : 'text-gray-400 hover:text-gray-200'}`}
-             >
-                <item.icon className="w-5 h-5" />
-                <span className="text-[10px] text-center w-full">{item.label}</span>
-             </button>
-          ))}
-        </div>
+        
 
         <div className="flex-1 flex flex-col min-w-0 md:overflow-hidden overflow-y-auto">
           

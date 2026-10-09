@@ -22,10 +22,10 @@ const TrackLane = React.memo(function TrackLane({ track, totalDuration, selected
             <span className="text-[9px] font-mono text-slate-500 uppercase">{track.type}</span>
           </div>
           <div className="flex gap-1.5">
-            <button className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors">
+            <button onClick={() => window.dispatchEvent(new CustomEvent('editor-update-track', { detail: { id: track.id, hidden: !track.hidden } }))} className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors">
               {track.hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
-            <button className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors">
+            <button onClick={() => window.dispatchEvent(new CustomEvent('editor-update-track', { detail: { id: track.id, locked: !track.locked } }))} className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors">
               {track.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
             </button>
             <button className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors">
@@ -49,9 +49,9 @@ const TrackLane = React.memo(function TrackLane({ track, totalDuration, selected
             return (
               <div
                 key={clip.id}
-                onPointerDown={(e) => { e.stopPropagation(); onSelectClip(clip.id); }}
+                onPointerDown={(e) => { e.stopPropagation(); onSelectClip(clip.id); startDrag(e, clip.id, "move"); }}
                 className={`absolute top-2 bottom-2 rounded-lg border-2 overflow-hidden transition-all ${
-                  selected ? "border-emerald-400 shadow-[0_0_0_1px_rgba(52,211,153,0.5)] z-10" : colorClass + "/50 border-transparent hover:border-white/20"
+                  selected ? "border-emerald-400 shadow-[0_0_0_1px_rgba(52,211,153,0.5)] z-10 cursor-grab active:cursor-grabbing" : colorClass + "/50 border-transparent hover:border-white/20 cursor-pointer"
                 }`}
                 style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: "2px" }}
               >
@@ -218,7 +218,7 @@ export default function EditorTimeline({
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
     };
-  }, [dragging, project, mediaItems, totalDuration, onEdgeLive, onEdgeCommit]);
+  }, [dragging, project, mediaItems, totalDuration, onEdgeLive, onEdgeCommit, currentTime]);
 
   useEffect(() => {
     if (!draggingPlayhead) return;

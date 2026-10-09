@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+const fs = require('fs');
+
+let code = `import React, { useState } from "react";
 import { TimelineClip } from "@/lib/editor/types";
 import { Scissors, Volume2, Type, Image as ImageIcon, Sliders, Play, Settings, Sparkles, Layers } from "lucide-react";
 
@@ -22,7 +24,7 @@ export default function TransformInspector({ clip, onUpdateLive, onBeginLive, on
         <button
           key={t}
           onClick={() => setActiveTab(t)}
-          className={`flex-1 text-[11px] font-bold py-1.5 rounded ${activeTab === t ? 'bg-[#2b2b36] text-white' : 'text-gray-400 hover:text-gray-200'}`}
+          className={\`flex-1 text-[11px] font-bold py-1.5 rounded \${activeTab === t ? 'bg-[#2b2b36] text-white' : 'text-gray-400 hover:text-gray-200'}\`}
         >
           {t}
         </button>
@@ -98,7 +100,7 @@ export default function TransformInspector({ clip, onUpdateLive, onBeginLive, on
              <span className="text-xs text-gray-300">{vol}%</span>
           </div>
           <input type="range" min="0" max="500" value={vol} onPointerDown={handleSliderStart} onPointerUp={handleSliderEnd} onChange={e => onUpdateLive({ audio: { ...clip.audio, volumePercent: parseFloat(e.target.value) } })} className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]" />
-          <button onClick={() => onUpdate({ audio: { ...clip.audio, muted: !isMuted } })} className={`mt-4 w-full py-1.5 rounded text-xs font-bold transition-colors ${isMuted ? 'bg-red-500/20 text-red-500' : 'bg-[#2b2b36] text-white hover:bg-gray-700'}`}>
+          <button onClick={() => onUpdate({ audio: { ...clip.audio, muted: !isMuted } })} className={\`mt-4 w-full py-1.5 rounded text-xs font-bold transition-colors \${isMuted ? 'bg-red-500/20 text-red-500' : 'bg-[#2b2b36] text-white hover:bg-gray-700'}\`}>
              {isMuted ? "Unmute Audio" : "Mute Audio"}
           </button>
         </div>
@@ -277,3 +279,6 @@ export default function TransformInspector({ clip, onUpdateLive, onBeginLive, on
     </div>
   );
 }
+`;
+
+fs.writeFileSync('frontend/app/tools/video-editor/components/TransformInspector.tsx', code);
