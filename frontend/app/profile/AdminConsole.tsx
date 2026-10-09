@@ -288,7 +288,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
 
       // 2. Complaints
       const resComplaints = await fetch(`${backendUrl}/api/admin/complaints`, {
-        headers: { "admin-api-key": token },
+        headers: { "x-admin-token": token },
       });
       if (resComplaints.ok) {
         setComplaints(await resComplaints.json());
@@ -314,7 +314,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
       }
 
       const resAnalytics = await fetch(`${backendUrl}/api/admin/analytics`, {
-        headers: { "admin-api-key": token },
+        headers: { "x-admin-token": token },
       });
       if (resAnalytics.ok) {
         setAnalytics(await resAnalytics.json());
@@ -330,7 +330,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
 
       // 6. Subscription Requests
       const resSubs = await fetch(`${backendUrl}/api/admin/subscription-requests`, {
-        headers: { "admin-api-key": token },
+        headers: { "x-admin-token": token },
       });
       if (resSubs.ok) {
         setSubRequests(await resSubs.json());
@@ -380,7 +380,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
         },
         body: JSON.stringify(quotas),
       });
@@ -400,7 +400,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
         },
         body: JSON.stringify(toolRewards),
       });
@@ -420,7 +420,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
         },
         body: JSON.stringify(promotions),
       });
@@ -440,7 +440,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
         },
         body: JSON.stringify(plans),
       });
@@ -459,7 +459,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
           "X-Admin-2Step-Code": code,
         },
         body: JSON.stringify(toolRules),
@@ -475,7 +475,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
           "X-Admin-2Step-Code": code,
         },
         body: JSON.stringify(policies),
@@ -491,7 +491,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
           "X-Admin-2Step-Code": code,
         },
         body: JSON.stringify({ ticket_id: ticketId, status: newStatus }),
@@ -518,7 +518,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
           "X-Admin-2Step-Code": code,
         },
         body: JSON.stringify({
@@ -543,7 +543,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
       const res = await fetch(`${await getBackendUrl()}/api/admin/jobs/${jobId}`, {
         method: "DELETE",
         headers: {
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
           "X-Admin-2Step-Code": code,
         },
       });
@@ -564,7 +564,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
           "X-Admin-2Step-Code": code,
         },
         body: JSON.stringify({
@@ -591,7 +591,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
       const res = await fetch(`${await getBackendUrl()}/api/admin/blogs/${blogId}`, {
         method: "DELETE",
         headers: {
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
           "X-Admin-2Step-Code": code,
         },
       });
@@ -610,7 +610,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
         },
         body: JSON.stringify({ test_email: smtpTestEmail || undefined }),
       });
@@ -641,7 +641,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "admin-api-key": adminToken || "",
+          "x-admin-token": adminToken || "",
         },
         body: JSON.stringify({
           to_email: updateToEmail,
@@ -1596,7 +1596,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                                   const backendUrl = await getBackendUrl();
                                   await fetch(`${backendUrl}/api/admin/subscription-requests/${req.id}/status?status=dismissed`, {
                                     method: "POST",
-                                    headers: { "admin-api-key": adminToken || "" },
+                                    headers: { "x-admin-token": adminToken || "" },
                                   });
                                   showToast("Removed from list.");
                                   loadAllData(adminToken || "");
