@@ -20,6 +20,7 @@
     "@types/pica": "^9.0.5",
     "browser-image-compression": "^2.0.2",
     "cropperjs": "^1.6.2",
+    "js-cookie": "^3.0.8",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "jszip": "^3.10.2",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/js-cookie": "^3.0.6",
     "@types/jszip": "^3.4.0",
     "@types/node": "^20",
     "@types/react": "^19",

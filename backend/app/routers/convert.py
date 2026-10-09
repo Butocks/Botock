@@ -214,7 +214,7 @@ async def voice_changer(
         raise HTTPException(status_code=400, detail="Empty file uploaded.")
 
     try:
-        from pedalboard import Pedalboard, PitchShift, Gain, Reverb, Compressor, HighpassFilter, LowpassFilter
+        from pedalboard import Pedalboard, PitchShift, Gain, Reverb, Compressor, HighpassFilter, LowpassFilter, Delay, Chorus, Bitcrash, Phaser, Distortion
         from pedalboard.io import AudioFile
     except ImportError:
         logger.error("Audio libraries not installed (pedalboard).")
@@ -222,6 +222,7 @@ async def voice_changer(
 
     # High-quality natural voice modes
     VOICE_MODES = {
+        # Standard
         "kid": {"pitch": 5, "vol": 1, "fx": []},
         "little_girl": {"pitch": 7, "vol": 1, "fx": [HighpassFilter(cutoff_frequency_hz=300)]},
         "man_deep": {"pitch": -4, "vol": 2, "fx": [Compressor(threshold_db=-20, ratio=2)]},
@@ -240,6 +241,44 @@ async def voice_changer(
             LowpassFilter(cutoff_frequency_hz=5000)
         ]},
         "strict": {"pitch": -1, "vol": 2, "fx": [Compressor(threshold_db=-15, ratio=3)]},
+        
+        # AI Voice Filters (Requested)
+        "robot": {"pitch": 0, "vol": 0, "fx": [
+            Chorus(rate_hz=50.0, depth=0.5, centre_delay_ms=2.0, feedback=0.5, mix=1.0),
+            Bitcrash(bit_depth=8)
+        ]},
+        "chipmunk": {"pitch": 12, "vol": 1, "fx": [HighpassFilter(cutoff_frequency_hz=400)]},
+        "echo_chamber": {"pitch": 0, "vol": 0, "fx": [
+            Delay(delay_seconds=0.3, feedback=0.5, mix=0.5),
+            Reverb(room_size=0.9, damping=0.1, wet_level=0.8)
+        ]},
+        "telephone": {"pitch": 0, "vol": 0, "fx": [
+            HighpassFilter(cutoff_frequency_hz=400),
+            LowpassFilter(cutoff_frequency_hz=3000),
+            Distortion(drive_db=10)
+        ]},
+        
+        # Voice Disguiser / Privacy Filter (Requested)
+        "privacy_disguiser": {"pitch": -5, "vol": 1, "fx": [
+            Bitcrash(bit_depth=12),
+            Chorus(rate_hz=2.0, depth=0.8, mix=0.5),
+            Compressor(threshold_db=-20, ratio=4)
+        ]},
+        
+        # AI Speech-to-Speech / Voice Cloning (Mocked as filters for this implementation)
+        "clone_elon": {"pitch": -2, "vol": 1, "fx": [
+            Compressor(threshold_db=-18, ratio=3),
+            LowpassFilter(cutoff_frequency_hz=6000)
+        ]},
+        "clone_morgan": {"pitch": -6, "vol": 2, "fx": [
+            Compressor(threshold_db=-25, ratio=5),
+            Reverb(room_size=0.1, damping=0.8, wet_level=0.05),
+            HighpassFilter(cutoff_frequency_hz=80)
+        ]},
+        "clone_anime_girl": {"pitch": 8, "vol": 1, "fx": [
+            HighpassFilter(cutoff_frequency_hz=350),
+            Chorus(rate_hz=1.5, depth=0.2, mix=0.2)
+        ]},
     }
 
     if mode not in VOICE_MODES:
@@ -313,3 +352,59 @@ async def voice_changer(
         if out_path and os.path.exists(out_path): os.remove(out_path)
         logger.exception("Voice conversion failed")
         raise HTTPException(status_code=500, detail="Voice conversion processing failed.")
+
+@router.post("/audio-enhance")
+async def audio_enhance(file: UploadFile = File(...)):
+    """
+    AI Audio Enhancer Mock
+    Uses pedalboard to apply noise gate, compression, and EQ to enhance speech.
+    """
+    import tempfile
+    import os
+    from fastapi.responses import FileResponse
+    from starlette.background import BackgroundTask
+    from pedalboard import Pedalboard, Compressor, NoiseGate, HighpassFilter, LowpassFilter
+    from pedalboard.io import AudioFile
+    
+    file_bytes = await file.read()
+    
+    # Fast mock for audio enhance
+    try:
+        in_f = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        in_f.write(file_bytes)
+        in_f.close()
+        
+        out_f = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        out_f.close()
+
+        with AudioFile(in_f.name) as f:
+            audio = f.read(f.frames)
+            samplerate = f.samplerate
+
+        # Professional speech enhancement chain
+        board = Pedalboard([
+            NoiseGate(threshold_db=-35, ratio=2.0),
+            HighpassFilter(cutoff_frequency_hz=80),  # Remove rumble
+            LowpassFilter(cutoff_frequency_hz=12000), # Remove hiss
+            Compressor(threshold_db=-20, ratio=4.0)   # Even out volume
+        ])
+
+        effected = board(audio, samplerate, reset=False)
+
+        with AudioFile(out_f.name, 'w', samplerate, effected.shape[0]) as f:
+            f.write(effected)
+            
+        def cleanup():
+            if os.path.exists(in_f.name): os.remove(in_f.name)
+            if os.path.exists(out_f.name): os.remove(out_f.name)
+
+        return FileResponse(
+            out_f.name,
+            filename="enhanced.wav",
+            media_type="audio/wav",
+            background=BackgroundTask(cleanup)
+        )
+    except Exception:
+        if os.path.exists(in_f.name): os.remove(in_f.name)
+        if os.path.exists(out_f.name): os.remove(out_f.name)
+        raise HTTPException(status_code=500, detail="Audio enhancement failed.")

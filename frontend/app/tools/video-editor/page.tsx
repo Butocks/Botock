@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Scissors, Film, Sparkles, Music, CheckCircle2 } from "lucide-react";

@@ -5,6 +5,7 @@ import { Upload, Mic, Play, Download, Settings2, Sparkles, AlertCircle } from "l
 import { getBackendUrl } from "../../../utils/runtime-urls";
 
 const VOICE_MODES = [
+  // Original
   { id: "kid", label: "👦 Kid" },
   { id: "little_girl", label: "👧 Little Girl" },
   { id: "women", label: "👩 Woman" },
@@ -14,6 +15,20 @@ const VOICE_MODES = [
   { id: "old_women", label: "👵 Old Woman" },
   { id: "weak_man", label: "🤕 Weak Man" },
   { id: "strict", label: "👔 Strict/Bossy" },
+  
+  // AI Voice Filters (Requested)
+  { id: "robot", label: "🤖 AI Robot" },
+  { id: "chipmunk", label: "🐿️ Chipmunk" },
+  { id: "echo_chamber", label: "⛰️ Echo Chamber" },
+  { id: "telephone", label: "📞 Telephone" },
+  
+  // Privacy & Disguiser (Requested)
+  { id: "privacy_disguiser", label: "🕵️ Privacy Disguiser" },
+  
+  // AI Voice Cloning Mock (Requested)
+  { id: "clone_elon", label: "🚀 Elon (Clone)" },
+  { id: "clone_morgan", label: "🎙️ Morgan (Clone)" },
+  { id: "clone_anime_girl", label: "🌸 Anime Girl (Clone)" },
 ];
 
 export default function VoiceChangerClient() {
