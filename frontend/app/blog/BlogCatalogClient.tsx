@@ -87,6 +87,50 @@ const POSTS: BlogPost[] = [
     readTime: "8 min read",
     date: "October 4, 2026",
     author: "Boto"
+  },
+  {
+    id: "ai-agents-creative-workflows",
+    title: "How AI Agents are Revolutionizing Creative Workflows in 2026",
+    excerpt: "Explore how autonomous AI agents are taking over repetitive coding, designing, and video editing tasks, allowing creators to focus on imagination.",
+    category: "ai",
+    categoryLabel: "AI Agents",
+    categoryColor: "bg-blue-500/20 text-blue-500 dark:text-blue-300 border-blue-500/30",
+    readTime: "6 min read",
+    date: "October 10, 2026",
+    author: "Boto"
+  },
+  {
+    id: "top-5-ai-video-trends-2026",
+    title: "Top 5 AI Video Generation Trends You Need to Know This Year",
+    excerpt: "From real-time 3D rendering to text-to-video masterpieces, discover the trends shaping the future of digital filmmaking and content creation.",
+    category: "video",
+    categoryLabel: "Video Trends",
+    categoryColor: "bg-pink-500/20 text-pink-500 dark:text-pink-300 border-pink-500/30",
+    readTime: "7 min read",
+    date: "October 10, 2026",
+    author: "Boto"
+  },
+  {
+    id: "ai-document-management-productivity",
+    title: "Maximizing Productivity with AI-Powered Document Management",
+    excerpt: "Learn how integrating AI processing with traditional PDF tools can cut down administrative hours and optimize your digital workspace.",
+    category: "pdf",
+    categoryLabel: "Productivity",
+    categoryColor: "bg-green-500/20 text-green-500 dark:text-green-300 border-green-500/30",
+    readTime: "5 min read",
+    date: "October 10, 2026",
+    author: "Boto"
+  },
+  {
+    id: "evolution-of-ai-image-generation",
+    title: "The Evolution of AI Image Generation: What's Next in 2026?",
+    excerpt: "A deep dive into algorithmic visualizations and the future of canvas painting with glowing digital energy and code matrices.",
+    category: "image",
+    categoryLabel: "AI Imaging",
+    categoryColor: "bg-indigo-500/20 text-indigo-500 dark:text-indigo-300 border-indigo-500/30",
+    readTime: "9 min read",
+    date: "October 10, 2026",
+    author: "Boto"
   }
 ];
 

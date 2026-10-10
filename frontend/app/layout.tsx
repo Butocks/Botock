@@ -87,6 +87,8 @@ export const metadata: Metadata = {
   },
 };
 
+import Analytics from "./components/Analytics";
+
 export default function RootLayout({
   children,
 }: {
@@ -172,6 +174,7 @@ export default function RootLayout({
         <Navbar />
         <main className="flex-1 flex flex-col">{children}</main>
         <Footer />
+        <Analytics />
       </body>
     </html>
   );

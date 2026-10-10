@@ -390,34 +390,39 @@ function ToolsDirectoryInner() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const [activeCategory, setActiveCategory] = useState<string>(searchParams.get("cat") || "all");
-  const [searchQuery, setSearchQuery] = useState<string>(searchParams.get("search") || "");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
-    const cat = searchParams.get("cat") || "all";
-    if (cat !== activeCategory) {
-      setActiveCategory(cat);
-    }
-    const search = searchParams.get("search") || "";
-    if (search !== searchQuery) {
-      setSearchQuery(search);
-    }
+    // Ensure we capture the URL params correctly on the client side
+    const currentParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const cat = currentParams?.get("cat") || searchParams.get("cat") || "all";
+    const search = currentParams?.get("search") || searchParams.get("search") || "";
+    
+    setActiveCategory(cat);
+    setSearchQuery(search);
   }, [searchParams]);
 
   const handleCategoryChange = (cat: string) => {
     setActiveCategory(cat);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     if (cat === "all") params.delete("cat");
     else params.set("cat", cat);
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    
+    // Use pushState to update the URL immediately for tracking tools without causing a Next.js re-render
+    window.history.pushState({}, '', newUrl);
   };
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     if (!val.trim()) params.delete("search");
     else params.set("search", val);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    window.history.replaceState({}, '', newUrl);
   };
 
   const categories = [
