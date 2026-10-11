@@ -23,7 +23,7 @@ self.addEventListener('message', async (e) => {
     try {
         self.postMessage({ status: 'loading', message: 'Loading model (this might take a minute on first load)...' });
         
-        let transcriber = await PipelineSingleton.getInstance((progress: any) => {
+        const transcriber = await PipelineSingleton.getInstance((progress: any) => {
             self.postMessage({ status: 'progress', progress });
         });
 

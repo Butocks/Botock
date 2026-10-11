@@ -5,9 +5,9 @@ import Client from "./Client";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "Rotate & Flip Image Online Free | 90°, 180° & Mirror",
+  title: "AI Batch Image Rotate & Auto-Straighten | Folder Upload & ZIP Free",
   description:
-    "Rotate images 90, 180, or 270 degrees or flip horizontally and vertically online for free. Works directly in your browser with zero file uploads.",
+    "Batch upload up to 100+ photos or an entire folder. AI automatically detects and straightens crooked or sideways images, ignores non-images (PDFs/docs), and exports as ZIP.",
   keywords: [
     "rotate image online",
     "flip image horizontal",

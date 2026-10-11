@@ -1535,3 +1535,49 @@ ToolRegistry.registerTool({
     { name: "file", type: "file", description: "PDF document", required: true }
   ]
 });
+
+ToolRegistry.registerTool({
+  id: "reaction-video-maker",
+  name: "AI Reaction Video Maker",
+  description: "Combine two video clips into a stacked top/bottom or split-screen reaction video for TikTok, Shorts, and Reels with custom aspect ratios, volume balancing, and auto-subtitles integration.",
+  category: "video",
+  seoTitle: "AI Reaction Video Maker Online Free - Botock",
+  seoDescription: "Create viral stacked reaction videos for TikTok, Instagram Reels, and YouTube Shorts. Split screen and audio mixing.",
+  endpoint: "/api/video/reaction-combine",
+  isClientSideOnly: false,
+  parameters: [
+    { name: "video_top", type: "file", description: "Top main video file (gameplay, clip, meme)", required: true },
+    { name: "video_bottom", type: "file", description: "Bottom reaction video file (facecam, commentary)", required: true },
+    { name: "aspect_ratio", type: "enum", description: "Target aspect ratio", required: false, options: ["9:16", "16:9", "1:1", "4:5"], default: "9:16" },
+    { name: "layout", type: "enum", description: "Video layout mode", required: false, options: ["stacked", "side_by_side", "pip"], default: "stacked" },
+    { name: "split_ratio", type: "enum", description: "Top to bottom size ratio", required: false, options: ["50/50", "60/40", "70/30", "40/60", "30/70"], default: "50/50" },
+    { name: "audio_mode", type: "enum", description: "Audio mixing mode", required: false, options: ["mix", "top_only", "bottom_only", "mute"], default: "mix" },
+    { name: "volume_top", type: "number", description: "Volume level for top video (0.0 to 2.0)", required: false, default: 1.0 },
+    { name: "volume_bottom", type: "number", description: "Volume level for reaction video (0.0 to 2.0)", required: false, default: 1.0 }
+  ],
+  outputs: [
+    { name: "reaction_video", type: "file", mimeType: "video/mp4", description: "The rendered MP4 reaction video file" }
+  ]
+});
+
+ToolRegistry.registerTool({
+  id: "voice-changer",
+  name: "AI Voice Changer & Speech Studio",
+  description: "Generate crystal-clear studio AI voiceovers (Deep Podcast, Documentary Narrator, Clean Child, Multilingual) using neural TTS and transform existing audio/video voice recordings.",
+  category: "ai",
+  seoTitle: "AI Voice Changer & Text to Speech Online Free - Botock",
+  seoDescription: "Generate deep podcast narrator voices, clean child voices, or alter voice pitch and effects online with Botock AI Voice Studio.",
+  endpoint: "/api/convert/text-to-speech",
+  isClientSideOnly: false,
+  parameters: [
+    { name: "text", type: "string", description: "Text content to speak", required: false },
+    { name: "voice", type: "enum", description: "Target AI Voice Preset", required: false, options: ["en-US-ChristopherNeural", "en-US-GuyNeural", "en-US-EricNeural", "en-GB-BrianNeural", "en-US-AnaNeural", "en-US-JennyNeural", "ur-PK-AsadNeural", "ur-PK-UzmaNeural", "hi-IN-MadhurNeural"], default: "en-US-ChristopherNeural" },
+    { name: "rate", type: "string", description: "Speaking speed adjustment (e.g. +0%, -10%, +20%)", required: false, default: "+0%" },
+    { name: "pitch", type: "string", description: "Voice pitch frequency adjustment (e.g. +0Hz, -5Hz, +10Hz)", required: false, default: "+0Hz" },
+    { name: "file", type: "file", description: "Optional audio file for voice-to-voice conversion", required: false }
+  ],
+  outputs: [
+    { name: "voice_audio", type: "file", mimeType: "audio/mpeg", description: "Generated MP3 voiceover audio file" }
+  ]
+});
+

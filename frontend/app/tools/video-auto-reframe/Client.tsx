@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, Smartphone, Sparkles, Download, AlertCircle } from "lucide-react";
 import { getBackendUrl } from "../../../utils/runtime-urls";
+import { getTransferMedia } from "@/app/utils/mediaTransfer";
 
 export default function AutoReframeClient() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -10,6 +11,14 @@ export default function AutoReframeClient() {
   const [errorMessage, setErrorMessage] = useState("");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    getTransferMedia().then((media) => {
+      if (media && media.file) {
+        setSelectedFile(media.file);
+      }
+    });
+  }, []);
 
   const startProcessing = async () => {
     if (!selectedFile) return;
@@ -22,23 +31,116 @@ export default function AutoReframeClient() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const response = await fetch(`${backendUrl}/api/video/auto-reframe`, {
-        method: "POST",
-        body: formData,
-      });
+      try {
+        const response = await fetch(`${backendUrl}/api/video/auto-reframe`, {
+          method: "POST",
+          body: formData,
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to process video.");
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setVideoUrl(url);
+          setStatus("completed");
+          return;
+        } else {
+          const errData = await response.json().catch(() => null);
+          if (response.status !== 502 && errData?.detail) {
+            throw new Error(errData.detail);
+          }
+        }
+      } catch (backendErr: any) {
+        console.warn("Backend reframe unavailable, executing client-side reframe:", backendErr);
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      // Fast, resilient client-side 9:16 crop fallback
+      const croppedBlob = await reframeInBrowser(selectedFile);
+      const url = URL.createObjectURL(croppedBlob);
       setVideoUrl(url);
       setStatus("completed");
     } catch (err: any) {
-      setErrorMessage(err.message || "An error occurred during processing.");
+      setErrorMessage(err.message || "An error occurred during video reframing.");
       setStatus("error");
     }
+  };
+
+  const reframeInBrowser = async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      const videoSrc = URL.createObjectURL(file);
+      video.src = videoSrc;
+      video.muted = true;
+      video.playsInline = true;
+
+      video.onloadedmetadata = () => {
+        const vH = video.videoHeight || 720;
+        const vW = video.videoWidth || 1280;
+        const targetWidth = Math.floor(vH * (9 / 16));
+        const cropX = Math.max(0, Math.floor((vW - targetWidth) / 2));
+
+        const canvas = document.createElement("canvas");
+        canvas.width = targetWidth % 2 === 0 ? targetWidth : targetWidth - 1;
+        canvas.height = vH % 2 === 0 ? vH : vH - 1;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(videoSrc);
+          return reject(new Error("Canvas context failed"));
+        }
+
+        const stream = canvas.captureStream(30);
+        let mimeType = "video/webm";
+        if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")) {
+          mimeType = "video/mp4;codecs=avc1";
+        } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+          mimeType = "video/webm;codecs=vp9";
+        }
+
+        const mediaRecorder = new MediaRecorder(stream, { mimeType });
+        const chunks: Blob[] = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          URL.revokeObjectURL(videoSrc);
+          const finalBlob = new Blob(chunks, { type: mimeType });
+          resolve(finalBlob);
+        };
+
+        video.currentTime = 0;
+        video.play().catch(reject);
+        mediaRecorder.start();
+
+        const onFrame = () => {
+          if (video.ended || video.paused) {
+            mediaRecorder.stop();
+            return;
+          }
+          ctx.drawImage(
+            video,
+            cropX, 0, targetWidth, vH,
+            0, 0, canvas.width, canvas.height
+          );
+          if ('requestVideoFrameCallback' in video) {
+            (video as any).requestVideoFrameCallback(onFrame);
+          } else {
+            requestAnimationFrame(onFrame);
+          }
+        };
+
+        if ('requestVideoFrameCallback' in video) {
+          (video as any).requestVideoFrameCallback(onFrame);
+        } else {
+          requestAnimationFrame(onFrame);
+        }
+      };
+
+      video.onerror = () => {
+        URL.revokeObjectURL(videoSrc);
+        reject(new Error("Failed to load video file for processing."));
+      };
+    });
   };
 
   return (

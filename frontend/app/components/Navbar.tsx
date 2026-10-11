@@ -28,7 +28,6 @@ import FirstLoginModal from "./FirstLoginModal";
 
 export default function Navbar() {
   const pathname = usePathname();
-  if (pathname === "/tools/video-editor") return null;
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -37,6 +36,7 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const supabase = createClient();
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverOpenTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const envAdmins = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
     .split(",")
@@ -65,8 +65,11 @@ export default function Navbar() {
       authListener.subscription.unsubscribe();
       document.removeEventListener("mousedown", handleClickOutside);
       if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+      if (hoverOpenTimeoutRef.current) clearTimeout(hoverOpenTimeoutRef.current);
     };
   }, []);
+
+  if (pathname === "/tools/video-editor") return null;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -75,16 +78,22 @@ export default function Navbar() {
 
   const handleMouseEnter = (menu: string) => {
     if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
-    setActiveDropdown(menu);
+    if (hoverOpenTimeoutRef.current) clearTimeout(hoverOpenTimeoutRef.current);
+    // 350ms hover intent delay so clicking Tools navigates cleanly without instant dropdown popup
+    hoverOpenTimeoutRef.current = setTimeout(() => {
+      setActiveDropdown(menu);
+    }, 350);
   };
 
   const handleMouseLeave = () => {
+    if (hoverOpenTimeoutRef.current) clearTimeout(hoverOpenTimeoutRef.current);
     dropdownTimeoutRef.current = setTimeout(() => {
       setActiveDropdown(null);
-    }, 180);
+    }, 200);
   };
 
   const toggleDropdown = (menu: string) => {
+    if (hoverOpenTimeoutRef.current) clearTimeout(hoverOpenTimeoutRef.current);
     setActiveDropdown(activeDropdown === menu ? null : menu);
   };
 
@@ -363,10 +372,18 @@ export default function Navbar() {
             </div>
 
             <Link
+              href="/botock-library"
+              className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-cyan-500 dark:text-cyan-400" />
+              <span>Botock Library</span>
+            </Link>
+
+            <Link
               href="/blog"
               className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer"
             >
-              Blog
+              Blogs
             </Link>
           </nav>
 
@@ -568,12 +585,21 @@ export default function Navbar() {
             </Link>
 
             <Link
+              href="/botock-library"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-cyan-500 dark:text-cyan-400" />
+              <span>Botock Library</span>
+            </Link>
+
+            <Link
               href="/blog"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] cursor-pointer"
             >
               <FileText className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-              <span>Blog</span>
+              <span>Blogs</span>
             </Link>
           </div>
 

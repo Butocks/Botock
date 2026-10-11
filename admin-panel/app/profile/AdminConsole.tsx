@@ -96,7 +96,7 @@ interface PlanItem {
 
 interface AdminConsoleProps {
   token?: string | null;
-  email?: string;
+  email?: string | null;
 }
 
 export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
@@ -104,8 +104,11 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
   const [adminToken, setAdminToken] = useState<string | null>(token || null);
   const [adminEmail, setAdminEmail] = useState<string>(email || "");
   const [activeTab, setActiveTab] = useState<
-    "analytics" | "quotas" | "tool-usage" | "promotions" | "plans" | "subscriptions" | "complaints" | "jobs" | "blogs" | "tools" | "policies" | "email"
+    "analytics" | "quotas" | "users" | "tool-usage" | "promotions" | "complaints" | "jobs" | "blogs" | "tools" | "policies" | "email"
   >("analytics");
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [newVipEmail, setNewVipEmail] = useState("");
   const [subRequests, setSubRequests] = useState<any[]>([]);
 
   // Zoho SMTP Diagnostics & Update State
@@ -146,14 +149,29 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
     mrr: "$0",
   });
   
-  const [videoStats, setVideoStats] = useState({ today: 0, this_month: 0, all_time: 0 });
-
-
+  const [videoStats, setVideoStats] = useState({
+    today: 0,
+    this_month: 0,
+    all_time: 0,
+    today_flow_credits: 0,
+    this_month_flow_credits: 0,
+    all_time_flow_credits: 0,
+  });
 
   // ----------------------------------------------------
-  // Module 2: Quotas & Tokens
+  // Module 2: Flow Credits & Generation Limits
   // ----------------------------------------------------
   const [quotas, setQuotas] = useState<any>({
+    flow_monthly_credit_pool: 5000,
+    global_daily_video_limit: 30,
+    global_monthly_video_limit: 500,
+    user_daily_video_limit: 2,
+    guest_daily_video_limit: 1,
+    guest_video_cost_credits: 4,
+    user_video_cost_credits: 6,
+    guest_video_locked: false,
+    special_unlimited_users: [],
+    restricted_users: [],
     free_daily_credits: 50,
     free_daily_photos: 5,
     subscribers_unlimited_photos: true,
@@ -335,9 +353,79 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
       if (resSubs.ok) {
         setSubRequests(await resSubs.json());
       }
+
+      // 7. Users with VIP / Limit status
+      const resUsers = await fetch(`${backendUrl}/api/admin/users`, {
+        headers: { "x-admin-token": token },
+      });
+      if (resUsers.ok) {
+        const uData = await resUsers.json();
+        if (uData.users) setUsersList(uData.users);
+      }
     } catch (err) {
       console.error("Error loading admin data:", err);
     }
+  };
+
+  const handleToggleVip = async (userEmail: string) => {
+    try {
+      setLoading(true);
+      const backendUrl = await getBackendUrl();
+      const res = await fetch(`${backendUrl}/api/admin/users/toggle-vip`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-token": adminToken || "",
+        },
+        body: JSON.stringify({ email: userEmail }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "Failed to toggle VIP status.");
+      const data = await res.json();
+      setUsersList((prev) =>
+        prev.map((u) => (u.email.toLowerCase() === userEmail.toLowerCase() ? { ...u, is_vip: data.is_vip } : u))
+      );
+      showToast(`${userEmail} VIP Unlimited: ${data.is_vip ? "Granted ⭐" : "Revoked"}`);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleRestrict = async (userEmail: string) => {
+    try {
+      setLoading(true);
+      const backendUrl = await getBackendUrl();
+      const res = await fetch(`${backendUrl}/api/admin/users/toggle-restrict`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-token": adminToken || "",
+        },
+        body: JSON.stringify({ email: userEmail }),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || "Failed to toggle restriction.");
+      const data = await res.json();
+      setUsersList((prev) =>
+        prev.map((u) => (u.email.toLowerCase() === userEmail.toLowerCase() ? { ...u, is_restricted: data.is_restricted } : u))
+      );
+      showToast(`${userEmail} ${data.is_restricted ? "Restricted 🚫" : "Activated"}`);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddVipManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVipEmail.trim() || !newVipEmail.includes("@")) {
+      showToast("Please enter a valid email address.", "error");
+      return;
+    }
+    await handleToggleVip(newVipEmail.trim());
+    setNewVipEmail("");
+    loadAllData(adminToken || "");
   };
 
   // ----------------------------------------------------
@@ -794,35 +882,23 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               activeTab === "quotas" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900"
             }`}
           >
-            <Zap className="w-4 h-4" />
-            <span>Credits & Photo Quota</span>
-          </button>
-
-          
-
-          <button
-            onClick={() => setActiveTab("plans")}
-            className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "plans" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900"
-            }`}
-          >
-            <Sliders className="w-4 h-4" />
-            <span>Pricing & Subscribers</span>
+            <Zap className="w-4 h-4 text-amber-400" />
+            <span>Flow Credits & Limits</span>
           </button>
 
           <button
-            onClick={() => setActiveTab("subscriptions")}
+            onClick={() => setActiveTab("users")}
             className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === "subscriptions" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900"
+              activeTab === "users" ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900"
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Crown className="w-4 h-4 text-amber-400" />
-              <span>Sub Requests</span>
+              <KeyRound className="w-4 h-4 text-emerald-400" />
+              <span>Users & VIP Access</span>
             </div>
-            {subRequests.filter((s: any) => s.status === "pending").length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-black text-[10px] font-bold">
-                {subRequests.filter((s: any) => s.status === "pending").length}
+            {usersList.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-mono">
+                {usersList.length}
               </span>
             )}
           </button>
@@ -954,98 +1030,203 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             </div>
           )}
 
-          {/* TAB 2: CREDITS & PHOTO QUOTA */}
+          {/* TAB 2: FLOW CREDITS & GENERATION QUOTA */}
           {activeTab === "quotas" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Credits, Tokens & Photo Quota Engine</h2>
-                  <p className="text-xs text-slate-400 mt-1">Configure limits for free visitors and token allocations</p>
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-amber-400" />
+                    <span>Google Flow Pool & Video Generation Quotas</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Set your Google Flow monthly credit pool and daily/monthly video limits. Generation stops automatically when quota is reached.
+                  </p>
                 </div>
                 <button
                   onClick={handleSaveQuotas}
                   className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Save Quotas</span>
+                  <span>Save Quotas & Pool</span>
                 </button>
               </div>
 
-              {/* Subscribers Unlimited Rule Card */}
-              <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-950/30 to-indigo-950/30 border border-purple-500/30 flex items-start gap-4">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-300 shrink-0">
-                  <Sparkles className="w-5 h-5" />
+              {/* Calculation Rules Card */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-950/20 via-indigo-950/20 to-purple-950/20 border border-amber-500/30 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-sm shrink-0">
+                    4cr
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-200">Guest Video (4s Duration)</h4>
+                    <p className="text-[11px] text-slate-300 mt-0.5">
+                      Costs exactly <strong>4 Flow Credits</strong> per generation.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-purple-200">Subscribers Rule: Unlimited Photos Active</h4>
-                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                    Subscribers are exempt from all image generation quotas. They can generate <strong>unlimited photos</strong> with Nano Banana 2. This rule is hardwired and guaranteed for all active subscribers.
-                  </p>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-sm shrink-0">
+                    6cr
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-indigo-200">Logged-In User (8s Duration)</h4>
+                    <p className="text-[11px] text-slate-300 mt-0.5">
+                      Costs exactly <strong>6 Flow Credits</strong> (360p standard).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-sm shrink-0">
+                    ⭐
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-200">VIP Unlimited Users</h4>
+                    <p className="text-[11px] text-slate-300 mt-0.5">
+                      Exempt from all limits; never blocked by daily or monthly caps.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Global Quotas & Analytics Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Monthly Flow Pool Gauge & Live Usage */}
+              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Google Flow Monthly Credit Pool Budget
+                    </span>
+                    <div className="text-2xl font-black text-white mt-1 flex items-center gap-3">
+                      <span>{videoStats.this_month_flow_credits || 0}</span>
+                      <span className="text-slate-500 text-sm font-normal">
+                        / {(quotas.flow_monthly_credit_pool || 5000).toLocaleString()} Flow Credits Used This Month
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-slate-400 whitespace-nowrap">Monthly Pool Size:</label>
+                    <input
+                      type="number"
+                      min={100}
+                      step={100}
+                      value={quotas.flow_monthly_credit_pool || 5000}
+                      onChange={(e) => setQuotas({ ...quotas, flow_monthly_credit_pool: parseInt(e.target.value) || 5000 })}
+                      className="w-32 px-3 py-1.5 bg-black/60 border border-slate-700 rounded-xl text-sm font-mono text-white text-right"
+                    />
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full h-3 rounded-full bg-slate-900 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      ((videoStats.this_month_flow_credits || 0) / (quotas.flow_monthly_credit_pool || 5000)) > 0.9
+                        ? "bg-rose-500"
+                        : "bg-gradient-to-r from-indigo-500 to-amber-500"
+                    }`}
+                    style={{
+                      width: `${Math.min(100, Math.round(((videoStats.this_month_flow_credits || 0) / (quotas.flow_monthly_credit_pool || 5000)) * 100))}%`,
+                    }}
+                  />
+                </div>
+
+                <div className="flex justify-between text-[11px] text-slate-500">
+                  <span>Today Consumed: {videoStats.today_flow_credits || 0} credits</span>
+                  <span>
+                    Remaining: {Math.max(0, (quotas.flow_monthly_credit_pool || 5000) - (videoStats.this_month_flow_credits || 0))} credits
+                  </span>
+                </div>
+              </div>
+
+              {/* Global Quotas & Limits Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 
-                {/* Global Daily Video Limit */}
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3">
+                {/* Platform Daily Video Cap */}
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
                   <label className="block text-xs font-semibold text-slate-300">
-                    Global Daily Video Limit (Platform-Wide)
+                    Platform Daily Video Cap
                   </label>
                   <input
                     type="number"
-                    min={10}
-                    max={10000}
-                    value={quotas.global_daily_video_limit || 500}
-                    onChange={(e) => setQuotas({ ...quotas, global_daily_video_limit: parseInt(e.target.value) || 500 })}
+                    min={1}
+                    value={quotas.global_daily_video_limit || 30}
+                    onChange={(e) => setQuotas({ ...quotas, global_daily_video_limit: parseInt(e.target.value) || 30 })}
                     className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
                   />
-                  <p className="text-[11px] text-slate-500">Maximum videos that can be generated per day across ALL users combined.</p>
+                  <p className="text-[11px] text-slate-500">Combined max videos generated per day across all users.</p>
                 </div>
 
-                {/* Guest Video Lock */}
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-3 flex flex-col justify-between">
+                {/* Platform Monthly Video Cap */}
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Platform Monthly Video Cap
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={quotas.global_monthly_video_limit || 500}
+                    onChange={(e) => setQuotas({ ...quotas, global_monthly_video_limit: parseInt(e.target.value) || 500 })}
+                    className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
+                  />
+                  <p className="text-[11px] text-slate-500">Combined max videos per calendar month.</p>
+                </div>
+
+                {/* Per-User Daily Limit */}
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Per-User Daily Limit
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={quotas.user_daily_video_limit || 2}
+                    onChange={(e) => setQuotas({ ...quotas, user_daily_video_limit: parseInt(e.target.value) || 2 })}
+                    className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white"
+                  />
+                  <p className="text-[11px] text-slate-500">Daily video limit for standard logged-in accounts.</p>
+                </div>
+
+                {/* Guest Daily Limit & Lock */}
+                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-2 flex flex-col justify-between">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300">
-                      Guest Video Lock (No Login)
+                      Guest Daily Limit (Per IP)
                     </label>
-                    <p className="text-[11px] text-slate-500 mt-1">Prevent unauthenticated guest visitors from generating videos to save tokens.</p>
+                    <input
+                      type="number"
+                      min={1}
+                      value={quotas.guest_daily_video_limit || 1}
+                      onChange={(e) => setQuotas({ ...quotas, guest_daily_video_limit: parseInt(e.target.value) || 1 })}
+                      className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-base font-mono text-white mt-1"
+                    />
                   </div>
                   
                   <button
                     onClick={() => setQuotas({ ...quotas, guest_video_locked: !quotas.guest_video_locked })}
-                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    className={`w-full py-2 rounded-xl text-xs font-bold transition-all ${
                       quotas.guest_video_locked 
                       ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' 
                       : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                     }`}
                   >
-                    {quotas.guest_video_locked ? 'LOCKED (Guests Blocked)' : 'UNLOCKED (Guests Allowed)'}
+                    {quotas.guest_video_locked ? 'Guests Locked (No Gen)' : 'Guests Allowed'}
                   </button>
                 </div>
 
-                {/* Video Generation Stats */}
-                <div className="p-5 rounded-2xl bg-indigo-900/20 border border-indigo-500/30 space-y-3">
-                  <label className="block text-xs font-bold text-indigo-300">
-                    Video Generation Analytics
-                  </label>
-                  
-                  <div className="space-y-2 pt-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-400">Generated Today:</span>
-                      <span className="font-mono font-bold text-indigo-400">{videoStats.today.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-400">Generated This Month:</span>
-                      <span className="font-mono font-bold text-indigo-400">{videoStats.this_month.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs pt-2 border-t border-indigo-500/20">
-                      <span className="text-slate-400">All Time Videos:</span>
-                      <span className="font-mono font-bold text-indigo-300">{videoStats.all_time.toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
+              </div>
 
+              {/* End-User Privacy Protection Banner */}
+              <div className="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 flex items-center gap-3">
+                <span className="text-lg">🛡️</span>
+                <div>
+                  <span className="font-bold text-slate-300">User Experience Guarantee: </span>
+                  When daily or monthly quota is reached, visitors only see: 
+                  <span className="italic text-amber-300"> "Service temporarily unavailable. Quota full for today. Please try again tomorrow." </span>
+                  Your Google Flow backend credits pool is never revealed to public visitors.
+                </div>
               </div>
 
               <div className="space-y-4 mt-6">
@@ -1384,230 +1565,153 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             </div>
           )}
 
-          {/* TAB 4: PRICING & SUBSCRIBERS */}
-          {activeTab === "plans" && (
+          {/* TAB 4: USER MANAGEMENT & VIP UNLIMITED ACCESS */}
+          {activeTab === "users" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-white">Subscription Plans & Feature Bundles</h2>
-                  <p className="text-xs text-slate-400 mt-1">Edit plan pricing and features displayed on /services</p>
-                </div>
-                <button
-                  onClick={handleSavePlans}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Save Plans</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {plans.map((p, pIdx) => (
-                  <div key={p.id} className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs uppercase font-bold tracking-wider text-indigo-400">{p.name}</span>
-                      <input
-                        type="text"
-                        value={p.badge}
-                        onChange={(e) => {
-                          const updated = [...plans];
-                          updated[pIdx].badge = e.target.value;
-                          setPlans(updated);
-                        }}
-                        className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] text-slate-300 text-right"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] text-slate-500 block mb-1">Plan Description</label>
-                      <textarea
-                        rows={2}
-                        value={p.desc || ""}
-                        onChange={(e) => {
-                          const updated = [...plans];
-                          updated[pIdx].desc = e.target.value;
-                          setPlans(updated);
-                        }}
-                        placeholder="Brief summary of plan target..."
-                        className="w-full px-3 py-1.5 bg-black/60 border border-slate-700 rounded-xl text-xs text-slate-300 resize-none outline-none focus:border-indigo-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] text-slate-500 block mb-1">Plan Price</label>
-                      <input
-                        type="text"
-                        value={p.price}
-                        onChange={(e) => {
-                          const updated = [...plans];
-                          updated[pIdx].price = e.target.value;
-                          setPlans(updated);
-                        }}
-                        className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-lg font-bold text-white font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] text-slate-500 block mb-1">Billing Period</label>
-                      <input
-                        type="text"
-                        value={p.period}
-                        onChange={(e) => {
-                          const updated = [...plans];
-                          updated[pIdx].period = e.target.value;
-                          setPlans(updated);
-                        }}
-                        className="w-full px-3 py-1.5 bg-black/60 border border-slate-700 rounded-xl text-xs text-slate-300"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="text-[11px] text-slate-400 font-semibold">Feature List (1 per line)</label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...plans];
-                            updated[pIdx].features.push("New Feature Benefit");
-                            setPlans(updated);
-                          }}
-                          className="text-[10px] text-indigo-400 hover:text-indigo-300"
-                        >
-                          + Add Item
-                        </button>
-                      </div>
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                        {p.features.map((feat, fIdx) => (
-                          <div key={fIdx} className="flex items-center gap-1.5">
-                            <input
-                              type="text"
-                              value={feat}
-                              onChange={(e) => {
-                                const updated = [...plans];
-                                updated[pIdx].features[fIdx] = e.target.value;
-                                setPlans(updated);
-                              }}
-                              className="flex-1 px-2.5 py-1 bg-black/40 border border-slate-800 rounded-lg text-xs text-slate-200"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = [...plans];
-                                updated[pIdx].features.splice(fIdx, 1);
-                                setPlans(updated);
-                              }}
-                              className="text-slate-600 hover:text-red-400 p-1"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: COMPLAINTS PORTAL */}
-          {/* TAB: SUBSCRIPTION WAITLIST & NOTIFY EMAILS */}
-          {activeTab === "subscriptions" && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-indigo-400" />
-                    <span>Subscription Waitlist & Notification Emails</span>
+                    <KeyRound className="w-5 h-5 text-emerald-400" />
+                    <span>User Management & VIP Unlimited Engine</span>
                   </h2>
                   <p className="text-xs text-slate-400 mt-1">
-                    Users waiting to subscribe when payment methods launch. Admin can view and copy emails to notify them.
+                    Track generations per user, grant special VIP access (bypass all limits), or restrict abusive accounts.
                   </p>
                 </div>
-              </div>
-
-              {/* Mode Banner */}
-              <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold">
-                    ✉️
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-white">Waitlist Collection Active</h4>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Users see "We will notify you when available" and submit their emails.
-                    </p>
-                  </div>
-                </div>
                 <button
-                  type="button"
-                  onClick={() => {
-                    const allEmails = subRequests.map((r: any) => r.email).join(", ");
-                    navigator.clipboard.writeText(allEmails);
-                    showToast("All waitlist emails copied to clipboard!");
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs cursor-pointer"
+                  onClick={() => loadAllData(adminToken || "")}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs flex items-center gap-1.5 self-start cursor-pointer"
                 >
-                  Copy All Emails
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Refresh Users</span>
                 </button>
               </div>
 
-              {/* Table */}
+              {/* Add VIP Form & Search */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Search Bar */}
+                <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 flex items-center gap-3">
+                  <Search className="w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by user email..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="w-full bg-transparent text-xs text-white outline-none placeholder:text-slate-500"
+                  />
+                  {userSearch && (
+                    <button
+                      onClick={() => setUserSearch("")}
+                      className="text-slate-500 hover:text-white text-xs"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Add VIP Fast */}
+                <form
+                  onSubmit={handleAddVipManual}
+                  className="p-4 rounded-2xl bg-[#111116] border border-slate-800 flex items-center gap-3"
+                >
+                  <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                  <input
+                    type="email"
+                    placeholder="Enter email to make VIP Unlimited..."
+                    value={newVipEmail}
+                    onChange={(e) => setNewVipEmail(e.target.value)}
+                    className="w-full bg-transparent text-xs text-white outline-none placeholder:text-slate-500"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 cursor-pointer"
+                  >
+                    Add VIP
+                  </button>
+                </form>
+              </div>
+
+              {/* Users Table */}
               <div className="bg-[#111116] border border-slate-800 rounded-2xl overflow-hidden">
                 <div className="p-4 border-b border-slate-800 flex justify-between items-center">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Collected User Emails ({subRequests.length})
+                    Registered User Accounts ({usersList.length})
                   </h3>
                 </div>
 
-                {subRequests.length === 0 ? (
+                {usersList.length === 0 ? (
                   <div className="p-8 text-center text-xs text-slate-500">
-                    No waitlist submissions yet. When users request to be notified, their emails will appear here.
+                    No registered user accounts found yet.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-900/50 text-slate-400 border-b border-slate-800">
+                      <thead className="bg-slate-900/50 text-slate-400 border-b border-slate-800 font-semibold">
                         <tr>
                           <th className="p-3">User Email</th>
-                          <th className="p-3">Interested Plan</th>
-                          <th className="p-3">Date Submitted</th>
-                          <th className="p-3 text-right">Action</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3 text-center">Videos Today</th>
+                          <th className="p-3 text-center">Videos This Month</th>
+                          <th className="p-3 text-center">All-Time Total</th>
+                          <th className="p-3 text-center">Quota Rule</th>
+                          <th className="p-3 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800 text-slate-200">
-                        {subRequests.map((req: any) => (
-                          <tr key={req.id} className="hover:bg-white/[0.02]">
-                            <td className="p-3 font-semibold text-white">{req.email}</td>
-                            <td className="p-3 text-indigo-400">{req.plan || "Pro"}</td>
-                            <td className="p-3 text-slate-500 text-[11px]">{req.created_at}</td>
-                            <td className="p-3 text-right space-x-2">
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(req.email);
-                                  showToast(`Copied ${req.email} to clipboard!`);
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] cursor-pointer"
-                              >
-                                Copy Email
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  const backendUrl = await getBackendUrl();
-                                  await fetch(`${backendUrl}/api/admin/subscription-requests/${req.id}/status?status=dismissed`, {
-                                    method: "POST",
-                                    headers: { "x-admin-token": adminToken || "" },
-                                  });
-                                  showToast("Removed from list.");
-                                  loadAllData(adminToken || "");
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 font-bold text-[11px] cursor-pointer"
-                              >
-                                Delete
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {usersList
+                          .filter((u) => !userSearch || u.email.toLowerCase().includes(userSearch.toLowerCase()))
+                          .map((u) => (
+                            <tr key={u.email} className="hover:bg-white/[0.02]">
+                              <td className="p-3 font-semibold text-white">
+                                <div className="flex items-center gap-2">
+                                  <span>{u.email}</span>
+                                  {u.is_vip && (
+                                    <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[10px] font-bold">
+                                      ⭐ VIP Unlimited
+                                    </span>
+                                  )}
+                                  {u.is_restricted && (
+                                    <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
+                                      Banned
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 text-slate-400 capitalize">{u.status || "active"}</td>
+                              <td className="p-3 text-center font-mono font-bold text-indigo-400">{u.videos_today || 0}</td>
+                              <td className="p-3 text-center font-mono font-bold text-indigo-300">{u.videos_month || 0}</td>
+                              <td className="p-3 text-center font-mono text-slate-400">{u.total_videos || 0}</td>
+                              <td className="p-3 text-center">
+                                {u.is_vip ? (
+                                  <span className="text-[11px] font-bold text-amber-400">Unlimited (Bypasses Limits)</span>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400">Standard Daily Quota</span>
+                                )}
+                              </td>
+                              <td className="p-3 text-right space-x-2">
+                                <button
+                                  onClick={() => handleToggleVip(u.email)}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                                    u.is_vip
+                                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30"
+                                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                                  }`}
+                                >
+                                  {u.is_vip ? "⭐ VIP Active" : "Make VIP"}
+                                </button>
+                                <button
+                                  onClick={() => handleToggleRestrict(u.email)}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                                    u.is_restricted
+                                      ? "bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30"
+                                      : "bg-slate-800 text-slate-400 hover:text-rose-300 hover:bg-rose-950/40"
+                                  }`}
+                                >
+                                  {u.is_restricted ? "Restricted" : "Restrict"}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>
@@ -1615,6 +1719,8 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               </div>
             </div>
           )}
+
+
 
           
         {activeTab === "tool-usage" && (

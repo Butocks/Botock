@@ -17,14 +17,34 @@ export function useWaveforms(mediaItems: MediaBinItem[]) {
         setWaveformsBySource(prev => ({ ...prev, [item.id]: waveformsCache[item.id] }));
         return;
       }
-      
+
+      const isImage =
+        item.file?.type?.startsWith("image/") ||
+        /\.(jpe?g|png|gif|webp|svg|bmp|ico|avif)$/i.test(item.name || "") ||
+        /\.(jpe?g|png|gif|webp|svg|bmp|ico|avif)$/i.test(item.url || "");
+
+      if (isImage) {
+        waveformsCache[item.id] = [];
+        return;
+      }
+
+      let audioCtx: AudioContext | null = null;
       try {
         // Fetch the object URL as an array buffer
         const response = await fetch(item.url);
+        if (!response.ok) {
+          waveformsCache[item.id] = [];
+          return;
+        }
         const arrayBuffer = await response.arrayBuffer();
 
         // Decode audio data
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtxClass) {
+          waveformsCache[item.id] = [];
+          return;
+        }
+        audioCtx = new AudioCtxClass();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
         // We only care about the first channel for the waveform overview
@@ -54,16 +74,30 @@ export function useWaveforms(mediaItems: MediaBinItem[]) {
         if (active) {
           setWaveformsBySource(prev => ({ ...prev, [item.id]: peaks }));
         }
-      } catch (err) {
-        console.error("Failed to generate waveform for", item.name, err);
+      } catch {
+        // Silent video (no audio track) or non-audio media: cache empty peak array to avoid retrying
+        waveformsCache[item.id] = [];
+      } finally {
+        if (audioCtx) {
+          try {
+            audioCtx.close();
+          } catch {}
+        }
       }
     };
 
     mediaItems.forEach(item => {
-      // Generate waveforms for both explicit audio files and video files (which might have audio)
-      // Since video files can be large, we might want to check the type, but for a web editor 
-      // we usually want to see audio waveforms on video clips too!
-      if (!waveformsBySource[item.id]) {
+      const isImage =
+        item.file?.type?.startsWith("image/") ||
+        /\.(jpe?g|png|gif|webp|svg|bmp|ico|avif)$/i.test(item.name || "") ||
+        /\.(jpe?g|png|gif|webp|svg|bmp|ico|avif)$/i.test(item.url || "");
+
+      if (isImage) {
+        waveformsCache[item.id] = [];
+        return;
+      }
+
+      if (!waveformsBySource[item.id] && waveformsCache[item.id] === undefined) {
         generateWaveform(item);
       }
     });

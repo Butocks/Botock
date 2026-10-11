@@ -166,6 +166,16 @@ def check_otp_spam_protection(email: str, ip: str) -> None:
 # ----------------------------------------------------
 DEFAULT_SETTINGS = {
     "quotas": {
+        "flow_monthly_credit_pool": 5000,
+        "global_daily_video_limit": 30,
+        "global_monthly_video_limit": 500,
+        "user_daily_video_limit": 2,
+        "guest_daily_video_limit": 1,
+        "guest_video_cost_credits": 4,
+        "user_video_cost_credits": 6,
+        "special_unlimited_users": [],
+        "restricted_users": [],
+        "guest_video_locked": False,
         "free_daily_credits": 50,
         "free_daily_photos": 5,
         "subscribers_unlimited_photos": True,
@@ -296,7 +306,7 @@ DEFAULT_SETTINGS = {
         {"id": "pdf-merge", "name": "Merge PDF Documents", "isProOnly": False, "isInDevelopment": False, "statusMessage": "Operational"},
         {"id": "pdf-compress", "name": "Compress PDF Files", "isProOnly": False, "isInDevelopment": False, "statusMessage": "Operational"},
         {"id": "pdf-to-word", "name": "PDF to Word (DOCX)", "isProOnly": True, "isInDevelopment": False, "statusMessage": "Pro Only"},
-        {"id": "image-upscale", "name": "AI Image Upscaler 4K", "isProOnly": False, "isInDevelopment": True, "statusMessage": "This tool is temporarily restricted: Currently In Development"},
+        {"id": "image-upscale", "name": "AI Image Upscaler 4K", "isProOnly": False, "isInDevelopment": False, "statusMessage": "Operational"},
     ],
     "policies": {
         "privacy_policy": "Botock respects your privacy. Media generated is stored for 24h for free users and 30 days for Pro users. We never sell your personal information.",
@@ -603,17 +613,25 @@ async def update_quotas(
     data: Dict[str, Any],
     admin_token: str = Depends(verify_admin_token),
 ):
-    """Admin updates daily free credits, photos, and video tokens."""
+    """Admin updates Flow monthly credits pool, daily/monthly limits, and model costs."""
     cfg = get_platform_settings()
     cfg["quotas"].update({
+        "flow_monthly_credit_pool": int(data.get("flow_monthly_credit_pool", cfg["quotas"].get("flow_monthly_credit_pool", 5000))),
+        "global_daily_video_limit": int(data.get("global_daily_video_limit", cfg["quotas"].get("global_daily_video_limit", 30))),
+        "global_monthly_video_limit": int(data.get("global_monthly_video_limit", cfg["quotas"].get("global_monthly_video_limit", 500))),
+        "user_daily_video_limit": int(data.get("user_daily_video_limit", cfg["quotas"].get("user_daily_video_limit", 2))),
+        "guest_daily_video_limit": int(data.get("guest_daily_video_limit", cfg["quotas"].get("guest_daily_video_limit", 1))),
+        "guest_video_cost_credits": int(data.get("guest_video_cost_credits", 4)),
+        "user_video_cost_credits": int(data.get("user_video_cost_credits", 6)),
+        "guest_video_locked": bool(data.get("guest_video_locked", cfg["quotas"].get("guest_video_locked", False))),
         "free_daily_credits": int(data.get("free_daily_credits", 50)),
         "free_daily_photos": int(data.get("free_daily_photos", 5)),
         "subscribers_unlimited_photos": True,
         "video_tokens": int(data.get("video_tokens", 1500)),
-        "video_model_costs": data.get("video_model_costs", {
-            "omni-1.1-flash-360p": 15,
+        "video_model_costs": data.get("video_model_costs", cfg["quotas"].get("video_model_costs", {
+            "omni-1.1-flash-360p": 14,
             "omni-1.1-flash-720p": 30
-        }),
+        })),
     })
     _write_json(SETTINGS_FILE, cfg)
     return {"success": True, "quotas": cfg["quotas"]}

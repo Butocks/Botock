@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, Headphones, Sparkles, Download, AlertCircle } from "lucide-react";
 import { getBackendUrl } from "../../../utils/runtime-urls";
+import { getTransferMedia } from "@/app/utils/mediaTransfer";
 
 export default function AudioEnhanceClient() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -10,6 +11,22 @@ export default function AudioEnhanceClient() {
   const [errorMessage, setErrorMessage] = useState("");
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const checkTransfer = async () => {
+      try {
+        const media = await getTransferMedia();
+        if (mounted && media && media.file) {
+          setSelectedFile(media.file);
+        }
+      } catch (err) {
+        console.error("Error auto-loading transfer media in audio enhance:", err);
+      }
+    };
+    checkTransfer();
+    return () => { mounted = false; };
+  }, []);
 
   const startProcessing = async () => {
     if (!selectedFile) return;
@@ -22,23 +39,135 @@ export default function AudioEnhanceClient() {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const response = await fetch(`${backendUrl}/api/convert/audio-enhance`, {
-        method: "POST",
-        body: formData,
-      });
+      try {
+        const response = await fetch(`${backendUrl}/api/convert/audio-enhance`, {
+          method: "POST",
+          body: formData,
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to process audio.");
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setAudioUrl(url);
+          setStatus("completed");
+          return;
+        } else {
+          const errData = await response.json().catch(() => null);
+          if (response.status !== 502 && errData?.detail) {
+            throw new Error(errData.detail);
+          }
+        }
+      } catch (backendErr: any) {
+        console.warn("Backend audio enhancer unavailable, using browser Web Audio pipeline:", backendErr);
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      // Fast, offline-capable browser audio enhance fallback
+      const enhancedBlob = await enhanceAudioInBrowser(selectedFile);
+      const url = URL.createObjectURL(enhancedBlob);
       setAudioUrl(url);
       setStatus("completed");
     } catch (err: any) {
-      setErrorMessage(err.message || "An error occurred during processing.");
+      setErrorMessage(err.message || "An error occurred during audio processing.");
       setStatus("error");
     }
+  };
+
+  const enhanceAudioInBrowser = async (file: File): Promise<Blob> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+
+    const offlineCtx = new OfflineAudioContext(
+      decoded.numberOfChannels,
+      decoded.length,
+      decoded.sampleRate
+    );
+
+    const source = offlineCtx.createBufferSource();
+    source.buffer = decoded;
+
+    // Highpass filter to eliminate low-frequency rumble below 80Hz
+    const highpass = offlineCtx.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 80;
+
+    // Lowpass filter to eliminate high-frequency hiss above 12kHz
+    const lowpass = offlineCtx.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 12000;
+
+    // Dynamic speech compressor to balance voice levels
+    const compressor = offlineCtx.createDynamicsCompressor();
+    compressor.threshold.value = -24;
+    compressor.knee.value = 20;
+    compressor.ratio.value = 8;
+    compressor.attack.value = 0.005;
+    compressor.release.value = 0.2;
+
+    source.connect(highpass);
+    highpass.connect(lowpass);
+    lowpass.connect(compressor);
+    compressor.connect(offlineCtx.destination);
+
+    source.start(0);
+    const renderedBuffer = await offlineCtx.startRendering();
+
+    // Encode renderedBuffer to standard WAV format
+    return bufferToWave(renderedBuffer);
+  };
+
+  const bufferToWave = (abuffer: AudioBuffer): Blob => {
+    const numOfChan = abuffer.numberOfChannels;
+    const length = abuffer.length * numOfChan * 2 + 44;
+    const out = new DataView(new ArrayBuffer(length));
+    const channels: Float32Array[] = [];
+    let sampleRate = abuffer.sampleRate;
+    let offset = 0;
+    let pos = 0;
+
+    function setUint16(data: number) {
+      out.setUint16(pos, data, true);
+      pos += 2;
+    }
+    function setUint32(data: number) {
+      out.setUint32(pos, data, true);
+      pos += 4;
+    }
+
+    // RIFF chunk descriptor
+    setUint32(0x46464952); // "RIFF"
+    setUint32(length - 8); // file length - 8
+    setUint32(0x45564157); // "WAVE"
+
+    // FMT sub-chunk
+    setUint32(0x20746d66); // "fmt " chunk
+    setUint32(16); // 16 for PCM
+    setUint16(1); // Linear quantization (PCM)
+    setUint16(numOfChan);
+    setUint32(sampleRate);
+    setUint32(sampleRate * 2 * numOfChan); // byte rate
+    setUint16(numOfChan * 2); // block align
+    setUint16(16); // bits per sample
+
+    // Data sub-chunk
+    setUint32(0x61746164); // "data" chunk
+    setUint32(length - pos - 4);
+
+    for (let i = 0; i < abuffer.numberOfChannels; i++) {
+      channels.push(abuffer.getChannelData(i));
+    }
+
+    while (offset < abuffer.length) {
+      for (let i = 0; i < numOfChan; i++) {
+        let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+        sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+        out.setInt16(pos, sample, true);
+        pos += 2;
+      }
+      offset++;
+    }
+
+    return new Blob([out.buffer], { type: "audio/wav" });
   };
 
   return (

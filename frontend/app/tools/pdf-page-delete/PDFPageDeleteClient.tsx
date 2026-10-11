@@ -9,7 +9,9 @@ import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
 import * as pdfjsLib from "pdfjs-dist";
 import PDFPageThumbnail from "./PDFPageThumbnail";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+if (typeof window !== "undefined") {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+}
 
 export default function PDFPageDeleteClient() {
   const { file, pageCount, error: docError, loadFile, reset: resetDoc } = usePdfDocument();

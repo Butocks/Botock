@@ -97,14 +97,14 @@ export default function VideoEditorPage() {
   };
 
   return (
-    <div className="w-full min-h-screen bg-black text-white flex flex-col font-sans">
+    <div className="w-full h-screen overflow-hidden bg-black text-white flex flex-col font-sans">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       
-      {/* Editor Container - Takes full viewport height minus scroll */}
-      <div className="w-full h-[100dvh] shrink-0 border-b border-[#2b2b36]">
+      {/* Editor Container - Takes exactly full viewport height */}
+      <div className="w-full h-full flex-1 overflow-hidden">
         <ToolErrorBoundary toolName="Video Editor">
           <Suspense fallback={<div className="flex h-full items-center justify-center text-slate-500">Loading Video Editor...</div>}>
             <VideoEditorComponent />
@@ -112,8 +112,8 @@ export default function VideoEditorPage() {
         </ToolErrorBoundary>
       </div>
     
-      {/* --- Enterprise SEO Content --- */}
-      <section className="max-w-7xl mx-auto px-4 py-16 w-full">
+      {/* --- Enterprise SEO Content (Crawlable by search engines without disrupting full-screen studio) --- */}
+      <div className="sr-only">
         <div className="space-y-12">
           <div className="space-y-4">
             <h2 className="text-2xl sm:text-3xl font-black text-white">
@@ -169,7 +169,7 @@ export default function VideoEditorPage() {
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
     </div>
   );

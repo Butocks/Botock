@@ -25,6 +25,8 @@ import {
   Split,
   Crop,
   Sliders,
+  BookOpen,
+  Eye,
 } from "lucide-react";
 import AdBanner from "./components/AdBanner";
 import ToolsSlider from "./components/ToolsSlider";
@@ -126,6 +128,75 @@ const TOP_USED_TOOLS = [
     icon: Music,
     iconBg: "bg-indigo-500/15",
     iconColor: "text-indigo-600 dark:text-indigo-400",
+  },
+];
+
+const FEATURED_GUIDE = {
+  id: "complete-guide-to-botock-video-editor",
+  title: "The Complete Guide to Botock Video Editor: Timeline, Motion Animation, Visual FX & WebAssembly Export",
+  excerpt:
+    "The definitive creator guide to Botock Video Editor. Discover why it was built, full feature breakdown (multi-track power hierarchy, resizable FX blocks, continuous zooms, directional motion animations, typewriter text), and zero-server client-side MP4 export.",
+  category: "Creator Guides",
+  badgeColor: "bg-pink-500/10 dark:bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-500/20 dark:border-pink-500/30",
+  readTime: "15 min read",
+  date: "October 11, 2026",
+  views: "34.2k reads",
+};
+
+const CURATED_BLOGS = [
+  {
+    id: "complete-guide-to-ai-video-tools-creators",
+    title: "The Ultimate AI Video Creator Toolkit: Auto-Reframe, Background Remover & Reaction Studio",
+    excerpt: "Learn how to repurpose horizontal clips to 9:16 Shorts, strip backgrounds without green screens, straighten orientation, and build stacked reaction videos.",
+    category: "Creator Guides",
+    badgeColor: "bg-sky-500/10 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/20 dark:border-sky-500/30",
+    readTime: "14 min read",
+    date: "October 11, 2026",
+  },
+  {
+    id: "complete-guide-to-ai-image-tools-upscale-rotate",
+    title: "AI Image Editing Mastery: Batch Auto-Rotate, 4K/8K Upscaler & Background Removal",
+    excerpt: "Scale your visual workflows. Batch straighten up to 100+ photos via folder upload with ZIP download, upscale low-res images to 4K/8K, and generate transparent cutouts.",
+    category: "AI & Tech",
+    badgeColor: "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 dark:border-emerald-500/30",
+    readTime: "13 min read",
+    date: "October 11, 2026",
+  },
+  {
+    id: "complete-guide-to-ai-audio-voice-tools",
+    title: "Mastering AI Audio & Voice Production: Noise Removal, Voice Changer & Subtitles",
+    excerpt: "Transform noisy smartphone recordings into acoustic studio masters. Comprehensive guide on noise removal, neural character voices, automated subtitles, and MP3 extraction.",
+    category: "AI & Tech",
+    badgeColor: "bg-violet-500/10 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-500/20 dark:border-violet-500/30",
+    readTime: "11 min read",
+    date: "October 11, 2026",
+  },
+  {
+    id: "complete-guide-to-pdf-tools-workflows",
+    title: "The Complete Guide to Modern PDF Tools: AI Summarizer, 3D Flipbook & AcroForms",
+    excerpt: "Everything you need to know about modern digital documents. What each PDF tool does, step-by-step instructions, benefits, and productivity workflows.",
+    category: "Productivity",
+    badgeColor: "bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/20 dark:border-rose-500/30",
+    readTime: "12 min read",
+    date: "October 11, 2026",
+  },
+  {
+    id: "how-to-create-reaction-videos-trends-guide",
+    title: "Why Reaction Videos Dominate Social Media in 2026: Trends, Data & Complete Guide",
+    excerpt: "Discover why top-and-bottom stacked reaction videos dominate TikTok, Shorts, and Reels with 82% retention rates. Full trends data and creation tutorial.",
+    category: "Showbiz & Media",
+    badgeColor: "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/20 dark:border-amber-500/30",
+    readTime: "8 min read",
+    date: "October 10, 2026",
+  },
+  {
+    id: "ai-agents-creative-workflows",
+    title: "How AI Agents are Revolutionizing Creative Workflows in 2026",
+    excerpt: "Explore how autonomous AI agents are taking over repetitive coding, designing, and video editing tasks, allowing creators to focus on imagination.",
+    category: "AI & Tech",
+    badgeColor: "bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/20 dark:border-blue-500/30",
+    readTime: "6 min read",
+    date: "October 10, 2026",
   },
 ];
 
@@ -410,251 +481,128 @@ export default function HomeClient() {
       {/* Ad Space */}
       <AdBanner slot="home-leaderboard" />
 
-      {/* 6. Four Core Creative Suites Breakdown */}
-      <section className="py-16 bg-slate-50/50 dark:bg-[#09090b] transition-colors">
+      {/* 6. Creator Guides & Knowledge Hub (Rich Blog Showcase) */}
+      <section className="py-20 bg-slate-50/50 dark:bg-[#0a0a0e] border-t border-slate-200 dark:border-white/[0.06] transition-colors">
         <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-2">
-              Everything in One Unified Workspace
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl mx-auto">
-              Replace multiple subscriptions with Botock. High-speed client processing with zero software installation.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Suite 1: PDF Tools */}
-            <div className="rounded-2xl bg-white dark:bg-[#111114] p-6 border border-slate-200 dark:border-white/[0.08] hover:border-rose-500/40 flex flex-col justify-between transition-all group shadow-sm hover:shadow-md">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-4 border border-rose-500/20">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-300 transition-colors">
-                    PDF Suite
-                  </h3>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/20">
-                    Complete Suite
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                  Merge, split, compress, protect with AES password, OCR extract text, and convert PDF to Word, Excel, and PowerPoint.
-                </p>
-                <div className="space-y-1.5 mb-5 border-t border-slate-100 dark:border-white/[0.06] pt-3">
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-rose-500" />
-                    <span>Merge, Split & Reorder Pages</span>
-                  </div>
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-rose-500" />
-                    <span>Compress without losing clarity</span>
-                  </div>
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-rose-500" />
-                    <span>PDF to DOCX editable Word files</span>
-                  </div>
-                </div>
-              </div>
-              <Link
-                href="/tools/pdf-merge"
-                className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline inline-flex items-center gap-1 pt-3 border-t border-slate-100 dark:border-white/[0.06] cursor-pointer"
-              >
-                <span>Browse PDF Tools</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {/* Suite 2: Video Tools & Studio */}
-            <div className="rounded-2xl bg-white dark:bg-[#111114] p-6 border border-slate-200 dark:border-white/[0.08] hover:border-sky-500/40 flex flex-col justify-between transition-all group shadow-sm hover:shadow-md">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center mb-4 border border-sky-500/20">
-                  <Scissors className="w-5 h-5" />
-                </div>
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-300 transition-colors">
-                    Video Suite
-                  </h3>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/15 text-sky-600 dark:text-sky-300 border border-sky-500/20">
-                    Studio Suite
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                  In-browser video editor with 0ms lag. Lossless trimmer, video compressor, audio extractor (MP3), speed changer, and GIF maker.
-                </p>
-                <div className="space-y-1.5 mb-5 border-t border-slate-100 dark:border-white/[0.06] pt-3">
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-sky-500" />
-                    <span>Full Browser Video Editor (0ms Lag)</span>
-                  </div>
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-sky-500" />
-                    <span>Lossless Trimming & Cropping</span>
-                  </div>
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-sky-500" />
-                    <span>Video to MP3 & GIF converter</span>
-                  </div>
-                </div>
-              </div>
-              <Link
-                href="/tools/video-trim"
-                className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-1 pt-3 border-t border-slate-100 dark:border-white/[0.06] cursor-pointer"
-              >
-                <span>Browse Video Tools</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {/* Suite 3: Image Suite */}
-            <div className="rounded-2xl bg-white dark:bg-[#111114] p-6 border border-slate-200 dark:border-white/[0.08] hover:border-emerald-500/40 flex flex-col justify-between transition-all group shadow-sm hover:shadow-md">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4 border border-emerald-500/20">
-                  <ImageIcon className="w-5 h-5" />
-                </div>
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">
-                    Image Suite
-                  </h3>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20">
-                    Essential Suite
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                  AI background remover, WebP converter, smart image compressor, canvas resizer, photo watermarking, and format converter.
-                </p>
-                <div className="space-y-1.5 mb-5 border-t border-slate-100 dark:border-white/[0.06] pt-3">
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Instant AI Background Cutout</span>
-                  </div>
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>JPG / PNG to WebP Modern Format</span>
-                  </div>
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span>Bulk Image Compression</span>
-                  </div>
-                </div>
-              </div>
-              <Link
-                href="/tools/image-remove-bg"
-                className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1 pt-3 border-t border-slate-100 dark:border-white/[0.06] cursor-pointer"
-              >
-                <span>Browse Image Tools</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {/* Suite 4: AI Generative Studios */}
-            <div className="rounded-2xl bg-white dark:bg-[#111114] p-6 border border-slate-200 dark:border-white/[0.08] hover:border-violet-500/40 flex flex-col justify-between transition-all group shadow-sm hover:shadow-md">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center justify-center mb-4 border border-violet-500/20">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors">
-                    AI Studios
-                  </h3>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/20">
-                    Cinematic AI
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 leading-relaxed">
-                  Turn text prompts and photos into realistic 4–10s video clips with Botock Engine Flash 360p, or create artwork with Nano Banana.
-                </p>
-                <div className="space-y-1.5 mb-5 border-t border-slate-100 dark:border-white/[0.06] pt-3">
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-violet-500" />
-                    <span>3 Daily Video Generations</span>
-                  </div>
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-violet-500" />
-                    <span>5 Daily Image Generations</span>
-                  </div>
-                  <div className="text-[11px] text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3 text-violet-500" />
-                    <span>Photo Attachment & Motion Hints</span>
-                  </div>
-                </div>
-              </div>
-              <Link
-                href="/tools/video-generator"
-                className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline inline-flex items-center gap-1 pt-3 border-t border-slate-100 dark:border-white/[0.06] cursor-pointer"
-              >
-                <span>Launch AI Studios</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. Top Blogs & Guides */}
-      <section className="py-16 bg-slate-50/50 dark:bg-[#0a0a0e] border-t border-slate-200 dark:border-white/[0.06] transition-colors">
-        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
             <div>
-              <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 text-xs font-bold uppercase tracking-wider mb-1">
-                <FileText className="w-3.5 h-3.5" />
-                <span>Knowledge Hub</span>
+              <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 text-xs font-bold uppercase tracking-wider mb-2">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Knowledge Hub & Tutorials</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-                Latest Guides & Tutorials
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                Featured Guides & Creator Tutorials
               </h2>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                Step-by-step masterclasses, workflow blueprints, and production techniques covering video editing, AI generation, audio engineering, and document automation.
+              </p>
             </div>
             <Link
               href="/blog"
-              className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline flex items-center gap-1 self-start sm:self-auto"
+              className="text-xs sm:text-sm font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors inline-flex items-center gap-1.5 self-start sm:self-auto py-2"
             >
-              <span>View All Articles →</span>
+              <span>Explore All 15+ Guides</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { id: "guide-to-ai-video-generation", title: "The Ultimate Guide to AI Video Generation", desc: "Learn the secrets of Text-to-Video and Image-to-Video. Discover how to write the perfect prompt...", date: "Oct 4, 2026", cat: "AI Studio", color: "text-violet-500 border-violet-500/20 bg-violet-500/10" },
-              { id: "guide-to-photo-generation-and-faq", title: "Mastering AI Photo Generation", desc: "Everything you need to know about generating stunning images, understanding system speeds...", date: "Oct 4, 2026", cat: "Image Generation", color: "text-amber-500 border-amber-500/20 bg-amber-500/10" },
-              { id: "guide-to-pdf-and-document-tools", title: "Streamlining Workflow with PDF Tools", desc: "Learn how to secure, unlock, and split PDF documents directly inside your Botock creative workspace.", date: "Oct 4, 2026", cat: "Productivity", color: "text-rose-500 border-rose-500/20 bg-rose-500/10" },
-            ].map(b => (
-              <Link key={b.id} href={`/blog/${b.id}`} className="block rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] p-6 hover:border-violet-500/40 transition-all hover:shadow-lg group">
-                <div className="flex justify-between items-center mb-4">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${b.color}`}>{b.cat}</span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">{b.date}</span>
+          {/* Featured Hero Guide */}
+          <Link
+            href={`/blog/${FEATURED_GUIDE.id}`}
+            className="block mb-8 p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] hover:border-violet-500/50 transition-all hover:shadow-xl group relative overflow-hidden"
+          >
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-3 max-w-4xl">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border ${FEATURED_GUIDE.badgeColor}`}>
+                    {FEATURED_GUIDE.category}
+                  </span>
+                  <span className="text-[11px] font-semibold text-pink-600 dark:text-pink-400 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Spotlight Guide
+                  </span>
+                  <span className="text-slate-300 dark:text-white/20">•</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {FEATURED_GUIDE.readTime}
+                  </span>
+                  <span className="text-slate-300 dark:text-white/20">•</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    {FEATURED_GUIDE.date}
+                  </span>
                 </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">{b.title}</h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{b.desc}</p>
+
+                <h3 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors leading-snug">
+                  {FEATURED_GUIDE.title}
+                </h3>
+
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2">
+                  {FEATURED_GUIDE.excerpt}
+                </p>
+              </div>
+
+              <div className="shrink-0 flex items-center gap-3">
+                <div className="px-5 py-3 rounded-xl bg-violet-600 group-hover:bg-violet-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-md group-hover:translate-x-0.5">
+                  <span>Read Creator Manual</span>
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* 6-Card Grid of Curated Tutorials */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {CURATED_BLOGS.map((blog) => (
+              <Link
+                key={blog.id}
+                href={`/blog/${blog.id}`}
+                className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] hover:border-violet-500/40 p-6 flex flex-col justify-between transition-all group hover:shadow-lg"
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${blog.badgeColor}`}>
+                      {blog.category}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {blog.readTime}
+                    </span>
+                  </div>
+
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors line-clamp-2 leading-snug">
+                    {blog.title}
+                  </h3>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed mb-4">
+                    {blog.excerpt}
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 group-hover:text-violet-600 dark:group-hover:text-white transition-colors">
+                  <span>Read Tutorial</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </div>
               </Link>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* 8. Modern CTA Banner */}
-      <section className="py-20 bg-white dark:bg-[#09090b] transition-colors">
-        <div className="max-w-[1560px] mx-auto px-4 sm:px-8 lg:px-12">
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-700 dark:from-violet-900 dark:to-indigo-950 px-6 py-16 sm:px-16 text-center shadow-2xl border border-violet-500/20">
-            {/* Background elements */}
-            <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/10 blur-3xl rounded-full pointer-events-none" />
-            <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-blue-500/20 blur-3xl rounded-full pointer-events-none" />
-            
-            <div className="relative z-10 max-w-3xl mx-auto">
-              <h2 className="text-3xl sm:text-5xl font-black text-white mb-6 tracking-tight">
-                Your Complete Creative Studio.
-              </h2>
-              <p className="text-sm sm:text-base text-violet-100/90 mb-10 max-w-xl mx-auto font-medium leading-relaxed">
-                Access comprehensive utilities, AI Studios, and professional tools. Start creating your next masterpiece today.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link
-                  href="/tools"
-                  className="px-8 py-4 rounded-xl bg-violet-800/50 hover:bg-violet-800 text-white border border-violet-400/30 font-bold text-sm transition-all shadow-lg hover:-translate-y-1 backdrop-blur-sm"
-                >
-                  Explore All Tools
-                </Link>
+          {/* Bottom Catalog Discovery Strip */}
+          <div className="mt-12 p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+            <div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">
+                Looking for specific tools, prompting formulas, or technical FAQs?
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Visit the Botock Creative Intelligence blog for our complete collection of 15+ guides.
               </div>
             </div>
+            <Link
+              href="/blog"
+              className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-100 dark:text-zinc-950 font-bold text-xs transition-all shrink-0 cursor-pointer shadow-sm"
+            >
+              Browse Full Catalog →
+            </Link>
           </div>
         </div>
       </section>

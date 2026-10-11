@@ -4,7 +4,8 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const allowedIp = process.env.ADMIN_ALLOWED_IP;
   if (allowedIp) {
-    const ip = request.ip || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
+    const forwardedFor = request.headers.get('x-forwarded-for');
+    const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : request.headers.get('x-real-ip');
     if (ip !== allowedIp) {
       return new NextResponse(
         JSON.stringify({ error: 'Access Denied: IP not whitelisted', your_ip: ip }),

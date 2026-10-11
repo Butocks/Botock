@@ -91,7 +91,10 @@ class AntiBotMiddleware(BaseHTTPMiddleware):
         return request.client.host if request.client else "127.0.0.1"
 
     async def dispatch(self, request: Request, call_next):
-        # 1. Allow health check and root endpoints freely
+        # 1. Allow health check, root endpoints, and CORS preflight OPTIONS freely
+        if request.method == "OPTIONS":
+            return await call_next(request)
+
         path = request.url.path
         if path in ["/", "/docs", "/openapi.json", "/health"]:
             return await call_next(request)

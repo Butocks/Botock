@@ -8,7 +8,12 @@ export function useThumbnails() {
   const generationAbortRef = useRef<boolean>(false);
 
   const generate = useCallback(async (url: string, duration: number, count = 12): Promise<string[]> => {
-    if (!url || !duration) return [];
+    if (!url) return [];
+
+    // If item is an image, the image itself is its thumbnail!
+    if (/\.(jpe?g|png|gif|webp|svg|bmp|ico|avif)$/i.test(url) || url.startsWith("data:image")) {
+      return [url];
+    }
 
     // Cancel any in-progress generation
     generationAbortRef.current = true;
@@ -34,10 +39,15 @@ export function useThumbnails() {
     }
 
     try {
-      await new Promise<void>((resolve, reject) => {
+      await new Promise<void>((resolve) => {
         video.onloadedmetadata = () => resolve();
-        video.onerror = () => reject(new Error("Could not load video for thumbnails."));
+        video.onerror = () => resolve();
       });
+
+      if (!video.videoWidth || !video.videoHeight) {
+        setIsGenerating(false);
+        return [url];
+      }
 
       // Clamp total count. First batch of up to 6 is shown immediately for fast UX.
       const INITIAL_BATCH = Math.min(6, count);

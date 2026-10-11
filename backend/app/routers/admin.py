@@ -82,3 +82,86 @@ async def update_blog(blog: BlogUpdate):
     """Upsert a blog entry for a tool."""
     logger.info(f"Admin updating blog for {blog.tool_id}")
     return {"status": "success", "tool_id": blog.tool_id, "message": "Blog updated successfully (Simulated DB)."}
+
+@router.get("/users", dependencies=[Depends(verify_admin)])
+async def get_admin_users():
+    """Fetch all registered users with generation metrics and VIP/Restricted flags."""
+    from app.routers.auth_otp import USER_STATUS_FILE, _read_json
+    from app.services.stats_service import get_video_stats
+    
+    settings_data = get_platform_settings()
+    quotas = settings_data.get("quotas", {})
+    special_users = set(u.lower().strip() for u in quotas.get("special_unlimited_users", []))
+    restricted_users = set(u.lower().strip() for u in quotas.get("restricted_users", []))
+    
+    statuses = _read_json(USER_STATUS_FILE, {})
+    stats = get_video_stats()
+    user_daily = stats.get("user_daily", {})
+    user_monthly = stats.get("user_monthly", {})
+    user_totals = stats.get("user_totals", {})
+    
+    all_emails = set(statuses.keys())
+    all_emails.update(user_totals.keys())
+    all_emails.update(special_users)
+    all_emails.update(restricted_users)
+    
+    user_list = []
+    for email in sorted(all_emails):
+        if not email or "@" not in email:
+            continue
+        user_list.append({
+            "email": email,
+            "status": statuses.get(email, "active"),
+            "is_vip": email.lower() in special_users,
+            "is_restricted": email.lower() in restricted_users,
+            "videos_today": user_daily.get(email, 0),
+            "videos_month": user_monthly.get(email, 0),
+            "total_videos": user_totals.get(email, 0),
+        })
+        
+    return {
+        "status": "success",
+        "total_users": len(user_list),
+        "users": user_list
+    }
+
+class UserActionRequest(BaseModel):
+    email: str
+
+@router.post("/users/toggle-vip", dependencies=[Depends(verify_admin)])
+async def toggle_user_vip(req: UserActionRequest):
+    """Toggle a user's Special/VIP Unlimited status (exempt from all limits)."""
+    current = get_platform_settings()
+    quotas = current.setdefault("quotas", {})
+    specials = set(u.lower().strip() for u in quotas.get("special_unlimited_users", []))
+    email = req.email.lower().strip()
+    
+    if email in specials:
+        specials.remove(email)
+        is_vip = False
+    else:
+        specials.add(email)
+        is_vip = True
+        
+    quotas["special_unlimited_users"] = list(specials)
+    _write_json(SETTINGS_FILE, current)
+    return {"status": "success", "email": email, "is_vip": is_vip}
+
+@router.post("/users/toggle-restrict", dependencies=[Depends(verify_admin)])
+async def toggle_user_restrict(req: UserActionRequest):
+    """Toggle a user's Restricted/Banned status."""
+    current = get_platform_settings()
+    quotas = current.setdefault("quotas", {})
+    restricted = set(u.lower().strip() for u in quotas.get("restricted_users", []))
+    email = req.email.lower().strip()
+    
+    if email in restricted:
+        restricted.remove(email)
+        is_restricted = False
+    else:
+        restricted.add(email)
+        is_restricted = True
+        
+    quotas["restricted_users"] = list(restricted)
+    _write_json(SETTINGS_FILE, current)
+    return {"status": "success", "email": email, "is_restricted": is_restricted}

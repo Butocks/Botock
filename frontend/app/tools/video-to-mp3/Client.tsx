@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { formatBytes, formatTime } from "@/lib/utils/formatters";
+import { getTransferMedia } from "@/app/utils/mediaTransfer";
 import {
   Film,
   Music,
@@ -35,6 +36,16 @@ export default function VideoToMp3Client() {
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const { run, cancel, isProcessing, progress, statusMessage, error } = useFFmpeg();
+
+  // Load transferred media from another tool (e.g. Video Generator or Editor)
+  useEffect(() => {
+    getTransferMedia().then((media) => {
+      if (media && media.file) {
+        setOriginalFile(media.file);
+        setVideoUrl(media.url);
+      }
+    });
+  }, []);
 
   // Cleanup object URLs on unmount or file reset
   useEffect(() => {

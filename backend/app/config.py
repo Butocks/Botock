@@ -90,6 +90,14 @@ class Settings(BaseSettings):
     # The secure default is false.
     CHROMIUM_NO_SANDBOX: bool = False
 
+    # Google Drive Integration & Free AI Media Library
+    GDRIVE_ENABLED: bool = False
+    GDRIVE_SERVICE_ACCOUNT_FILE: str = ""
+    GDRIVE_SERVICE_ACCOUNT_JSON: str = ""
+    GDRIVE_PHOTOS_FOLDER_ID: str = ""
+    GDRIVE_VIDEOS_FOLDER_ID: str = ""
+    LIBRARY_MANIFEST_FILE: str = "generated_library.json"
+
 settings = Settings()
 
 os.makedirs(settings.VIDEOS_DIR, exist_ok=True)

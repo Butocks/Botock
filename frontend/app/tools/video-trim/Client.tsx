@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { formatBytes, formatTime } from "@/lib/utils/formatters";
+import { getTransferMedia } from "@/app/utils/mediaTransfer";
 import {
   AlertCircle,
   Check,
@@ -308,6 +309,15 @@ export default function VideoTrimClient() {
     },
     [revokeResultUrl, revokeVideoUrl]
   );
+
+  // Auto-load transferred video from previous tool (e.g. Video Generator or Subtitles)
+  useEffect(() => {
+    getTransferMedia().then((media) => {
+      if (media && media.file) {
+        onDrop([media.file]);
+      }
+    });
+  }, [onDrop]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

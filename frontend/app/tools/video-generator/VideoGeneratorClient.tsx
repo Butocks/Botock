@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import GuestCTA from "../../components/GuestCTA";
+import ToolSuggestions from "../../components/ToolSuggestions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../utils/supabase/client";
@@ -213,7 +214,7 @@ export default function VideoGeneratorClient() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
       else if (gid) headers["X-Guest-ID"] = gid;
 
-      let intervalId = setInterval(async () => {
+      const intervalId = setInterval(async () => {
         try {
           const res = await fetch(`${backendBaseUrl}/api/video/status/${id}`, { headers });
           if (!res.ok) {
@@ -344,6 +345,18 @@ export default function VideoGeneratorClient() {
               >
                 Create Another
               </button>
+            </div>
+
+            {/* Smart Next Actions with 1-click video workflow carryover */}
+            <div className="w-full max-w-xl mt-4">
+              <ToolSuggestions
+                type="video"
+                mediaUrl={videoUrl}
+                fileName={`botock_${generationId || "video"}`}
+                onEditInStudio={() => {
+                  window.location.href = `/tools/video-editor`;
+                }}
+              />
             </div>
           </div>
         )}

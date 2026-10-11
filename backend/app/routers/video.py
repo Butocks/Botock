@@ -7,7 +7,7 @@ import logging
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends, UploadFile, File, Form
 from fastapi.responses import FileResponse, Response
 from app.models.schemas import VideoGenerateRequest, VideoGenerateResponse, VideoStatusResponse, VideoListResponse
 from app.services.flow_service import FlowVideoService
@@ -93,6 +93,19 @@ async def safe_generate_task(
                 motion_hint=motion_hint,
                 image_base64=image_base64,
             )
+            if video_statuses.get(generation_id, {}).get("status") == "completed":
+                try:
+                    from app.services.gdrive_service import library_service
+                    video_path = os.path.join(settings.VIDEOS_DIR, f"{generation_id}.mp4")
+                    await library_service.register_item(
+                        generation_id=generation_id,
+                        media_type="video",
+                        file_path=video_path,
+                        prompt=prompt,
+                        aspect_ratio=aspect_ratio,
+                    )
+                except Exception as lib_err:
+                    logger.warning(f"Failed to register video in library: {lib_err}")
             if not is_pro and user_id and video_statuses.get(generation_id, {}).get("status") == "failed":
                 from app.middleware.auth import refund_video_credit
                 await refund_video_credit(user_id, generation_id)
@@ -183,24 +196,57 @@ async def generate_video(
         if duration_seconds == 8:
             selected_model = "omni-1.1-flash-360p"
 
-    # Admin quota checking (just count today's generations)
+    # Admin quota checking & VIP bypass
     from app.services.stats_service import get_video_stats, record_video_generation
     
-    # Check Global Daily Video Limit
-    try:
+    user_email = (user.get("email") or "").lower().strip() if user else ""
+    user_id_str = str(user.get("user_id") or "") if user else ""
+    special_users = [u.lower().strip() for u in quotas.get("special_unlimited_users", [])]
+    restricted_users = [u.lower().strip() for u in quotas.get("restricted_users", [])]
+    
+    # Check if user is Special/VIP (Exempt from all daily and monthly limits)
+    is_vip = bool(user_email in special_users or user_id_str in special_users or is_pro)
+    
+    # Check if user is Restricted/Banned
+    if user_email in restricted_users or user_id_str in restricted_users:
+        raise HTTPException(
+            status_code=403,
+            detail="Your account has been restricted by the administrator."
+        )
+
+    # If NOT VIP, enforce limits (Guest, User, Daily, Monthly)
+    if not is_vip:
         global_stats = get_video_stats()
         today_total = global_stats.get("today", 0)
-        global_limit = int(quotas.get("global_daily_video_limit", 500))
-        if today_total >= global_limit and not is_pro:
+        month_credits = global_stats.get("this_month_flow_credits", 0)
+        flow_credit_pool = int(quotas.get("flow_monthly_credit_pool", 5000))
+        global_daily_limit = int(quotas.get("global_daily_video_limit", 500))
+        global_monthly_limit = int(quotas.get("global_monthly_video_limit", 1000))
+        
+        # 1. Global Daily Generation Cap (Auto-stop when daily budget exhausted)
+        if global_daily_limit > 0 and today_total >= global_daily_limit:
             raise HTTPException(
                 status_code=429,
-                detail=f"The global daily video generation limit ({global_limit}) has been reached for today. Pro subscribers can bypass this limit. Please try again tomorrow."
+                detail="Service temporarily unavailable. Quota full for today. Please try again tomorrow."
             )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.warning(f"Failed to check global video limit: {e}")
-    daily_limit = int(quotas.get("free_daily_videos", 10)) # default 10 per day if not set
+            
+        # 2. Global Monthly Flow Credit Pool / Monthly Cap (Auto-stop when monthly budget exhausted)
+        if (flow_credit_pool > 0 and month_credits >= flow_credit_pool) or (global_monthly_limit > 0 and global_stats.get("this_month", 0) >= global_monthly_limit):
+            raise HTTPException(
+                status_code=429,
+                detail="Service temporarily unavailable. Quota full for this month. Please try again later."
+            )
+            
+        # 3. Individual User Daily Limit Check
+        user_key = client_ip if is_guest else (user_email or user_id_str)
+        user_daily_limit = int(quotas.get("guest_daily_video_limit" if is_guest else "user_daily_video_limit", 1 if is_guest else 3))
+        user_today_count = global_stats.get("user_daily", {}).get(user_key, 0)
+        
+        if user_daily_limit > 0 and user_today_count >= user_daily_limit:
+            raise HTTPException(
+                status_code=429,
+                detail="Quota full for today. Please try again tomorrow."
+            )
 
     # In distributed mode we reserve a queue position
     aspect_ratio = "9:16" if "9:16" in str(request.aspect_ratio) else "16:9"
@@ -241,6 +287,13 @@ async def generate_video(
         "status": "queued",
         "message": f"Video generation queued in Botock Engine ({selected_model}, {duration_seconds}s)."
     }
+    
+    # Record generation stats (Guest 4s = 4 Flow credits, User 8s = 6 Flow credits)
+    record_video_generation(
+        is_guest=is_guest,
+        duration=duration_seconds,
+        user_key=(client_ip if is_guest else (user.get("email") or user.get("user_id")))
+    )
     
     if not settings.DISTRIBUTED_QUEUE_ENABLED:
         # Legacy single-machine mode: run Playwright locally.
@@ -508,8 +561,8 @@ async def video_auto_reframe(file: UploadFile = File(...)):
     out_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
     out_f.close()
 
-    # ffmpeg center crop for 9:16 aspect ratio: crop=ih*(9/16):ih
-    filter_str = "crop=ih*(9/16):ih"
+    # ffmpeg center crop for 9:16 aspect ratio with even dimensions for libx264
+    filter_str = "crop=trunc(ih*9/16/2)*2:trunc(ih/2)*2"
 
     try:
         proc = await asyncio.create_subprocess_exec(
@@ -522,7 +575,10 @@ async def video_auto_reframe(file: UploadFile = File(...)):
             stderr=asyncio.subprocess.PIPE
         )
         
-        await proc.communicate()
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            logger.error(f"Auto-reframe FFmpeg error: {stderr.decode()}")
+            raise HTTPException(status_code=500, detail="Reframe processing failed during video encoding.")
         
         def cleanup():
             if os.path.exists(in_f.name): os.remove(in_f.name)
@@ -534,5 +590,287 @@ async def video_auto_reframe(file: UploadFile = File(...)):
             media_type="video/mp4",
             background=BackgroundTask(cleanup)
         )
-    except Exception:
-        raise HTTPException(status_code=500, detail="Reframe processing failed.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Auto-reframe unexpected error")
+        raise HTTPException(status_code=500, detail=f"Reframe processing failed: {str(e)}")
+
+
+@router.post("/reaction-combine")
+async def reaction_combine(
+    video_top: UploadFile = File(...),
+    video_bottom: UploadFile = File(...),
+    aspect_ratio: str = Form("9:16"),
+    layout: str = Form("stacked"),
+    split_ratio: str = Form("50/50"),
+    audio_mode: str = Form("mix"),
+    volume_top: float = Form(1.0),
+    volume_bottom: float = Form(1.0),
+    duration_mode: str = Form("shortest")
+):
+    """
+    Combines two videos into a reaction-style split or stacked video.
+    Supported aspect ratios: 9:16 (vertical/Shorts/TikTok/Reels), 16:9 (horizontal), 1:1 (square), 4:5.
+    Layouts: stacked (top/bottom), side_by_side (left/right), pip (picture-in-picture).
+    """
+    import tempfile
+    import os
+    import asyncio
+    from fastapi.responses import FileResponse
+    from starlette.background import BackgroundTask
+
+    ALLOWED_EXTS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
+    ext_top = os.path.splitext(video_top.filename or "")[1].lower()
+    ext_bot = os.path.splitext(video_bottom.filename or "")[1].lower()
+
+    if ext_top not in ALLOWED_EXTS or ext_bot not in ALLOWED_EXTS:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid video format. Supported formats: MP4, MOV, WebM, MKV, AVI."
+        )
+
+    # Size limit 100MB per file
+    MAX_SIZE = 100 * 1024 * 1024
+    bytes_top = await video_top.read()
+    bytes_bot = await video_bottom.read()
+
+    if len(bytes_top) > MAX_SIZE or len(bytes_bot) > MAX_SIZE:
+        raise HTTPException(status_code=413, detail="Each video file must be under 100MB.")
+
+    top_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    top_f.write(bytes_top)
+    top_f.close()
+
+    bot_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    bot_f.write(bytes_bot)
+    bot_f.close()
+
+    out_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    out_f.close()
+
+    top_path = top_f.name
+    bot_path = bot_f.name
+    out_path = out_f.name
+
+    try:
+        # Check audio presence using ffprobe
+        async def has_audio(path: str) -> bool:
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    "ffprobe", "-v", "error", "-select_streams", "a",
+                    "-show_entries", "stream=index", "-of", "csv=p=0", path,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, _ = await proc.communicate()
+                return len(stdout.strip()) > 0
+            except Exception:
+                return False
+
+        has_top_audio, has_bot_audio = await asyncio.gather(
+            has_audio(top_path), has_audio(bot_path)
+        )
+
+        # Dimension mapping
+        dim_map = {
+            "9:16": (1080, 1920),
+            "16:9": (1920, 1080),
+            "1:1": (1080, 1080),
+            "4:5": (1080, 1350)
+        }
+        canvas_w, canvas_h = dim_map.get(aspect_ratio, (1080, 1920))
+
+        # Build video filter
+        if layout == "side_by_side":
+            w1 = canvas_w // 2
+            if w1 % 2 != 0: w1 += 1
+            w2 = canvas_w - w1
+            v_filter = (
+                f"[0:v]scale={w1}:{canvas_h}:force_original_aspect_ratio=increase,crop={w1}:{canvas_h},setsar=1[v0];"
+                f"[1:v]scale={w2}:{canvas_h}:force_original_aspect_ratio=increase,crop={w2}:{canvas_h},setsar=1[v1];"
+                f"[v0][v1]hstack=inputs=2[v]"
+            )
+        elif layout == "pip":
+            pip_w = canvas_w // 3
+            if pip_w % 2 != 0: pip_w += 1
+            pip_h = int(pip_w * 9 / 16) if aspect_ratio == "16:9" else int(pip_w * 16 / 9)
+            if pip_h % 2 != 0: pip_h += 1
+            v_filter = (
+                f"[0:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=increase,crop={canvas_w}:{canvas_h},setsar=1[main];"
+                f"[1:v]scale={pip_w}:{pip_h}:force_original_aspect_ratio=increase,crop={pip_w}:{pip_h},setsar=1[pip];"
+                f"[main][pip]overlay=W-w-30:H-h-30[v]"
+            )
+        else:
+            # Stacked (default)
+            split_pcts = {
+                "50/50": (0.5, 0.5),
+                "60/40": (0.6, 0.4),
+                "70/30": (0.7, 0.3),
+                "40/60": (0.4, 0.6),
+                "30/70": (0.3, 0.7),
+            }
+            r_top, _ = split_pcts.get(split_ratio, (0.5, 0.5))
+            h1 = int(canvas_h * r_top)
+            if h1 % 2 != 0: h1 += 1
+            h2 = canvas_h - h1
+            v_filter = (
+                f"[0:v]scale={canvas_w}:{h1}:force_original_aspect_ratio=increase,crop={canvas_w}:{h1},setsar=1[top];"
+                f"[1:v]scale={canvas_w}:{h2}:force_original_aspect_ratio=increase,crop={canvas_w}:{h2},setsar=1[bot];"
+                f"[top][bot]vstack=inputs=2[v]"
+            )
+
+        # Audio mixing logic
+        vol_t = max(0.0, min(3.0, volume_top))
+        vol_b = max(0.0, min(3.0, volume_bottom))
+        has_out_audio = False
+        a_filter = ""
+
+        if audio_mode == "mix":
+            if has_top_audio and has_bot_audio:
+                a_filter = f";[0:a]volume={vol_t}[a0];[1:a]volume={vol_b}[a1];[a0][a1]amix=inputs=2:duration=first:dropout_transition=2[a]"
+                has_out_audio = True
+            elif has_top_audio:
+                a_filter = f";[0:a]volume={vol_t}[a]"
+                has_out_audio = True
+            elif has_bot_audio:
+                a_filter = f";[1:a]volume={vol_b}[a]"
+                has_out_audio = True
+        elif audio_mode == "top_only" and has_top_audio:
+            a_filter = f";[0:a]volume={vol_t}[a]"
+            has_out_audio = True
+        elif audio_mode == "bottom_only" and has_bot_audio:
+            a_filter = f";[1:a]volume={vol_b}[a]"
+            has_out_audio = True
+
+        full_filter = v_filter + a_filter
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", top_path,
+            "-i", bot_path,
+            "-filter_complex", full_filter,
+            "-map", "[v]"
+        ]
+
+        if has_out_audio:
+            cmd.extend(["-map", "[a]", "-c:a", "aac", "-b:a", "192k"])
+
+        if duration_mode == "shortest":
+            cmd.append("-shortest")
+
+        cmd.extend([
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-crf", "23",
+            "-pix_fmt", "yuv420p",
+            out_path
+        ])
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            logger.error("FFmpeg reaction combine failed: %s", stderr.decode(errors="ignore"))
+            raise Exception("Video rendering failed")
+
+        def cleanup():
+            for p in [top_path, bot_path, out_path]:
+                if os.path.exists(p):
+                    try: os.remove(p)
+                    except Exception: pass
+
+        return FileResponse(
+            out_path,
+            filename=f"reaction_{aspect_ratio.replace(':', '_')}.mp4",
+            media_type="video/mp4",
+            background=BackgroundTask(cleanup)
+        )
+    except HTTPException:
+        for p in [top_path, bot_path, out_path]:
+            if os.path.exists(p):
+                try: os.remove(p)
+                except Exception: pass
+        raise
+    except Exception as e:
+        for p in [top_path, bot_path, out_path]:
+            if os.path.exists(p):
+                try: os.remove(p)
+                except Exception: pass
+        logger.exception("Reaction video combine error: %s", str(e))
+        raise HTTPException(status_code=500, detail="Failed to combine reaction videos.")
+
+
+@router.post("/rotate")
+async def rotate_video(
+    file: UploadFile = File(...),
+    angle: int = Form(90), # 90, 180, 270
+    flip_h: bool = Form(False)
+):
+    """
+    Rotates video by specified angle (90, 180, 270) with optional horizontal flip.
+    """
+    import tempfile
+    import os
+    import asyncio
+    from fastapi.responses import FileResponse
+    from starlette.background import BackgroundTask
+
+    file_bytes = await file.read()
+    if len(file_bytes) > 200 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Video too large (max 200MB)")
+
+    in_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    in_f.write(file_bytes)
+    in_f.close()
+
+    out_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    out_f.close()
+
+    filters = []
+    normalized_angle = (angle % 360 + 360) % 360
+    if normalized_angle == 90:
+        filters.append("transpose=1")
+    elif normalized_angle == 180:
+        filters.append("transpose=1,transpose=1")
+    elif normalized_angle == 270:
+        filters.append("transpose=2")
+
+    if flip_h:
+        filters.append("hflip")
+
+    vf_arg = ",".join(filters) if filters else "null"
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-y", "-i", in_f.name,
+            "-vf", vf_arg,
+            "-c:v", "libx264", "-preset", "ultrafast",
+            "-c:a", "copy",
+            out_f.name,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await proc.communicate()
+        if proc.returncode != 0:
+            logger.error("FFmpeg video rotation failed: %s", stderr.decode(errors="ignore"))
+            raise Exception("Video rotation failed")
+
+        def cleanup():
+            if os.path.exists(in_f.name): os.remove(in_f.name)
+            if os.path.exists(out_f.name): os.remove(out_f.name)
+
+        return FileResponse(
+            out_f.name,
+            filename=f"rotated_{normalized_angle}deg.mp4",
+            media_type="video/mp4",
+            background=BackgroundTask(cleanup)
+        )
+    except Exception as e:
+        if os.path.exists(in_f.name): os.remove(in_f.name)
+        if os.path.exists(out_f.name): os.remove(out_f.name)
+        raise HTTPException(status_code=500, detail="Failed to rotate video.")

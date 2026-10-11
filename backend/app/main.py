@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import video, image, convert, auth_otp, rewards, workers, remove_bg, admin, contact, blog_cms
+from app.routers import video, image, convert, auth_otp, rewards, workers, remove_bg, admin, contact, blog_cms, library
 from app.middleware.anti_bot import AntiBotMiddleware
 from app.config import settings
 from app.services.google_auth import ensure_valid_session
@@ -40,8 +40,12 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
 
     if settings.DISTRIBUTED_QUEUE_ENABLED:
-        await queue.start()
-        maintenance_task = asyncio.create_task(_queue_maintenance())
+        try:
+            await queue.start()
+            maintenance_task = asyncio.create_task(_queue_maintenance())
+        except Exception as e:
+            logger.warning(f"⚠️ Distributed queue failed to start: {e}. Running in standalone mode.")
+            maintenance_task = None
     else:
         maintenance_task = None
 
@@ -59,11 +63,11 @@ async def lifespan(app: FastAPI):
             "All authenticated routes will fail closed until this secret is configured."
         )
 
-    # 3. Pre-load rembg model for instant background removal
+    # 3. Pre-load rembg model in background without blocking server startup
     try:
         from app.routers.remove_bg import _get_rembg_session
-        await asyncio.to_thread(_get_rembg_session)
-        logger.info("✅ rembg background removal model pre-loaded.")
+        asyncio.create_task(asyncio.to_thread(_get_rembg_session))
+        logger.info("ℹ️ rembg background removal model scheduled to load in background.")
     except Exception as e:
         logger.warning(f"⚠️ rembg model pre-load failed (will lazy-load on first request): {e}")
 
@@ -96,7 +100,10 @@ async def lifespan(app: FastAPI):
             await maintenance_task
         except asyncio.CancelledError:
             pass
-    await queue.stop()
+    try:
+        await queue.stop()
+    except Exception:
+        pass
 
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
@@ -127,6 +134,8 @@ app.add_middleware(AntiBotMiddleware)
 # Cross-Origin Resource Sharing
 default_origins = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://192.168.0.105:3000",
     "https://botock.app",
     "https://www.botock.app",
     "https://botock.vercel.app",
@@ -137,6 +146,7 @@ allowed_origins = os.getenv("ALLOWED_ORIGINS").split(",") if os.getenv("ALLOWED_
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -153,6 +163,7 @@ app.include_router(admin.router)
 app.include_router(contact.router)
 app.include_router(blog_cms.cms_router)
 app.include_router(blog_cms.pub_router)
+app.include_router(library.router)
 
 
 @app.get("/")

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import Client from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 import { ToolRegistry } from "../ToolEngine";
 
 const tool = ToolRegistry.getTool("pdf-forms");
@@ -52,22 +53,15 @@ export default function PDFFormsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="w-full max-w-7xl mx-auto space-y-8 px-4 sm:px-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">
-          {tool?.name || "Create Fillable PDF"}
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-          {tool?.description}
-        </p>
-      </div>
-
-      <Client />
+      <ToolErrorBoundary toolName="PDF Forms">
+        <Client />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

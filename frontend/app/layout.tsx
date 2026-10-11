@@ -88,6 +88,7 @@ export const metadata: Metadata = {
 };
 
 import Analytics from "./components/Analytics";
+import Breadcrumbs from "./components/Breadcrumbs";
 
 export default function RootLayout({
   children,
@@ -172,6 +173,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground selection:bg-primary/30">
         <Navbar />
+        <Breadcrumbs />
         <main className="flex-1 flex flex-col">{children}</main>
         <Footer />
         <Analytics />

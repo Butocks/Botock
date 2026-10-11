@@ -40,7 +40,7 @@ export default function DashboardPage() {
             Logout
           </button>
         </div>
-        <AdminConsole token={token} email={email} />
+        <AdminConsole token={token} email={email || undefined} />
       </div>
     </div>
   );

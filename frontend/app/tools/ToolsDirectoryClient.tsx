@@ -40,6 +40,14 @@ export interface ToolItem {
 export const IMPLEMENTED_TOOLS: ToolItem[] = [
   // Advanced AI Features
   {
+    id: "reaction-video-maker",
+    name: "AI Reaction Video Maker",
+    desc: "Create viral top-bottom stacked or split-screen reaction videos for TikTok, Reels & Shorts.",
+    category: "ai",
+    href: "/tools/reaction-video-maker",
+    icon: Layers,
+  },
+  {
     id: "video-remove-bg",
     name: "AI Video BG Remover",
     desc: "Instantly remove backgrounds, apply Smart Cutout & AI Green Screen.",
@@ -62,6 +70,14 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
     category: "ai",
     href: "/tools/video-auto-reframe",
     icon: Maximize2,
+  },
+  {
+    id: "video-rotate",
+    name: "Rotate Video",
+    desc: "Rotate videos 90°, 180°, 270° or auto-straighten sideways clips with instant preview.",
+    category: "ai",
+    href: "/tools/video-rotate",
+    icon: RotateCw,
   },
   {
     id: "voice-changer-advanced",
@@ -96,14 +112,6 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
     category: "ai",
     href: "/tools/video-editor",
     icon: Scissors,
-  },
-  {
-    id: "media-library",
-    name: "My Media Library",
-    desc: "Instant access to all your generated videos and downloaded creative assets.",
-    category: "ai",
-    href: "/tools/library",
-    icon: Sparkles,
   },
 
   // 2. PDF Suite
@@ -269,7 +277,7 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
   },
   {
     id: "pdf-ai-summarizer",
-    name: "PDF AI Summarizer",
+    name: "PDF AI Summarizer (Beta)",
     desc: "Extract key takeaways, executive summaries, and action points from PDF reports.",
     category: "pdf",
     href: "/tools/pdf-ai-summarizer",
@@ -277,6 +285,14 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
   },
 
   // 3. Image Suite
+  {
+    id: "image-upscale",
+    name: "AI Image Upscaler 4K",
+    desc: "Enlarge images up to 8x Ultra HD with multi-pass step scaling and edge sharpness recovery.",
+    category: "image",
+    href: "/tools/image-upscale",
+    icon: Sparkles,
+  },
   {
     id: "image-remove-bg",
     name: "AI Background Remover",
@@ -319,8 +335,8 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
   },
   {
     id: "image-rotate",
-    name: "Rotate & Flip Image",
-    desc: "Rotate photos 90/180/270 degrees and flip horizontally or vertically.",
+    name: "AI Batch Image Rotate",
+    desc: "Batch upload photos or full folders. AI auto-straightens crooked photos and exports as ZIP.",
     category: "image",
     href: "/tools/image-rotate",
     icon: RotateCw,

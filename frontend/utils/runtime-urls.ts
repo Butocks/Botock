@@ -33,14 +33,14 @@ function getPrimaryBackendUrl() {
     return '/api/proxy';
   }
 
-  if (configured) {
-    return withoutTrailingSlash(configured);
-  }
-
   if (typeof window !== 'undefined') {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:8000';
     }
+  }
+
+  if (configured) {
+    return withoutTrailingSlash(configured);
   }
 
   return '';
@@ -84,7 +84,10 @@ export async function getBackendUrl() {
 
   if (!backendUrlRequest) {
     backendUrlRequest = (async () => {
-      const candidates = [primaryBackendUrl, laptopBackendUrl, colabBackendUrl]
+      const localUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'http://localhost:8000'
+        : null;
+      const candidates = [primaryBackendUrl, localUrl, laptopBackendUrl, colabBackendUrl]
         .filter((url): url is string => Boolean(url))
         .map(withoutTrailingSlash);
       for (const candidate of candidates) {
@@ -94,11 +97,10 @@ export async function getBackendUrl() {
           return candidate;
         }
       }
-      // Keep the normal API error path; do not silently direct user data to an
-      // unknown endpoint when every configured backend is offline.
-      cachedBackendUrl = primaryBackendUrl || getSiteUrl();
+      // If no external backend is healthy, fall back to relative path so same-origin Next.js API routes handle it
+      cachedBackendUrl = '';
       backendUrlCheckedAt = Date.now();
-      return cachedBackendUrl;
+      return '';
     })().finally(() => {
       backendUrlRequest = null;
     });

@@ -1,18 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Edit3, Image as ImageIcon, Video, FileText, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Video,
+  Image as ImageIcon,
+  FileText,
+  Volume2,
+  Code2,
+  Bot,
+  Sparkles,
+  ShieldCheck,
+  CheckCircle2,
+  Clock,
+  UserCheck,
+  Zap,
+} from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "About Us: The Story Behind Botock",
+  title: "About Botock: Built by a Web Developer, Vibe Coding & The Doc Ock Story | Botock Hub",
   description:
-    "Learn about Botock's mission to make generative AI video and creative multimedia tools universally accessible, private, and easy to use.",
+    "The story behind Botock: created by a web developer while vibe coding, completely costless tools with or without login, and the Doc Ock Spider-Man origin of our name.",
   alternates: {
     canonical: "/blog/about-botock-app",
   },
   openGraph: {
-    title: "About Us: The Story Behind Botock | Botock Blog",
+    title: "About Botock: Built by a Web Developer, Vibe Coding & The Doc Ock Story",
     description:
-      "Learn about Botock's mission to make generative AI video and creative multimedia tools universally accessible.",
+      "Learn the honest story behind Botock: built by a solo web developer while vibe coding, 100% costless tools, and the Spider-Man Doc Ock name origin.",
     url: "https://botock.app/blog/about-botock-app",
     type: "article",
     publishedTime: "2026-10-04T00:00:00Z",
@@ -21,9 +35,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "About Us: The Story Behind Botock | Botock Blog",
+    title: "About Botock: Built by a Web Developer | Botock Hub",
     description:
-      "Learn about Botock's mission to make generative AI video and creative multimedia tools universally accessible.",
+      "The story behind Botock: created while vibe coding, costless tools with or without login, and the Doc Ock name origin.",
     images: ["https://botock.app/og-image.jpg"],
   },
 };
@@ -34,9 +48,9 @@ export default function AboutBotockApp() {
     "@graph": [
       {
         "@type": "BlogPosting",
-        headline: "About Us: The Story Behind Botock",
+        headline: "About Botock: Built by a Web Developer, Vibe Coding & The Doc Ock Story",
         description:
-          "Botock was created by Boto with a simple idea: creative technology should be easier to access.",
+          "The genuine developer story behind Botock: vibe coding, costless in-browser tools, and the Doc Ock name origin.",
         author: {
           "@type": "Person",
           name: "Boto",
@@ -84,14 +98,32 @@ export default function AboutBotockApp() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+
       {/* Header */}
       <div className="w-full bg-white dark:bg-[#111114] border-b border-slate-200 dark:border-white/10 px-6 py-12 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-orange-500"></div>
         <div className="max-w-4xl mx-auto">
-          <Link href="/blog" className="inline-flex items-center text-xs font-bold text-slate-500 hover:text-amber-500 mb-6 transition-colors">
+          <Link
+            href="/blog"
+            className="inline-flex items-center text-xs font-bold text-slate-500 hover:text-amber-500 mb-6 transition-colors"
+          >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Blog
+            Back to Blog Hub
           </Link>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <span className="px-3.5 py-1 text-xs font-bold rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+              News &amp; Trends
+            </span>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+              #FounderStory
+            </span>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+              #WebDevelopment
+            </span>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+              #VibeCoding
+            </span>
+          </div>
           <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 leading-tight">
             About Us: The Story Behind Botock
           </h1>
@@ -99,272 +131,162 @@ export default function AboutBotockApp() {
             <span>By Boto</span>
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
             <span>October 4, 2026</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" /> 6 min read
+            </span>
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-6 py-12 prose dark:prose-invert prose-slate prose-headings:font-black prose-a:text-amber-500 hover:prose-a:text-amber-400">
-        
         <p className="text-lg font-semibold text-slate-700 dark:text-slate-300 lead">
-          Botock was created by Boto with a simple idea: creative technology should be easier to access.
+          Hi, I am a web developer. Botock was created during late-night &quot;vibe coding&quot; sessions, and I ended up publishing it live for the world to use.
         </p>
 
         <p>
-          Today, creating content is no longer limited to large companies with production teams, expensive software, and professional equipment. AI has made many parts of the creative process possible for individuals, creators, small businesses, and anyone with an idea.
+          I love exploring modern web technologies, WebAssembly, browser audio/video manipulation, and AI models. One day while coding in the zone, I started piecing together practical media utilities that solve real digital headaches: converting horizontal videos to vertical shorts, removing video backgrounds without green screens, straightening batch photo dumps, and filling PDF forms directly in the browser.
         </p>
-        <p>But there is still a problem.</p>
-        <p>Having access to AI does not automatically mean knowing how to use it well.</p>
+
         <p>
-          Generating a video is one thing. Creating a video that actually looks good, follows a clear idea, has the right visual direction, feels consistent, and is useful for a real audience is something else entirely.
-        </p>
-        <p>That is the space where I wanted to build Botock.</p>
-        <p>
-          Botock is my attempt to make AI-powered content creation more accessible while also building a place where people can eventually get professional creative work done for them.
+          Before I knew it, those individual experiments grew into an entire cohesive creative platform. I decided to put it online so that anyone on the web can take advantage of it.
         </p>
 
         <hr className="my-10 border-slate-200 dark:border-white/10" />
 
-        <h2>Who Is Boto?</h2>
-        <p>I use <strong>Boto</strong> as my creative name and identity.</p>
+        {/* Section: The Name */}
+        <h2>What Does the Name &quot;Botock&quot; Mean?</h2>
         <p>
-          I am interested in AI, digital content creation, video generation, editing, and the practical ways these technologies can help people create things that would otherwise require considerably more time, technical knowledge, or resources.
+          You might wonder why on earth I picked such an unusual name like <strong>&quot;Botock&quot;</strong>. At first glance, you might think: <em>&quot;What a strange, quirky name! Where did that come from?&quot;</em>
         </p>
         <p>
-          Over time, I have developed my own workflow for working with AI to create and improve digital content.
+          Here is the honest backstory: The name is inspired by Spider-Man&apos;s legendary villain, <strong>Doc Ock</strong> (Doctor Octopus).
         </p>
+        <div className="not-prose my-6 p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-slate-800 dark:text-slate-200">
+          <div className="flex items-center gap-3 mb-2 font-black text-lg text-amber-600 dark:text-amber-400">
+            <Bot className="w-6 h-6" />
+            The Formula: AI Bot + Doc Ock = Botock
+          </div>
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            All the heavy lifting on this platform—from background segmentation and acoustic noise filtering to text summarization and 4K upscaling—is executed by intelligent <strong>AI bots</strong> and background algorithmic agents. Combining <strong>&quot;Bot&quot;</strong> with the punchy cadence of <strong>&quot;Ock&quot;</strong> gave birth to <strong>Botock</strong>.
+          </p>
+        </div>
         <p>
-          I have learned that the difference between simply asking an AI to generate something and actually producing a useful result often comes from how the tools are used, how the content is directed, how problems are handled, and how the final result is refined.
+          I really liked how memorable and distinct it sounded. It was catchy, original, and true to the technology behind it—so the name stuck!
         </p>
-        <p>That experience is one of the main reasons Botock exists.</p>
 
         <hr className="my-10 border-slate-200 dark:border-white/10" />
 
-        <h2>What Does Botock Provide?</h2>
-        <p>Botock is being developed around a collection of AI-powered creative and productivity services.</p>
-        <p>The platform can be used for different types of digital content, including:</p>
+        {/* Section: Costless & Login Freedom */}
+        <h2>100% Costless — Use With or Without Login</h2>
+        <p>
+          The services and tools on Botock are completely <strong>costless</strong>. There are no credit cards required, no trial expiration countdowns, and no hidden subscriptions.
+        </p>
+        <p>
+          Even better: <strong>You can use these tools whether you choose to log in or use them completely without logging in.</strong>
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6 not-prose">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/5">
+            <UserCheck className="w-6 h-6 text-emerald-500 mb-2" />
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-1">
+              Zero Login Barrier
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Need to rotate 50 photos or crop a quick video? Drop your files and get your download instantly without creating an account.
+            </p>
+          </div>
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/5">
+            <ShieldCheck className="w-6 h-6 text-blue-500 mb-2" />
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-1">
+              Client-Side Privacy
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Most tools process directly inside your browser via WebAssembly and Canvas. Your private media stays on your device.
+            </p>
+          </div>
+        </div>
+
+        <hr className="my-10 border-slate-200 dark:border-white/10" />
+
+        {/* Section: Maintained Daily */}
+        <h2>Actively Maintained Daily</h2>
+        <p>
+          Because I built this platform myself, <strong>I actively keep an eye on it every single day</strong>.
+        </p>
+        <p>
+          I watch the error telemetry, test video encoding filters, fine-tune audio algorithms, verify PDF compatibility, and continually push speed improvements. If a browser update changes how Web Audio API works or if a user discovers an orientation bug on newer smartphone videos, I am right there debugging and fixing it.
+        </p>
+        <p>
+          This is an active, living platform crafted with care.
+        </p>
+
+        <hr className="my-10 border-slate-200 dark:border-white/10" />
+
+        {/* Section: What's Available */}
+        <h2>What Can You Do on Botock?</h2>
+        <p>
+          Here is a quick look at the core tool suites ready for you right now:
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-8 not-prose">
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/5">
-            <Video className="w-8 h-8 text-amber-500 mb-3" />
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2">Video Generation</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Users can create AI-generated videos from their ideas and prompts. The goal is not simply to generate something random. It is to help turn an idea into a piece of content that can actually be used for social media, projects, storytelling, or marketing.
+            <Video className="w-7 h-7 text-sky-500 mb-3" />
+            <h3 className="font-bold text-slate-900 dark:text-white mb-1.5">
+              AI Video Studio
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Auto-reframe horizontal clips to 9:16 Shorts, remove backgrounds without green screens, straighten crooked videos, and build stacked reaction videos.
             </p>
           </div>
-          
+
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/5">
-            <Edit3 className="w-8 h-8 text-blue-500 mb-3" />
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2">Video Editing</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Video generation is only one part of content creation. Botock also focuses on editing, allowing users to work with existing videos and turn raw footage into more useful and polished content.
+            <Volume2 className="w-7 h-7 text-violet-500 mb-3" />
+            <h3 className="font-bold text-slate-900 dark:text-white mb-1.5">
+              Audio &amp; Voice Studio
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Remove background noise and fan hiss, generate deep narrator character voices with Neural Text-to-Speech, auto-transcribe subtitles, and extract 320kbps MP3s.
             </p>
           </div>
-          
+
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/5">
-            <ImageIcon className="w-8 h-8 text-emerald-500 mb-3" />
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2">Photo Editing & AI Content</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Images are just as important as videos. Botock provides tools and workflows for image editing and AI-generated visual content without needing a complete professional editing setup.
+            <ImageIcon className="w-7 h-7 text-emerald-500 mb-3" />
+            <h3 className="font-bold text-slate-900 dark:text-white mb-1.5">
+              AI Image Suite
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Batch auto-straighten entire photo folders with 1-click ZIP export, upscale low-res graphics to 4K/8K with 200% Pixel Inspect, and remove image backgrounds.
             </p>
           </div>
-          
+
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-white/5">
-            <FileText className="w-8 h-8 text-purple-500 mb-3" />
-            <h3 className="font-bold text-slate-900 dark:text-white mb-2">PDF & Document Tools</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Content creation does not always mean video. Botock also includes tools designed to help users work with PDFs and digital documents, making common tasks easier.
+            <FileText className="w-7 h-7 text-rose-500 mb-3" />
+            <h3 className="font-bold text-slate-900 dark:text-white mb-1.5">
+              Document &amp; PDF Suite
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Extract executive briefs with PDF AI Summarizer (Beta), read in 3D flipbook mode, design interactive fillable AcroForms, and auto-align rotated scanned documents.
             </p>
           </div>
         </div>
 
-        <h3>📝 Documentary & Scriptwriting</h3>
-        <p>
-          A good video often starts before the camera, editor, or AI generator is ever involved. It starts with an idea and a script.
-        </p>
-        <p>
-          Botock is also intended to support documentary-style content, storytelling, research-based scripts, and other forms of written content that can eventually become videos or other media.
-        </p>
-        <p>
-          These services are part of a larger goal: <strong>to give users a place where different parts of the content creation process can be handled together.</strong>
-        </p>
-
-        <hr className="my-10 border-slate-200 dark:border-white/10" />
-
-        <h2>Why Am I Providing These Services for Free?</h2>
-        <p>This is an important part of the Botock story.</p>
-        <p>
-          The services currently being made available are <strong>free for a limited period</strong>. They are not being presented as a promise that everything will remain free forever.
-        </p>
-        <p>I am making them available freely because I want people to actually use them.</p>
-        <ul className="space-y-2">
-          <li><CheckCircle2 className="inline-block w-4 h-4 text-amber-500 mr-2"/>There are creators who have ideas but do not have expensive software.</li>
-          <li><CheckCircle2 className="inline-block w-4 h-4 text-amber-500 mr-2"/>There are people trying to grow a social media channel who cannot afford to hire an editor.</li>
-          <li><CheckCircle2 className="inline-block w-4 h-4 text-amber-500 mr-2"/>There are small businesses that need content but do not have a production team.</li>
-          <li><CheckCircle2 className="inline-block w-4 h-4 text-amber-500 mr-2"/>And there are simply people who want to experiment with AI without immediately paying for another subscription.</li>
-        </ul>
-        <p>I want those people to have an opportunity to create.</p>
-        <p>
-          If someone can use a Botock tool to make a video, improve a photo, create content for their social media page, or turn an idea into something they can publish, then the platform has already served a useful purpose.
-        </p>
-        <p>
-          The current free availability is therefore an <strong>introductory opportunity to use Botock while it is being developed and expanded.</strong>
-        </p>
-
-        <hr className="my-10 border-slate-200 dark:border-white/10" />
-
-        <h2>Can These Tools Guarantee Your Social Media Growth?</h2>
-        <p>No.</p>
-        <p>And I do not want to make that promise.</p>
-        <p>
-          A better video can help a creator present their ideas more professionally. Better content can improve consistency, experimentation, and the overall quality of a social media presence. But no tool can honestly guarantee followers, views, or viral success.
-        </p>
-        <p>Your audience, topic, consistency, distribution, timing, and the quality of your ideas still matter.</p>
-        <p>What Botock can do is help reduce one of the biggest barriers:</p>
-        <p className="text-xl font-black text-center my-6 text-amber-500">
-          The difficulty of producing the content itself.
-        </p>
-        <p>
-          If you have an idea but creating the video is the part stopping you, Botock is designed to help you get past that obstacle.
-        </p>
-
-        <hr className="my-10 border-slate-200 dark:border-white/10" />
-
-        <h2>Why Not Just Give Everyone the Tools?</h2>
-        <p>Because using a tool and having someone do the work for you are two different things.</p>
-        <p>A creator may be perfectly happy generating one or two videos themselves. But imagine a business that needs:</p>
-        <ul>
-          <li>multiple videos every week</li>
-          <li>social media content</li>
-          <li>promotional visuals</li>
-          <li>edited footage</li>
-          <li>AI-generated scenes</li>
-          <li>product images</li>
-          <li>documentary-style videos</li>
-          <li>scripts and research</li>
-          <li>large amounts of content produced consistently</li>
-        </ul>
-        <p>
-          At that point, simply giving someone a tool may not be enough. They have a business to run. They may not have the time to learn every AI workflow, solve every generation problem, edit every result, check every output, and repeat the process dozens of times.
-        </p>
-        <p><strong>That is where professional content services become valuable.</strong></p>
-
-        <hr className="my-10 border-slate-200 dark:border-white/10" />
-
-        <h2>From Free Tools to Professional Services</h2>
-        <p>Botock's free tools are one side of what I am building.</p>
-        <p>
-          The other side is a future professional service where users can come to me with a requirement and have the work created for them.
-        </p>
-        <p>Instead of learning how to generate and edit everything themselves, a client could say:</p>
-        <blockquote className="border-l-4 border-amber-500 pl-4 italic text-slate-600 dark:text-slate-400 bg-amber-500/5 py-2 px-4 rounded-r-lg my-4">
-          "I need a professional video for my channel."
-        </blockquote>
-        <p>Or:</p>
-        <blockquote className="border-l-4 border-amber-500 pl-4 italic text-slate-600 dark:text-slate-400 bg-amber-500/5 py-2 px-4 rounded-r-lg my-4">
-          "I need several videos for my business."
-        </blockquote>
-        <p>Or:</p>
-        <blockquote className="border-l-4 border-amber-500 pl-4 italic text-slate-600 dark:text-slate-400 bg-amber-500/5 py-2 px-4 rounded-r-lg my-4">
-          "I need a documentary-style video with a script, visuals, editing, and final production."
-        </blockquote>
-        <p>
-          The goal is to take that requirement and handle the creative production process. This is especially useful for people who need more than a single generation and want <strong>consistency, quality, direction, and professional handling.</strong>
-        </p>
-
-        <hr className="my-10 border-slate-200 dark:border-white/10" />
-
-        <h2>Why I Want to Work With Future Clients</h2>
-        <p>The ultimate purpose of building Botock is not simply to collect users.</p>
-        <p>I want to build relationships with people and businesses that genuinely need creative production.</p>
-        <p>
-          The free tools give people a chance to experience what is possible. They also give me the opportunity to demonstrate the workflows and skills I have developed.
-        </p>
-        <p>
-          If a creator uses Botock today to make a few videos and later needs someone to produce twenty, fifty, or more pieces of content professionally, that relationship can naturally grow into a client relationship.
-        </p>
-        <p>That is the direction I want to build toward.</p>
-        <p className="text-lg font-bold text-amber-500 text-center my-6">
-          The free service is the starting point. Professional work is the long-term opportunity.
-        </p>
-
-        <hr className="my-10 border-slate-200 dark:border-white/10" />
-
-        <h2>Why AI?</h2>
-        <p>AI has changed the creative process dramatically.</p>
-        <p>But I do not see AI as a replacement for creativity. I see it as a tool.</p>
-        <p>
-          The same AI system can produce a poor result in one person's hands and a much better result in another's because the workflow, instructions, selection, editing, and decision-making are different.
-        </p>
-        <p>
-          I have spent time learning how to work with these systems and how to combine AI generation with editing and creative direction. That is one of the skills behind Botock.
-        </p>
-        <p>The objective is not simply:</p>
-        <p className="font-bold text-center text-slate-500">"Let AI make something."</p>
-        <p>It is:</p>
-        <p className="font-bold text-center text-amber-500 text-xl">"Use AI intelligently to help create something useful."</p>
-
-        <hr className="my-10 border-slate-200 dark:border-white/10" />
-
-        <h2>What Happens When Free Access Ends?</h2>
-        <p>Botock's current free availability is temporary.</p>
-        <p>
-          As the platform develops, some tools or services may move toward different plans, limits, or professional service options. The exact structure can evolve as the platform grows.
-        </p>
-        <p>What I do not want to do is make a false promise that everything will remain free forever.</p>
-        <p>For now, the purpose is simple:</p>
-        <p className="text-xl font-black text-center my-6 text-emerald-500">
-          Use the platform. Experiment. Create something. See what is possible.
-        </p>
-        <p>
-          And if you eventually need something beyond the self-service tools, professional content creation can become the next step.
-        </p>
-
-        <hr className="my-10 border-slate-200 dark:border-white/10" />
-
-        <h2>More Than an AI Tool Website</h2>
-        <p>I do not want Botock to become just another website filled with buttons that say "Generate."</p>
-        <p>I want it to become a place where an idea can move through the entire creative process.</p>
-        <div className="bg-slate-100 dark:bg-slate-800/50 p-6 rounded-2xl my-6">
-          <ul className="space-y-3 font-semibold text-slate-700 dark:text-slate-300">
-            <li>An idea can become a script.</li>
-            <li>A script can become visuals.</li>
-            <li>Visuals can become a video.</li>
-            <li>A video can be edited.</li>
-            <li>A finished piece can become content for a social media channel.</li>
-          </ul>
-        </div>
-        <p>
-          And when a user needs more than a tool can provide, there can be a person behind the process who can take responsibility for producing the work.
-        </p>
-        <p>That is the direction I am building toward.</p>
-
-        <hr className="my-10 border-slate-200 dark:border-white/10" />
-
-        <h2>My Purpose</h2>
-        <p>My purpose with Botock is straightforward.</p>
-        <p className="text-lg font-bold text-amber-500">
-          I want to make high-quality digital content more accessible while building the skills, technology, and relationships needed to provide professional creative services.
-        </p>
-        <ul className="space-y-2 mt-6">
-          <li>If you are a creator, I want Botock to help you create.</li>
-          <li>If you are experimenting with AI, I want you to have a place to explore it.</li>
-          <li>If you are building a social media channel, I want to make content production easier.</li>
-          <li>If you are a business that eventually needs someone to handle the work professionally, I want Botock to grow into a service you can rely on.</li>
-        </ul>
-        <p>The platform may change.</p>
-        <p>The tools will continue to improve.</p>
-        <p>The technology will continue to evolve.</p>
-        <p>But the basic idea will remain the same:</p>
-        
-        <div className="text-center p-8 mt-10 rounded-3xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
-          <p className="text-2xl font-black text-slate-900 dark:text-white mb-4">
-            You bring the idea. Botock helps turn it into something real.
+        <div className="text-center p-8 mt-12 rounded-3xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+          <p className="text-2xl font-black text-slate-900 dark:text-white mb-3">
+            Built for Creators, Powered by Code.
           </p>
-          <p className="text-xl font-bold text-amber-500">Welcome to Botock.</p>
-          <p className="text-slate-500 mt-2">— Created by Boto.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300 max-w-lg mx-auto mb-6">
+            Everything here is open, fast, and costless. Use it, enjoy it, and make great things.
+          </p>
+          <Link
+            href="/tools"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-md"
+          >
+            Explore All Free Tools
+            <Zap className="w-4 h-4" />
+          </Link>
+          <p className="text-xs text-slate-400 mt-4">— Built by Boto</p>
         </div>
-
       </div>
     </div>
   );

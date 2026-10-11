@@ -56,8 +56,22 @@ __pycache__/
 *.so
 .pytest_cache/
 
-# OS files
+# OS & Editor temporary files
 .DS_Store
 Thumbs.db
+*.swp
+*..swp
+*.swo
+*~
+*.bak
+*.tmp
+*.tmp.*
+
+# Auto-generated agent docs
+AGENTS.md
+CLAUDE.md
+**/AGENTS.md
+**/CLAUDE.md
+
 /botock-admin
 botock-admin/

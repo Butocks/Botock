@@ -47,3 +47,32 @@ class ImageStatusResponse(BaseModel):
 
 class ImageListResponse(BaseModel):
     images: list[ImageStatusResponse]
+
+
+# ----------------- LIBRARY SCHEMAS -----------------
+class LibraryItem(BaseModel):
+    id: str
+    title: str
+    prompt: str
+    type: str  # "photo" | "video"
+    preview_url: str
+    download_url: str
+    drive_file_id: Optional[str] = None
+    drive_web_url: Optional[str] = None
+    aspect_ratio: Optional[str] = "16:9"
+    license: str = "Free for Personal & Commercial Use (CC0 / Public Domain)"
+    created_at: str
+
+class LibraryListResponse(BaseModel):
+    items: list[LibraryItem]
+    total: int
+    page: int
+    limit: int
+    has_more: bool
+    google_drive_connected: bool
+
+class LibrarySyncResponse(BaseModel):
+    status: str
+    message: str
+    synced_items: int
+

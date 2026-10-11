@@ -13,6 +13,8 @@ import {
   Loader2,
 } from "lucide-react";
 
+import { getTransferMedia } from "@/app/utils/mediaTransfer";
+
 // Formats ms to timestamp
 const formatMsToTimestamp = (ms: number, format: "srt" | "vtt"): string => {
   const validMs = Math.max(0, ms);
@@ -133,6 +135,22 @@ export default function SubtitlesClient() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const checkTransfer = async () => {
+      try {
+        const media = await getTransferMedia();
+        if (mounted && media && media.file) {
+          onDrop([media.file]);
+        }
+      } catch (err) {
+        console.error("Error auto-loading transfer media in subtitles:", err);
+      }
+    };
+    checkTransfer();
+    return () => { mounted = false; };
+  }, [onDrop]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

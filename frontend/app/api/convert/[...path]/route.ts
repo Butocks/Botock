@@ -15,26 +15,38 @@ export async function POST(
       process.env.BACKEND_INTERNAL_URL ||
       process.env.BACKEND_URL ||
       process.env.NEXT_PUBLIC_BACKEND_URL ||
-      process.env.NEXT_PUBLIC_API_URL
-    )?.replace(/\/$/, "");
-
-    if (!backendUrl) {
-      throw new Error("Backend URL is not configured. Please set NEXT_PUBLIC_API_URL.");
-    }
+      process.env.NEXT_PUBLIC_API_URL ||
+      "http://127.0.0.1:8000"
+    ).replace(/\/$/, "");
 
     const targetUrl = `${backendUrl}/api/convert/${subpath}`;
 
-    const formData = await request.formData();
-
+    const reqContentType = request.headers.get("content-type") || "";
+    let body: any;
     const headers: Record<string, string> = {
       "Bypass-Tunnel-Reminder": "true",
       "ngrok-skip-browser-warning": "true",
       "User-Agent": "Botock-Web-Client/1.0",
     };
 
+    if (reqContentType.includes("application/json")) {
+      body = await request.text();
+      headers["Content-Type"] = "application/json";
+    } else if (
+      reqContentType.includes("multipart/form-data") ||
+      reqContentType.includes("application/x-www-form-urlencoded")
+    ) {
+      body = await request.formData();
+    } else {
+      body = await request.arrayBuffer();
+      if (reqContentType) {
+        headers["Content-Type"] = reqContentType;
+      }
+    }
+
     const backendRes = await fetch(targetUrl, {
       method: "POST",
-      body: formData,
+      body,
       headers,
     });
 

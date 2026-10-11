@@ -93,7 +93,7 @@ export default function PdfAiSummarizerPage() {
             <span>/</span>
             <Link href="/tools" className="hover:text-foreground transition-colors">Tools</Link>
             <span>/</span>
-            <span className="text-foreground font-semibold">PDF AI Summarizer</span>
+            <span className="text-foreground font-semibold">PDF AI Summarizer (Beta)</span>
           </nav>
           <span className="flex items-center gap-1.5 text-emerald-400">
             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -114,7 +114,7 @@ export default function PdfAiSummarizerPage() {
         <div className="max-w-6xl mx-auto space-y-6">
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-foreground mb-2">
-              AI PDF Document Summarizer — Executive Summaries &amp; Key Directives
+              AI PDF Document Summarizer (Beta) — Executive Summaries &amp; Key Directives
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-4xl">
               Condense extensive legal agreements, financial disclosures, research papers, and technical manuals into crisp executive summaries. Generates actionable takeaways, bullet point digests, and structured sections in seconds.

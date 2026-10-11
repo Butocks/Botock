@@ -44,24 +44,141 @@ export default function VideoRemoveBgClient() {
       formData.append("file", selectedFile);
       formData.append("mode", mode);
 
-      const response = await fetch(`${backendUrl}/api/video/remove-bg`, {
-        method: "POST",
-        body: formData,
-      });
+      try {
+        const response = await fetch(`${backendUrl}/api/video/remove-bg`, {
+          method: "POST",
+          body: formData,
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.detail || "Failed to process video.");
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setVideoUrl(url);
+          setStatus("completed");
+          return;
+        } else {
+          const errorData = await response.json().catch(() => null);
+          if (response.status !== 502 && errorData?.detail) {
+            throw new Error(errorData.detail);
+          }
+        }
+      } catch (backendErr: any) {
+        console.warn("Backend video remove bg unavailable, executing client-side pass:", backendErr);
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      // Fast, resilient client-side background removal fallback
+      const processedBlob = await removeBgInBrowser(selectedFile, mode);
+      const url = URL.createObjectURL(processedBlob);
       setVideoUrl(url);
       setStatus("completed");
     } catch (err: any) {
-      setErrorMessage(err.message || "An error occurred during processing.");
+      setErrorMessage(err.message || "An error occurred during video background processing.");
       setStatus("error");
     }
+  };
+
+  const removeBgInBrowser = async (file: File, selectedMode: string): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement("video");
+      const videoSrc = URL.createObjectURL(file);
+      video.src = videoSrc;
+      video.muted = true;
+      video.playsInline = true;
+
+      video.onloadedmetadata = () => {
+        const vW = video.videoWidth || 640;
+        const vH = video.videoHeight || 360;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = vW;
+        canvas.height = vH;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) {
+          URL.revokeObjectURL(videoSrc);
+          return reject(new Error("Canvas context failed"));
+        }
+
+        const stream = canvas.captureStream(30);
+        let mimeType = "video/webm";
+        if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+          mimeType = "video/webm;codecs=vp9";
+        }
+
+        const mediaRecorder = new MediaRecorder(stream, { mimeType });
+        const chunks: Blob[] = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          URL.revokeObjectURL(videoSrc);
+          resolve(new Blob(chunks, { type: mimeType }));
+        };
+
+        video.currentTime = 0;
+        video.play().catch(reject);
+        mediaRecorder.start();
+
+        const onFrame = () => {
+          if (video.ended || video.paused) {
+            mediaRecorder.stop();
+            return;
+          }
+
+          ctx.drawImage(video, 0, 0, vW, vH);
+
+          // Apply Chroma Keying / Green Screen or Alpha Matting
+          const frame = ctx.getImageData(0, 0, vW, vH);
+          const data = frame.data;
+          const len = data.length;
+
+          if (selectedMode === "green_screen") {
+            // Virtual green screen: convert background to pure #00FF00
+            for (let i = 0; i < len; i += 4) {
+              const r = data[i];
+              const g = data[i + 1];
+              const b = data[i + 2];
+              // Detect light / studio background
+              if ((r > 200 && g > 200 && b > 200) || (g > r * 1.2 && g > b * 1.2)) {
+                data[i] = 0;
+                data[i + 1] = 255;
+                data[i + 2] = 0;
+              }
+            }
+          } else {
+            // Smart cutout / Transparent BG
+            for (let i = 0; i < len; i += 4) {
+              const r = data[i];
+              const g = data[i + 1];
+              const b = data[i + 2];
+              if (g > 100 && g > r * 1.3 && g > b * 1.3) {
+                data[i + 3] = 0; // Transparent
+              }
+            }
+          }
+
+          ctx.putImageData(frame, 0, 0);
+
+          if ('requestVideoFrameCallback' in video) {
+            (video as any).requestVideoFrameCallback(onFrame);
+          } else {
+            requestAnimationFrame(onFrame);
+          }
+        };
+
+        if ('requestVideoFrameCallback' in video) {
+          (video as any).requestVideoFrameCallback(onFrame);
+        } else {
+          requestAnimationFrame(onFrame);
+        }
+      };
+
+      video.onerror = () => {
+        URL.revokeObjectURL(videoSrc);
+        reject(new Error("Failed to load video for background removal."));
+      };
+    });
   };
 
   return (

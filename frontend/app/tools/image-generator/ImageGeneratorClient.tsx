@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import GuestCTA from "../../components/GuestCTA";
+import ToolSuggestions from "../../components/ToolSuggestions";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../../utils/supabase/client";
@@ -449,6 +450,15 @@ export default function ImageGeneratorClient() {
                 <Layers className="w-3.5 h-3.5" />
                 <span>Edit in Studio</span>
               </Link>
+            </div>
+
+            {/* Smart Next Actions for Image */}
+            <div className="w-full max-w-xl mt-3">
+              <ToolSuggestions
+                type="image"
+                mediaUrl={imageUrl}
+                fileName={`botock_${generationId || "image"}`}
+              />
             </div>
           </div>
         )}

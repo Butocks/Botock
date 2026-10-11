@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import logging
 import pymupdf as fitz
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
 from fastapi.responses import FileResponse
 from pdf2docx import Converter
 import pdfplumber
@@ -188,6 +188,228 @@ async def protect_pdf(
         logger.exception("PDF protection failed")
         raise HTTPException(status_code=503, detail="The document service is temporarily unavailable. Please try again shortly.")
 
+@router.get("/tts-voices")
+async def get_tts_voices():
+    """Returns curated ultra-realistic AI neural voices for podcasts, narrators, and kids."""
+    return [
+        {
+            "id": "en-US-ChristopherNeural",
+            "name": "Christopher",
+            "role": "Deep Podcast Host & Documentary",
+            "category": "Deep & Narrator",
+            "gender": "Male",
+            "lang": "English (US)",
+            "defaultPitch": "-4Hz",
+            "defaultRate": "-2%",
+            "desc": "Ultra-realistic, deep authoritative voice for podcasts, video essays, and documentaries."
+        },
+        {
+            "id": "en-US-GuyNeural",
+            "name": "Guy",
+            "role": "Confident Storyteller",
+            "category": "Deep & Narrator",
+            "gender": "Male",
+            "lang": "English (US)",
+            "defaultPitch": "+0Hz",
+            "defaultRate": "+0%",
+            "desc": "Rich, dynamic voice ideal for YouTube shorts, narrations, and explaining concepts."
+        },
+        {
+            "id": "en-US-EricNeural",
+            "name": "Eric",
+            "role": "Deep Movie Villain & Trailer",
+            "category": "Deep & Narrator",
+            "gender": "Male",
+            "lang": "English (US)",
+            "defaultPitch": "-8Hz",
+            "defaultRate": "-6%",
+            "desc": "Resonant, heavy cinematic voice with gravity, suspense, and presence."
+        },
+        {
+            "id": "en-GB-BrianNeural",
+            "name": "Brian",
+            "role": "British Documentary Narrator",
+            "category": "Deep & Narrator",
+            "gender": "Male",
+            "lang": "English (UK)",
+            "defaultPitch": "-2Hz",
+            "defaultRate": "-2%",
+            "desc": "Sophisticated British narrator voice with natural BBC-style depth and cadence."
+        },
+        {
+            "id": "en-US-AnaNeural",
+            "name": "Ana",
+            "role": "Clean Child / Kid Voice",
+            "category": "Kids & Youth",
+            "gender": "Child",
+            "lang": "English (US)",
+            "defaultPitch": "+0Hz",
+            "defaultRate": "+0%",
+            "desc": "Pure, crystal-clean natural child voice for cartoons, bedtime stories, and youth dialogues."
+        },
+        {
+            "id": "en-US-JennyNeural",
+            "name": "Jenny",
+            "role": "Studio Host & Audiobooks",
+            "category": "Female Hosts",
+            "gender": "Female",
+            "lang": "English (US)",
+            "defaultPitch": "+0Hz",
+            "defaultRate": "+0%",
+            "desc": "Warm, professional, crystal-clear studio voice for podcasts and audiobooks."
+        },
+        {
+            "id": "en-US-AriaNeural",
+            "name": "Aria",
+            "role": "Expressive & Friendly Host",
+            "category": "Female Hosts",
+            "gender": "Female",
+            "lang": "English (US)",
+            "defaultPitch": "+0Hz",
+            "defaultRate": "+2%",
+            "desc": "Modern energetic tone perfect for social media reels, ads, and character dialogues."
+        },
+        {
+            "id": "ur-PK-AsadNeural",
+            "name": "Asad",
+            "role": "Urdu Deep Male Voiceover",
+            "category": "Regional & Multilingual",
+            "gender": "Male",
+            "lang": "Urdu (Pakistan)",
+            "defaultPitch": "-2Hz",
+            "defaultRate": "+0%",
+            "desc": "Vocal depth and clear pronunciation for Urdu podcasts, poetry, and documentaries."
+        },
+        {
+            "id": "ur-PK-UzmaNeural",
+            "name": "Uzma",
+            "role": "Urdu Female Narrator",
+            "category": "Regional & Multilingual",
+            "gender": "Female",
+            "lang": "Urdu (Pakistan)",
+            "defaultPitch": "+0Hz",
+            "defaultRate": "+0%",
+            "desc": "Eloquent, sweet Urdu narration voice for stories, news, and voiceovers."
+        },
+        {
+            "id": "hi-IN-MadhurNeural",
+            "name": "Madhur",
+            "role": "Hindi Deep Narrator",
+            "category": "Regional & Multilingual",
+            "gender": "Male",
+            "lang": "Hindi (India)",
+            "defaultPitch": "-2Hz",
+            "defaultRate": "+0%",
+            "desc": "Resonant, deep Hindi voice for YouTube videos, podcasts, and explainers."
+        },
+        {
+            "id": "hi-IN-SwaraNeural",
+            "name": "Swara",
+            "role": "Hindi Studio Female",
+            "category": "Regional & Multilingual",
+            "gender": "Female",
+            "lang": "Hindi (India)",
+            "defaultPitch": "+0Hz",
+            "defaultRate": "+0%",
+            "desc": "Clear, natural Hindi narration for audiobooks, stories, and social media."
+        }
+    ]
+
+@router.post("/text-to-speech")
+async def text_to_speech(
+    request: Request
+):
+    """
+    Advanced Free AI Text-To-Speech (Edge TTS).
+    Generates high-definition neural voiceovers (Deep Podcast, Narrator, Clean Child, etc.)
+    with zero robotic artifacts.
+    """
+    import tempfile
+    import os
+    import edge_tts
+    import httpx
+    from starlette.background import BackgroundTask
+
+    text = ""
+    voice = "en-US-ChristopherNeural"
+    rate = "+0%"
+    pitch = "+0Hz"
+
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            text = str(body.get("text", "")).strip()
+            voice = str(body.get("voice", voice)).strip()
+            rate = str(body.get("rate", rate)).strip()
+            pitch = str(body.get("pitch", pitch)).strip()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid JSON body.")
+    else:
+        form = await request.form()
+        text = str(form.get("text", "")).strip()
+        voice = str(form.get("voice", voice)).strip()
+        rate = str(form.get("rate", rate)).strip()
+        pitch = str(form.get("pitch", pitch)).strip()
+
+    if not text:
+        raise HTTPException(status_code=400, detail="Text cannot be empty.")
+
+    if len(text) > 4000:
+        raise HTTPException(status_code=400, detail="Text length exceeds 4,000 characters limit.")
+
+    # Format rate and pitch safely
+    if not rate.endswith("%"):
+        rate = f"{rate}%"
+    if not rate.startswith(("+", "-")):
+        rate = f"+{rate}"
+
+    if not pitch.endswith("Hz"):
+        pitch = f"{pitch}Hz"
+    if not pitch.startswith(("+", "-")):
+        pitch = f"+{pitch}"
+
+    # Pre-sync clock skew to guarantee 100% reliable websocket handshake
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            resp = await client.head("https://www.bing.com")
+            s_date = resp.headers.get("date")
+            if s_date:
+                parsed = edge_tts.drm.DRM.parse_rfc2616_date(s_date)
+                c_time = edge_tts.drm.DRM.get_unix_timestamp()
+                edge_tts.drm.DRM.adj_clock_skew_seconds(parsed - c_time)
+    except Exception:
+        pass
+
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as out_f:
+        out_path = out_f.name
+
+    try:
+        communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+        await communicate.save(out_path)
+
+        if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+            raise Exception("Generated audio file is empty.")
+
+        def cleanup():
+            if os.path.exists(out_path):
+                try: os.remove(out_path)
+                except Exception: pass
+
+        safe_v_name = voice.split('-')[-1].replace('Neural', '')
+        return FileResponse(
+            out_path,
+            filename=f"botock_voiceover_{safe_v_name}.mp3",
+            media_type="audio/mpeg",
+            background=BackgroundTask(cleanup)
+        )
+    except Exception as e:
+        if os.path.exists(out_path):
+            try: os.remove(out_path)
+            except Exception: pass
+        logger.exception("Text-to-speech generation failed: %s", str(e))
+        raise HTTPException(status_code=500, detail="Failed to synthesize speech. Please try again.")
+
 @router.post("/voice-changer")
 async def voice_changer(
     file: UploadFile = File(...),
@@ -195,20 +417,24 @@ async def voice_changer(
 ):
     import tempfile
     import os
+    import asyncio
+    from starlette.background import BackgroundTask
     
-    ALLOWED_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.ogg'}
-    ALLOWED_MIMES = {'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/ogg'}
+    AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.ogg'}
+    VIDEO_EXTENSIONS = {'.mp4', '.mov', '.webm', '.mkv', '.avi'}
     
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIMES:
-        raise HTTPException(status_code=400, detail="Invalid audio format. Please upload MP3, WAV, M4A, or OGG.")
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    is_video = ext in VIDEO_EXTENSIONS or (file.content_type and file.content_type.startswith("video/"))
+    is_audio = ext in AUDIO_EXTENSIONS or (file.content_type and file.content_type.startswith("audio/"))
 
-    MAX_FILE_SIZE = 10 * 1024 * 1024 # 10MB limit
+    if not is_audio and not is_video:
+        raise HTTPException(status_code=400, detail="Invalid format. Please upload MP3, WAV, M4A, OGG, or MP4, MOV, WebM.")
+
+    MAX_FILE_SIZE = 60 * 1024 * 1024 if is_video else 20 * 1024 * 1024
     
-    # Read the file with size limit
     file_bytes = await file.read()
     if len(file_bytes) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="Audio file too large. Maximum size is 10MB.")
+        raise HTTPException(status_code=413, detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB.")
         
     if len(file_bytes) == 0:
         raise HTTPException(status_code=400, detail="Empty file uploaded.")
@@ -287,31 +513,47 @@ async def voice_changer(
     params = VOICE_MODES[mode]
     
     in_path = None
-    out_path = None
+    audio_raw_path = None
+    processed_wav_path = None
+    final_out_path = None
 
     try:
-        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as in_f:
+        with tempfile.NamedTemporaryFile(suffix=ext if ext else (".mp4" if is_video else ".wav"), delete=False) as in_f:
             in_f.write(file_bytes)
             in_path = in_f.name
 
+        if is_video:
+            # Extract audio to wav first
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as a_raw:
+                audio_raw_path = a_raw.name
+            extract_proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y", "-i", in_path,
+                "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
+                audio_raw_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await extract_proc.communicate()
+            audio_target_input = audio_raw_path
+        else:
+            audio_target_input = in_path
+
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as out_f:
-            out_path = out_f.name
+            processed_wav_path = out_f.name
 
         # Read with pedalboard io
         try:
-            with AudioFile(in_path) as f:
-                # Basic duration check - limit to 3 minutes
+            with AudioFile(audio_target_input) as f:
                 duration = f.frames / f.samplerate
-                if duration > 180:
-                    raise HTTPException(status_code=413, detail="Audio duration exceeds 3 minutes limit.")
-                
+                if duration > 300: # 5 min limit
+                    raise HTTPException(status_code=413, detail="Audio duration exceeds 5 minutes limit.")
                 audio = f.read(f.frames)
                 samplerate = f.samplerate
         except HTTPException:
             raise
         except Exception as e:
             logger.error(f"Failed to read audio file: {e}")
-            raise HTTPException(status_code=400, detail="Corrupt or unreadable audio file.")
+            raise HTTPException(status_code=400, detail="Corrupt or unreadable audio stream.")
 
         # Build pedalboard
         plugins = [PitchShift(semitones=params["pitch"])]
@@ -323,88 +565,173 @@ async def voice_changer(
         # Process audio
         effected = board(audio, samplerate, reset=False)
 
-        # Write back to wav (more reliable than mp3 with pedalboard)
-        with AudioFile(out_path, 'w', samplerate, effected.shape[0]) as f:
+        # Write to wav
+        with AudioFile(processed_wav_path, 'w', samplerate, effected.shape[0]) as f:
             f.write(effected)
 
-        from starlette.background import BackgroundTask
-        
+        if is_video:
+            # Remux audio into original video
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as v_out:
+                final_out_path = v_out.name
+            remux_proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y", "-i", in_path, "-i", processed_wav_path,
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+                "-map", "0:v:0", "-map", "1:a:0", "-shortest",
+                final_out_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await remux_proc.communicate()
+            response_file = final_out_path
+            response_name = (file.filename or "video").rsplit('.', 1)[0] + f"_{mode}.mp4"
+            media_type = "video/mp4"
+        else:
+            response_file = processed_wav_path
+            response_name = (file.filename or "audio").rsplit('.', 1)[0] + f"_{mode}.wav"
+            media_type = "audio/wav"
+
         def cleanup():
-            if in_path and os.path.exists(in_path):
-                try: os.remove(in_path)
-                except Exception: pass
-            if out_path and os.path.exists(out_path):
-                try: os.remove(out_path)
-                except Exception: pass
+            for p in [in_path, audio_raw_path, processed_wav_path, final_out_path]:
+                if p and os.path.exists(p):
+                    try: os.remove(p)
+                    except Exception: pass
 
         return FileResponse(
-            out_path,
-            filename=file.filename.rsplit('.', 1)[0] + f"_{mode}.wav",
-            media_type="audio/wav",
+            response_file,
+            filename=response_name,
+            media_type=media_type,
             background=BackgroundTask(cleanup)
         )
     except HTTPException:
-        if in_path and os.path.exists(in_path): os.remove(in_path)
-        if out_path and os.path.exists(out_path): os.remove(out_path)
+        for p in [in_path, audio_raw_path, processed_wav_path, final_out_path]:
+            if p and os.path.exists(p):
+                try: os.remove(p)
+                except Exception: pass
         raise
     except Exception as e:
-        if in_path and os.path.exists(in_path): os.remove(in_path)
-        if out_path and os.path.exists(out_path): os.remove(out_path)
+        for p in [in_path, audio_raw_path, processed_wav_path, final_out_path]:
+            if p and os.path.exists(p):
+                try: os.remove(p)
+                except Exception: pass
         logger.exception("Voice conversion failed")
         raise HTTPException(status_code=500, detail="Voice conversion processing failed.")
 
 @router.post("/audio-enhance")
 async def audio_enhance(file: UploadFile = File(...)):
     """
-    AI Audio Enhancer Mock
+    AI Audio Enhancer
     Uses pedalboard to apply noise gate, compression, and EQ to enhance speech.
+    Supports both audio files (MP3, WAV, etc.) and video files (MP4, MOV, WebM).
     """
     import tempfile
     import os
+    import asyncio
     from fastapi.responses import FileResponse
     from starlette.background import BackgroundTask
     from pedalboard import Pedalboard, Compressor, NoiseGate, HighpassFilter, LowpassFilter
     from pedalboard.io import AudioFile
     
-    file_bytes = await file.read()
-    
-    # Fast mock for audio enhance
-    try:
-        in_f = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-        in_f.write(file_bytes)
-        in_f.close()
-        
-        out_f = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-        out_f.close()
+    AUDIO_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.ogg'}
+    VIDEO_EXTENSIONS = {'.mp4', '.mov', '.webm', '.mkv', '.avi'}
 
-        with AudioFile(in_f.name) as f:
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    is_video = ext in VIDEO_EXTENSIONS or (file.content_type and file.content_type.startswith("video/"))
+    is_audio = ext in AUDIO_EXTENSIONS or (file.content_type and file.content_type.startswith("audio/"))
+
+    if not is_audio and not is_video:
+        raise HTTPException(status_code=400, detail="Invalid format. Please upload MP3, WAV, M4A, OGG, or MP4, MOV, WebM.")
+
+    file_bytes = await file.read()
+    if len(file_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Empty file uploaded.")
+
+    in_path = None
+    audio_raw_path = None
+    out_wav_path = None
+    final_out_path = None
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=ext if ext else (".mp4" if is_video else ".wav"), delete=False) as in_f:
+            in_f.write(file_bytes)
+            in_path = in_f.name
+
+        if is_video:
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as a_raw:
+                audio_raw_path = a_raw.name
+            extract_proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y", "-i", in_path,
+                "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "2",
+                audio_raw_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await extract_proc.communicate()
+            audio_target_input = audio_raw_path
+        else:
+            audio_target_input = in_path
+        
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as out_f:
+            out_wav_path = out_f.name
+
+        with AudioFile(audio_target_input) as f:
             audio = f.read(f.frames)
             samplerate = f.samplerate
 
         # Professional speech enhancement chain
         board = Pedalboard([
             NoiseGate(threshold_db=-35, ratio=2.0),
-            HighpassFilter(cutoff_frequency_hz=80),  # Remove rumble
+            HighpassFilter(cutoff_frequency_hz=80),   # Remove rumble
             LowpassFilter(cutoff_frequency_hz=12000), # Remove hiss
             Compressor(threshold_db=-20, ratio=4.0)   # Even out volume
         ])
 
         effected = board(audio, samplerate, reset=False)
 
-        with AudioFile(out_f.name, 'w', samplerate, effected.shape[0]) as f:
+        with AudioFile(out_wav_path, 'w', samplerate, effected.shape[0]) as f:
             f.write(effected)
+
+        if is_video:
+            with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as v_out:
+                final_out_path = v_out.name
+            remux_proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y", "-i", in_path, "-i", out_wav_path,
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+                "-map", "0:v:0", "-map", "1:a:0", "-shortest",
+                final_out_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await remux_proc.communicate()
+            response_file = final_out_path
+            response_name = (file.filename or "video").rsplit('.', 1)[0] + "_enhanced.mp4"
+            media_type = "video/mp4"
+        else:
+            response_file = out_wav_path
+            response_name = (file.filename or "audio").rsplit('.', 1)[0] + "_enhanced.wav"
+            media_type = "audio/wav"
             
         def cleanup():
-            if os.path.exists(in_f.name): os.remove(in_f.name)
-            if os.path.exists(out_f.name): os.remove(out_f.name)
+            for p in [in_path, audio_raw_path, out_wav_path, final_out_path]:
+                if p and os.path.exists(p):
+                    try: os.remove(p)
+                    except Exception: pass
 
         return FileResponse(
-            out_f.name,
-            filename="enhanced.wav",
-            media_type="audio/wav",
+            response_file,
+            filename=response_name,
+            media_type=media_type,
             background=BackgroundTask(cleanup)
         )
-    except Exception:
-        if os.path.exists(in_f.name): os.remove(in_f.name)
-        if os.path.exists(out_f.name): os.remove(out_f.name)
+    except HTTPException:
+        for p in [in_path, audio_raw_path, out_wav_path, final_out_path]:
+            if p and os.path.exists(p):
+                try: os.remove(p)
+                except Exception: pass
+        raise
+    except Exception as e:
+        for p in [in_path, audio_raw_path, out_wav_path, final_out_path]:
+            if p and os.path.exists(p):
+                try: os.remove(p)
+                except Exception: pass
+        logger.exception("Audio enhancement failed: %s", str(e))
         raise HTTPException(status_code=500, detail="Audio enhancement failed.")

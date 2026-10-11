@@ -1,4 +1,4 @@
-export type TrackType = "video" | "audio" | "text" | "graphics";
+export type TrackType = "video" | "audio" | "text" | "graphics" | "effect";
 
 export interface Transform {
   x: number; // percentage
@@ -24,7 +24,20 @@ export interface ClipFilters {
   saturation: number;
 }
 
-export type TransitionType = "none" | "fade" | "wipeleft" | "wiperight" | "slideup";
+export type TransitionType = 
+  | "none" 
+  | "fade" 
+  | "dip-black" 
+  | "dip-white" 
+  | "slide-left" 
+  | "slide-right" 
+  | "zoom-in" 
+  | "zoom-out" 
+  | "wipeleft" 
+  | "wiperight"
+  | "mirror"
+  | "bounce"
+  | "curtain";
 
 export type SpeedPoint = {
   time: number; // local time 0-1 (normalized within the clip)
@@ -63,12 +76,38 @@ export interface ChromaKeySettings {
   spillReduction: number;
 }
 
+export type MotionDirection =
+  | "left"
+  | "right"
+  | "up"
+  | "down"
+  | "up_left"
+  | "up_right"
+  | "down_left"
+  | "down_right"
+  | "custom";
+
+export interface MotionPath {
+  enabled: boolean;
+  action?: "move" | "none";
+  direction?: MotionDirection;
+  distance?: number; // 10 to 100 percentage
+  startTime?: number; // offset in seconds from clip start
+  duration?: number; // duration of motion in seconds
+  startX: number; // percentage 0-100
+  startY: number; // percentage 0-100
+  endX: number; // percentage 0-100
+  endY: number; // percentage 0-100
+  pathType?: "line" | "arc" | "zigzag";
+  rotateWithMotion?: boolean;
+}
+
 // Canonical Media Layer / Timeline Clip
 export interface TimelineClip {
   id: string;
   trackId: string;
   sourceId: string;
-  type: "video" | "audio" | "image" | "text"; // source type
+  type: "video" | "audio" | "image" | "text" | "effect"; // source type
   
   // Timing
   timelineStart: number;
@@ -81,6 +120,7 @@ export interface TimelineClip {
   // Spatial
   transform?: Transform;
   crop?: CropRect;
+  motionPath?: MotionPath;
   
   // Audio
   audio?: AudioSettings;
@@ -90,6 +130,10 @@ export interface TimelineClip {
   effects?: Effect[];
   transitions?: TransitionType; // Simplified for Phase 1
   transitionDuration?: number;
+  transitionIn?: TransitionType;
+  transitionInDuration?: number;
+  transitionOut?: TransitionType;
+  transitionOutDuration?: number;
   keyframes?: Keyframe[];
   chromaKey?: ChromaKeySettings;
   
@@ -97,6 +141,9 @@ export interface TimelineClip {
   text?: string;
   color?: string;
   fontSizePercent?: number;
+  textAnimation?: "none" | "typewriter" | "fade-in" | "pop-in";
+  typewriterSpeed?: number;
+  textMovement?: "none" | "slide-left-to-right" | "slide-right-to-left" | "slide-bottom-to-top" | "motion-path";
 }
 
 export interface TimelineTrack {
@@ -114,6 +161,7 @@ export interface EditorProject {
   width: number;
   height: number;
   fps: number;
+  backgroundColor?: string;
   tracks: TimelineTrack[];
   duration: number; // project total duration
 }
@@ -173,9 +221,10 @@ export function createProject(width = 1280, height = 720, fps = 30): EditorProje
     width,
     height,
     fps,
+    backgroundColor: "#000000",
     tracks: [
-      createTrack("video", "V1"),
-      createTrack("audio", "A1")
+      createTrack("effect", "FX"),
+      createTrack("video", "V1")
     ],
     duration: 0
   };
@@ -206,6 +255,7 @@ export function cloneProject(project: EditorProject): EditorProject {
         effects: c.effects ? [...c.effects] : undefined,
         keyframes: c.keyframes ? [...c.keyframes] : undefined,
         chromaKey: c.chromaKey ? { ...c.chromaKey } : undefined,
+        motionPath: c.motionPath ? { ...c.motionPath } : undefined,
       }))
     }))
   };

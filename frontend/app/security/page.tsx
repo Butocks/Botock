@@ -151,7 +151,7 @@ export default function SecurityPage() {
         </div>
 
         {/* Detailed Breakdown Sections */}
-        <div className="max-w-4xl mx-auto space-y-8 mb-16">
+        <div id="compliance" className="max-w-4xl mx-auto space-y-8 mb-16 scroll-mt-24">
           <div className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] p-8">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />

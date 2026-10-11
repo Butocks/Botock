@@ -49,6 +49,20 @@ async def safe_image_generate_task(
             style=style,
             is_pro=is_pro,
         )
+        if image_statuses.get(generation_id, {}).get("status") == "completed":
+            try:
+                from app.services.gdrive_service import library_service
+                img_path = os.path.join(settings.IMAGES_DIR, f"{generation_id}.png")
+                await library_service.register_item(
+                    generation_id=generation_id,
+                    media_type="photo",
+                    file_path=img_path,
+                    prompt=prompt,
+                    aspect_ratio=aspect_ratio,
+                )
+            except Exception as lib_err:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to register photo in library: {lib_err}")
 
 
 @router.post("/generate", response_model=ImageGenerateResponse)

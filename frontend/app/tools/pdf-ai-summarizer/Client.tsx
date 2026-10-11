@@ -22,7 +22,7 @@ import {
 import * as pdfjsLib from "pdfjs-dist";
 
 if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 }
 
 interface SummaryResult {
@@ -211,8 +211,11 @@ export default function PdfAiSummarizerClient() {
             <Brain className="w-3.5 h-3.5" />
             Document Intelligence Synthesizer
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            AI PDF Document Summarizer
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight flex items-center justify-center gap-3">
+            <span>AI PDF Document Summarizer</span>
+            <span className="px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              Beta
+            </span>
           </h1>
           <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-xl">
             Extract executive summaries, key directives, actionable obligations, and question-answer pairs directly in your browser.

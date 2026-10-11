@@ -51,6 +51,21 @@ export function useMediaBin() {
 
   const getItem = useCallback((id: string) => items.find((i) => i.id === id) || null, [items]);
 
+  const removeItem = useCallback((id: string) => {
+    setItems((prev) => {
+      const item = prev.find((i) => i.id === id);
+      if (item) URL.revokeObjectURL(item.url);
+      return prev.filter((i) => i.id !== id);
+    });
+  }, []);
+
+  const addItem = useCallback((item: MediaBinItem) => {
+    setItems((prev) => {
+      if (prev.some((i) => i.id === item.id)) return prev;
+      return [...prev, item];
+    });
+  }, []);
+
   const reset = useCallback(() => {
     setItems((prev) => {
       prev.forEach((i) => URL.revokeObjectURL(i.url));
@@ -58,5 +73,5 @@ export function useMediaBin() {
     });
   }, []);
 
-  return { items, addFile, getItem, reset };
+  return { items, addFile, addItem, getItem, removeItem, reset };
 }

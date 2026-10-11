@@ -5,16 +5,16 @@ import VoiceChangerClient from "./VoiceChangerClient";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "AI Voice Changer | Modify Audio Pitch & Tone Free",
+  title: "AI Voice Changer & Text to Speech Studio | Deep Podcast & Narrator Voices Free",
   description:
-    "Transform audio files with Botock's AI Voice Changer. Instantly convert voices to kids, old men, deep villains, and more for free.",
+    "Generate ultra-realistic AI voiceovers (Deep Podcast Narrator, Clean Child, Urdu/Hindi) or modify existing audio pitch with Botock AI Voice Studio.",
   alternates: {
     canonical: "/tools/voice-changer",
   },
   openGraph: {
-    title: "AI Voice Changer | Modify Audio Pitch & Tone Free",
+    title: "AI Voice Changer & Text to Speech Studio | Free Neural AI Voices",
     description:
-      "Transform audio files with Botock AI Voice Changer. Instantly convert voices to kids, old men, deep villains, and more for free.",
+      "Generate ultra-realistic deep podcast voices, documentary narrators, clean child voices, or transform voice recordings for free with Botock AI.",
     url: "https://botock.app/tools/voice-changer",
     siteName: "Botock AI",
     type: "website",
@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Voice Changer | Botock AI",
+    title: "AI Voice Changer & Text to Speech Studio | Botock AI",
     description:
-      "Transform audio files with Botock AI Voice Changer. Instantly convert voices to kids, old men, deep villains, and more for free.",
+      "Generate ultra-realistic deep podcast voices, documentary narrators, clean child voices, or transform voice recordings for free with Botock AI.",
     images: ["https://botock.app/og-image.jpg"],
   },
 };
@@ -88,10 +88,10 @@ export default function VoiceChangerPage() {
         <div className="max-w-4xl mx-auto space-y-4">
           <h1 className="text-xl sm:text-2xl font-extrabold text-foreground mb-2 flex items-center gap-2">
             <Mic className="w-6 h-6 text-primary" />
-            AI Voice Changer & Pitch Shifter
+            AI Voice Changer & Text-to-Speech Studio
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Easily modify your audio recordings using our high-performance cloud audio processing engine. Change the pitch and speed of voices to sound like a child, an older person, or a movie villain. Supports MP3 and WAV files up to 20MB.
+            Generate ultra-realistic, human-quality neural voiceovers (Deep Podcast Narrators, Clean Child Voices, Movie Villains, and Urdu/Hindi Voiceovers) using advanced AI synthesis, or transform existing recordings with pitch & tone modulation.
           </p>
         </div>
       </section>

@@ -257,7 +257,7 @@ export default function Footer() {
                   className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1.5"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Blog & Guides</span>
+                  <span>Blogs & Guides</span>
                 </Link>
               </li>
               <li>
@@ -276,7 +276,6 @@ export default function Footer() {
                 >
                   <Briefcase className="w-3.5 h-3.5 text-emerald-500" />
                   <span>Join Us</span>
-                  <span className="text-[9px] px-1.5 py-0.2 bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 rounded font-bold">Hiring</span>
                 </Link>
               </li>
               <li>
@@ -317,7 +316,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/security#compliance" className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                <Link href="/security" className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                   Compliance & Disclosures
                 </Link>
               </li>
@@ -340,7 +339,7 @@ export default function Footer() {
             <div className="h-4 w-px bg-slate-300 dark:bg-white/[0.1] hidden sm:block" />
 
             <div className="flex flex-wrap items-center gap-4">
-              <Link href="/blog" className="hover:text-slate-800 dark:hover:text-white transition-colors">Blog</Link>
+              <Link href="/blog" className="hover:text-slate-800 dark:hover:text-white transition-colors">Blogs</Link>
               <Link href="/contact" className="hover:text-slate-800 dark:hover:text-white transition-colors">Contact</Link>
               <Link href="/security" className="hover:text-slate-800 dark:hover:text-white transition-colors">Security</Link>
             </div>

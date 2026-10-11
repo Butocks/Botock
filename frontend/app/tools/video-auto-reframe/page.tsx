@@ -5,14 +5,86 @@ import Link from "next/link";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AI Video Auto-Reframe (Vertical Crop) | Botock AI",
+  title: "AI Video Auto-Reframe (Vertical 9:16 Crop) | Botock AI",
   description:
-    "Automatically convert horizontal (16:9) videos into vertical (9:16) Reels, Shorts, or TikToks. AI detects the main subject and keeps them in frame.",
+    "Automatically convert horizontal (16:9) videos into vertical (9:16) Reels, Shorts, or TikToks. AI detects the main subject and keeps them centered in frame.",
+  keywords: [
+    "video auto reframe",
+    "convert horizontal to vertical video",
+    "16:9 to 9:16 video",
+    "ai video cropper",
+    "reels video converter",
+    "tiktok video auto crop",
+    "botock tools",
+  ],
+  alternates: {
+    canonical: "/tools/video-auto-reframe",
+  },
+  openGraph: {
+    title: "AI Video Auto-Reframe (Vertical 9:16 Crop) | Botock AI",
+    description: "Automatically convert horizontal (16:9) videos into vertical (9:16) Reels, Shorts, or TikToks. 100% free and automatic.",
+    url: "https://botock.app/tools/video-auto-reframe",
+    siteName: "Botock AI",
+    type: "website",
+    images: ["https://botock.app/og-image.jpg"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Video Auto-Reframe (Vertical 9:16 Crop) | Botock AI",
+    description: "Automatically convert horizontal (16:9) videos into vertical (9:16) Reels, Shorts, or TikToks.",
+    images: ["https://botock.app/og-image.jpg"],
+  },
 };
 
 export default function VideoAutoReframePage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebApplication",
+        name: "AI Video Auto-Reframe - Botock AI",
+        url: "https://botock.app/tools/video-auto-reframe",
+        description: "Convert widescreen 16:9 videos into vertical 9:16 videos for TikTok, Shorts, and Reels with intelligent subject tracking.",
+        applicationCategory: "MultimediaApplication",
+        operatingSystem: "All",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: "https://botock.app",
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Tools",
+            item: "https://botock.app/tools",
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: "Video Auto-Reframe",
+            item: "https://botock.app/tools/video-auto-reframe",
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div className="w-full min-h-screen flex flex-col">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <section className="bg-slate-900/50 border-b border-border/40 py-2.5 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
           <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-muted-foreground">

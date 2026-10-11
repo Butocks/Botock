@@ -18,13 +18,16 @@ import {
   FileCheck,
   Minimize2,
   Split,
+  Layers,
+  RotateCw,
+  Video,
 } from "lucide-react";
 
 interface SliderTool {
   id: string;
   name: string;
   desc: string;
-  category: "all" | "ai" | "pdf" | "image" | "video" | "converters";
+  category: "all" | "ai" | "pdf" | "image" | "video";
   badge: string;
   badgeColor: string;
   href: string;
@@ -40,11 +43,11 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Generate 4–10s cinematic clips from prompts and photos with Botock Engine Flash 360p.",
     category: "ai",
     badge: "Cinematic AI",
-    badgeColor: "bg-violet-500/20 text-violet-300 border-violet-500/30",
+    badgeColor: "bg-violet-500/10 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-500/20 dark:border-violet-500/30",
     href: "/tools/video-generator",
     icon: Film,
-    iconBg: "bg-violet-600/20",
-    iconColor: "text-violet-400",
+    iconBg: "bg-violet-500/15",
+    iconColor: "text-violet-600 dark:text-violet-400",
   },
   {
     id: "ai-image",
@@ -52,11 +55,23 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Generate hyper-detailed visuals with Nano Banana Lite, 2 & Pro in 5 aspect ratios.",
     category: "ai",
     badge: "Nano Banana",
-    badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+    badgeColor: "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/20 dark:border-amber-500/30",
     href: "/tools/image-generator",
     icon: Wand2,
-    iconBg: "bg-amber-500/20",
-    iconColor: "text-amber-400",
+    iconBg: "bg-amber-500/15",
+    iconColor: "text-amber-600 dark:text-amber-400",
+  },
+  {
+    id: "video-studio",
+    name: "In-Browser Video Studio",
+    desc: "Multi-track timeline, visual FX blocks, continuous zooms, motion animations & 0ms lag.",
+    category: "video",
+    badge: "Full Editor",
+    badgeColor: "bg-sky-500/10 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/20 dark:border-sky-500/30",
+    href: "/tools/video-editor",
+    icon: Scissors,
+    iconBg: "bg-sky-500/15",
+    iconColor: "text-sky-600 dark:text-sky-400",
   },
   {
     id: "pdf-merge",
@@ -64,11 +79,11 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Combine multiple PDF documents into a single organized file in seconds.",
     category: "pdf",
     badge: "34 PDF Suite",
-    badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+    badgeColor: "bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/20 dark:border-rose-500/30",
     href: "/tools/pdf-merge",
     icon: FileText,
-    iconBg: "bg-rose-500/20",
-    iconColor: "text-rose-400",
+    iconBg: "bg-rose-500/15",
+    iconColor: "text-rose-600 dark:text-rose-400",
   },
   {
     id: "remove-bg",
@@ -76,23 +91,23 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Instantly cut out backgrounds from product photos and portraits with AI precision.",
     category: "image",
     badge: "30 Image Suite",
-    badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+    badgeColor: "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 dark:border-emerald-500/30",
     href: "/tools/image-remove-bg",
     icon: Sparkles,
-    iconBg: "bg-emerald-500/20",
-    iconColor: "text-emerald-400",
+    iconBg: "bg-emerald-500/15",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
   },
   {
-    id: "video-studio",
-    name: "In-Browser Video Studio",
-    desc: "Trim, crop, adjust playback speed, mute audio, and color grade directly in browser.",
+    id: "reaction-maker",
+    name: "Reaction Video Maker",
+    desc: "Create viral top-and-bottom stacked reaction videos with live webcam recorder.",
     category: "video",
-    badge: "0ms Latency",
-    badgeColor: "bg-sky-500/20 text-sky-300 border-sky-500/30",
-    href: "/tools/video-editor",
-    icon: Scissors,
-    iconBg: "bg-sky-500/20",
-    iconColor: "text-sky-400",
+    badge: "Viral Trend",
+    badgeColor: "bg-pink-500/10 dark:bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-500/20 dark:border-pink-500/30",
+    href: "/tools/reaction-video-maker",
+    icon: Video,
+    iconBg: "bg-pink-500/15",
+    iconColor: "text-pink-600 dark:text-pink-400",
   },
   {
     id: "pdf-compress",
@@ -100,11 +115,11 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Shrink PDF size by up to 80% without noticeable loss in document readability.",
     category: "pdf",
     badge: "High Efficiency",
-    badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+    badgeColor: "bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/20 dark:border-rose-500/30",
     href: "/tools/pdf-compress",
     icon: Minimize2,
-    iconBg: "bg-rose-500/20",
-    iconColor: "text-rose-400",
+    iconBg: "bg-rose-500/15",
+    iconColor: "text-rose-600 dark:text-rose-400",
   },
   {
     id: "video-to-mp3",
@@ -112,11 +127,23 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Rip crystal clear high-bitrate MP3 audio from any MP4, MOV, or MKV video file.",
     category: "video",
     badge: "Fast Extraction",
-    badgeColor: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
+    badgeColor: "bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/20 dark:border-indigo-500/30",
     href: "/tools/video-to-mp3",
     icon: Music,
-    iconBg: "bg-indigo-500/20",
-    iconColor: "text-indigo-400",
+    iconBg: "bg-indigo-500/15",
+    iconColor: "text-indigo-600 dark:text-indigo-400",
+  },
+  {
+    id: "image-upscale",
+    name: "AI Image Upscaler",
+    desc: "Super-resolve photos to 4K and 8K with 200% Pixel Inspect and ultra sharpness.",
+    category: "image",
+    badge: "Super Resolution",
+    badgeColor: "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 dark:border-emerald-500/30",
+    href: "/tools/image-upscale",
+    icon: ImageIcon,
+    iconBg: "bg-emerald-500/15",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
   },
   {
     id: "webp-converter",
@@ -124,11 +151,11 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Convert heavy JPG and PNG photos into lightweight Next-Gen WebP images for web.",
     category: "image",
     badge: "Web Ready",
-    badgeColor: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+    badgeColor: "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 dark:border-emerald-500/30",
     href: "/tools/image-to-webp",
     icon: ImageIcon,
-    iconBg: "bg-emerald-500/20",
-    iconColor: "text-emerald-400",
+    iconBg: "bg-emerald-500/15",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
   },
   {
     id: "pdf-to-word",
@@ -136,11 +163,11 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Turn read-only PDF contracts, receipts, and documents into fully editable Word files.",
     category: "pdf",
     badge: "OCR Enabled",
-    badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+    badgeColor: "bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/20 dark:border-rose-500/30",
     href: "/tools/pdf-to-word",
     icon: FileCheck,
-    iconBg: "bg-rose-500/20",
-    iconColor: "text-rose-400",
+    iconBg: "bg-rose-500/15",
+    iconColor: "text-rose-600 dark:text-rose-400",
   },
   {
     id: "video-trimmer",
@@ -148,11 +175,11 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Cut unwanted footage with frame-level accuracy and export without re-encoding.",
     category: "video",
     badge: "Lossless Cut",
-    badgeColor: "bg-sky-500/20 text-sky-300 border-sky-500/30",
+    badgeColor: "bg-sky-500/10 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/20 dark:border-sky-500/30",
     href: "/tools/video-trim",
     icon: FileVideo,
-    iconBg: "bg-sky-500/20",
-    iconColor: "text-sky-400",
+    iconBg: "bg-sky-500/15",
+    iconColor: "text-sky-600 dark:text-sky-400",
   },
   {
     id: "pdf-protect",
@@ -160,11 +187,23 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Secure sensitive documents with military-grade 256-bit AES password encryption.",
     category: "pdf",
     badge: "AES-256",
-    badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+    badgeColor: "bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/20 dark:border-rose-500/30",
     href: "/tools/pdf-protect",
     icon: Lock,
-    iconBg: "bg-rose-500/20",
-    iconColor: "text-rose-400",
+    iconBg: "bg-rose-500/15",
+    iconColor: "text-rose-600 dark:text-rose-400",
+  },
+  {
+    id: "image-rotate",
+    name: "Batch Auto-Rotate",
+    desc: "Batch straighten photos by folder upload with instant ZIP archive download.",
+    category: "image",
+    badge: "Batch ZIP",
+    badgeColor: "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 dark:border-emerald-500/30",
+    href: "/tools/image-rotate",
+    icon: RotateCw,
+    iconBg: "bg-emerald-500/15",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
   },
   {
     id: "pdf-split",
@@ -172,11 +211,11 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Extract specific page ranges or burst a single multi-page PDF into separate files.",
     category: "pdf",
     badge: "Custom Range",
-    badgeColor: "bg-rose-500/20 text-rose-300 border-rose-500/30",
+    badgeColor: "bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/20 dark:border-rose-500/30",
     href: "/tools/pdf-split",
     icon: Split,
-    iconBg: "bg-rose-500/20",
-    iconColor: "text-rose-400",
+    iconBg: "bg-rose-500/15",
+    iconColor: "text-rose-600 dark:text-rose-400",
   },
 ];
 
@@ -219,8 +258,8 @@ export default function ToolsSlider() {
               onClick={() => setSelectedCategory(cat.id)}
               className={`text-xs font-semibold px-3.5 py-1.5 rounded-full transition-all whitespace-nowrap cursor-pointer ${
                 selectedCategory === cat.id
-                  ? "bg-white text-zinc-950 shadow-md font-bold"
-                  : "bg-white/[0.05] text-slate-400 hover:text-white hover:bg-white/[0.1] border border-slate-200 dark:border-white/[0.06]"
+                  ? "bg-slate-900 text-white dark:bg-white dark:text-zinc-950 shadow-sm font-bold"
+                  : "bg-slate-100 dark:bg-white/[0.05] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/[0.1] border border-slate-200 dark:border-white/[0.06]"
               }`}
             >
               {cat.label}
@@ -233,14 +272,14 @@ export default function ToolsSlider() {
           <button
             onClick={() => handleScroll("left")}
             aria-label="Scroll left"
-            className="p-2 rounded-xl bg-white/[0.05] border border-slate-200 dark:border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/[0.1] transition-colors cursor-pointer"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => handleScroll("right")}
             aria-label="Scroll right"
-            className="p-2 rounded-xl bg-white/[0.05] border border-slate-200 dark:border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.1] transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/[0.1] transition-colors cursor-pointer"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -257,13 +296,13 @@ export default function ToolsSlider() {
           return (
             <div
               key={tool.id}
-              className="w-[285px] sm:w-[315px] flex-shrink-0 snap-start rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] hover:border-violet-500/40 hover:bg-slate-100 dark:bg-[#15151a] p-5 flex flex-col justify-between transition-all group"
+              className="w-[285px] sm:w-[315px] flex-shrink-0 snap-start rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] hover:border-violet-500/40 hover:shadow-md p-5 flex flex-col justify-between transition-all group"
             >
               <div>
                 {/* Header: Icon & Category Badge */}
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <div
-                    className={`w-10 h-10 rounded-xl ${tool.iconBg} ${tool.iconColor} border border-slate-200 dark:border-white/[0.06] flex items-center justify-center group-hover:scale-105 transition-transform`}
+                    className={`w-10 h-10 rounded-xl ${tool.iconBg} ${tool.iconColor} border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-center group-hover:scale-105 transition-transform`}
                   >
                     <Icon className="w-5 h-5" />
                   </div>
@@ -275,10 +314,10 @@ export default function ToolsSlider() {
                 </div>
 
                 {/* Title & Description */}
-                <h3 className="text-sm font-bold text-white mb-1.5 group-hover:text-violet-300 transition-colors">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1.5 group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors">
                   {tool.name}
                 </h3>
-                <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-4">
+                <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">
                   {tool.desc}
                 </p>
               </div>
@@ -286,12 +325,12 @@ export default function ToolsSlider() {
               {/* Action Button */}
               <Link
                 href={tool.href}
-                className="mt-2 text-xs font-semibold text-white/90 hover:text-white inline-flex items-center justify-between w-full pt-3 border-t border-slate-200 dark:border-white/[0.06] group/btn cursor-pointer"
+                className="mt-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-violet-600 dark:hover:text-white inline-flex items-center justify-between w-full pt-3 border-t border-slate-100 dark:border-white/[0.06] group/btn cursor-pointer"
               >
-                <span className="text-slate-300 group-hover/btn:text-white transition-colors">
+                <span className="text-slate-600 dark:text-slate-400 group-hover/btn:text-violet-600 dark:group-hover/btn:text-white transition-colors">
                   Launch Tool
                 </span>
-                <div className="w-6 h-6 rounded-lg bg-white/[0.06] group-hover/btn:bg-violet-600 flex items-center justify-center text-slate-300 group-hover/btn:text-white transition-colors">
+                <div className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-white/[0.06] group-hover/btn:bg-violet-600 text-slate-500 dark:text-slate-300 group-hover/btn:text-white flex items-center justify-center transition-colors">
                   <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-0.5 transition-transform" />
                 </div>
               </Link>

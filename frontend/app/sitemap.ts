@@ -11,6 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     // Core Hubs
     "/tools",
+    "/botock-library",
     "/blog",
 
     // Flagship AI & Video Tools
@@ -48,9 +49,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/tools/image-remove-bg",
     "/tools/image-resize",
     "/tools/image-rotate",
+    "/tools/image-upscale",
     "/tools/jpg-to-pdf",
 
     // Video & Audio Utilities
+    "/tools/reaction-video-maker",
+    "/tools/audio-enhance",
+    "/tools/video-auto-reframe",
+    "/tools/video-rotate",
+    "/tools/video-remove-bg",
     "/tools/subtitles",
     "/tools/video-compress",
     "/tools/video-convert",
@@ -60,6 +67,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/tools/voice-changer",
 
     // Blog Articles
+    "/blog/complete-guide-to-botock-video-editor",
+    "/blog/complete-guide-to-pdf-tools-workflows",
+    "/blog/complete-guide-to-ai-video-tools-creators",
+    "/blog/complete-guide-to-ai-audio-voice-tools",
+    "/blog/complete-guide-to-ai-image-tools-upscale-rotate",
+    "/blog/how-to-create-reaction-videos-trends-guide",
+    "/blog/top-5-ai-video-trends-2026",
+    "/blog/ai-agents-creative-workflows",
+    "/blog/ai-document-management-productivity",
+    "/blog/evolution-of-ai-image-generation",
     "/blog/about-botock-app",
     "/blog/guide-to-ai-video-generation",
     "/blog/guide-to-photo-generation-and-faq",
