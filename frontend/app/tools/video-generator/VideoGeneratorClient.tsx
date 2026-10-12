@@ -214,21 +214,39 @@ export default function VideoGeneratorClient() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
       else if (gid) headers["X-Guest-ID"] = gid;
 
+      let consecutiveErrors = 0;
       const intervalId = setInterval(async () => {
         try {
           const res = await fetch(`${backendBaseUrl}/api/video/status/${id}`, { headers });
           if (!res.ok) {
-            clearInterval(intervalId);
-            setStatus("error");
-            setErrorMessage("Failed to fetch generation status.");
+            consecutiveErrors++;
+            if (consecutiveErrors >= 6) {
+              clearInterval(intervalId);
+              setStatus("error");
+              setErrorMessage("Failed to fetch generation status after several attempts.");
+            }
             return;
           }
+          consecutiveErrors = 0;
           const data = await res.json();
-          if (data.status === "processing") {
-            setProgressText(data.message || "Processing in queue...");
+          if (data.status === "processing" || data.status === "queued" || data.status === "running") {
+            const msg = data.message || "Processing in queue...";
+            setProgressText(msg);
+
+            // Extract percentage if available from Flow AI
+            const match = msg.match(/(\d{1,3})%/);
+            if (match) {
+              const pct = parseInt(match[1], 10);
+              if (!isNaN(pct)) {
+                setProgressPercent((prev) => Math.max(prev, Math.min(pct, 98)));
+              }
+            } else if (msg.toLowerCase().includes("video generated") || msg.toLowerCase().includes("finalizing") || msg.toLowerCase().includes("sending")) {
+              setProgressPercent((prev) => Math.max(prev, 95));
+            }
           } else if (data.status === "completed") {
             clearInterval(intervalId);
             setProgressPercent(100);
+            setProgressText("Video ready!");
             setStatus("completed");
             
             let finalUrl = data.download_url || `/api/video/download/${id}`;
@@ -253,12 +271,12 @@ export default function VideoGeneratorClient() {
           } else if (data.status === "failed") {
             clearInterval(intervalId);
             setStatus("error");
-            setErrorMessage(data.error || "Generation failed. Please try again.");
+            setErrorMessage(data.message || data.error || "Generation failed. Please try again.");
           }
         } catch (e) {
           // keep trying
         }
-      }, 5000);
+      }, 3000);
     } catch (err: any) {
       setStatus("error");
       setErrorMessage(err.message);
@@ -269,7 +287,7 @@ export default function VideoGeneratorClient() {
     <div className="fixed inset-x-0 top-16 bottom-0 flex flex-col justify-between overflow-hidden bg-slate-50 dark:bg-[#07050e] text-slate-900 dark:text-white select-none">
       
       {/* Main Canvas Area */}
-      <div className="flex-1 overflow-y-auto min-h-0 w-full max-w-4xl mx-auto px-4 py-4 sm:py-6 flex flex-col items-center justify-center">
+      <div className={`flex-1 overflow-y-auto min-h-0 w-full max-w-4xl mx-auto px-4 py-4 sm:py-6 flex flex-col items-center ${status === "completed" ? "justify-start" : "justify-center"}`}>
         
         {/* Idle State */}
         {status === "idle" && (
@@ -286,7 +304,7 @@ export default function VideoGeneratorClient() {
 
         {/* Generating State */}
         {(status === "generating" || status === "polling") && (
-          <div className="w-full max-w-xl flex flex-col items-center text-center">
+          <div className="w-full max-w-xl flex flex-col items-center text-center my-auto">
             <div className="w-24 h-24 mb-6 relative mx-auto">
               <div className="absolute inset-0 border-4 border-violet-500/20 rounded-full"></div>
               <div className="absolute inset-0 border-4 border-violet-500 rounded-full border-t-transparent animate-spin"></div>
@@ -294,14 +312,18 @@ export default function VideoGeneratorClient() {
                 {progressPercent}%
               </div>
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 animate-pulse">Generating your masterpiece...</h3>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 animate-pulse">
+              {progressText.toLowerCase().includes("video generated") || progressText.toLowerCase().includes("finalizing") || progressText.toLowerCase().includes("sending")
+                ? "✨ Video generated! Finalizing preview..."
+                : "Generating your masterpiece..."}
+            </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">{progressText}</p>
           </div>
         )}
 
         {/* Completed State */}
         {status === "completed" && (
-          <div className="w-full flex flex-col items-center space-y-4 max-w-3xl">
+          <div className="w-full flex flex-col items-center space-y-4 max-w-3xl py-2">
             <div className="relative w-full rounded-3xl overflow-hidden bg-black/90 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-2xl aspect-video">
               <video 
                 src={videoBlobUrl || videoUrl || ""} 

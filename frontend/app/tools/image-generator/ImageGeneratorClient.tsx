@@ -318,7 +318,7 @@ export default function ImageGeneratorClient() {
         } catch (error) {
           // Keep polling
         }
-      }, 2500);
+      }, 2000);
     }
 
     return () => {
@@ -353,7 +353,7 @@ export default function ImageGeneratorClient() {
     <div className="fixed inset-x-0 top-16 bottom-0 flex flex-col justify-between overflow-hidden bg-slate-50 dark:bg-[#07050e] text-slate-900 dark:text-white select-none">
       
       {/* Scrollable Upper Canvas Area */}
-      <div className="flex-1 overflow-y-auto min-h-0 w-full max-w-3xl mx-auto px-4 py-2 sm:py-4 flex flex-col items-center justify-center">
+      <div className={`flex-1 overflow-y-auto min-h-0 w-full max-w-3xl mx-auto px-4 py-3 sm:py-5 flex flex-col items-center ${status === "completed" ? "justify-start" : "justify-center"}`}>
         
         {/* Generating State */}
         {(status === "generating" || status === "polling") && (
@@ -404,12 +404,12 @@ export default function ImageGeneratorClient() {
 
         {/* Completed State */}
         {status === "completed" && imageUrl && (
-          <div className="w-full flex flex-col items-center space-y-3 max-w-xl">
-            <div className="relative rounded-2xl overflow-hidden bg-black/90 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-2xl p-2 max-h-[46vh]">
+          <div className="w-full flex flex-col items-center space-y-3 max-w-xl py-2">
+            <div className="relative rounded-2xl overflow-hidden bg-black/90 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-2xl p-2 max-h-[50vh]">
               <img
                 src={imageBlobUrl || imageUrl}
                 alt="Generated Artwork"
-                className="max-w-full max-h-[42vh] object-contain rounded-xl"
+                className="max-w-full max-h-[46vh] object-contain rounded-xl"
               />
               <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md text-[10px] text-amber-300 font-bold border border-amber-500/30 flex items-center gap-1 shadow-md">
                 <Clock className="w-3 h-3 text-amber-400" />

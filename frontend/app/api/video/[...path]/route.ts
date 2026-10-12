@@ -13,12 +13,11 @@ export async function POST(
 
     const backendUrl = (
       process.env.BACKEND_INTERNAL_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
       "http://127.0.0.1:8000"
     ).replace(/\/$/, "");
 
-    const targetUrl = `${backendUrl}/api/video/${subpath}`;
-
-    const formData = await request.formData();
+    const targetUrl = `${backendUrl}/api/video/${subpath}${request.nextUrl.search}`;
 
     const headers: Record<string, string> = {
       "Bypass-Tunnel-Reminder": "true",
@@ -26,9 +25,27 @@ export async function POST(
       "User-Agent": "Botock-Web-Client/1.0",
     };
 
+    const authHeader = request.headers.get("authorization");
+    if (authHeader) headers["authorization"] = authHeader;
+
+    const guestIdHeader = request.headers.get("x-guest-id");
+    if (guestIdHeader) headers["x-guest-id"] = guestIdHeader;
+
+    const contentType = request.headers.get("content-type") || "";
+    let body: any;
+
+    if (contentType.includes("application/json")) {
+      headers["content-type"] = "application/json";
+      body = await request.text();
+    } else if (contentType.includes("multipart/form-data")) {
+      body = await request.formData();
+    } else {
+      body = await request.arrayBuffer();
+    }
+
     const backendRes = await fetch(targetUrl, {
       method: "POST",
-      body: formData,
+      body,
       headers,
     });
 
@@ -57,12 +74,12 @@ export async function POST(
       return NextResponse.json({ detail: errorMsg }, { status: backendRes.status });
     }
 
-    const contentType = backendRes.headers.get("content-type") || "application/octet-stream";
+    const resContentType = backendRes.headers.get("content-type") || "application/octet-stream";
     const contentDisposition = backendRes.headers.get("content-disposition");
     const arrayBuffer = await backendRes.arrayBuffer();
 
     const resHeaders: Record<string, string> = {
-      "Content-Type": contentType,
+      "Content-Type": resContentType,
     };
     if (contentDisposition) {
       resHeaders["Content-Disposition"] = contentDisposition;
@@ -94,18 +111,27 @@ export async function GET(
 
     const backendUrl = (
       process.env.BACKEND_INTERNAL_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
       "http://127.0.0.1:8000"
     ).replace(/\/$/, "");
 
     const targetUrl = `${backendUrl}/api/video/${subpath}${request.nextUrl.search}`;
 
+    const headers: Record<string, string> = {
+      "Bypass-Tunnel-Reminder": "true",
+      "ngrok-skip-browser-warning": "true",
+      "User-Agent": "Botock-Web-Client/1.0",
+    };
+
+    const authHeader = request.headers.get("authorization");
+    if (authHeader) headers["authorization"] = authHeader;
+
+    const guestIdHeader = request.headers.get("x-guest-id");
+    if (guestIdHeader) headers["x-guest-id"] = guestIdHeader;
+
     const backendRes = await fetch(targetUrl, {
       method: "GET",
-      headers: {
-        "Bypass-Tunnel-Reminder": "true",
-        "ngrok-skip-browser-warning": "true",
-        "User-Agent": "Botock-Web-Client/1.0",
-      },
+      headers,
     });
 
     const data = await backendRes.arrayBuffer();

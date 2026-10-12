@@ -330,17 +330,20 @@ class FlowService:
 
     async def _handle_credit_approval(self, page, generation_id: str):
         """Clicks 'Always approve' or 'Approve' if credit confirmation dialog appears."""
-        for _ in range(5):
-            approve_btn = page.get_by_text("Always approve").first
-            if not await approve_btn.is_visible(timeout=1000):
-                approve_btn = page.get_by_text("Approve").first
+        for _ in range(2):
+            try:
+                approve_btn = page.get_by_text("Always approve").first
+                if not await approve_btn.is_visible(timeout=500):
+                    approve_btn = page.get_by_text("Approve").first
 
-            if await approve_btn.is_visible(timeout=1000):
-                logger.info(f"[{generation_id}] Credit approval dialog found! Clicking approve...")
-                await approve_btn.click()
-                await asyncio.sleep(1.5)
-                break
-            await asyncio.sleep(1.5)
+                if await approve_btn.is_visible(timeout=500):
+                    logger.info(f"[{generation_id}] Credit approval dialog found! Clicking approve...")
+                    await approve_btn.click()
+                    await asyncio.sleep(0.5)
+                    break
+            except Exception:
+                pass
+            await asyncio.sleep(0.4)
 
     # =========================================================================
     # VIDEO GENERATION (Omni 1.1 Flash, 360p, 10s, x1, 16:9 / 9:16)
@@ -373,6 +376,8 @@ class FlowService:
         }
 
         p, browser, context, page = await self._launch_browser()
+        captured_downloads = []
+        page.on("download", lambda dl: captured_downloads.append(dl))
 
         try:
             prompt_input = await self._ensure_studio_page(page, generation_id, status_dict)
@@ -491,17 +496,17 @@ class FlowService:
             }""")
 
             # Submit: Native Enter key on ProseMirror triggers the generation POST request
-            status_dict[generation_id]["message"] = "Generating video..."
+            status_dict[generation_id]["message"] = "Submitting prompt to Flow AI..."
             await prompt_input.press("Enter")
-
-            await asyncio.sleep(3)
+            await asyncio.sleep(1.5)
             await self._handle_credit_approval(page, generation_id)
 
             # Polling for video completion
-            status_dict[generation_id]["message"] = "Generating video... This may take a few minutes."
+            status_dict[generation_id]["message"] = "Rendering video on Flow AI..."
             start_time = asyncio.get_event_loop().time()
             video_ready = False
             already_opened = False
+            clicked_tile_once = False
 
             while not video_ready:
                 elapsed = asyncio.get_event_loop().time() - start_time
@@ -517,6 +522,11 @@ class FlowService:
                 except Exception:
                     body_text = ""
 
+                # Immediate check for AI safety / policy flags
+                if "violate our policies" in body_text.lower() or "policy violation" in body_text.lower():
+                    logger.warning(f"[{generation_id}] Video generation rejected by safety filter")
+                    raise Exception("Generation was flagged by AI content safety guidelines. Please try rephrasing your prompt.")
+
                 pct_matches = re.findall(r'(\d{1,3})%', body_text)
                 if pct_matches:
                     latest_pct = pct_matches[-1]
@@ -530,40 +540,56 @@ class FlowService:
 
                 pct_100 = pct_matches and int(pct_matches[-1]) >= 100
 
-                if elapsed >= 25 and (not pct_matches or pct_100):
-                    dl_btn = page.locator('button[aria-label*="Download media" i], button[aria-label*="Download" i]').first
-                    if await dl_btn.is_visible():
-                        video_ready = True
-                        already_opened = True
-                        break
+                # Check if a video element is rendered with active duration
+                video_rendered = await page.evaluate("""() => {
+                    const videos = Array.from(document.querySelectorAll('video'));
+                    for (const v of videos) {
+                        if (v.duration > 0 || (v.currentSrc && !v.currentSrc.includes('placeholder'))) return true;
+                    }
+                    return false;
+                }""")
 
-                    # Look specifically for a tile that was NOT in our baseline
+                # Download button visible check
+                dl_btn = page.locator('button[aria-label*="Download media" i], button[aria-label*="Download" i]').first
+                dl_btn_visible = await dl_btn.is_visible()
+
+                if pct_100 or video_rendered or dl_btn_visible or captured_downloads:
+                    logger.info(f"[{generation_id}] Video completion detected (pct_100={pct_100}, video_rendered={video_rendered}, dl_btn={dl_btn_visible})!")
+                    status_dict[generation_id]["message"] = "Video generated on Flow AI! Preparing and sending to your screen..."
+                    video_ready = True
+                    already_opened = dl_btn_visible or video_rendered
+                    break
+
+                # If elapsed >= 35s and no active % rendering (or stuck on tile view), click new tile ONCE to open detail viewer
+                if elapsed >= 35 and not clicked_tile_once and not pct_matches:
                     new_tile = None
-                    for tile in await page.locator('img[alt*="video" i], video').all():
-                        src = await tile.evaluate("el => el.currentSrc || el.src || ''")
-                        if src and src not in existing_video_tiles:
-                            new_tile = tile
-                            break
-
+                    for tile in await page.locator('img[alt*="video" i], video, flow-video-tile').all():
+                        try:
+                            src = await tile.evaluate("el => el.currentSrc || el.src || ''")
+                            if src and src not in existing_video_tiles:
+                                new_tile = tile
+                                break
+                        except Exception:
+                            pass
                     if new_tile:
-                        logger.info(f"[{generation_id}] Found new video tile! Opening viewer...")
-                        await new_tile.click()
-                        await asyncio.sleep(2)
-                    else:
-                        # Fallback click
-                        await page.mouse.click(350, 250)
-                        await asyncio.sleep(2)
+                        logger.info(f"[{generation_id}] Clicking new video tile once to open detail viewer...")
+                        try:
+                            await new_tile.click()
+                            clicked_tile_once = True
+                            await asyncio.sleep(2)
+                            if await dl_btn.is_visible():
+                                video_ready = True
+                                already_opened = True
+                                status_dict[generation_id]["message"] = "Video generated on Flow AI! Preparing and sending to your screen..."
+                                break
+                        except Exception as e:
+                            logger.debug(f"Tile click note: {e}")
 
-                    if await dl_btn.is_visible():
-                        video_ready = True
-                        already_opened = True
-                        break
-
-                await asyncio.sleep(4)
+                await asyncio.sleep(3)
 
             # Download MP4
-            status_dict[generation_id]["message"] = "Finalizing video..."
-            file_path = await self._download_video(page, generation_id, already_opened=already_opened, existing_video_tiles=existing_video_tiles)
+            status_dict[generation_id]["message"] = "Video generated on Flow AI! Preparing and sending to your screen..."
+            file_path = await self._download_video(page, generation_id, already_opened=already_opened, existing_video_tiles=existing_video_tiles, captured_downloads=captured_downloads)
 
             status_dict[generation_id].update({
                 "status": "completed",
@@ -583,60 +609,148 @@ class FlowService:
             await browser.close()
             await p.stop()
 
-    async def _download_video(self, page, generation_id: str, already_opened: bool = False, existing_video_tiles: list = None) -> str:
+    async def _download_video(self, page, generation_id: str, already_opened: bool = False, existing_video_tiles: list = None, captured_downloads: list = None) -> str:
         file_path = os.path.join(self.videos_dir, f"{generation_id}.mp4")
-        
-        more_vert = page.locator('button:has(mat-icon:has-text("more_vert")), mat-icon:has-text("more_vert")').first
+        logger.info(f"[{generation_id}] Beginning video download / media extraction...")
+
+        # Strategy 1: Check if download already completed in background
+        if captured_downloads:
+            try:
+                dl = captured_downloads[-1]
+                await dl.save_as(file_path)
+                if os.path.exists(file_path) and os.path.getsize(file_path) > 5000:
+                    logger.info(f"[{generation_id}] Saved video from captured download ({os.path.getsize(file_path)} bytes)!")
+                    return file_path
+            except Exception as cap_err:
+                logger.warning(f"Captured download save note: {cap_err}")
+
+        # Strategy 2: Direct DOM extraction from <video> element (Fastest & most robust against UI changes)
+        try:
+            logger.info(f"[{generation_id}] Attempting direct video extraction via DOM...")
+            video_url = await page.evaluate("""() => {
+                const videos = Array.from(document.querySelectorAll('video'));
+                for (const v of videos) {
+                    const s = v.currentSrc || v.src;
+                    if (s && (s.startsWith('http') || s.startsWith('blob:'))) return s;
+                }
+                let shadowUrl = null;
+                function walk(n) {
+                    if (n.shadowRoot) walk(n.shadowRoot);
+                    if (n.tagName === 'VIDEO') {
+                        const s = n.currentSrc || n.src;
+                        if (s && (s.startsWith('http') || s.startsWith('blob:'))) shadowUrl = s;
+                    }
+                    n.childNodes.forEach(c => walk(c));
+                }
+                walk(document);
+                return shadowUrl;
+            }""")
+
+            if video_url:
+                logger.info(f"[{generation_id}] Found video media URL: {video_url[:80]}... Fetching in-browser...")
+                b64_data = await page.evaluate("""async (url) => {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                }""", video_url)
+                if b64_data and "," in b64_data:
+                    import base64
+                    _, encoded = b64_data.split(",", 1)
+                    raw_bytes = base64.b64decode(encoded)
+                    if len(raw_bytes) > 5000:
+                        with open(file_path, "wb") as f:
+                            f.write(raw_bytes)
+                        logger.info(f"[{generation_id}] Successfully extracted video via DOM fetch ({len(raw_bytes)} bytes)!")
+                        return file_path
+        except Exception as dom_err:
+            logger.warning(f"[{generation_id}] Direct video DOM extraction note: {dom_err}")
+
+        # Strategy 3: Click Download Button in Flow UI
         dl_btn = page.locator('button[aria-label*="Download media" i], button[aria-label*="Download" i]').first
-        
+        more_vert = page.locator('button:has(mat-icon:has-text("more_vert")), mat-icon:has-text("more_vert")').first
+
         if not already_opened and not await dl_btn.is_visible() and not await more_vert.is_visible():
             new_tile = None
             if existing_video_tiles is not None:
                 for tile in await page.locator('img[alt*="video" i], video, flow-video-tile img').all():
-                    src = await tile.evaluate("el => el.currentSrc || el.src || ''")
-                    if src and src not in existing_video_tiles:
-                        new_tile = tile
-                        break
-
+                    try:
+                        src = await tile.evaluate("el => el.currentSrc || el.src || ''")
+                        if src and src not in existing_video_tiles:
+                            new_tile = tile
+                            break
+                    except Exception:
+                        pass
             if new_tile:
-                await new_tile.click()
-            else:
-                await page.mouse.click(350, 250)
-            await asyncio.sleep(2.5)
+                try:
+                    await new_tile.click()
+                    await asyncio.sleep(2)
+                except Exception:
+                    pass
 
-        if await more_vert.is_visible():
+        # Try clicking dl_btn directly with expect_download wrapper
+        if await dl_btn.is_visible(timeout=3000):
+            try:
+                logger.info(f"[{generation_id}] Clicking download button with expect_download...")
+                async with page.expect_download(timeout=8000) as dl_info:
+                    await dl_btn.click(force=True)
+                download = await dl_info.value
+                await download.save_as(file_path)
+                logger.info(f"[{generation_id}] Direct download button succeeded!")
+                return file_path
+            except PlaywrightTimeoutError:
+                logger.info(f"[{generation_id}] Download button opened menu. Checking resolution option...")
+                opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button, .cdk-overlay-pane button').filter(has_text=re.compile("720p|360p|Original|Download", re.IGNORECASE)).first
+                if not await opt.is_visible(timeout=3000):
+                    opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button').first
+
+                if await opt.is_visible(timeout=2000):
+                    async with page.expect_download(timeout=60000) as dl_info:
+                        await opt.click(force=True)
+                    download = await dl_info.value
+                    await download.save_as(file_path)
+                    logger.info(f"[{generation_id}] Menu download option succeeded!")
+                    return file_path
+
+        elif await more_vert.is_visible(timeout=2000):
             await more_vert.click()
             await asyncio.sleep(1)
             dl_opt = page.locator('.mat-mdc-menu-content button, [role="menuitem"]').filter(has_text=re.compile("Download", re.IGNORECASE)).first
             if await dl_opt.is_visible(timeout=2000):
-                await dl_opt.click()
-                await asyncio.sleep(1)
-        elif await dl_btn.is_visible(timeout=4000):
-            await dl_btn.click()
-            await asyncio.sleep(1.5)
-        else:
-            await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_no_dl_btn.png"))
-            raise Exception("Download media button not visible.")
+                try:
+                    async with page.expect_download(timeout=8000) as dl_info:
+                        await dl_opt.click(force=True)
+                    download = await dl_info.value
+                    await download.save_as(file_path)
+                    return file_path
+                except PlaywrightTimeoutError:
+                    opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button, .cdk-overlay-pane button').filter(has_text=re.compile("720p|360p|Original|Download", re.IGNORECASE)).first
+                    if await opt.is_visible(timeout=3000):
+                        async with page.expect_download(timeout=60000) as dl_info:
+                            await opt.click(force=True)
+                        download = await dl_info.value
+                        await download.save_as(file_path)
+                        return file_path
 
-        # Use global locators to avoid stale menu references
-        opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button, .cdk-overlay-pane button').filter(has_text=re.compile("720p|360p|Original|Download", re.IGNORECASE)).first
-        if not await opt.is_visible(timeout=3000):
-            opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button').first
-            
-        if not await opt.is_visible(timeout=2000):
-            raise Exception("Resolution option not found in download menu")
+        # Check if captured_downloads received any file during the clicks
+        if captured_downloads:
+            try:
+                dl = captured_downloads[-1]
+                await dl.save_as(file_path)
+                if os.path.exists(file_path) and os.path.getsize(file_path) > 5000:
+                    return file_path
+            except Exception:
+                pass
 
-        # Sometimes click is intercepted, use force or evaluate
-        async with page.expect_download(timeout=90000) as dl_info:
-            await opt.click(force=True)
-            
-        download = await dl_info.value
-        await download.save_as(file_path)
-        
-        await page.keyboard.press("Escape")
-        await asyncio.sleep(0.5)
-            
-        return file_path
+        if os.path.exists(file_path) and os.path.getsize(file_path) > 5000:
+            return file_path
+
+        await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_download_failed.png"))
+        raise Exception("Could not download generated video from Flow Studio.")
 
     # =========================================================================
     # IMAGE GENERATION (Nano Banana 2, x1, Aspect Ratios)
@@ -762,13 +876,11 @@ class FlowService:
             # Submit: Native Enter key on ProseMirror triggers the generation POST request
             status_dict[generation_id]["message"] = "Generating image..."
             await prompt_input.press("Enter")
-            await asyncio.sleep(1)
-
-            await asyncio.sleep(3)
+            await asyncio.sleep(1.2)
             await self._handle_credit_approval(page, generation_id)
 
             # Polling for Image completion
-            status_dict[generation_id]["message"] = "Generating image... Please wait."
+            status_dict[generation_id]["message"] = "Rendering image on Flow AI..."
             found_img_url = None
             save_path = os.path.join(self.images_dir, f"{generation_id}.png")
 
@@ -796,8 +908,8 @@ class FlowService:
                 else:
                     status_dict[generation_id]["message"] = f"Generating image... ({int(elapsed)}s elapsed)"
 
-                # Flow images finish in ~15-35s. After 15s and no percentage, download image
-                if elapsed >= 15:
+                # Flow images finish in ~8-25s. Check starting from 6s
+                if elapsed >= 6:
                     logger.info(f"[{generation_id}] Checking if image is rendered on canvas via JS deep search...")
                     
                     # 🚀 ULTIMATE JS FALLBACK: Walk all shadow DOMs and find the largest new image!
