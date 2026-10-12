@@ -249,24 +249,24 @@ export default function PdfToPowerpointClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-orange-500/20 selection:text-orange-400">
+    <div className="w-full text-slate-900 dark:text-white flex flex-col justify-between selection:bg-orange-500/20 selection:text-orange-500 dark:selection:text-orange-400">
       <div className="max-w-5xl mx-auto px-4 py-8 w-full">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-semibold uppercase tracking-wider mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 text-xs font-semibold uppercase tracking-wider mb-3">
             <Presentation className="w-3.5 h-3.5" />
             PDF to PPTX Studio
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Convert PDF to PowerPoint Presentation
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-xl">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
             Convert every PDF page into high-definition editable Microsoft PowerPoint (.pptx) presentation slides right inside your browser.
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-center gap-3">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -277,16 +277,16 @@ export default function PdfToPowerpointClient() {
           <div className="max-w-2xl mx-auto">
             <label
               htmlFor="pdf-upload"
-              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-700/60 hover:border-orange-500/50 rounded-2xl bg-slate-900/40 hover:bg-slate-900/80 transition-all duration-300 cursor-pointer text-center overflow-hidden"
+              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-300 dark:border-white/[0.1] hover:border-orange-500 dark:hover:border-orange-500 rounded-3xl bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 cursor-pointer text-center overflow-hidden shadow-sm"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-              <div className="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 dark:text-orange-400 mb-4 group-hover:scale-110 transition-transform">
                 <Presentation className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 Select your PDF presentation or document
               </h3>
-              <p className="text-xs text-slate-400 max-w-xs mb-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mb-4">
                 Native OpenXML packaging: converts directly into standard .pptx format.
               </p>
               <span className="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-medium text-xs shadow-lg shadow-orange-600/25 transition">
@@ -303,25 +303,25 @@ export default function PdfToPowerpointClient() {
           </div>
         ) : (
           /* File Preview & Conversion Area */
-          <div className="max-w-3xl mx-auto bg-slate-900/60 border border-slate-800 rounded-2xl p-6 sm:p-8 flex flex-col items-center">
-            <div className="flex items-center justify-between w-full pb-4 border-b border-slate-800 text-xs text-slate-400 mb-6">
+          <div className="max-w-3xl mx-auto bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] rounded-2xl p-6 sm:p-8 flex flex-col items-center shadow-sm">
+            <div className="flex items-center justify-between w-full pb-4 border-b border-slate-200 dark:border-white/[0.08] text-xs text-slate-500 dark:text-slate-400 mb-6">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-orange-400" />
-                <span className="font-medium text-slate-200 truncate max-w-sm">{file.name}</span>
+                <FileText className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-sm">{file.name}</span>
               </div>
               <span>{pageCount} Slide{pageCount > 1 ? "s" : ""} • {(file.size / 1024 / 1024).toFixed(2)} MB</span>
             </div>
 
             {/* Slide Previews Grid */}
             <div className="w-full mb-6">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
                 Detected Slides Preview
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {slidePreviews.map((img, idx) => (
                   <div
                     key={idx}
-                    className="relative aspect-video bg-black/40 rounded-lg overflow-hidden border border-slate-800 shadow-md group"
+                    className="relative aspect-video bg-slate-100 dark:bg-black/40 rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm group"
                   >
                     <img src={img} alt={`Slide ${idx + 1}`} className="w-full h-full object-cover" />
                     <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-white font-medium">
@@ -331,7 +331,7 @@ export default function PdfToPowerpointClient() {
                 ))}
               </div>
               {pageCount > 4 && (
-                <p className="text-center text-xs text-slate-500 mt-2">
+                <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2">
                   + {pageCount - 4} more slide{pageCount - 4 > 1 ? "s" : ""} included in conversion
                 </p>
               )}
@@ -342,11 +342,11 @@ export default function PdfToPowerpointClient() {
               <div className="w-full flex flex-col items-center gap-4">
                 {isConverting && (
                   <div className="w-full space-y-2">
-                    <div className="flex justify-between text-xs text-slate-400">
+                    <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
                       <span>Building PresentationML structure...</span>
                       <span>{progress}%</span>
                     </div>
-                    <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-orange-500 transition-all duration-300"
                         style={{ width: `${progress}%` }}
@@ -375,7 +375,7 @@ export default function PdfToPowerpointClient() {
               </div>
             ) : (
               <div className="w-full flex flex-col items-center gap-3">
-                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2 mb-2">
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2 mb-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>Success! Your PowerPoint presentation is ready for download.</span>
                 </div>
@@ -396,7 +396,7 @@ export default function PdfToPowerpointClient() {
                 setDownloadUrl(null);
                 setSlidePreviews([]);
               }}
-              className="mt-6 inline-flex items-center gap-2 text-xs text-slate-400 hover:text-red-400 transition"
+              className="mt-6 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 transition"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Choose another document
@@ -406,30 +406,30 @@ export default function PdfToPowerpointClient() {
 
         {/* Feature Highlights */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 mb-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 dark:text-orange-400 mb-3">
               <Presentation className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Standard 16:9 Presentation</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Standard 16:9 Presentation</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Generated slides match standard widescreen presentation layouts compatible with Microsoft PowerPoint, Google Slides, and Apple Keynote.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-3">
               <Shield className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">100% Private & Browser-Native</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">100% Private &amp; Browser-Native</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               The XML slides and high-definition raster elements are compiled entirely in your browser using JSZip. Zero cloud upload.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 mb-3">
               <CheckCircle2 className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">High-Definition Quality</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">High-Definition Quality</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Every slide is rendered at double raster scaling to ensure clear text and diagrams when presenting on projectors and 4K displays.
             </p>
           </div>

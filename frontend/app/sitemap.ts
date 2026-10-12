@@ -39,6 +39,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/tools/pdf-to-powerpoint",
     "/tools/pdf-to-word",
     "/tools/pdf-watermark",
+    "/tools/repair-pdf",
+    "/tools/translate-pdf",
     "/tools/word-to-pdf",
 
     // Image Suite Tools

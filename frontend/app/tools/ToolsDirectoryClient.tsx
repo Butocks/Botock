@@ -25,6 +25,8 @@ import {
   RotateCw,
   FolderTree,
   BookOpen,
+  Wrench,
+  Languages,
 } from "lucide-react";
 import AdBanner from "../components/AdBanner";
 
@@ -282,6 +284,22 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
     category: "pdf",
     href: "/tools/pdf-ai-summarizer",
     icon: Sparkles,
+  },
+  {
+    id: "repair-pdf",
+    name: "Repair Corrupted PDF",
+    desc: "Rebuild cross-reference tables and recover broken, unreadable PDF documents.",
+    category: "pdf",
+    href: "/tools/repair-pdf",
+    icon: Wrench,
+  },
+  {
+    id: "translate-pdf",
+    name: "Translate PDF",
+    desc: "Translate PDF text into 18+ international languages directly in browser.",
+    category: "pdf",
+    href: "/tools/translate-pdf",
+    icon: Languages,
   },
 
   // 3. Image Suite

@@ -118,23 +118,23 @@ export default function ExcelToPdfClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-emerald-500/20 selection:text-emerald-400">
+    <div className="w-full text-slate-900 dark:text-white flex flex-col justify-between selection:bg-emerald-500/20 selection:text-emerald-500 dark:selection:text-emerald-400">
       <div className="max-w-5xl mx-auto px-4 py-12 w-full">
         <div className="flex flex-col items-center text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3">
             <FileSpreadsheet className="w-3.5 h-3.5" />
             Excel to PDF Studio
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Convert Excel to PDF Online Free
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-lg">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-lg">
             Convert XLSX, XLS, and CSV spreadsheets into beautifully styled, printable PDF documents directly in your browser.
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-center gap-3">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -144,15 +144,15 @@ export default function ExcelToPdfClient() {
           <div className="max-w-xl mx-auto">
             <label
               htmlFor="excel-upload"
-              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-700/60 hover:border-emerald-500/50 rounded-2xl bg-slate-900/40 hover:bg-slate-900/80 transition-all duration-300 cursor-pointer text-center"
+              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-300 dark:border-white/[0.1] hover:border-emerald-500 dark:hover:border-emerald-500 rounded-3xl bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 cursor-pointer text-center shadow-sm"
             >
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
                 <FileSpreadsheet className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 Select your Excel spreadsheet (.xlsx, .xls, .csv)
               </h3>
-              <p className="text-xs text-slate-400 max-w-xs mb-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mb-4">
                 Auto-fit tables and clean striped data grids. Zero cloud uploads.
               </p>
               <span className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-lg shadow-emerald-600/25 transition">
@@ -168,11 +168,11 @@ export default function ExcelToPdfClient() {
             </label>
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col items-center">
-            <div className="flex items-center gap-3 w-full pb-4 border-b border-slate-800 text-xs text-slate-400 mb-6">
-              <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+          <div className="max-w-3xl mx-auto bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] rounded-2xl p-6 flex flex-col items-center shadow-sm">
+            <div className="flex items-center gap-3 w-full pb-4 border-b border-slate-200 dark:border-white/[0.08] text-xs text-slate-500 dark:text-slate-400 mb-6">
+              <FileSpreadsheet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               <div className="truncate flex-1">
-                <span className="font-medium text-slate-200 block truncate">{file.name}</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200 block truncate">{file.name}</span>
                 <span>{(file.size / 1024).toFixed(1)} KB</span>
               </div>
               <button
@@ -181,7 +181,7 @@ export default function ExcelToPdfClient() {
                   setDownloadUrl(null);
                   setSheetData([]);
                 }}
-                className="text-slate-400 hover:text-red-400 transition"
+                className="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -190,11 +190,11 @@ export default function ExcelToPdfClient() {
             {/* Workbook Options */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mb-6">
               <div>
-                <label className="text-xs text-slate-400 block mb-1 font-medium">Select Sheet</label>
+                <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-medium">Select Sheet</label>
                 <select
                   value={selectedSheet}
                   onChange={(e) => handleSheetChange(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 >
                   {sheetNames.map((s) => (
                     <option key={s} value={s}>
@@ -204,11 +204,11 @@ export default function ExcelToPdfClient() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-slate-400 block mb-1 font-medium">PDF Orientation</label>
+                <label className="text-xs text-slate-700 dark:text-slate-300 block mb-1 font-medium">PDF Orientation</label>
                 <select
                   value={orientation}
                   onChange={(e) => setOrientation(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
                 >
                   <option value="l">Landscape (Recommended for tables)</option>
                   <option value="p">Portrait (Vertical)</option>
@@ -218,12 +218,12 @@ export default function ExcelToPdfClient() {
 
             {/* Sheet Preview Table (first 5 rows) */}
             <div className="w-full mb-6">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2">
                 Data Preview ({sheetData.length} total rows)
               </span>
-              <div className="w-full overflow-x-auto border border-slate-800 rounded-xl bg-slate-950/60">
-                <table className="w-full text-left text-[11px] text-slate-300">
-                  <thead className="bg-slate-900 border-b border-slate-800 text-slate-400 font-semibold">
+              <div className="w-full overflow-x-auto border border-slate-200 dark:border-white/[0.08] rounded-xl bg-slate-50 dark:bg-black/30">
+                <table className="w-full text-left text-[11px] text-slate-700 dark:text-slate-300">
+                  <thead className="bg-slate-100 dark:bg-white/[0.04] border-b border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 font-semibold">
                     <tr>
                       {(sheetData[0] || []).slice(0, 6).map((h: any, idx: number) => (
                         <th key={idx} className="p-2.5">
@@ -232,7 +232,7 @@ export default function ExcelToPdfClient() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60">
+                  <tbody className="divide-y divide-slate-200 dark:divide-white/[0.06]">
                     {sheetData.slice(1, 5).map((row, rIdx) => (
                       <tr key={rIdx}>
                         {row.slice(0, 6).map((cell: any, cIdx: number) => (
@@ -267,11 +267,11 @@ export default function ExcelToPdfClient() {
               </button>
             ) : (
               <div className="w-full space-y-4">
-                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-3">
+                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-3">
                   <CheckCircle2 className="w-5 h-5 shrink-0" />
                   <div>
-                    <p className="font-semibold text-white">Conversion Successful!</p>
-                    <p>Clean auto-fit PDF document created from sheet "{selectedSheet}".</p>
+                    <p className="font-semibold text-slate-900 dark:text-white">Conversion Successful!</p>
+                    <p className="text-slate-600 dark:text-slate-400">Clean auto-fit PDF document created from sheet "{selectedSheet}".</p>
                   </div>
                 </div>
 
@@ -289,30 +289,30 @@ export default function ExcelToPdfClient() {
         )}
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-3">
               <Table className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Automatic Grid Formatting</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Automatic Grid Formatting</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Columns are auto-calculated and wrapped to fit standard A4 paper width cleanly without clipping wide cells.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-3">
               <Shield className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Client-Side Privacy</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Client-Side Privacy</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Your financial records, salaries, and company sheets are parsed in your browser memory via SheetJS. Zero data is sent to a server.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 mb-3">
               <Layers className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Multi-Sheet Support</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Multi-Sheet Support</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Select specific tabs within multi-sheet Excel workbooks to generate individual dedicated PDF reports.
             </p>
           </div>

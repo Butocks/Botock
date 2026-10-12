@@ -216,18 +216,18 @@ export default function PDFToBookClient() {
   const { left: leftPage, right: rightPage } = getPagesForSpread(currentSpread);
 
   return (
-    <div className="min-h-screen bg-[#06080c] text-slate-100 flex flex-col justify-between selection:bg-amber-500/20 selection:text-amber-400">
+    <div className="w-full text-slate-900 dark:text-white flex flex-col justify-between selection:bg-amber-500/20 selection:text-amber-500 dark:selection:text-amber-400">
       <div className="max-w-6xl mx-auto px-4 py-8 w-full">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold uppercase tracking-wider mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-semibold uppercase tracking-wider mb-3">
             <BookOpen className="w-3.5 h-3.5" />
             3D Interactive Flipbook Reader
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Turn PDF into an Interactive Flipbook
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-xl">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
             Experience documents like a real book with authentic page-turning animation, center spine shadows, and two-page spreads.
           </p>
         </div>
@@ -236,21 +236,21 @@ export default function PDFToBookClient() {
         {!file ? (
           <div
             {...getRootProps()}
-            className={`max-w-xl mx-auto p-16 border-2 border-dashed rounded-3xl text-center cursor-pointer transition-all space-y-4 ${
+            className={`max-w-xl mx-auto p-16 border-2 border-dashed rounded-3xl text-center cursor-pointer transition-all space-y-4 shadow-sm ${
               isDragActive
                 ? "border-amber-500 bg-amber-500/5"
-                : "border-slate-800 bg-slate-900/40 hover:bg-slate-900/80 hover:border-amber-500/50"
+                : "border-slate-300 dark:border-white/[0.1] bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-white/[0.02] hover:border-amber-500 dark:hover:border-amber-500"
             }`}
           >
             <input {...getInputProps()} />
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
               <BookOpen className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white mb-1">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
                 Upload PDF to Create 3D Book
               </h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
                 Magazines, brochures, catalogs, eBooks, and comics rendered with real page flips.
               </p>
             </div>
@@ -263,15 +263,15 @@ export default function PDFToBookClient() {
           </div>
         ) : loading ? (
           /* Loading Pipeline */
-          <div className="max-w-md mx-auto p-12 rounded-3xl bg-slate-900/80 border border-slate-800 text-center space-y-4 shadow-2xl">
-            <Loader2 className="w-10 h-10 animate-spin text-amber-400 mx-auto" />
+          <div className="max-w-md mx-auto p-12 rounded-3xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] text-center space-y-4 shadow-xl">
+            <Loader2 className="w-10 h-10 animate-spin text-amber-500 dark:text-amber-400 mx-auto" />
             <div>
-              <h3 className="text-base font-bold text-white mb-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
                 Generating 3D Flipbook
               </h3>
-              <p className="text-xs text-slate-400">{statusText}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{statusText}</p>
             </div>
-            <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
               <div
                 className="bg-amber-500 h-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
@@ -283,16 +283,16 @@ export default function PDFToBookClient() {
           <div
             ref={bookContainerRef}
             className={`space-y-4 ${
-              isFullscreen ? "fixed inset-0 z-50 bg-[#050608] p-4 flex flex-col justify-between" : ""
+              isFullscreen ? "fixed inset-0 z-50 bg-slate-100 dark:bg-[#050608] p-4 flex flex-col justify-between" : ""
             }`}
           >
             {/* Top Toolbar */}
-            <div className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="p-3 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
               <div className="flex items-center gap-3">
-                <span className="font-bold text-white truncate max-w-xs">
+                <span className="font-bold text-slate-900 dark:text-white truncate max-w-xs">
                   {file.name}
                 </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-semibold text-[11px]">
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold text-[11px]">
                   {currentSpread === 0
                     ? "Front Cover"
                     : `Pages ${leftPage?.pageNum || "-"}-${rightPage?.pageNum || "-"}`} of {pages.length}
@@ -304,7 +304,9 @@ export default function PDFToBookClient() {
                   type="button"
                   onClick={() => setSoundEnabled(!soundEnabled)}
                   className={`p-2 rounded-xl transition ${
-                    soundEnabled ? "text-amber-400 bg-amber-500/10" : "text-slate-500 bg-slate-800"
+                    soundEnabled
+                      ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10"
+                      : "text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800"
                   }`}
                   title={soundEnabled ? "Mute Page Flip Sound" : "Enable Sound"}
                 >
@@ -314,7 +316,7 @@ export default function PDFToBookClient() {
                 <button
                   type="button"
                   onClick={() => setZoom((z) => Math.max(0.8, z - 0.1))}
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
                   title="Zoom Out"
                 >
                   <ZoomOut className="w-4 h-4" />
@@ -322,7 +324,7 @@ export default function PDFToBookClient() {
                 <button
                   type="button"
                   onClick={() => setZoom((z) => Math.min(1.4, z + 0.1))}
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
                   title="Zoom In"
                 >
                   <ZoomIn className="w-4 h-4" />
@@ -331,7 +333,7 @@ export default function PDFToBookClient() {
                 <button
                   type="button"
                   onClick={toggleFullscreen}
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
                   title="Toggle Fullscreen"
                 >
                   {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -340,7 +342,7 @@ export default function PDFToBookClient() {
                 <button
                   type="button"
                   onClick={resetAll}
-                  className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 transition"
+                  className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition"
                   title="Close Book"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -349,13 +351,13 @@ export default function PDFToBookClient() {
             </div>
 
             {/* 3D Realistic Book Stage */}
-            <div className="relative w-full h-[540px] sm:h-[620px] rounded-3xl bg-gradient-to-b from-[#11141c] to-[#0a0d14] border border-slate-800 flex items-center justify-center p-4 sm:p-8 overflow-hidden shadow-2xl select-none">
+            <div className="relative w-full h-[540px] sm:h-[620px] rounded-3xl bg-gradient-to-b from-slate-200 via-slate-100 to-slate-200 dark:from-[#11141c] dark:to-[#0a0d14] border border-slate-300 dark:border-slate-800 flex items-center justify-center p-4 sm:p-8 overflow-hidden shadow-2xl select-none">
               {/* Previous Page Clickable Side Region */}
               <button
                 type="button"
                 onClick={turnPrev}
                 disabled={currentSpread <= 0 || isFlipping}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full bg-slate-900/90 border border-white/10 hover:border-amber-500/50 hover:bg-amber-600 text-white flex items-center justify-center shadow-2xl disabled:opacity-20 disabled:pointer-events-none transition-all group"
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-300 dark:border-white/10 hover:border-amber-500/50 hover:bg-amber-500 dark:hover:bg-amber-600 text-slate-800 hover:text-white dark:text-white flex items-center justify-center shadow-xl disabled:opacity-20 disabled:pointer-events-none transition-all group"
                 title="Previous Page (Left Arrow)"
               >
                 <ChevronLeft className="w-6 h-6 group-hover:-translate-x-0.5 transition-transform" />
@@ -366,7 +368,7 @@ export default function PDFToBookClient() {
                 type="button"
                 onClick={turnNext}
                 disabled={currentSpread >= totalSpreads - 1 || isFlipping}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full bg-slate-900/90 border border-white/10 hover:border-amber-500/50 hover:bg-amber-600 text-white flex items-center justify-center shadow-2xl disabled:opacity-20 disabled:pointer-events-none transition-all group"
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-12 h-12 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-300 dark:border-white/10 hover:border-amber-500/50 hover:bg-amber-500 dark:hover:bg-amber-600 text-slate-800 hover:text-white dark:text-white flex items-center justify-center shadow-xl disabled:opacity-20 disabled:pointer-events-none transition-all group"
                 title="Next Page (Right Arrow)"
               >
                 <ChevronRight className="w-6 h-6 group-hover:translate-x-0.5 transition-transform" />
@@ -471,13 +473,13 @@ export default function PDFToBookClient() {
             </div>
 
             {/* Bottom Spread Slider & Navigation Bar */}
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={turnPrev}
                   disabled={currentSpread <= 0 || isFlipping}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-30"
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-30"
                 >
                   <ChevronLeft className="w-4 h-4" /> Previous
                 </button>
@@ -493,7 +495,7 @@ export default function PDFToBookClient() {
 
               {/* Spread Scrub Range Slider */}
               <div className="flex-1 max-w-md w-full flex items-center gap-3">
-                <span className="text-[11px] text-slate-400 font-medium">Cover</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Cover</span>
                 <input
                   type="range"
                   min={0}
@@ -502,11 +504,11 @@ export default function PDFToBookClient() {
                   onChange={(e) => setCurrentSpread(parseInt(e.target.value, 10))}
                   className="flex-1 accent-amber-500 cursor-pointer"
                 />
-                <span className="text-[11px] text-slate-400 font-medium">End</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">End</span>
               </div>
 
-              <div className="text-xs text-slate-400">
-                Tip: Click left/right pages or use <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-white font-mono text-[10px]">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-white font-mono text-[10px]">→</kbd> keys
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                Tip: Click left/right pages or use <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 font-mono text-[10px]">←</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-white/10 font-mono text-[10px]">→</kbd> keys
               </div>
             </div>
           </div>

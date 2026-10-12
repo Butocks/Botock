@@ -87,16 +87,16 @@ export default function PdfPageNumbersPage() {
       />
 
       {/* Semantic Top Navigation Breadcrumb */}
-      <section className="bg-slate-900/50 border-b border-border/40 py-2.5 px-4 sm:px-6">
+      <section className="bg-slate-100/60 dark:bg-white/[0.03] border-b border-slate-200 dark:border-white/[0.08] py-2.5 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+            <Link href="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Home</Link>
             <span>/</span>
-            <Link href="/tools" className="hover:text-foreground transition-colors">Tools</Link>
+            <Link href="/tools" className="hover:text-slate-900 dark:hover:text-white transition-colors">Tools</Link>
             <span>/</span>
-            <span className="text-foreground font-semibold">Add Page Numbers to PDF</span>
+            <span className="text-slate-900 dark:text-white font-semibold">Add Page Numbers to PDF</span>
           </nav>
-          <span className="flex items-center gap-1.5 text-emerald-400">
+          <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
             <CheckCircle2 className="w-3.5 h-3.5" />
             <span>Private Client-Side Processing</span>
           </span>
@@ -111,48 +111,48 @@ export default function PdfPageNumbersPage() {
       </div>
 
       {/* Structured SEO & Internal Link Footer Section */}
-      <section className="border-t border-border/40 bg-card/30 py-10 px-4 sm:px-6">
+      <section className="border-t border-slate-200 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] py-10 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto space-y-6">
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-foreground mb-2">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white mb-2">
               Add Page Numbers to PDF Online — Custom Header &amp; Footer Pagination
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-4xl">
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-4xl">
               Insert clear, sequential page numbers across all or selected ranges of your PDF documents. Select custom placement (top left, top center, bottom right, etc.), typography formatting, and start index with instant real-time preview.
             </p>
           </div>
 
-          <div className="pt-4 border-t border-border/40">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2.5">
+          <div className="pt-4 border-t border-slate-200 dark:border-white/[0.08]">
+            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2.5">
               Related PDF Utilities
             </h3>
             <div className="flex flex-wrap gap-2.5">
               <Link
                 href="/tools/pdf-watermark"
-                className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-[#121215] border border-slate-200 dark:border-white/[0.08] hover:border-rose-500 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 transition-colors flex items-center gap-1.5"
               >
-                <FileText className="w-3.5 h-3.5 text-primary" />
+                <FileText className="w-3.5 h-3.5 text-rose-500" />
                 <span>Watermark PDF</span>
               </Link>
               <Link
                 href="/tools/pdf-merge"
-                className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-[#121215] border border-slate-200 dark:border-white/[0.08] hover:border-rose-500 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 transition-colors flex items-center gap-1.5"
               >
-                <FileText className="w-3.5 h-3.5 text-primary" />
+                <FileText className="w-3.5 h-3.5 text-rose-500" />
                 <span>Merge PDF</span>
               </Link>
               <Link
                 href="/tools/organize-pdf"
-                className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-[#121215] border border-slate-200 dark:border-white/[0.08] hover:border-rose-500 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 transition-colors flex items-center gap-1.5"
               >
-                <Type className="w-3.5 h-3.5 text-primary" />
+                <Type className="w-3.5 h-3.5 text-rose-500" />
                 <span>Organize PDF</span>
               </Link>
               <Link
                 href="/tools/pdf-compress"
-                className="px-3.5 py-1.5 rounded-lg bg-card border border-border/60 hover:border-primary text-xs font-medium text-foreground hover:text-primary transition-colors flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-lg bg-white dark:bg-[#121215] border border-slate-200 dark:border-white/[0.08] hover:border-rose-500 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 transition-colors flex items-center gap-1.5"
               >
-                <Minimize2 className="w-3.5 h-3.5 text-primary" />
+                <Minimize2 className="w-3.5 h-3.5 text-rose-500" />
                 <span>Compress PDF</span>
               </Link>
             </div>

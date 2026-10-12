@@ -394,19 +394,19 @@ export default function PDFFormsClient() {
   const currentPageFields = fields.filter((f) => f.page === currentPage);
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col justify-between selection:bg-indigo-500/20 selection:text-indigo-400">
+    <div className="w-full text-slate-900 dark:text-white flex flex-col justify-between selection:bg-indigo-500/20 selection:text-indigo-500 dark:selection:text-indigo-400">
       <div className="max-w-7xl mx-auto px-4 py-6 w-full space-y-6">
         {/* Header Title & Actions */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/[0.08]">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
               <PenTool className="w-3.5 h-3.5" />
               Interactive Form Creator Studio
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               PDF Form Builder &amp; Creator
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
               Design computerized fillable PDF forms directly in your browser. Add text inputs, multiline notes, checkboxes, dates, and signature areas.
             </p>
           </div>
@@ -415,9 +415,9 @@ export default function PDFFormsClient() {
             <button
               type="button"
               onClick={() => templateInputRef.current?.click()}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition flex items-center gap-1.5 border border-white/5"
+              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 dark:border-white/10"
             >
-              <FolderOpen className="w-4 h-4 text-indigo-400" />
+              <FolderOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               {templateFile ? "Replace PDF Template" : "Import PDF Template"}
             </button>
             <input
@@ -458,16 +458,16 @@ export default function PDFFormsClient() {
         </div>
 
         {/* Informative Banner: Computerized Fillability Explained */}
-        <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs text-slate-300">
+        <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs text-slate-700 dark:text-slate-300">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0 text-indigo-400">
+            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 border border-indigo-500/20 dark:border-indigo-500/30 flex items-center justify-center shrink-0 text-indigo-600 dark:text-indigo-400">
               <CheckSquare className="w-4 h-4" />
             </div>
             <div>
-              <p className="font-semibold text-white">
+              <p className="font-semibold text-slate-900 dark:text-white">
                 100% Computerized &amp; Fillable AcroForm PDF
               </p>
-              <p className="text-slate-400 text-[11px] mt-0.5">
+              <p className="text-slate-600 dark:text-slate-400 text-[11px] mt-0.5">
                 When you download or send this PDF to someone, they can open it in <strong>Adobe Acrobat, Google Chrome, Microsoft Edge, Apple Preview</strong>, or smartphone PDF apps and <strong>type electronically directly on their computer or mobile</strong>—no paper or printer required!
               </p>
             </div>
@@ -492,12 +492,12 @@ export default function PDFFormsClient() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Tool Palette Sidebar (3 Columns) */}
           <div className="lg:col-span-3 space-y-4">
-            <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
-              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] space-y-3 shadow-sm">
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                 Add Form Elements
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Click a tool below, then click anywhere on the page canvas to place it.
               </p>
 
@@ -524,19 +524,19 @@ export default function PDFFormsClient() {
                       className={`w-full p-2.5 rounded-xl border text-left transition flex items-center gap-3 ${
                         isSelected
                           ? "bg-indigo-600 border-indigo-500 text-white shadow-md shadow-indigo-600/30"
-                          : "bg-slate-800/60 hover:bg-slate-800 border-white/5 text-slate-300 disabled:opacity-50"
+                          : "bg-slate-50 hover:bg-slate-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border-slate-200 dark:border-white/[0.08] text-slate-750 dark:text-slate-300 disabled:opacity-50"
                       }`}
                     >
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                          isSelected ? "bg-white/20 text-white" : "bg-indigo-500/10 text-indigo-400"
+                          isSelected ? "bg-white/20 text-white" : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
                         }`}
                       >
                         <Icon className="w-4 h-4" />
                       </div>
                       <div className="overflow-hidden">
                         <p className="text-xs font-bold leading-tight">{tool.label}</p>
-                        <p className={`text-[10px] ${isSelected ? "text-indigo-100" : "text-slate-400"}`}>
+                        <p className={`text-[10px] ${isSelected ? "text-indigo-100" : "text-slate-500 dark:text-slate-400"}`}>
                           {tool.desc}
                         </p>
                       </div>
@@ -546,7 +546,7 @@ export default function PDFFormsClient() {
               </div>
 
               {activePlacementTool && (
-                <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[11px] animate-pulse text-center font-medium">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 text-[11px] animate-pulse text-center font-medium">
                   Click on the document page to place this element.
                 </div>
               )}
@@ -554,15 +554,15 @@ export default function PDFFormsClient() {
 
             {/* Field Properties Inspector */}
             {selectedField && !isPreviewMode && (
-              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+              <div className="p-4 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] space-y-3 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                     Field Settings
                   </h4>
                   <button
                     type="button"
                     onClick={() => deleteField(selectedField.id)}
-                    className="p-1 rounded-md text-slate-400 hover:text-red-400 transition"
+                    className="p-1 rounded-md text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition"
                     title="Delete field"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -571,7 +571,7 @@ export default function PDFFormsClient() {
 
                 <div className="space-y-2.5 text-xs">
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">Field Label</label>
+                    <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Field Label</label>
                     <input
                       type="text"
                       value={selectedField.label}
@@ -582,13 +582,13 @@ export default function PDFFormsClient() {
                         );
                         resetDownload();
                       }}
-                      className="w-full mt-1 px-3 py-1.5 rounded-lg bg-slate-800 border border-white/10 text-white text-xs focus:outline-hidden focus:border-indigo-500"
+                      className="w-full mt-1 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white text-xs focus:outline-hidden focus:border-indigo-500"
                     />
                   </div>
 
                   {selectedField.type === "text" && (
                     <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase">Placeholder</label>
+                      <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Placeholder</label>
                       <input
                         type="text"
                         value={selectedField.placeholder || ""}
@@ -599,7 +599,7 @@ export default function PDFFormsClient() {
                           );
                           resetDownload();
                         }}
-                        className="w-full mt-1 px-3 py-1.5 rounded-lg bg-slate-800 border border-white/10 text-white text-xs focus:outline-hidden focus:border-indigo-500"
+                        className="w-full mt-1 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white text-xs focus:outline-hidden focus:border-indigo-500"
                       />
                     </div>
                   )}
@@ -617,7 +617,7 @@ export default function PDFFormsClient() {
                       }}
                       className="rounded accent-indigo-600"
                     />
-                    <span className="text-slate-300 text-xs">Required input</span>
+                    <span className="text-slate-700 dark:text-slate-300 text-xs">Required input</span>
                   </label>
                 </div>
               </div>
@@ -627,18 +627,18 @@ export default function PDFFormsClient() {
           {/* Center Main Document Canvas (9 Columns) */}
           <div className="lg:col-span-9 space-y-4">
             {/* Page Header Bar & Controls */}
-            <div className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="p-3 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-300">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
                   Page {currentPage} of {pageCount}
                 </span>
                 {templateFile && (
-                  <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[10px] font-medium">
+                  <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-medium">
                     Template: {templateFile.name}
                   </span>
                 )}
                 {fields.length > 0 && (
-                  <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px]">
+                  <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-400 text-[10px]">
                     {fields.length} {fields.length === 1 ? "field" : "fields"}
                   </span>
                 )}
@@ -651,9 +651,9 @@ export default function PDFFormsClient() {
                   type="button"
                   onClick={handleClearAllFields}
                   title="Remove all fields from canvas"
-                  className="px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/20 text-xs font-semibold flex items-center gap-1.5 transition"
+                  className="px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/20 text-xs font-semibold flex items-center gap-1.5 transition"
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
                   Remove All
                 </button>
 
@@ -662,19 +662,19 @@ export default function PDFFormsClient() {
                   type="button"
                   onClick={handleRestoreDefaultForm}
                   title="Restore default sample registration form"
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/5 text-xs font-semibold flex items-center gap-1.5 transition"
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 text-xs font-semibold flex items-center gap-1.5 transition"
                 >
-                  <RotateCcw className="w-3.5 h-3.5 text-indigo-400" />
+                  <RotateCcw className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   Sample Form
                 </button>
 
-                <div className="h-4 w-[1px] bg-slate-700 mx-1 hidden sm:block" />
+                <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-750 mx-1 hidden sm:block" />
 
                 <button
                   type="button"
                   disabled={currentPage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30"
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 disabled:opacity-30"
                 >
                   Previous
                 </button>
@@ -682,7 +682,7 @@ export default function PDFFormsClient() {
                   type="button"
                   disabled={currentPage >= pageCount}
                   onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
-                  className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white disabled:opacity-30"
+                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 disabled:opacity-30"
                 >
                   Next
                 </button>
@@ -692,7 +692,7 @@ export default function PDFFormsClient() {
                     setPageCount((c) => c + 1);
                     setCurrentPage((c) => c + 1);
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 text-xs font-semibold flex items-center gap-1 transition"
+                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-600/30 dark:hover:bg-indigo-600 text-indigo-700 dark:text-indigo-200 text-xs font-semibold flex items-center gap-1 transition border border-indigo-200 dark:border-indigo-500/20"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Blank Page
                 </button>
@@ -701,9 +701,9 @@ export default function PDFFormsClient() {
 
             {/* Test Fill Indicator if Preview Mode */}
             {isPreviewMode && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-300">
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-300">
                 <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-emerald-400" />
+                  <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                   <span>
                     <strong>Interactive Preview Mode:</strong> Click any field below and type computerized text to experience how recipients fill out your form.
                   </span>
@@ -719,7 +719,7 @@ export default function PDFFormsClient() {
             )}
 
             {/* Canvas Viewport (US Letter / A4 Proportions: 612x792) */}
-            <div className="flex justify-center p-4 bg-slate-950/60 rounded-3xl border border-slate-800/80 overflow-auto">
+            <div className="flex justify-center p-4 bg-slate-100/70 dark:bg-black/40 rounded-3xl border border-slate-200 dark:border-white/[0.08] overflow-auto shadow-inner">
               <div
                 ref={canvasContainerRef}
                 onClick={handleCanvasClick}

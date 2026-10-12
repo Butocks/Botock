@@ -137,24 +137,24 @@ export default function CropPdfClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-indigo-500/20 selection:text-indigo-400">
+    <div className="w-full text-slate-900 dark:text-white flex flex-col justify-between selection:bg-indigo-500/20 selection:text-indigo-500 dark:selection:text-indigo-400">
       <div className="max-w-6xl mx-auto px-4 py-8 w-full">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-3">
             <Crop className="w-3.5 h-3.5" />
             PDF Cropping Studio
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Crop PDF Pages Online Free
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-xl">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
             Visually trim margins, remove unwanted headers, or crop page margins to exact dimensions. Works directly in your browser.
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex items-center gap-3">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <span>{error}</span>
           </div>
@@ -165,16 +165,16 @@ export default function CropPdfClient() {
           <div className="max-w-2xl mx-auto">
             <label
               htmlFor="pdf-upload"
-              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-700/60 hover:border-indigo-500/50 rounded-2xl bg-slate-900/40 hover:bg-slate-900/80 transition-all duration-300 cursor-pointer text-center overflow-hidden"
+              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-300 dark:border-white/[0.1] hover:border-indigo-500 dark:hover:border-indigo-500 rounded-3xl bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 cursor-pointer text-center overflow-hidden shadow-sm"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
                 <Crop className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 Select your PDF document
               </h3>
-              <p className="text-xs text-slate-400 max-w-xs mb-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mb-4">
                 Interactive crop boundary: Trim margins for all pages or specific page numbers.
               </p>
               <span className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/25 transition">
@@ -194,18 +194,18 @@ export default function CropPdfClient() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Visual Canvas Pane */}
             <div className="lg:col-span-8 flex flex-col items-center">
-              <div className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col items-center">
+              <div className="w-full bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] rounded-2xl p-6 flex flex-col items-center shadow-sm">
                 {/* Pagination Toolbar */}
-                <div className="flex items-center justify-between w-full mb-4 pb-3 border-b border-slate-800 text-xs text-slate-400">
+                <div className="flex items-center justify-between w-full mb-4 pb-3 border-b border-slate-200 dark:border-white/[0.08] text-xs text-slate-500 dark:text-slate-400">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-indigo-400" />
-                    <span className="font-medium text-slate-200 truncate max-w-xs">{file.name}</span>
+                    <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-xs">{file.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handlePageChange(currentPage - 1)}
                       disabled={currentPage <= 1}
-                      className="p-1 rounded hover:bg-slate-800 disabled:opacity-30"
+                      className="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 disabled:opacity-30"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -215,7 +215,7 @@ export default function CropPdfClient() {
                     <button
                       onClick={() => handlePageChange(currentPage + 1)}
                       disabled={currentPage >= pageCount}
-                      className="p-1 rounded hover:bg-slate-800 disabled:opacity-30"
+                      className="p-1 rounded hover:bg-slate-100 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 disabled:opacity-30"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -226,7 +226,7 @@ export default function CropPdfClient() {
                 {pageImage && (
                   <div
                     ref={containerRef}
-                    className="relative max-w-md w-full border border-slate-700 rounded-lg overflow-hidden select-none shadow-2xl bg-white"
+                    className="relative max-w-md w-full border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden select-none shadow-xl bg-white"
                   >
                     <img src={pageImage} alt="Crop preview" className="w-full h-auto pointer-events-none" />
 
@@ -284,7 +284,7 @@ export default function CropPdfClient() {
                     setFile(null);
                     setDownloadUrl(null);
                   }}
-                  className="mt-6 inline-flex items-center gap-2 text-xs text-slate-400 hover:text-red-400 transition"
+                  className="mt-6 inline-flex items-center gap-2 text-xs text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 transition"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Choose another file
@@ -293,28 +293,28 @@ export default function CropPdfClient() {
             </div>
 
             {/* Right Options Sidebar */}
-            <div className="lg:col-span-4 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6">
+            <div className="lg:col-span-4 bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] rounded-2xl p-6 flex flex-col gap-6 shadow-sm">
               <div>
-                <h3 className="text-sm font-semibold text-white tracking-wide uppercase mb-3">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-wide uppercase mb-3">
                   Crop Scope
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => setApplyToAll(true)}
-                    className={`py-2 px-3 text-xs font-medium rounded-lg border transition ${
+                    className={`py-2 px-3 text-xs rounded-lg border transition ${
                       applyToAll
-                        ? "bg-indigo-600/20 border-indigo-500 text-indigo-300 font-semibold"
-                        : "border-slate-800 bg-slate-800/40 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                        ? "bg-indigo-50 dark:bg-indigo-600/20 border-indigo-500 text-indigo-600 dark:text-indigo-300 font-semibold"
+                        : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     All Pages ({pageCount})
                   </button>
                   <button
                     onClick={() => setApplyToAll(false)}
-                    className={`py-2 px-3 text-xs font-medium rounded-lg border transition ${
+                    className={`py-2 px-3 text-xs rounded-lg border transition ${
                       !applyToAll
-                        ? "bg-indigo-600/20 border-indigo-500 text-indigo-300 font-semibold"
-                        : "border-slate-800 bg-slate-800/40 text-slate-400 hover:border-slate-700 hover:text-slate-200"
+                        ? "bg-indigo-50 dark:bg-indigo-600/20 border-indigo-500 text-indigo-600 dark:text-indigo-300 font-semibold"
+                        : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                     }`}
                   >
                     Current Page Only
@@ -324,12 +324,12 @@ export default function CropPdfClient() {
 
               {/* Crop Margin Sliders */}
               <div>
-                <h3 className="text-sm font-semibold text-white tracking-wide uppercase mb-3">
-                  Adjust Margin Margins (%)
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white tracking-wide uppercase mb-3">
+                  Adjust Margins (%)
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <div className="flex justify-between text-xs text-slate-400 mb-1">
+                    <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1">
                       <span>Left Margin</span>
                       <span>{cropBox.x}%</span>
                     </div>
@@ -350,7 +350,7 @@ export default function CropPdfClient() {
                     />
                   </div>
                   <div>
-                    <div className="flex justify-between text-xs text-slate-400 mb-1">
+                    <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1">
                       <span>Top Margin</span>
                       <span>{cropBox.y}%</span>
                     </div>
@@ -371,7 +371,7 @@ export default function CropPdfClient() {
                     />
                   </div>
                   <div>
-                    <div className="flex justify-between text-xs text-slate-400 mb-1">
+                    <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1">
                       <span>Crop Width</span>
                       <span>{cropBox.width}%</span>
                     </div>
@@ -385,7 +385,7 @@ export default function CropPdfClient() {
                     />
                   </div>
                   <div>
-                    <div className="flex justify-between text-xs text-slate-400 mb-1">
+                    <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1">
                       <span>Crop Height</span>
                       <span>{cropBox.height}%</span>
                     </div>
@@ -432,9 +432,9 @@ export default function CropPdfClient() {
                   </a>
                   <button
                     onClick={() => setDownloadUrl(null)}
-                    className="w-full py-2 text-xs text-slate-400 hover:text-white transition text-center"
+                    className="w-full py-2 text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition text-center"
                   >
-                    Reset & crop again
+                    Reset &amp; crop again
                   </button>
                 </div>
               )}
@@ -444,30 +444,30 @@ export default function CropPdfClient() {
 
         {/* Feature Highlights */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-3">
               <Crop className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Lossless MediaBox Trimming</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Lossless MediaBox Trimming</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Modifies native PDF CropBox tags without lossy image re-compression, preserving razor-sharp text and diagrams.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 mb-3">
               <Shield className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Instant In-Browser Execution</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Instant In-Browser Execution</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Cropping coordinates are calculated and updated inside your browser. No files are ever sent to an external server.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
-            <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 mb-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-600 dark:text-pink-400 mb-3">
               <CheckCircle2 className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Batch or Single Page</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Batch or Single Page</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Apply uniform margin trims across entire books and reports, or isolate a single page for targeted cropping.
             </p>
           </div>

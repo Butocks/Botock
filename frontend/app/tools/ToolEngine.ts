@@ -1260,6 +1260,10 @@ ToolRegistry.registerTool({
   isClientSideOnly: true,
   parameters: [
     { name: "file", type: "file", description: "Corrupted PDF document", required: true }
+  ],
+  outputs: [
+    { name: "repairedFile", type: "file", mimeType: "application/pdf", description: "Reconstructed, clean PDF document" },
+    { name: "recoveredPages", type: "number", description: "Number of successfully recovered pages" }
   ]
 });
 
@@ -1332,6 +1336,10 @@ ToolRegistry.registerTool({
   parameters: [
     { name: "file", type: "file", description: "PDF document to translate", required: true },
     { name: "targetLang", type: "string", description: "Language code (e.g. es, fr, ur)", required: true }
+  ],
+  outputs: [
+    { name: "translatedFile", type: "file", mimeType: "application/pdf", description: "Translated PDF document" },
+    { name: "translatedText", type: "string", description: "Extracted and translated document text" }
   ]
 });
 
