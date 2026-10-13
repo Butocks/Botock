@@ -5,6 +5,9 @@ import { Play, Scissors, Layers, CheckCircle, ArrowRight } from "lucide-react";
 export const metadata: Metadata = {
   title: "Professional Web Video Editor | Botock",
   description: "Edit videos directly in your browser with hardware acceleration. Add chroma key, animations, and text easily.",
+  alternates: {
+    canonical: "/features/video-editor",
+  },
 };
 
 export default function VideoEditorFeaturePage() {

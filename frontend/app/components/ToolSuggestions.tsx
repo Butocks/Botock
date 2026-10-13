@@ -145,11 +145,11 @@ export default function ToolSuggestions({
       supportsTransfer: true,
     },
     {
-      id: "audio-converter",
-      title: "Audio Format Converter",
-      desc: "Convert between MP3, WAV, AAC, and FLAC",
+      id: "video-to-mp3",
+      title: "Extract Audio to MP3",
+      desc: "Convert and extract high-quality audio",
       icon: Music,
-      href: "/tools/audio-converter",
+      href: "/tools/video-to-mp3",
       supportsTransfer: true,
     },
   ];

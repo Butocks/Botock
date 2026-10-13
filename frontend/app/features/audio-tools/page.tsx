@@ -5,6 +5,9 @@ import { Music, Volume2, Mic, CheckCircle, ArrowRight } from "lucide-react";
 export const metadata: Metadata = {
   title: "Audio Editing & Conversion | Botock",
   description: "Trim, compress, and convert audio files directly in your browser.",
+  alternates: {
+    canonical: "/features/audio-tools",
+  },
 };
 
 export default function AudioToolsFeaturePage() {

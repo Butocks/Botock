@@ -5,6 +5,9 @@ import { FileText, Lock, FileOutput, CheckCircle, ArrowRight } from "lucide-reac
 export const metadata: Metadata = {
   title: "PDF Suite & Document Tools | Botock",
   description: "Secure, split, merge, and manage your PDF documents easily.",
+  alternates: {
+    canonical: "/features/pdf-suite",
+  },
 };
 
 export default function PDFSuiteFeaturePage() {

@@ -30,12 +30,12 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/refund-policy",
-        destination: "/refund",
+        destination: "/terms",
         permanent: true,
       },
       {
         source: "/cancellation-policy",
-        destination: "/refund",
+        destination: "/terms",
         permanent: true,
       },
     ];

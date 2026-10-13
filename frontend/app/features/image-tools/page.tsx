@@ -5,6 +5,9 @@ import { Image as ImageIcon, Crop, Sparkles, CheckCircle, ArrowRight } from "luc
 export const metadata: Metadata = {
   title: "Image Editing & Enhancement | Botock",
   description: "Remove backgrounds, crop, resize, and convert images online for free.",
+  alternates: {
+    canonical: "/features/image-tools",
+  },
 };
 
 export default function ImageToolsFeaturePage() {

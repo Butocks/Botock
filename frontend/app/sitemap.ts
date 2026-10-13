@@ -67,6 +67,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/tools/video-to-mp3",
     "/tools/video-trim",
     "/tools/voice-changer",
+    "/tools/live-data-extractor",
+
+    // Feature Hub Pages
+    "/features/video-editor",
+    "/features/pdf-suite",
+    "/features/image-tools",
+    "/features/audio-tools",
 
     // Blog Articles
     "/blog/complete-guide-to-botock-video-editor",
@@ -110,6 +117,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority = 0.9;
       changeFrequency = "daily";
     } else if (route.startsWith("/tools/")) {
+      priority = 0.8;
+      changeFrequency = "weekly";
+    } else if (route.startsWith("/features/")) {
       priority = 0.8;
       changeFrequency = "weekly";
     } else if (route.startsWith("/blog")) {

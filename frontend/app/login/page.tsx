@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
-import { getSiteUrl } from "../../utils/runtime-urls";
+import { getSiteUrl, getBackendUrl } from "../../utils/runtime-urls";
 import { ArrowRight, Lock, Mail, AlertCircle, CheckCircle2 } from "lucide-react";
 import GoogleAuthButton from "../../components/GoogleAuthButton";
 
@@ -80,6 +80,27 @@ function LoginForm() {
       });
 
       if (error) {
+        // Check if this account is actually a Google account without a password
+        try {
+          const backendUrl = await getBackendUrl();
+          const checkRes = await fetch(`${backendUrl}/api/auth/check-account-type`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email.trim().toLowerCase() }),
+          });
+          const checkData = await checkRes.json().catch(() => ({}));
+          if (checkData.status === "google_only") {
+            setMessage({
+              type: "error",
+              text: "This account was registered using Google Sign-In and has no application password. Please click 'Continue with Google' above to sign in.",
+            });
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Ignore network errors in check
+        }
+
         // 3. Record failed attempt
         const { data: failStatus } = await supabase.rpc('record_failed_login', { p_email: email });
         
@@ -198,6 +219,7 @@ function LoginForm() {
               </label>
               <Link
                 href="/forgot-password"
+                rel="nofollow"
                 className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
               >
                 Forgot password?
