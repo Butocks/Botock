@@ -12,6 +12,14 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 301);
   }
 
+  // Redirect legacy malformed crawler requests (e.g. /& and /$) cleanly to homepage
+  const pathname = request.nextUrl.pathname;
+  if (pathname === "/&" || pathname === "/$" || pathname === "/%26" || pathname === "/%24") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url, 301);
+  }
+
   return NextResponse.next();
 }
 
