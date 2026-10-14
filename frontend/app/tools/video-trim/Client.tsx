@@ -136,6 +136,7 @@ export default function VideoTrimClient() {
   >(null);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [frameAccurateMode, setFrameAccurateMode] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const resultVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -896,65 +897,82 @@ const exportVideo = useCallback(async () => {
       }
 
       let args: string[] = [];
+      let exitCode = -1;
 
-      // FIX 1: Handle Single Clip vs Multiple Clips Safely
-      if (finalSegments.length === 1) {
-        // Agar 1 clip hai toh direct fast cut (No concat crash)
+      // Stream Copy for Fast Trim: Default single-clip trim uses -ss [start] -to [end] -i input -c copy output (1-second instant trim)
+      if (finalSegments.length === 1 && !frameAccurateMode) {
         const seg = finalSegments[0];
         args = [
           "-y",
-          "-i", inputName,
           "-ss", seg.start.toFixed(3),
           "-to", seg.end.toFixed(3),
-          ...(hasAudio ? ["-c:a", "aac", "-b:a", "128k"] : ["-an"]),
-          "-c:v", "libx264",
-          "-preset", "veryfast",
-          "-crf", "20",
-          "-movflags", "+faststart",
-          outputName
-        ];
-      } else {
-        // Agar 2+ clips hain toh filter_complex (Concat) use karein
-        const filterParts: string[] = [];
-        const concatInputs: string[] = [];
-
-        finalSegments.forEach((segment, index) => {
-          const start = segment.start.toFixed(3);
-          const end = segment.end.toFixed(3);
-
-          filterParts.push(`[0:v]trim=start=${start}:end=${end},setpts=PTS-STARTPTS[v${index}]`);
-
-          if (hasAudio) {
-            filterParts.push(`[0:a]atrim=start=${start}:end=${end},asetpts=PTS-STARTPTS[a${index}]`);
-            concatInputs.push(`[v${index}][a${index}]`);
-          } else {
-            concatInputs.push(`[v${index}]`);
-          }
-        });
-
-        if (hasAudio) {
-          filterParts.push(`${concatInputs.join("")}concat=n=${finalSegments.length}:v=1:a=1[outv][outa]`);
-        } else {
-          filterParts.push(`${concatInputs.join("")}concat=n=${finalSegments.length}:v=1:a=0[outv]`);
-        }
-
-        const filterComplex = filterParts.join(";");
-
-        args = [
-          "-y",
           "-i", inputName,
-          "-filter_complex", filterComplex,
-          "-map", "[outv]",
-          ...(hasAudio ? ["-map", "[outa]", "-c:a", "aac", "-b:a", "128k"] : ["-an"]),
-          "-c:v", "libx264",
-          "-preset", "veryfast",
-          "-crf", "20",
+          "-c", "copy",
           "-movflags", "+faststart",
           outputName
         ];
+        exitCode = await exec(args);
       }
 
-      const exitCode = await exec(args);
+      // If frame-accurate mode is selected, multiple clips exist, or stream copy fallback is needed:
+      if (exitCode !== 0) {
+        if (finalSegments.length === 1) {
+          const seg = finalSegments[0];
+          args = [
+            "-y",
+            "-ss", seg.start.toFixed(3),
+            "-to", seg.end.toFixed(3),
+            "-i", inputName,
+            ...(hasAudio ? ["-c:a", "aac", "-b:a", "128k"] : ["-an"]),
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-crf", "28",
+            "-movflags", "+faststart",
+            outputName
+          ];
+        } else {
+          // Multiple clips require filter_complex concat
+          const filterParts: string[] = [];
+          const concatInputs: string[] = [];
+
+          finalSegments.forEach((segment, index) => {
+            const start = segment.start.toFixed(3);
+            const end = segment.end.toFixed(3);
+
+            filterParts.push(`[0:v]trim=start=${start}:end=${end},setpts=PTS-STARTPTS[v${index}]`);
+
+            if (hasAudio) {
+              filterParts.push(`[0:a]atrim=start=${start}:end=${end},asetpts=PTS-STARTPTS[a${index}]`);
+              concatInputs.push(`[v${index}][a${index}]`);
+            } else {
+              concatInputs.push(`[v${index}]`);
+            }
+          });
+
+          if (hasAudio) {
+            filterParts.push(`${concatInputs.join("")}concat=n=${finalSegments.length}:v=1:a=1[outv][outa]`);
+          } else {
+            filterParts.push(`${concatInputs.join("")}concat=n=${finalSegments.length}:v=1:a=0[outv]`);
+          }
+
+          const filterComplex = filterParts.join(";");
+
+          args = [
+            "-y",
+            "-i", inputName,
+            "-filter_complex", filterComplex,
+            "-map", "[outv]",
+            ...(hasAudio ? ["-map", "[outa]", "-c:a", "aac", "-b:a", "128k"] : ["-an"]),
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-crf", "28",
+            "-movflags", "+faststart",
+            outputName
+          ];
+        }
+
+        exitCode = await exec(args);
+      }
 
       if (exitCode !== 0) {
         throw new Error(`FFmpeg could not export the edited video. Exit code: ${exitCode}`);
@@ -980,7 +998,8 @@ const exportVideo = useCallback(async () => {
     deleteFile,
     duration,
     exec,
-    segments, // Yahan finalSegments hata kar segments kiya gaya taake dependencies sahi rahein
+    frameAccurateMode,
+    segments,
     load,
     originalFile,
     readFile,
@@ -1056,8 +1075,8 @@ const exportVideo = useCallback(async () => {
             export one final video.
           </p>
 
-          <span className="rounded-xl bg-slate-100 px-5 py-2.5 text-sm font-semibold text-slate-700 dark:bg-white/[0.06] dark:text-slate-200">
-            Choose Video
+          <span className="min-h-[48px] inline-flex items-center justify-center rounded-xl bg-emerald-600 hover:bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-md shadow-emerald-500/20 active:scale-95 transition-all">
+            Tap to Select Video
           </span>
 
           <p className="mt-5 text-xs text-slate-400">
@@ -1305,7 +1324,7 @@ const exportVideo = useCallback(async () => {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto pb-2">
+                <div className="overflow-x-auto pb-2 touch-pan-x">
                   <div
                     ref={timelineRef}
                     onPointerDown={handleTimelinePointerDown}
@@ -1652,6 +1671,23 @@ const exportVideo = useCallback(async () => {
                   • {formatTime(keptDuration, true)} final
                   duration
                 </p>
+
+                <div className="flex items-center gap-2 mt-2">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={frameAccurateMode}
+                      onChange={(e) => setFrameAccurateMode(e.target.checked)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5"
+                    />
+                    <span>Frame-Accurate Encode</span>
+                  </label>
+                  {!frameAccurateMode && (
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded-full">
+                      Fast Stream Copy (Instant)
+                    </span>
+                  )}
+                </div>
               </div>
 
               <button

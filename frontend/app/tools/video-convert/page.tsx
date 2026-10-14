@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { FileVideo, Film, Scissors, Music, CheckCircle2 } from "lucide-react";
-import Client from "./Client";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading FFmpeg Video Conversion Engine..." />,
+});
 
 export const metadata: Metadata = {
   title: "Convert Video Format Online Free | MP4, WebM, MOV, AVI",
@@ -72,6 +77,27 @@ export default function VideoConvertPage() {
             position: 3,
             name: "Video Converter",
             item: "https://botock.app/tools/video-convert",
+          },
+        ],
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "Is Video Converter really free to use?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Yes! Our Video Converter tool is completely free with no file watermarks, daily limits, or hidden fees.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Do I need to create an account?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "No sign-up is required. You can convert video files directly in your browser with zero latency.",
+            },
           },
         ],
       },

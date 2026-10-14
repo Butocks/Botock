@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Sparkles, Film, Wand2, BookOpen, Minimize2, CheckCircle2, Crop } from "lucide-react";
-import ImageGeneratorClient from "./ImageGeneratorClient";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const ImageGeneratorClient = dynamic(() => import("./ImageGeneratorClient"), {
+  loading: () => <ToolLoader message="Loading AI Image Studio..." />,
+});
 
 export const metadata: Metadata = {
   title: "Free AI Image Generator | Text to Image Online",
@@ -128,8 +134,10 @@ export default function ImageGeneratorPage() {
 
       {/* Interactive Generator App */}
       <div className="flex-1">
-  
-      <ImageGeneratorClient />
+        <ToolErrorBoundary toolName="AI Image Generator">
+          <ImageGeneratorClient />
+        </ToolErrorBoundary>
+      </div>
 
       {/* --- Rich Enterprise SEO Content Section --- */}
       <section className="mt-20 pt-12 border-t border-slate-200 dark:border-white/[0.05] space-y-12">
@@ -195,8 +203,6 @@ export default function ImageGeneratorPage() {
           </div>
         </div>
       </section>
-
-      </div>
 
       {/* Structured SEO & Internal Link Footer Section */}
       <section className="border-t border-border/40 bg-card/30 py-12 px-4 sm:px-6">

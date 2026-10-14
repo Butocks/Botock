@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { CheckCircle2 } from "lucide-react";
-import Client from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
 import { ToolRegistry } from "../ToolEngine";
+
+const Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading Booklet Viewer Engine..." />,
+});
 
 const tool = ToolRegistry.getTool("pdf-to-book");
 
@@ -48,6 +54,27 @@ export default function PDFToBookPage() {
           { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://botock.app/tools" },
           { "@type": "ListItem", "position": 3, "name": "PDF to Booklet Viewer", "item": "https://botock.app/tools/pdf-to-book" }
         ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is PDF to Book really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our PDF to Book viewer is 100% free of charge with no hidden fees and no sign-up required."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can read your PDFs as booklets directly in your browser."
+            }
+          }
+        ]
       }
     ]
   };
@@ -86,7 +113,9 @@ export default function PDFToBookPage() {
           </p>
         </div>
 
-        <Client />
+        <ToolErrorBoundary toolName="PDF to Book">
+          <Client />
+        </ToolErrorBoundary>
             
         {/* --- Enterprise SEO Content --- */}
         <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Image as ImageIcon, ShieldCheck } from "lucide-react";
-import ImageConvertClient from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const ImageConvertClient = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading Image Converter..." />,
+});
 
 export const metadata: Metadata = {
   title: "Convert Image Format Online Free | WebP, PNG, JPG",
@@ -65,6 +71,27 @@ export default function ImageConvertPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Image Format Converter really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Image Format Converter is completely free with no hidden charges, watermarks, or limits.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can start converting images immediately in your browser.",
+            },
+          },
+        ],
+      },
     ],
   };
 
@@ -88,7 +115,9 @@ export default function ImageConvertPage() {
         </p>
       </div>
 
-      <ImageConvertClient />
+      <ToolErrorBoundary toolName="Image Converter">
+        <ImageConvertClient />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

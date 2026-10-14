@@ -772,7 +772,7 @@ export default function PDFFormsClient() {
                 onClick={handleCanvasClick}
                 className={`relative w-full max-w-[620px] aspect-[1/1.294] bg-white rounded-xl shadow-2xl overflow-hidden select-none border border-black/10 transition-all ${
                   activePlacementTool && !isPreviewMode
-                    ? "cursor-crosshair ring-2 ring-indigo-500/50"
+                    ? "cursor-crosshair ring-2 ring-indigo-500/50 touch-none"
                     : "cursor-default"
                 }`}
               >

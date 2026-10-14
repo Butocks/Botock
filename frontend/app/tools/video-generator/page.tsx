@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Film, Scissors, Sparkles, BookOpen, Music, CheckCircle2 } from "lucide-react";
-import VideoGeneratorClient from "./VideoGeneratorClient";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const VideoGeneratorClient = dynamic(() => import("./VideoGeneratorClient"), {
+  loading: () => <ToolLoader message="Loading AI Video Studio..." />,
+});
 
 export const metadata: Metadata = {
   title: "Botock AI Video Generator | Free Text & Photo to Video",
@@ -128,7 +134,9 @@ export default function VideoGeneratorPage() {
 
       {/* Interactive Generator App */}
       <div className="flex-1">
-        <VideoGeneratorClient />
+        <ToolErrorBoundary toolName="AI Video Generator">
+          <VideoGeneratorClient />
+        </ToolErrorBoundary>
       </div>
 
       {/* Structured SEO & Internal Link Footer Section */}

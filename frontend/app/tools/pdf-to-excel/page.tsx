@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { FileSpreadsheet, Server } from "lucide-react";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 const Client = dynamic(() => import("./Client"), {
   loading: () => (
@@ -99,12 +100,35 @@ export default function PdfToExcelPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is PDF to Excel Converter really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our PDF to Excel tool is completely free with no limits, no watermarks, and no sign-up required.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can convert PDF tables to XLSX spreadsheets immediately.",
+            },
+          },
+        ],
+      },
     ],
   }),
         }}
       />
 
-      <Client />
+      <ToolErrorBoundary toolName="PDF to Excel">
+        <Client />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

@@ -39,7 +39,7 @@ export default function VideoCompressClient() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const { run, cancel, isProcessing, progress, statusMessage, error } = useFFmpeg();
+  const { run, deleteFile, cancel, isProcessing, progress, statusMessage, error } = useFFmpeg();
 
   // Cleanup object URLs on unmount or file reset
   useEffect(() => {
@@ -134,13 +134,13 @@ export default function VideoCompressClient() {
       return;
     }
 
+    const ext = originalFile.name.split('.').pop()?.toLowerCase() || "mp4";
+    const safeInputName = `input.${ext}`;
+    const outputName = "output.mp4";
+
     try {
       // ✅ FIXED: Single FFmpeg command with optional audio mapping (-map 0:a?)
       // This handles both videos with AND without audio tracks in one pass.
-      // Previous code ran 2 full encodes when audio was absent (try+catch).
-      const ext = originalFile.name.split('.').pop()?.toLowerCase() || "mp4";
-      const safeInputName = `input.${ext}`;
-
       const args = [
         "-i",
         safeInputName,
@@ -160,12 +160,12 @@ export default function VideoCompressClient() {
         args.splice(args.indexOf("-c:v"), 0, "-vf", scaleFilter);
       }
 
-      args.push("output.mp4");
+      args.push(outputName);
 
       const outputBlob = await runFn({
         inputFile: originalFile,
         inputFileName: safeInputName,
-        outputFileName: "output.mp4",
+        outputFileName: outputName,
         outputMimeType: "video/mp4",
         args,
       });
@@ -176,6 +176,9 @@ export default function VideoCompressClient() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to compress video.";
       setErrorMsg(msg);
+    } finally {
+      try { await deleteFile(safeInputName); } catch {}
+      try { await deleteFile(outputName); } catch {}
     }
   };
 

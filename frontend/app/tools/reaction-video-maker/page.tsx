@@ -11,8 +11,13 @@ import {
   CheckCircle2,
   HelpCircle,
 } from "lucide-react";
-import ReactionVideoClient from "./Client";
+import dynamic from "next/dynamic";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const ReactionVideoClient = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading Reaction Video Maker..." />,
+});
 
 export const metadata: Metadata = {
   title: "AI Reaction Video Maker (Top & Bottom Split Video) | Botock AI",

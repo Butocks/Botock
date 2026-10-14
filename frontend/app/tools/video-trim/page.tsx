@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Scissors, ShieldCheck } from "lucide-react";
-import VideoTrimClient from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const VideoTrimClient = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading Video Trimmer..." />,
+});
 
 export const metadata: Metadata = {
   title: "Trim Video Online Free | Fast Lossless Video Cutter",
@@ -65,6 +71,27 @@ export default function VideoTrimPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Trim Video Online really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Trim Video tool is completely free with no watermarks and no limits.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can cut and export video clips immediately.",
+            },
+          },
+        ],
+      },
     ],
   };
 
@@ -92,7 +119,9 @@ export default function VideoTrimPage() {
         }}
       />
 
-      <VideoTrimClient />
+      <ToolErrorBoundary toolName="Video Trim">
+        <VideoTrimClient />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

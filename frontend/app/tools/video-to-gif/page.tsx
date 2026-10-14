@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Film, ShieldCheck } from "lucide-react";
-import VideoToGifClient from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const VideoToGifClient = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading GIF Conversion Engine..." />,
+});
 
 export const metadata: Metadata = {
   title: "Convert Video to GIF Online Free | Animated GIF Maker",
@@ -65,6 +71,27 @@ export default function VideoToGifPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Convert Video to GIF really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Video to GIF converter is completely free of cost with zero watermarks.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can make animated GIFs directly in your browser.",
+            },
+          },
+        ],
+      },
     ],
   };
 
@@ -88,7 +115,9 @@ export default function VideoToGifPage() {
         </p>
       </div>
 
-      <VideoToGifClient />
+      <ToolErrorBoundary toolName="Video to GIF">
+        <VideoToGifClient />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

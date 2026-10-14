@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 const PDFMergeClient = dynamic(() => import("./PDFMergeClient"), {
   loading: () => (
@@ -115,8 +116,9 @@ export default function PDFMergePage() {
       />
 
       {/* Client-side processing component */}
-
-      <PDFMergeClient />
+      <ToolErrorBoundary toolName="Merge PDF">
+        <PDFMergeClient />
+      </ToolErrorBoundary>
 
       {/* --- Rich SEO Content Section --- */}
       <section className="mt-20 pt-12 border-t border-slate-200 dark:border-white/[0.05] space-y-12">

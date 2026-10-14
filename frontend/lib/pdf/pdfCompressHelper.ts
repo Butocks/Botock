@@ -95,55 +95,53 @@ async function downsampleImage(
   canvas.width = width;
   canvas.height = height;
 
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    imageBitmap.close();
-    return null;
-  }
-
-  // Draw image directly onto canvas to detect transparency
-  ctx.drawImage(imageBitmap, 0, 0, width, height);
-  imageBitmap.close();
-
-  // Check if image contains transparent pixels (e.g. logos, signatures)
-  // Transparent images should never be recompressed to opaque JPEGs
   try {
-    const imgData = ctx.getImageData(0, 0, width, height);
-    const data = imgData.data;
-    const len = data.length;
-    // Step through alpha bytes
-    for (let i = 3; i < len; i += 16) {
-      if (data[i] < 250) {
-        canvas.width = 0;
-        canvas.height = 0;
-        return null; // Preserve transparent image stream
-      }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      imageBitmap.close();
+      return null;
     }
-  } catch {
-    // In case getImageData fails, skip JPEG conversion to prevent corrupting transparent assets
+
+    // Draw image directly onto canvas to detect transparency
+    ctx.drawImage(imageBitmap, 0, 0, width, height);
+    imageBitmap.close();
+
+    // Check if image contains transparent pixels (e.g. logos, signatures)
+    // Transparent images should never be recompressed to opaque JPEGs
+    try {
+      const imgData = ctx.getImageData(0, 0, width, height);
+      const data = imgData.data;
+      const len = data.length;
+      // Step through alpha bytes
+      for (let i = 3; i < len; i += 16) {
+        if (data[i] < 250) {
+          return null; // Preserve transparent image stream
+        }
+      }
+    } catch {
+      // In case getImageData fails, skip JPEG conversion to prevent corrupting transparent assets
+      return null;
+    }
+
+    const compressedBlob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", quality)
+    );
+
+    if (!compressedBlob) return null;
+
+    const newBytes = new Uint8Array(await compressedBlob.arrayBuffer());
+
+    // Only retain if it achieves a genuine size reduction
+    if (newBytes.length < imageBytes.length) {
+      return newBytes;
+    }
+
+    return null;
+  } finally {
+    // Explicitly zero out dimensions to free backing store memory immediately
     canvas.width = 0;
     canvas.height = 0;
-    return null;
   }
-
-  const compressedBlob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob((b) => resolve(b), "image/jpeg", quality)
-  );
-
-  // Clean up canvas backing store immediately
-  canvas.width = 0;
-  canvas.height = 0;
-
-  if (!compressedBlob) return null;
-
-  const newBytes = new Uint8Array(await compressedBlob.arrayBuffer());
-
-  // Only retain if it achieves a genuine size reduction
-  if (newBytes.length < imageBytes.length) {
-    return newBytes;
-  }
-
-  return null;
 }
 
 /**
@@ -220,8 +218,10 @@ export async function compressPdf(
       }
     }
 
-    // Yield to event loop to allow UI responsiveness
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    // Yield every 3 pages/images to prevent browser hang
+    if ((i + 1) % 3 === 0) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
   }
 
   onProgress?.(85, "Rebuilding and compacting PDF object streams...");

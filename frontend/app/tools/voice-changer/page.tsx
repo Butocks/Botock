@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { CheckCircle2, Mic } from "lucide-react";
-import VoiceChangerClient from "./VoiceChangerClient";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const VoiceChangerClient = dynamic(() => import("./VoiceChangerClient"), {
+  loading: () => <ToolLoader message="Loading AI Voice Studio..." />,
+});
 
 export const metadata: Metadata = {
   title: "AI Voice Changer & Text to Speech Studio | Deep Podcast & Narrator Voices Free",
@@ -48,6 +53,27 @@ export default function VoiceChangerPage() {
           { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://botock.app" },
           { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://botock.app/tools" },
           { "@type": "ListItem", "position": 3, "name": "AI Voice Changer", "item": "https://botock.app/tools/voice-changer" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is AI Voice Changer & Pitch Shifter really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our AI Voice Changer & Pitch Shifter is completely free of cost with no hidden charges, trial periods, or watermarks."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can start using the AI Voice Changer & Pitch Shifter immediately without logging in."
+            }
+          }
         ]
       }
     ]

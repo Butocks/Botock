@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolJsonLd } from "@/components/seo/ToolJsonLd";
+import { ToolSeoSection } from "@/components/seo/ToolSeoSection";
 
 const Client = dynamic(() => import("./Client"), {
   loading: () => (
@@ -31,6 +34,21 @@ export const metadata: Metadata = {
   },
 };
 
+const EXTRACTOR_FAQS = [
+  {
+    question: "What is the Live Data Extractor tool?",
+    answer: "It is a utility that generates direct, chronological search URLs for YouTube, Facebook, Google, and Twitter (X) to bypass algorithmic feeds and retrieve the freshest real-time information.",
+  },
+  {
+    question: "Why do platforms hide chronological sorting?",
+    answer: "Platforms prioritize algorithmic feeds to maximize watch time. By using specific query string parameters like '&sp=EgQIARAB' or '&f=live', you can force native chronological indexing.",
+  },
+  {
+    question: "Is this tool completely free?",
+    answer: "Yes, it is 100% free and open to everyone with zero sign-up or installation required.",
+  },
+];
+
 export default function LiveDataExtractorPage() {
   return (
     <div className="max-w-5xl mx-auto py-12 px-4">
@@ -43,33 +61,24 @@ export default function LiveDataExtractorPage() {
         </p>
       </div>
 
-      {/* SEO Schema Markup */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@graph": [
-              {
-                "@type": "WebApplication",
-                "name": "Live Data Extractor Tool - Botock AI",
-                "url": "https://botock.app/tools/live-data-extractor",
-                "description": "Generate hidden URLs to extract real-time data from YouTube, Facebook, Google, and Twitter.",
-                "applicationCategory": "UtilitiesApplication",
-                "operatingSystem": "All",
-                "offers": {
-                  "@type": "Offer",
-                  "price": "0",
-                  "priceCurrency": "USD",
-                },
-              },
-            ],
-          }),
-        }}
+      <ToolJsonLd
+        name="Live Data Extractor"
+        description="Generate hidden URLs to extract real-time data from YouTube, Facebook, Google, and Twitter."
+        url="/tools/live-data-extractor"
+        applicationCategory="UtilitiesApplication"
+        faqs={EXTRACTOR_FAQS}
+        featureList={[
+          "YouTube last-hour real-time video filter",
+          "Facebook chronological newest-first feed URL",
+          "Google Clean Web mode parameter",
+          "Twitter/X real-time live tweets generator",
+        ]}
       />
 
       {/* Interactive Tool Client */}
-      <Client />
+      <ToolErrorBoundary toolName="Live Data Extractor">
+        <Client />
+      </ToolErrorBoundary>
           
       {/* --- SEO Content / Guide --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">
@@ -125,11 +134,13 @@ export default function LiveDataExtractorPage() {
               </code>
             </div>
           </div>
-
-
         </div>
       </section>
 
+      <ToolSeoSection
+        toolName="Live Data Extractor"
+        faqs={EXTRACTOR_FAQS}
+      />
     </div>
   );
 }

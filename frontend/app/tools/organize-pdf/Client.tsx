@@ -239,22 +239,25 @@ export default function OrganizePdfClient() {
       {!file ? (
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-2xl p-16 text-center cursor-pointer transition-all ${
+          className={`border-2 border-dashed rounded-2xl p-6 sm:p-10 md:p-16 text-center cursor-pointer transition-all ${
             isDragActive
               ? "border-violet-500 bg-violet-500/5"
               : "border-slate-300 dark:border-white/[0.1] hover:border-violet-500 hover:bg-slate-50 dark:hover:bg-white/[0.02]"
           }`}
         >
           <input {...getInputProps()} />
-          <div className="w-16 h-16 bg-slate-100 dark:bg-white/[0.05] rounded-full flex items-center justify-center mx-auto mb-4">
-            <Layers className="w-8 h-8 text-violet-500" />
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-100 dark:bg-white/[0.05] rounded-full flex items-center justify-center mx-auto mb-4">
+            <Layers className="w-7 h-7 sm:w-8 sm:h-8 text-violet-500" />
           </div>
-          <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+          <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2">
             Drop PDF here to Organize Pages
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-4">
             Reorder, delete, rotate, duplicate, and insert pages visually with Canva/iLovePDF level control.
           </p>
+          <div className="mt-5 inline-flex items-center justify-center min-h-[48px] px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm shadow-md shadow-violet-500/20 active:scale-95 transition-all">
+            <span>Tap to Select PDF</span>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">

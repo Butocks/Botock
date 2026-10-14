@@ -3,6 +3,7 @@ import io
 import os
 import shutil
 import tempfile
+import uuid
 import logging
 import pymupdf as fitz
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
@@ -61,9 +62,15 @@ async def convert_pdf_to_docx(file: UploadFile = File(...)):
     out_path = in_path.replace(".pdf", ".docx")
     
     try:
-        cv = Converter(in_path)
-        cv.convert(out_path, start=0, end=None)
-        cv.close()
+        def _do_convert(src: str, dst: str):
+            cv = Converter(src)
+            try:
+                cv.convert(dst, start=0, end=None)
+            finally:
+                cv.close()
+
+        # Wrap CPU-bound synchronous pdf2docx conversion in asyncio.to_thread to keep FastAPI event loop unblocked
+        await asyncio.to_thread(_do_convert, in_path, out_path)
         
         return FileResponse(
             out_path, 
@@ -84,29 +91,32 @@ async def convert_pdf_to_excel(file: UploadFile = File(...)):
     
     try:
         pdf_bytes = await read_bounded_file(file)
-        output = io.BytesIO()
         
-        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf, \
-             pd.ExcelWriter(output, engine="openpyxl") as writer:
-            
-            tables_found = False
-            for page_idx, page in enumerate(pdf.pages):
-                tables = page.extract_tables()
-                for t_idx, table in enumerate(tables):
-                    if table:
-                        tables_found = True
-                        df = pd.DataFrame(table[1:], columns=table[0])
-                        sheet_name = f"P{page_idx+1}_T{t_idx+1}"
-                        # Excel sheet names must be <= 31 characters
-                        df.to_excel(writer, sheet_name=sheet_name[:31], index=False)
-            
-            if not tables_found:
-                raise HTTPException(status_code=400, detail="No tables found in the PDF. Please upload a PDF that contains tables.")
-                
-        output.seek(0)
+        def _do_extract_tables(data: bytes) -> bytes:
+            output = io.BytesIO()
+            with pdfplumber.open(io.BytesIO(data)) as pdf, \
+                 pd.ExcelWriter(output, engine="openpyxl") as writer:
+                tables_found = False
+                for page_idx, page in enumerate(pdf.pages):
+                    tables = page.extract_tables()
+                    for t_idx, table in enumerate(tables):
+                        if table:
+                            tables_found = True
+                            df = pd.DataFrame(table[1:], columns=table[0])
+                            sheet_name = f"P{page_idx+1}_T{t_idx+1}"
+                            # Excel sheet names must be <= 31 characters
+                            df.to_excel(writer, sheet_name=sheet_name[:31], index=False)
+                if not tables_found:
+                    return b""
+            return output.getvalue()
+
+        # Wrap synchronous pdfplumber / openpyxl in asyncio.to_thread
+        excel_bytes = await asyncio.to_thread(_do_extract_tables, pdf_bytes)
+        if not excel_bytes:
+            raise HTTPException(status_code=400, detail="No tables found in the PDF. Please upload a PDF that contains tables.")
         
         with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as out_f:
-            out_f.write(output.getvalue())
+            out_f.write(excel_bytes)
             out_path = out_f.name
             
         return FileResponse(
@@ -137,11 +147,21 @@ async def convert_docx_to_pdf(file: UploadFile = File(...)):
         in_path = in_f.name
         
     out_dir = tempfile.mkdtemp()
+    # Concurrency Fix: Isolate user profile to prevent LibreOffice profile lock/crash under concurrent load
+    lo_profile_id = uuid.uuid4().hex
+    lo_profile_dir = f"/tmp/lo_profile_{lo_profile_id}"
+    os.makedirs(lo_profile_dir, exist_ok=True)
     
     try:
         proc = await asyncio.create_subprocess_exec(
-            soffice_cmd, "--headless", "--convert-to", "pdf",
-            "--outdir", out_dir, in_path
+            soffice_cmd,
+            f"-env:UserInstallation=file://{lo_profile_dir}",
+            "--headless",
+            "--convert-to", "pdf",
+            "--outdir", out_dir,
+            in_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
         )
         await proc.communicate()
         
@@ -159,13 +179,13 @@ async def convert_docx_to_pdf(file: UploadFile = File(...)):
             out_path, 
             filename=file.filename.rsplit(".", 1)[0] + ".pdf",
             media_type="application/pdf",
-            background=BackgroundTask(cleanup_files, in_path, out_dir)
+            background=BackgroundTask(cleanup_files, in_path, out_dir, lo_profile_dir)
         )
     except HTTPException:
-        cleanup_files(in_path, out_dir)
+        cleanup_files(in_path, out_dir, lo_profile_dir)
         raise
     except Exception:
-        cleanup_files(in_path, out_dir)
+        cleanup_files(in_path, out_dir, lo_profile_dir)
         logger.exception("Word-to-PDF conversion failed")
         raise HTTPException(status_code=503, detail="The conversion service is temporarily unavailable. Please try again shortly.")
 

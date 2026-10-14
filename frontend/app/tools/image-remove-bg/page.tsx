@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Sparkles } from "lucide-react";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 const Client = dynamic(() => import("./Client"), {
   loading: () => (
@@ -56,6 +57,27 @@ const jsonLd = {
         { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://botock.app/tools" },
         { "@type": "ListItem", "position": 3, "name": "AI Background Remover", "item": "https://botock.app/tools/image-remove-bg" }
       ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is AI Background Remover really free to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! Our AI Background Remover is completely free with no limits and no watermarks."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to create an account?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No sign-up is required. You can remove backgrounds immediately directly in your browser."
+          }
+        }
+      ]
     }
   ]
 };
@@ -81,7 +103,10 @@ const jsonLd = {
       </div>
 
       <div className="bg-white dark:bg-[#1a1a22] border border-slate-200 dark:border-white/[0.05] rounded-[2rem] p-4 sm:p-8 shadow-2xl shadow-slate-200/50 dark:shadow-none relative z-10">
-        <Client />
+        <ToolErrorBoundary toolName="AI Background Remover">
+          <Client />
+        </ToolErrorBoundary>
+      </div>
             
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">
@@ -105,7 +130,7 @@ const jsonLd = {
             <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05]">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">No Sign-Up Required</h3>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Skip the tedious registration process. You don't need to create an account or provide your email address to access our full suite of features.
+                Skip the tedious registration process. You don&apos;t need to create an account or provide your email address to access our full suite of features.
               </p>
             </div>
             <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05]">
@@ -168,7 +193,6 @@ const jsonLd = {
           </Link>
         </div>
       </div>
-    </div>
     </main>
   );
 }

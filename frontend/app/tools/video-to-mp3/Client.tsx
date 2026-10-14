@@ -35,7 +35,7 @@ export default function VideoToMp3Client() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const { run, cancel, isProcessing, progress, statusMessage, error } = useFFmpeg();
+  const { run, deleteFile, cancel, isProcessing, progress, statusMessage, error } = useFFmpeg();
 
   // Load transferred media from another tool (e.g. Video Generator or Editor)
   useEffect(() => {
@@ -152,6 +152,9 @@ export default function VideoToMp3Client() {
       } else {
         setErrorMsg(rawError || "Failed to extract MP3 audio.");
       }
+    } finally {
+      try { await deleteFile(safeInputName); } catch {}
+      try { await deleteFile("output.mp3"); } catch {}
     }
   };
 

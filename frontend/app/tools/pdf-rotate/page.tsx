@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 const PDFRotateClient = dynamic(() => import("./PDFRotateClient"), {
   loading: () => (
@@ -87,12 +88,35 @@ export default function PDFRotatePage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Rotate PDF Pages really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Rotate PDF tool is completely free with no limits, no watermarks, and no sign-up required.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can rotate PDF pages directly in your browser with zero server uploads.",
+            },
+          },
+        ],
+      },
     ],
   }),
         }}
       />
 
-      <PDFRotateClient />
+      <ToolErrorBoundary toolName="Rotate PDF">
+        <PDFRotateClient />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

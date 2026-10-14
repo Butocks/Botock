@@ -1561,22 +1561,35 @@ export default function VideoEditorComponent() {
             MOBILE SLIDE-UP DRAWER (Bottom Sheet for any active tool)
         ═══════════════════════════════════════════════════════════════════ */}
         {isMobile && activeDrawer && (
-          <div className="absolute inset-x-0 bottom-0 top-[34vh] z-50 bg-[#12121a]/95 backdrop-blur-md border-t border-[#2b2b36] flex flex-col rounded-t-2xl shadow-2xl animate-fade-in">
-            {/* Drawer Header */}
-            <div className="h-10 border-b border-[#2b2b36] flex items-center justify-between px-4 shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#ff6b4a]" />
-                <span className="text-xs font-bold text-white capitalize">
-                  {activeDrawer === "properties" ? `${selectedClip?.type || "Clip"} Properties` : activeDrawer}
-                </span>
-              </div>
-              <button
+          <>
+            <div
+              className="absolute inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity"
+              onClick={() => setActiveDrawer(null)}
+            />
+            <div className="absolute inset-x-0 bottom-0 top-[30vh] z-50 bg-[#12121a]/98 backdrop-blur-md border-t border-[#2b2b36] flex flex-col rounded-t-3xl shadow-2xl animate-fade-in">
+              {/* Drag Handle indicator */}
+              <div
+                className="w-full flex justify-center pt-2 pb-1 cursor-pointer shrink-0"
                 onClick={() => setActiveDrawer(null)}
-                className="p-1 text-gray-400 hover:text-white rounded-lg hover:bg-white/5"
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+                <div className="w-12 h-1 bg-white/25 rounded-full" />
+              </div>
+
+              {/* Drawer Header */}
+              <div className="h-10 border-b border-[#2b2b36] flex items-center justify-between px-4 shrink-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#ff6b4a]" />
+                  <span className="text-xs font-bold text-white capitalize">
+                    {activeDrawer === "properties" ? `${selectedClip?.type || "Clip"} Properties` : activeDrawer}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setActiveDrawer(null)}
+                  className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 active:scale-95"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
             {/* Drawer Content */}
             <div className="flex-1 overflow-y-auto p-3">
@@ -1908,6 +1921,7 @@ export default function VideoEditorComponent() {
               )}
             </div>
           </div>
+          </>
         )}
       </div>
 

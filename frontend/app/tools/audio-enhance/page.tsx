@@ -1,8 +1,14 @@
-import { Mic, Headphones, Volume2 } from "lucide-react";
-import Client from "./Client";
-import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
-import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+import { ToolJsonLd } from "@/components/seo/ToolJsonLd";
+import { ToolSeoSection } from "@/components/seo/ToolSeoSection";
+
+const Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading AI Audio Enhancer..." />,
+});
 
 export const metadata: Metadata = {
   title: "AI Audio Enhancer & Background Noise Remover | Studio Vocal Clarity Free",
@@ -35,95 +41,71 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AudioEnhancePage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebApplication",
-        name: "AI Audio Enhancer - Botock AI",
-        url: "https://botock.app/tools/audio-enhance",
-        description: "Studio-grade vocal noise removal, dynamic compression, and voice presence enhancer online for free.",
-        applicationCategory: "MultimediaApplication",
-        operatingSystem: "All",
-        offers: {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "USD",
-        },
-      },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Home",
-            item: "https://botock.app",
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "Tools",
-            item: "https://botock.app/tools",
-          },
-          {
-            "@type": "ListItem",
-            position: 3,
-            name: "Audio Enhancer",
-            item: "https://botock.app/tools/audio-enhance",
-          },
-        ],
-      },
-    ],
-  };
+const AUDIO_FAQS = [
+  {
+    question: "How does the AI Audio Enhancer remove background noise?",
+    answer: "Our AI DSP engine uses neural spectral gating to isolate human voice frequencies from ambient background noise like fans, traffic, AC rumble, and room reverb without making voices sound muffled.",
+  },
+  {
+    question: "Is AI Audio Enhancer free with no limits?",
+    answer: "Yes, it is 100% free with no subscription required. You can enhance voice recordings, podcast clips, and voiceovers without hidden charges.",
+  },
+  {
+    question: "What audio formats are supported?",
+    answer: "We support MP3, WAV, AAC, M4A, OGG, and FLAC files up to 50MB.",
+  },
+  {
+    question: "Are my audio recordings kept private?",
+    answer: "Yes. All audio processing is handled privately and temporarily in memory during your session, and files are never stored or used to train models.",
+  },
+];
 
+export default function AudioEnhancePage() {
   return (
     <div className="w-full min-h-screen flex flex-col">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <ToolJsonLd
+        name="AI Audio Enhancer"
+        description="Studio-grade vocal noise removal, dynamic compression, and voice presence enhancer online for free."
+        url="/tools/audio-enhance"
+        applicationCategory="AudioApplication"
+        faqs={AUDIO_FAQS}
+        featureList={[
+          "Neural background noise removal",
+          "Voice presence & resonance booster",
+          "Automatic level balancing",
+          "Lossless audio export",
+        ]}
       />
-      <section className="bg-slate-900/50 border-b border-border/40 py-2.5 px-4 sm:px-6">
+
+      <section className="bg-slate-100/60 dark:bg-white/[0.03] border-b border-slate-200 dark:border-white/[0.08] py-2.5 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+            <Link href="/" className="hover:text-slate-900 dark:text-white transition-colors">Home</Link>
             <span>/</span>
-            <Link href="/tools" className="hover:text-foreground transition-colors">Tools</Link>
+            <Link href="/tools" className="hover:text-slate-900 dark:text-white transition-colors">Tools</Link>
             <span>/</span>
-            <span className="text-foreground font-semibold">Audio Enhancer</span>
+            <span className="text-slate-900 dark:text-white font-semibold">Audio Enhancer</span>
           </nav>
         </div>
       </section>
 
-      <div className="flex-1 bg-background">
+      <div className="flex-1 max-w-5xl mx-auto w-full p-4 sm:p-6">
         <ToolErrorBoundary toolName="Audio Enhancer">
           <Client />
         </ToolErrorBoundary>
       </div>
-      
-      <section className="border-t border-border/40 bg-card/30 py-16 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <h2 className="text-2xl font-black text-foreground">Studio Quality Sound with AI</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            <div className="p-6 rounded-2xl bg-muted/20 border border-border">
-              <Headphones className="w-8 h-8 text-violet-500 mb-4" />
-              <h3 className="font-bold text-foreground mb-2">Noise Removal</h3>
-              <p className="text-sm text-muted-foreground">AI intelligently isolates your voice and deletes background traffic, wind, and static.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-muted/20 border border-border">
-              <Mic className="w-8 h-8 text-emerald-500 mb-4" />
-              <h3 className="font-bold text-foreground mb-2">Studio Reverb</h3>
-              <p className="text-sm text-muted-foreground">Enhances vocal presence and resonance to sound like a professional mic.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-muted/20 border border-border">
-              <Volume2 className="w-8 h-8 text-blue-500 mb-4" />
-              <h3 className="font-bold text-foreground mb-2">Auto-Leveling</h3>
-              <p className="text-sm text-muted-foreground">Balances quiet and loud parts automatically for smooth, clear listening.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+
+      <ToolSeoSection
+        toolName="AI Audio Enhancer"
+        headline="Studio-Grade Vocal Clarity & Denoise with AI"
+        tagline="Instantly transform quiet, noisy, or echoey recordings into studio-quality voice tracks for podcasts, videos, and meetings."
+        faqs={AUDIO_FAQS}
+        relatedTools={[
+          { name: "Voice Changer", href: "/tools/voice-changer" },
+          { name: "Video to MP3", href: "/tools/video-to-mp3" },
+          { name: "Subtitles Generator", href: "/tools/subtitles" },
+        ]}
+      />
     </div>
   );
 }

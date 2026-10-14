@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Subtitles, ShieldCheck } from "lucide-react";
-import SubtitlesClient from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const SubtitlesClient = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading AI Whisper Subtitle Engine..." />,
+});
 
 export const metadata: Metadata = {
   title: "AI Auto-Generate Subtitles Online Free | Perfect Sync",
@@ -65,6 +71,27 @@ export default function SubtitlesPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is AI Subtitle Generator really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our AI Subtitle Generator is completely free with no limits and no forced watermarks.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can auto-transcribe and generate subtitles directly in your browser.",
+            },
+          },
+        ],
+      },
     ],
   };
 
@@ -88,7 +115,9 @@ export default function SubtitlesPage() {
         </p>
       </div>
 
-      <SubtitlesClient />
+      <ToolErrorBoundary toolName="AI Subtitles">
+        <SubtitlesClient />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

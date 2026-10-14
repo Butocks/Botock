@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Music, ShieldCheck } from "lucide-react";
-import VideoToMp3Client from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const VideoToMp3Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading MP3 Audio Extraction Engine..." />,
+});
 
 export const metadata: Metadata = {
   title: "Extract MP3 from Video Online Free | Lossless Audio Ripper",
@@ -65,6 +71,27 @@ export default function VideoToMp3Page() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Convert Video to MP3 really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Video to MP3 converter is 100% free with no file size limitations and no watermarks.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can extract MP3 audio directly in your browser.",
+            },
+          },
+        ],
+      },
     ],
   };
 
@@ -92,7 +119,9 @@ export default function VideoToMp3Page() {
         }}
       />
 
-      <VideoToMp3Client />
+      <ToolErrorBoundary toolName="Video to MP3">
+        <VideoToMp3Client />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

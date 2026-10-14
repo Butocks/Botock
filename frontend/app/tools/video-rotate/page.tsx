@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { RotateCw, Video, CheckCircle2 } from "lucide-react";
-import Client from "./Client";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading Video Rotation Engine..." />,
+});
 
 export const metadata: Metadata = {
   title: "Rotate Video Online Free | 90°, 180°, 270° & Auto-Straighten",
@@ -72,6 +77,27 @@ export default function VideoRotatePage() {
             position: 3,
             name: "Rotate Video",
             item: "https://botock.app/tools/video-rotate",
+          },
+        ],
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "Is Rotate Video really free to use?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Yes! Our Rotate Video tool is 100% free of charge with zero watermarks.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Do I need to create an account?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "No sign-up is required. You can rotate and straighten videos directly in your browser.",
+            },
           },
         ],
       },

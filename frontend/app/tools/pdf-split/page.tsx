@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 const PDFSplitClient = dynamic(() => import("./PDFSplitClient"), {
   loading: () => (
@@ -87,12 +88,35 @@ export default function PDFSplitPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Split & Extract PDF Pages really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Split PDF tool is completely free with no limits, no watermarks, and no sign-up required.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can extract and split PDF pages directly in your browser with zero server uploads.",
+            },
+          },
+        ],
+      },
     ],
   }),
         }}
       />
 
-      <PDFSplitClient />
+      <ToolErrorBoundary toolName="Split PDF">
+        <PDFSplitClient />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

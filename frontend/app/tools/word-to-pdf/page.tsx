@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { FileText, Server, ShieldCheck } from "lucide-react";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 const Client = dynamic(() => import("./Client"), {
   loading: () => (
@@ -99,13 +100,36 @@ export default function WordToPdfPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Word to PDF Converter really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Word to PDF tool is completely free with no limits, no watermarks, and no sign-up required.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can convert Microsoft Word documents to PDF files immediately.",
+            },
+          },
+        ],
+      },
     ],
   }),
         }}
       />
 
       {/* Client Component */}
-      <Client />
+      <ToolErrorBoundary toolName="Word to PDF">
+        <Client />
+      </ToolErrorBoundary>
 
       {/* Feature Highlights */}
       <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">

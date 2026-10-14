@@ -48,31 +48,63 @@ export default function CropPdfClient() {
   // Canvas interaction
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [dragMode, setDragMode] = useState<"move" | "nw" | "ne" | "sw" | "se" | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const handleCropMouseDown = (e: React.MouseEvent) => {
+  const handleCropPointerDown = (e: React.PointerEvent, mode: "move" | "nw" | "ne" | "sw" | "se" = "move") => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
+    setDragMode(mode);
     setDragStart({ x: e.clientX, y: e.clientY });
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
 
-  const handleContainerMouseMove = (e: React.MouseEvent) => {
+  const handleContainerPointerMove = (e: React.PointerEvent) => {
     if (!isDragging || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const deltaXPercent = ((e.clientX - dragStart.x) / rect.width) * 100;
     const deltaYPercent = ((e.clientY - dragStart.y) / rect.height) * 100;
 
     setCropBox((prev) => {
-      const newX = Math.max(0, Math.min(100 - prev.width, prev.x + deltaXPercent));
-      const newY = Math.max(0, Math.min(100 - prev.height, prev.y + deltaYPercent));
-      return { ...prev, x: Math.round(newX), y: Math.round(newY) };
+      let { x, y, width, height } = prev;
+      if (dragMode === "move") {
+        x = Math.max(0, Math.min(100 - width, x + deltaXPercent));
+        y = Math.max(0, Math.min(100 - height, y + deltaYPercent));
+      } else if (dragMode === "se") {
+        width = Math.max(10, Math.min(100 - x, width + deltaXPercent));
+        height = Math.max(10, Math.min(100 - y, height + deltaYPercent));
+      } else if (dragMode === "nw") {
+        const newX = Math.max(0, Math.min(x + width - 10, x + deltaXPercent));
+        const newY = Math.max(0, Math.min(y + height - 10, y + deltaYPercent));
+        width = width + (x - newX);
+        height = height + (y - newY);
+        x = newX;
+        y = newY;
+      } else if (dragMode === "ne") {
+        const newY = Math.max(0, Math.min(y + height - 10, y + deltaYPercent));
+        width = Math.max(10, Math.min(100 - x, width + deltaXPercent));
+        height = height + (y - newY);
+        y = newY;
+      } else if (dragMode === "sw") {
+        const newX = Math.max(0, Math.min(x + width - 10, x + deltaXPercent));
+        width = width + (x - newX);
+        height = Math.max(10, Math.min(100 - y, height + deltaYPercent));
+        x = newX;
+      }
+      return { x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height) };
     });
     setDragStart({ x: e.clientX, y: e.clientY });
   };
 
-  const handleContainerMouseUp = () => {
-    if (isDragging) setIsDragging(false);
+  const handleContainerPointerUp = (e: React.PointerEvent) => {
+    if (isDragging) {
+      setIsDragging(false);
+      setDragMode(null);
+      try {
+        (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+      } catch {}
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,19 +223,19 @@ export default function CropPdfClient() {
           <div className="max-w-2xl mx-auto">
             <label
               htmlFor="pdf-upload"
-              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-300 dark:border-white/[0.1] hover:border-indigo-500 dark:hover:border-indigo-500 rounded-3xl bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 cursor-pointer text-center overflow-hidden shadow-sm"
+              className="relative group flex flex-col items-center justify-center p-6 sm:p-10 md:p-12 border-2 border-dashed border-slate-300 dark:border-white/[0.1] hover:border-indigo-500 dark:hover:border-indigo-500 rounded-3xl bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-all duration-300 cursor-pointer text-center overflow-hidden shadow-sm"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
-                <Crop className="w-8 h-8" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 group-hover:scale-110 transition-transform">
+                <Crop className="w-7 h-7 sm:w-8 sm:h-8" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-1">
                 Select your PDF document
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mb-4">
                 Interactive crop boundary: Trim margins for all pages or specific page numbers.
               </p>
-              <span className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/25 transition">
+              <span className="px-6 py-3 min-h-[48px] inline-flex items-center justify-center rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/25 active:scale-95 transition">
                 Choose PDF File
               </span>
               <input
@@ -252,12 +284,12 @@ export default function CropPdfClient() {
                 {pageImage && (
                   <div
                     ref={containerRef}
-                    onMouseMove={handleContainerMouseMove}
-                    onMouseUp={handleContainerMouseUp}
-                    onMouseLeave={handleContainerMouseUp}
-                    className="relative max-w-md w-full border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden select-none shadow-xl bg-white"
+                    onPointerMove={handleContainerPointerMove}
+                    onPointerUp={handleContainerPointerUp}
+                    onPointerCancel={handleContainerPointerUp}
+                    className="relative max-w-md w-full border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden select-none shadow-xl bg-white touch-none"
                   >
-                    <img src={pageImage} alt="Crop preview" className="w-full h-auto pointer-events-none" />
+                    <img src={pageImage} alt="Crop preview" className="w-full h-auto pointer-events-none select-none" />
 
                     {/* Darkened Mask Over Uncropped Area */}
                     <div className="absolute inset-0 pointer-events-none">
@@ -293,18 +325,36 @@ export default function CropPdfClient() {
 
                     {/* Active Crop Border Box */}
                     <div
-                      onMouseDown={handleCropMouseDown}
+                      onPointerDown={(e) => handleCropPointerDown(e, "move")}
                       style={{
                         top: `${cropBox.y}%`,
                         left: `${cropBox.x}%`,
                         width: `${cropBox.width}%`,
                         height: `${cropBox.height}%`,
                       }}
-                      className="absolute border-2 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)] cursor-move"
+                      className="absolute border-2 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.5)] cursor-move touch-none"
                     >
-                      <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-indigo-600 text-[10px] text-white font-medium">
+                      <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-indigo-600 text-[10px] text-white font-medium select-none pointer-events-none">
                         Crop Area
                       </div>
+
+                      {/* Corner Handles for touch / mouse resize */}
+                      <div
+                        onPointerDown={(e) => handleCropPointerDown(e, "nw")}
+                        className="absolute -top-2.5 -left-2.5 w-5 h-5 bg-white border-2 border-indigo-600 rounded-full cursor-nwse-resize touch-none shadow-md z-30"
+                      />
+                      <div
+                        onPointerDown={(e) => handleCropPointerDown(e, "ne")}
+                        className="absolute -top-2.5 -right-2.5 w-5 h-5 bg-white border-2 border-indigo-600 rounded-full cursor-nesw-resize touch-none shadow-md z-30"
+                      />
+                      <div
+                        onPointerDown={(e) => handleCropPointerDown(e, "sw")}
+                        className="absolute -bottom-2.5 -left-2.5 w-5 h-5 bg-white border-2 border-indigo-600 rounded-full cursor-nesw-resize touch-none shadow-md z-30"
+                      />
+                      <div
+                        onPointerDown={(e) => handleCropPointerDown(e, "se")}
+                        className="absolute -bottom-2.5 -right-2.5 w-5 h-5 bg-white border-2 border-indigo-600 rounded-full cursor-nwse-resize touch-none shadow-md z-30"
+                      />
                     </div>
                   </div>
                 )}

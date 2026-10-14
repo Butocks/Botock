@@ -153,24 +153,24 @@ export default function PDFWatermarkClient() {
         /* ─── Drop Zone ──────────────────────────────────────────────────── */
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-2xl p-16 text-center cursor-pointer transition-all ${
+          className={`border-2 border-dashed rounded-2xl p-6 sm:p-10 md:p-16 text-center cursor-pointer transition-all ${
             isDragActive
               ? "border-rose-500 bg-rose-500/5"
               : "border-slate-300 dark:border-white/[0.1] hover:border-rose-500 hover:bg-slate-50 dark:hover:bg-white/[0.02]"
           }`}
         >
           <input {...getInputProps()} />
-          <div className="w-16 h-16 bg-rose-50 dark:bg-rose-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Stamp className="w-8 h-8 text-rose-500" />
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-rose-50 dark:bg-rose-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Stamp className="w-7 h-7 sm:w-8 sm:h-8 text-rose-500" />
           </div>
-          <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+          <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2">
             Drop your PDF to add a watermark
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-4">
             Stamp custom text overlays across all pages, 100% in your browser.
           </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.05] text-xs font-semibold text-slate-600 dark:text-slate-300">
-            <span>Click or drag a PDF here</span>
+          <div className="mt-5 inline-flex items-center justify-center min-h-[48px] px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm shadow-md shadow-rose-500/20 active:scale-95 transition-all">
+            <span>Tap to Select PDF</span>
           </div>
         </div>
       ) : (

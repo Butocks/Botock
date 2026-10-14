@@ -1,8 +1,14 @@
-import { Smartphone, Maximize, Target } from "lucide-react";
-import Client from "./Client";
-import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
-import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+import { ToolJsonLd } from "@/components/seo/ToolJsonLd";
+import { ToolSeoSection } from "@/components/seo/ToolSeoSection";
+
+const Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading AI Video Auto-Reframe..." />,
+});
 
 export const metadata: Metadata = {
   title: "AI Video Auto-Reframe (Vertical 9:16 Crop) | Botock AI",
@@ -36,95 +42,71 @@ export const metadata: Metadata = {
   },
 };
 
-export default function VideoAutoReframePage() {
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebApplication",
-        name: "AI Video Auto-Reframe - Botock AI",
-        url: "https://botock.app/tools/video-auto-reframe",
-        description: "Convert widescreen 16:9 videos into vertical 9:16 videos for TikTok, Shorts, and Reels with intelligent subject tracking.",
-        applicationCategory: "MultimediaApplication",
-        operatingSystem: "All",
-        offers: {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "USD",
-        },
-      },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          {
-            "@type": "ListItem",
-            position: 1,
-            name: "Home",
-            item: "https://botock.app",
-          },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "Tools",
-            item: "https://botock.app/tools",
-          },
-          {
-            "@type": "ListItem",
-            position: 3,
-            name: "Video Auto-Reframe",
-            item: "https://botock.app/tools/video-auto-reframe",
-          },
-        ],
-      },
-    ],
-  };
+const REFRAME_FAQS = [
+  {
+    question: "What does Video Auto-Reframe do?",
+    answer: "It automatically converts landscape 16:9 widescreen videos into vertical 9:16 format suitable for TikTok, Instagram Reels, and YouTube Shorts by tracking moving subjects and keeping them in center view.",
+  },
+  {
+    question: "How does subject tracking work?",
+    answer: "Our computer vision model identifies primary focal points (faces, people, sports action) and pans the vertical crop window smoothly across frames without sudden jumps.",
+  },
+  {
+    question: "Does it reduce video resolution or clarity?",
+    answer: "No. The output retains high definition (1080x1920) matching the original source resolution with clean H.264 video compression.",
+  },
+  {
+    question: "Can I use it on mobile phones?",
+    answer: "Yes, Botock Video Auto-Reframe is optimized for mobile browsers, tablets, and desktop computers.",
+  },
+];
 
+export default function VideoAutoReframePage() {
   return (
     <div className="w-full min-h-screen flex flex-col">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      <ToolJsonLd
+        name="AI Video Auto-Reframe"
+        description="Convert widescreen 16:9 videos into vertical 9:16 videos for TikTok, Shorts, and Reels with intelligent subject tracking."
+        url="/tools/video-auto-reframe"
+        applicationCategory="MultimediaApplication"
+        faqs={REFRAME_FAQS}
+        featureList={[
+          "Intelligent subject tracking",
+          "One-click 16:9 to 9:16 vertical conversion",
+          "Smooth camera panning algorithm",
+          "Export directly to Reels and Shorts format",
+        ]}
       />
-      <section className="bg-slate-900/50 border-b border-border/40 py-2.5 px-4 sm:px-6">
+
+      <section className="bg-slate-100/60 dark:bg-white/[0.03] border-b border-slate-200 dark:border-white/[0.08] py-2.5 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
+            <Link href="/" className="hover:text-slate-900 dark:text-white transition-colors">Home</Link>
             <span>/</span>
-            <Link href="/tools" className="hover:text-foreground transition-colors">Tools</Link>
+            <Link href="/tools" className="hover:text-slate-900 dark:text-white transition-colors">Tools</Link>
             <span>/</span>
-            <span className="text-foreground font-semibold">Auto-Reframe</span>
+            <span className="text-slate-900 dark:text-white font-semibold">Auto-Reframe</span>
           </nav>
         </div>
       </section>
 
-      <div className="flex-1 bg-background">
+      <div className="flex-1 max-w-5xl mx-auto w-full p-4 sm:p-6">
         <ToolErrorBoundary toolName="Auto-Reframe">
           <Client />
         </ToolErrorBoundary>
       </div>
-      
-      <section className="border-t border-border/40 bg-card/30 py-16 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <h2 className="text-2xl font-black text-foreground">Turn Horizontal Videos into Viral Shorts</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            <div className="p-6 rounded-2xl bg-muted/20 border border-border">
-              <Smartphone className="w-8 h-8 text-violet-500 mb-4" />
-              <h3 className="font-bold text-foreground mb-2">9:16 Ready</h3>
-              <p className="text-sm text-muted-foreground">Perfect for TikTok, Instagram Reels, and YouTube Shorts.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-muted/20 border border-border">
-              <Target className="w-8 h-8 text-emerald-500 mb-4" />
-              <h3 className="font-bold text-foreground mb-2">Subject Tracking</h3>
-              <p className="text-sm text-muted-foreground">Our AI detects the main person and keeps them perfectly centered.</p>
-            </div>
-            <div className="p-6 rounded-2xl bg-muted/20 border border-border">
-              <Maximize className="w-8 h-8 text-blue-500 mb-4" />
-              <h3 className="font-bold text-foreground mb-2">No Quality Loss</h3>
-              <p className="text-sm text-muted-foreground">Maintains crystal clear resolution even after vertical cropping.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+
+      <ToolSeoSection
+        toolName="AI Video Auto-Reframe"
+        headline="Turn Horizontal Videos into Viral Shorts & Reels"
+        tagline="Bypass manual keyframing. Let AI auto-detect focal subjects and reframe horizontal footage into polished 9:16 vertical video."
+        faqs={REFRAME_FAQS}
+        relatedTools={[
+          { name: "Video Editor", href: "/tools/video-editor" },
+          { name: "Reaction Video Maker", href: "/tools/reaction-video-maker" },
+          { name: "Video Trim", href: "/tools/video-trim" },
+        ]}
+      />
     </div>
   );
 }

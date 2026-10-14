@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Sparkles, ShieldCheck, Zap, Layers, Image as ImageIcon, HelpCircle } from "lucide-react";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 const Client = dynamic(() => import("./Client"), {
   loading: () => (
@@ -134,7 +135,9 @@ export default function ImageUpscalePage() {
       />
 
       {/* Interactive Tool Client */}
-      <Client />
+      <ToolErrorBoundary toolName="AI Image Upscaler">
+        <Client />
+      </ToolErrorBoundary>
 
       {/* Feature Value Props */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.06] space-y-12">

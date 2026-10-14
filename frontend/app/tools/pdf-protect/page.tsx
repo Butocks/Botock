@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Lock, ShieldCheck } from "lucide-react";
-import PdfProtectClient from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const PdfProtectClient = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading PDF Encryption Engine..." />,
+});
 
 export const metadata: Metadata = {
   title: "Password Protect PDF Online Free | 256-Bit AES Encryption",
@@ -65,6 +71,27 @@ export default function PdfProtectPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Password Protect PDF really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Password Protect PDF tool is completely free with no hidden charges, watermarks, or limits.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can encrypt PDFs immediately in your browser.",
+            },
+          },
+        ],
+      },
     ],
   };
 
@@ -88,7 +115,9 @@ export default function PdfProtectPage() {
         </p>
       </div>
 
-      <PdfProtectClient />
+      <ToolErrorBoundary toolName="Password Protect PDF">
+        <PdfProtectClient />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

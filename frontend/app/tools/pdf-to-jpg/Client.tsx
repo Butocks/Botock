@@ -250,22 +250,25 @@ export default function PdfToJpgClient() {
       {!file ? (
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-2xl p-16 text-center cursor-pointer transition-all ${
+          className={`border-2 border-dashed rounded-2xl p-6 sm:p-10 md:p-16 text-center cursor-pointer transition-all ${
             isDragActive
               ? "border-amber-500 bg-amber-500/5"
               : "border-slate-300 dark:border-white/[0.1] hover:border-amber-500 hover:bg-slate-50 dark:hover:bg-white/[0.02]"
           }`}
         >
           <input {...getInputProps()} />
-          <div className="w-16 h-16 bg-slate-100 dark:bg-white/[0.05] rounded-full flex items-center justify-center mx-auto mb-4">
-            <ImageIcon className="w-8 h-8 text-amber-500" />
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-100 dark:bg-white/[0.05] rounded-full flex items-center justify-center mx-auto mb-4">
+            <ImageIcon className="w-7 h-7 sm:w-8 sm:h-8 text-amber-500" />
           </div>
-          <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+          <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2">
             Drop PDF here or click to browse
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-4">
             Convert every page of your PDF into high-resolution JPG images. 100% private, client-side WASM processing.
           </p>
+          <div className="mt-5 inline-flex items-center justify-center min-h-[48px] px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm shadow-md shadow-amber-500/20 active:scale-95 transition-all">
+            <span>Tap to Select PDF</span>
+          </div>
         </div>
       ) : (
         <div className="space-y-6">

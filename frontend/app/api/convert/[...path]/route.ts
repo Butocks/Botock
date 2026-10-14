@@ -3,6 +3,19 @@ import { NextRequest, NextResponse } from "next/server";
 export const maxDuration = 300; // Allow long conversions
 export const dynamic = "force-dynamic";
 
+const ALLOWED_CONVERT_PATHS = new Set([
+  "pdf-to-docx",
+  "pdf-to-excel",
+  "docx-to-pdf",
+  "pdf-protect",
+  "tts-voices",
+  "text-to-speech",
+  "voice-changer",
+  "audio-enhance",
+]);
+
+const MAX_CONVERT_PAYLOAD_BYTES = 50 * 1024 * 1024; // 50MB limit
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> }
@@ -10,6 +23,23 @@ export async function POST(
   try {
     const { path } = await context.params;
     const subpath = Array.isArray(path) ? path.join("/") : path;
+
+    // SSRF & Path Traversal Protection
+    if (!subpath || subpath.includes("..") || !ALLOWED_CONVERT_PATHS.has(subpath)) {
+      return NextResponse.json(
+        { detail: "Forbidden: Invalid or unapproved conversion endpoint." },
+        { status: 403 }
+      );
+    }
+
+    // Payload size validation
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > MAX_CONVERT_PAYLOAD_BYTES) {
+      return NextResponse.json(
+        { detail: "Payload Too Large: Maximum allowed file size is 50MB." },
+        { status: 413 }
+      );
+    }
 
     const backendUrl = (
       process.env.BACKEND_INTERNAL_URL ||
@@ -21,32 +51,32 @@ export async function POST(
 
     const targetUrl = `${backendUrl}/api/convert/${subpath}`;
 
-    const reqContentType = request.headers.get("content-type") || "";
-    let body: any;
+    const reqContentType = request.headers.get("content-type");
+    const reqContentLength = request.headers.get("content-length");
+    const authHeader = request.headers.get("authorization");
+
     const headers: Record<string, string> = {
       "Bypass-Tunnel-Reminder": "true",
       "ngrok-skip-browser-warning": "true",
       "User-Agent": "Botock-Web-Client/1.0",
     };
 
-    if (reqContentType.includes("application/json")) {
-      body = await request.text();
-      headers["Content-Type"] = "application/json";
-    } else if (
-      reqContentType.includes("multipart/form-data") ||
-      reqContentType.includes("application/x-www-form-urlencoded")
-    ) {
-      body = await request.formData();
-    } else {
-      body = await request.arrayBuffer();
-      if (reqContentType) {
-        headers["Content-Type"] = reqContentType;
-      }
+    if (reqContentType) {
+      headers["Content-Type"] = reqContentType;
+    }
+    if (reqContentLength) {
+      headers["Content-Length"] = reqContentLength;
+    }
+    if (authHeader) {
+      headers["Authorization"] = authHeader;
     }
 
+    // Direct streaming: forward request.body stream (with duplex: 'half') straight to backend
     const backendRes = await fetch(targetUrl, {
       method: "POST",
-      body,
+      body: request.body,
+      // @ts-expect-error duplex: 'half' is required by Node.js fetch when streaming request bodies
+      duplex: "half",
       headers,
     });
 
@@ -76,7 +106,6 @@ export async function POST(
 
     const contentType = backendRes.headers.get("content-type") || "application/octet-stream";
     const contentDisposition = backendRes.headers.get("content-disposition");
-    const arrayBuffer = await backendRes.arrayBuffer();
 
     const resHeaders: Record<string, string> = {
       "Content-Type": contentType,
@@ -85,8 +114,9 @@ export async function POST(
       resHeaders["Content-Disposition"] = contentDisposition;
     }
 
-    return new NextResponse(arrayBuffer, {
-      status: 200,
+    // Stream backend response directly to client without buffering full file into RAM
+    return new NextResponse(backendRes.body, {
+      status: backendRes.status,
       headers: resHeaders,
     });
   } catch (err: any) {
@@ -98,5 +128,51 @@ export async function POST(
       },
       { status: 502 }
     );
+  }
+}
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> }
+) {
+  try {
+    const { path } = await context.params;
+    const subpath = Array.isArray(path) ? path.join("/") : path;
+
+    if (!subpath || subpath.includes("..") || !ALLOWED_CONVERT_PATHS.has(subpath)) {
+      return NextResponse.json(
+        { detail: "Forbidden: Invalid or unapproved conversion endpoint." },
+        { status: 403 }
+      );
+    }
+
+    const backendUrl = (
+      process.env.BACKEND_INTERNAL_URL ||
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "http://127.0.0.1:8000"
+    ).replace(/\/$/, "");
+
+    const targetUrl = `${backendUrl}/api/convert/${subpath}${request.nextUrl.search}`;
+
+    const backendRes = await fetch(targetUrl, {
+      method: "GET",
+      headers: {
+        "Bypass-Tunnel-Reminder": "true",
+        "ngrok-skip-browser-warning": "true",
+        "User-Agent": "Botock-Web-Client/1.0",
+      },
+    });
+
+    const data = await backendRes.arrayBuffer();
+    const contentType = backendRes.headers.get("content-type") || "application/json";
+
+    return new NextResponse(data, {
+      status: backendRes.status,
+      headers: { "Content-Type": contentType },
+    });
+  } catch (err: any) {
+    return NextResponse.json({ detail: err.message }, { status: 502 });
   }
 }

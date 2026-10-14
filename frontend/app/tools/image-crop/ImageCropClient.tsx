@@ -81,22 +81,25 @@ export default function ImageCropClient() {
       {!image ? (
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-2xl p-16 text-center cursor-pointer transition-all ${
+          className={`border-2 border-dashed rounded-2xl p-6 sm:p-10 md:p-16 text-center cursor-pointer transition-all ${
             isDragActive
               ? "border-emerald-500 bg-emerald-500/5"
               : "border-slate-300 dark:border-white/[0.1] hover:border-emerald-500 hover:bg-slate-50 dark:hover:bg-white/[0.02]"
           }`}
         >
           <input {...getInputProps()} />
-          <div className="w-16 h-16 bg-slate-100 dark:bg-white/[0.05] rounded-full flex items-center justify-center mx-auto mb-4">
-            <ImageIcon className="w-8 h-8 text-slate-500 dark:text-slate-400" />
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-100 dark:bg-white/[0.05] rounded-full flex items-center justify-center mx-auto mb-4">
+            <ImageIcon className="w-7 h-7 sm:w-8 sm:h-8 text-slate-500 dark:text-slate-400" />
           </div>
-          <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+          <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2">
             Drop an Image here
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-4">
             Supports JPG, PNG, WEBP.
           </p>
+          <div className="mt-5 inline-flex items-center justify-center min-h-[48px] px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md shadow-emerald-500/20 active:scale-95 transition-all">
+            <span>Tap to Select Image</span>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -126,7 +129,7 @@ export default function ImageCropClient() {
               ))}
             </div>
 
-            <div className="rounded-xl overflow-hidden bg-slate-100 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] p-2">
+            <div className="rounded-xl overflow-hidden bg-slate-100 dark:bg-[#09090b] border border-slate-200 dark:border-white/[0.08] p-2 touch-none">
               <Cropper
                 src={image}
                 style={{ height: 400, width: "100%" }}

@@ -104,22 +104,25 @@ export default function PDFMergeClient() {
           )}
           <div
             {...getRootProps()}
-            className={`border-2 border-dashed rounded-3xl p-12 text-center cursor-pointer transition-colors ${
+            className={`border-2 border-dashed rounded-3xl p-6 sm:p-10 md:p-12 text-center cursor-pointer transition-colors ${
               isDragActive
                 ? "border-violet-500 bg-violet-500/5"
                 : "border-slate-300 dark:border-white/[0.1] hover:border-violet-500 hover:bg-slate-50 dark:hover:bg-white/[0.02]"
             }`}
           >
             <input {...getInputProps()} />
-            <div className="w-16 h-16 bg-slate-100 dark:bg-white/[0.05] rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileUp className="w-8 h-8 text-slate-500 dark:text-slate-400" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-100 dark:bg-white/[0.05] rounded-full flex items-center justify-center mx-auto mb-4">
+              <FileUp className="w-7 h-7 sm:w-8 sm:h-8 text-slate-500 dark:text-slate-400" />
             </div>
-            <p className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+            <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2">
               Drop PDF files here
             </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
               or click to browse from your computer
             </p>
+            <div className="mt-5 inline-flex items-center justify-center min-h-[44px] px-6 py-2.5 rounded-xl bg-violet-600 text-white font-semibold text-xs shadow-md shadow-violet-500/20 active:scale-95 transition-all">
+              Tap to Select PDFs
+            </div>
           </div>
 
           {files.length > 0 && (

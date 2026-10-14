@@ -22,10 +22,12 @@ import {
   Check,
 } from "lucide-react";
 import { getBackendUrl } from "../../../utils/runtime-urls";
+import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 
 type RotationAngle = 0 | 90 | 180 | 270 | number;
 
 export default function VideoRotateClient() {
+  const { load: loadFFmpeg, writeFile, readFile, deleteFile, exec } = useFFmpeg();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [rotation, setRotation] = useState<number>(0); // 0, 90, 180, 270
@@ -94,15 +96,80 @@ export default function VideoRotateClient() {
     }
 
     const targetAngle = overrideAngle !== undefined ? overrideAngle : rotation;
+    const ext = selectedFile.name.split('.').pop()?.toLowerCase() || "mp4";
+    const inputName = `input_${Date.now()}.${ext}`;
+    const outputName = `rotated_${Date.now()}.mp4`;
 
     try {
-      const backendUrl = await getBackendUrl();
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("angle", targetAngle.toString());
-      formData.append("flip_h", flipH ? "true" : "false");
-
+      // 1. In-Browser FFmpeg Rotation (Fast Stream Copy / Ultrafast Re-encode)
       try {
+        await loadFFmpeg();
+        const inputBytes = new Uint8Array(await selectedFile.arrayBuffer());
+        await writeFile(inputName, inputBytes);
+
+        let exitCode = -1;
+
+        // Fast stream copy rotation if no horizontal flip
+        if (!flipH && (targetAngle === 90 || targetAngle === 180 || targetAngle === 270)) {
+          const streamCopyArgs = [
+            "-y",
+            "-i", inputName,
+            "-map_metadata", "0",
+            "-metadata:s:v:0", `rotate=${targetAngle}`,
+            "-c", "copy",
+            "-movflags", "+faststart",
+            outputName,
+          ];
+          exitCode = await exec(streamCopyArgs);
+        }
+
+        // If stream copy was not applicable or failed, encode using transpose filter with ultrafast preset and crf 28
+        if (exitCode !== 0) {
+          const filterList: string[] = [];
+          if (targetAngle === 90) filterList.push("transpose=1");
+          else if (targetAngle === 180) filterList.push("transpose=2,transpose=2");
+          else if (targetAngle === 270) filterList.push("transpose=2");
+
+          if (flipH) filterList.push("hflip");
+
+          const vf = filterList.length > 0 ? filterList.join(",") : "null";
+          const encodeArgs = [
+            "-y",
+            "-i", inputName,
+            "-vf", vf,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-crf", "28",
+            "-c:a", "copy",
+            "-movflags", "+faststart",
+            outputName,
+          ];
+          exitCode = await exec(encodeArgs);
+        }
+
+        if (exitCode === 0) {
+          const outputBytes = await readFile(outputName);
+          const blob = new Blob([outputBytes as unknown as BlobPart], { type: "video/mp4" });
+          const url = URL.createObjectURL(blob);
+          setExportedUrl(url);
+          setStatus("completed");
+          return;
+        }
+      } catch (ffmpegErr) {
+        console.warn("Client FFmpeg rotation failed, falling back to backend/canvas:", ffmpegErr);
+      } finally {
+        try { await deleteFile(inputName); } catch {}
+        try { await deleteFile(outputName); } catch {}
+      }
+
+      // 2. Fallback to Backend
+      try {
+        const backendUrl = await getBackendUrl();
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("angle", targetAngle.toString());
+        formData.append("flip_h", flipH ? "true" : "false");
+
         const response = await fetch(`${backendUrl}/api/video/rotate`, {
           method: "POST",
           body: formData,
@@ -119,7 +186,7 @@ export default function VideoRotateClient() {
         console.warn("Backend video rotate unavailable, using client-side canvas recorder:", backendErr);
       }
 
-      // In-browser fallback rotation
+      // 3. In-browser canvas fallback rotation
       const clientBlob = await rotateVideoInBrowser(selectedFile, targetAngle, flipH);
       const url = URL.createObjectURL(clientBlob);
       setExportedUrl(url);

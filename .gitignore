@@ -75,5 +75,7 @@ CLAUDE.md
 **/AGENTS.md
 **/CLAUDE.md
 
+*.part
 /botock-admin
 botock-admin/
+.agents/

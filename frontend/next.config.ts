@@ -89,7 +89,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/tools/(.*)",
+        source: "/tools/:path*",
         headers: [
           {
             key: "Cross-Origin-Opener-Policy",
@@ -97,7 +97,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Cross-Origin-Embedder-Policy",
-            value: "require-corp",
+            value: "credentialless",
           },
         ],
       },

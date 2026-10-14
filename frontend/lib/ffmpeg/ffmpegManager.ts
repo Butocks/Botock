@@ -75,12 +75,35 @@ export class FFmpegManager {
       let loaded = false;
       const cdnBases = [PRIMARY_CDN_BASE, FALLBACK_CDN_BASE];
 
+      // Helper function to cache WASM and JS binaries permanently using browser Cache Storage
+      const getCachedBlobURL = async (url: string, mimeType: string): Promise<string> => {
+        if (typeof window !== "undefined" && "caches" in window) {
+          try {
+            const cache = await window.caches.open("botock-wasm-v1");
+            const cachedResponse = await cache.match(url);
+            if (cachedResponse) {
+              const blob = await cachedResponse.blob();
+              return URL.createObjectURL(new Blob([blob], { type: mimeType }));
+            }
+            const response = await fetch(url);
+            if (response.ok) {
+              await cache.put(url, response.clone());
+              const blob = await response.blob();
+              return URL.createObjectURL(new Blob([blob], { type: mimeType }));
+            }
+          } catch (cacheErr) {
+            console.warn(`Browser cache fetch failed for ${url}, falling back to direct download:`, cacheErr);
+          }
+        }
+        return await toBlobURL(url, mimeType);
+      };
+
       for (const baseURL of cdnBases) {
         try {
-          // ✅ Parallel fetch: JS and WASM download simultaneously, saving ~1-2s cold start
+          // ✅ Parallel fetch with browser Cache Storage ('botock-wasm-v1') to avoid downloading 30MB WASM repeatedly
           const [coreURL, wasmURL] = await Promise.all([
-            toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-            toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+            getCachedBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+            getCachedBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
           ]);
 
           await ffmpeg.load({

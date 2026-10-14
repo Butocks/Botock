@@ -36,7 +36,7 @@ export default function VideoToGifClient() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const { run, cancel, isProcessing, progress } = useFFmpeg();
+  const { run, deleteFile, cancel, isProcessing, progress } = useFFmpeg();
 
   useEffect(() => {
     return () => {
@@ -134,6 +134,9 @@ export default function VideoToGifClient() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setErrorMsg(msg || "Failed to convert video to GIF.");
+    } finally {
+      try { await deleteFile(safeInputName); } catch {}
+      try { await deleteFile("output.gif"); } catch {}
     }
   };
 

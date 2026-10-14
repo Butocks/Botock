@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Image as ImageIcon, ShieldCheck, FileText, Minimize2 } from "lucide-react";
 import ClientWrapper from "./ClientWrapper";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
   title: "Convert PDF to JPG Online Free | High Resolution (300 DPI)",
@@ -76,6 +77,27 @@ export default function PdfToJpgPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Convert PDF to JPG Online really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our PDF to JPG converter is 100% free with no limits, no watermarks, and no sign-up required.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can convert PDF pages to high-resolution JPG images directly in your browser.",
+            },
+          },
+        ],
+      },
     ],
   };
 
@@ -99,7 +121,9 @@ export default function PdfToJpgPage() {
         </p>
       </div>
 
-      <ClientWrapper />
+      <ToolErrorBoundary toolName="PDF to JPG">
+        <ClientWrapper />
+      </ToolErrorBoundary>
 
       
       {/* --- Enterprise SEO Content --- */}

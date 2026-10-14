@@ -75,6 +75,15 @@ export default function ReactionVideoClient() {
   const videoBottomRef = useRef<HTMLVideoElement>(null);
   const exportedVideoRef = useRef<HTMLVideoElement>(null);
 
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (urlTop) URL.revokeObjectURL(urlTop);
+      if (urlBottom) URL.revokeObjectURL(urlBottom);
+      if (exportedUrl) URL.revokeObjectURL(exportedUrl);
+    };
+  }, [urlTop, urlBottom, exportedUrl]);
+
   // Synchronize top file upload
   const handleTopFile = (file: File) => {
     if (urlTop) URL.revokeObjectURL(urlTop);
@@ -203,6 +212,7 @@ export default function ReactionVideoClient() {
 
       setProcessStep("Finalizing video export...");
       const blob = await res.blob();
+      if (exportedUrl) URL.revokeObjectURL(exportedUrl);
       const url = URL.createObjectURL(blob);
 
       setExportedBlob(blob);

@@ -198,6 +198,53 @@ export default function EditorTimeline({
     return () => window.removeEventListener("editor-time-update", handleTimeUpdate);
   }, [totalDuration]);
 
+  // Mobile Pinch-to-Zoom gesture on timeline
+  const pinchRef = useRef<{ initialDist: number; initialZoom: number } | null>(null);
+
+  useEffect(() => {
+    const el = trackAreaRef.current;
+    if (!el || !setZoom) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        pinchRef.current = { initialDist: dist, initialZoom: zoom };
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchRef.current) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.hypot(dx, dy);
+        if (pinchRef.current.initialDist > 0) {
+          const factor = dist / pinchRef.current.initialDist;
+          const newZoom = Math.max(0.2, Math.min(3.5, pinchRef.current.initialZoom * factor));
+          setZoom(Math.round(newZoom * 100) / 100);
+        }
+      }
+    };
+
+    const onTouchEnd = () => {
+      pinchRef.current = null;
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [setZoom, zoom]);
+
   // Edge trimming drag
   useEffect(() => {
     if (!draggingEdge) return;
@@ -436,7 +483,7 @@ export default function EditorTimeline({
         </div>
 
         {/* RIGHT COLUMN: Scrollable Timeline (Ruler + Tracks + Playhead) */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden relative bg-[#13131a]">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden relative bg-[#13131a] touch-pan-x">
           <div
             ref={trackAreaRef}
             className="relative h-full flex flex-col"

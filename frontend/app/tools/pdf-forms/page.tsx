@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { CheckCircle2 } from "lucide-react";
-import Client from "./Client";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
 import { ToolRegistry } from "../ToolEngine";
+
+const Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading PDF Form Editor..." />,
+});
 
 const tool = ToolRegistry.getTool("pdf-forms");
 
@@ -48,6 +53,27 @@ export default function PDFFormsPage() {
           { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://botock.app" },
           { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://botock.app/tools" },
           { "@type": "ListItem", "position": 3, "name": "Fill PDF Forms", "item": "https://botock.app/tools/pdf-forms" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Fill & Sign PDF Forms really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Fill & Sign PDF Forms tool is 100% free of charge with zero watermarks and no registration required."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can start filling PDF forms immediately directly inside your browser."
+            }
+          }
         ]
       }
     ]

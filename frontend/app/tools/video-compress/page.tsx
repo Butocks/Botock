@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { Minimize2, ShieldCheck } from "lucide-react";
-import VideoCompressClient from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const VideoCompressClient = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading Video Compressor..." />,
+});
 
 export const metadata: Metadata = {
   title: "Compress Video Online Free | Reduce Video File Size",
@@ -65,6 +71,27 @@ export default function VideoCompressPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Compress Video Online really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our Compress Video tool is completely free with no file size limits and no watermarks.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can compress video files immediately directly in your browser.",
+            },
+          },
+        ],
+      },
     ],
   };
 
@@ -92,7 +119,9 @@ export default function VideoCompressPage() {
         }}
       />
 
-      <VideoCompressClient />
+      <ToolErrorBoundary toolName="Compress Video">
+        <VideoCompressClient />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

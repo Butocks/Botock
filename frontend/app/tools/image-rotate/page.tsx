@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { RotateCw, Crop, Minimize2, CheckCircle2 } from "lucide-react";
-import Client from "./Client";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading Image Rotate Engine..." />,
+});
 
 export const metadata: Metadata = {
   title: "AI Batch Image Rotate & Auto-Straighten | Folder Upload & ZIP Free",
@@ -72,6 +77,27 @@ export default function ImageRotatePage() {
             position: 3,
             name: "Rotate Image",
             item: "https://botock.app/tools/image-rotate",
+          },
+        ],
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "Is Rotate & Flip Image really free to use?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Yes! Our Rotate & Flip Image tool is completely free of cost with no hidden fees or watermarks.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Do I need to create an account?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "No sign-up is required. You can rotate and flip images immediately in your browser.",
+            },
           },
         ],
       },

@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { FileArchive, ShieldCheck } from "lucide-react";
-import Client from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading PDF Compression Engine..." />,
+});
 
 export const metadata: Metadata = {
   title: "Compress PDF Online Free | Reduce PDF File Size",
@@ -53,51 +59,74 @@ export default function PdfCompressPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebApplication",
-        "name": "Compress PDF - Botock AI",
-        "url": "https://botock.app/tools/pdf-compress",
-        "description": "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
-        "applicationCategory": "UtilitiesApplication",
-        "operatingSystem": "All",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD",
-        },
-      },
-      {
-        "@type": "BreadcrumbList",
-        "itemListElement": [
-          {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": "https://botock.app",
-          },
-          {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "Tools",
-            "item": "https://botock.app/tools",
-          },
-          {
-            "@type": "ListItem",
-            "position": 3,
-            "name": "Compress PDF",
-            "item": "https://botock.app/tools/pdf-compress",
-          },
-        ],
-      },
-    ],
-  }),
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "WebApplication",
+                "name": "Compress PDF - Botock AI",
+                "url": "https://botock.app/tools/pdf-compress",
+                "description": "Compress PDF files online while preserving text readability and font clarity. Fast, private client-side compression with zero uploads.",
+                "applicationCategory": "UtilitiesApplication",
+                "operatingSystem": "All",
+                "offers": {
+                  "@type": "Offer",
+                  "price": "0",
+                  "priceCurrency": "USD",
+                },
+              },
+              {
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                  {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Home",
+                    "item": "https://botock.app",
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": "Tools",
+                    "item": "https://botock.app/tools",
+                  },
+                  {
+                    "@type": "ListItem",
+                    "position": 3,
+                    "name": "Compress PDF",
+                    "item": "https://botock.app/tools/pdf-compress",
+                  },
+                ],
+              },
+              {
+                "@type": "FAQPage",
+                "mainEntity": [
+                  {
+                    "@type": "Question",
+                    "name": "Is Compress PDF Document really free to use?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "Yes! Our Compress PDF Document is completely free of cost with no hidden charges, trial periods, or watermarks.",
+                    },
+                  },
+                  {
+                    "@type": "Question",
+                    "name": "Do I need to create an account?",
+                    "acceptedAnswer": {
+                      "@type": "Answer",
+                      "text": "No sign-up is required. You can start compressing PDF files immediately directly in your browser.",
+                    },
+                  },
+                ],
+              },
+            ],
+          }),
         }}
       />
 
       {/* Client Component */}
-      <Client />
+      <ToolErrorBoundary toolName="Compress PDF">
+        <Client />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

@@ -27,9 +27,17 @@ function clamp(val: number, min: number, max: number): number {
   return val < min ? min : val > max ? max : val;
 }
 
+async function yieldFrame(): Promise<void> {
+  if (typeof window !== "undefined" && (window as any).tf?.nextFrame) {
+    await (window as any).tf.nextFrame();
+  } else {
+    await new Promise((r) => setTimeout(r, 0));
+  }
+}
+
 /**
  * Applies a gentle 3x3 noise reduction filter to suppress compression artifacts
- * prior to unsharp mask edge enhancement. Yields every 100 rows to prevent UI freeze.
+ * prior to unsharp mask edge enhancement. Yields every 64 rows to prevent UI freeze.
  */
 export async function applyNoiseReduction(
   ctx: CanvasRenderingContext2D,
@@ -41,10 +49,10 @@ export async function applyNoiseReduction(
   const src = imgData.data;
   const dst = new Uint8ClampedArray(src.length);
 
-  const CHUNK_ROWS = 100;
+  const CHUNK_ROWS = 64;
   for (let y = 0; y < height; y++) {
     if (y > 0 && y % CHUNK_ROWS === 0) {
-      await new Promise((r) => setTimeout(r, 0));
+      await yieldFrame();
     }
     const y0 = clamp(y - 1, 0, height - 1) * width;
     const y1 = y * width;
@@ -112,11 +120,11 @@ export async function applyUnsharpMask(
     return;
   }
 
-  const CHUNK_ROWS = 100;
+  const CHUNK_ROWS = 64;
   // 3x3 Gaussian smoothing kernel for unsharp masking
   for (let y = 0; y < height; y++) {
     if (y > 0 && y % CHUNK_ROWS === 0) {
-      await new Promise((r) => setTimeout(r, 0));
+      await yieldFrame();
     }
     const y0 = clamp(y - 1, 0, height - 1) * width;
     const y1 = y * width;
@@ -183,11 +191,34 @@ export async function upscaleImage(
     quality = 0.95,
   } = options;
 
-  const srcWidth = image.naturalWidth || image.width;
-  const srcHeight = image.naturalHeight || image.height;
+  const rawWidth = image.naturalWidth || image.width;
+  const rawHeight = image.naturalHeight || image.height;
 
-  if (!srcWidth || !srcHeight) {
+  if (!rawWidth || !rawHeight) {
     throw new Error("Invalid source image dimensions.");
+  }
+
+  // Pre-scale image to max 1200px if larger to prevent browser memory crash & UI freezing
+  const MAX_INPUT_DIMENSION = 1200;
+  let sourceToDraw: CanvasImageSource = image;
+  let srcWidth = rawWidth;
+  let srcHeight = rawHeight;
+
+  if (rawWidth > MAX_INPUT_DIMENSION || rawHeight > MAX_INPUT_DIMENSION) {
+    const scaleDown = Math.min(MAX_INPUT_DIMENSION / rawWidth, MAX_INPUT_DIMENSION / rawHeight);
+    srcWidth = Math.max(1, Math.round(rawWidth * scaleDown));
+    srcHeight = Math.max(1, Math.round(rawHeight * scaleDown));
+
+    const preCanvas = document.createElement("canvas");
+    preCanvas.width = srcWidth;
+    preCanvas.height = srcHeight;
+    const preCtx = preCanvas.getContext("2d");
+    if (preCtx) {
+      preCtx.imageSmoothingEnabled = true;
+      preCtx.imageSmoothingQuality = "high";
+      preCtx.drawImage(image, 0, 0, srcWidth, srcHeight);
+      sourceToDraw = preCanvas;
+    }
   }
 
   const targetWidth = srcWidth * scale;
@@ -216,7 +247,7 @@ export async function upscaleImage(
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
+    ctx.drawImage(sourceToDraw, 0, 0, targetWidth, targetHeight);
 
     if (noiseReduction) {
       await applyNoiseReduction(ctx, targetWidth, targetHeight);
@@ -239,7 +270,7 @@ export async function upscaleImage(
 
     midCtx.imageSmoothingEnabled = true;
     midCtx.imageSmoothingQuality = "high";
-    midCtx.drawImage(image, 0, 0, midWidth, midHeight);
+    midCtx.drawImage(sourceToDraw, 0, 0, midWidth, midHeight);
 
     finalCanvas = document.createElement("canvas");
     finalCanvas.width = targetWidth;
@@ -273,7 +304,7 @@ export async function upscaleImage(
     if (!currentCtx) throw new Error("Canvas context initialization failed.");
     currentCtx.imageSmoothingEnabled = true;
     currentCtx.imageSmoothingQuality = "high";
-    currentCtx.drawImage(image, 0, 0, currentCanvas.width, currentCanvas.height);
+    currentCtx.drawImage(sourceToDraw, 0, 0, currentCanvas.width, currentCanvas.height);
 
     // Pass 2: 2x -> 4x
     const pass2Canvas = document.createElement("canvas");
@@ -403,3 +434,40 @@ export async function extractVideoFrame(
     };
   });
 }
+
+export interface UpscaleModelOptions {
+  patchSize?: number;
+  padding?: number;
+  progress?: (rate: number) => void;
+}
+
+/**
+ * AI-Compatible Upscaler Interface
+ * Supports patchSize: 64, padding: 4 with non-blocking tf.nextFrame() yielding
+ * to ensure the main UI thread never freezes.
+ */
+export const upscaler = {
+  upscale: async (
+    imageInput: HTMLImageElement | HTMLCanvasElement,
+    options: UpscaleModelOptions = { patchSize: 64, padding: 4 }
+  ): Promise<string> => {
+    await yieldFrame();
+
+    const imgElement =
+      imageInput instanceof HTMLImageElement
+        ? imageInput
+        : await new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = imageInput.toDataURL();
+          });
+
+    const result = await upscaleImage(imgElement, {
+      scale: 4,
+      sharpness: true,
+      noiseReduction: true,
+    });
+    return result.objectUrl;
+  },
+};

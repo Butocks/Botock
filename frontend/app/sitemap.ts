@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://botock.app";
   const now = new Date();
 
@@ -101,7 +101,39 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/complaint",
   ];
 
-  return routes.map((route) => {
+  // Try fetching dynamically published blogs from CMS/backend
+  const backendUrl = (
+    process.env.BACKEND_INTERNAL_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    "https://api.botock.app"
+  ).replace(/\/$/, "");
+
+  const dynamicBlogEntries: MetadataRoute.Sitemap = [];
+  try {
+    const res = await fetch(`${backendUrl}/api/public/blogs`, {
+      next: { revalidate: 3600 },
+    });
+    if (res.ok) {
+      const posts = await res.json();
+      if (Array.isArray(posts)) {
+        for (const post of posts) {
+          if (post?.slug && (post.status === "PUBLISHED" || !post.status)) {
+            const blogUrl = `${baseUrl}/blog/${post.slug}`;
+            dynamicBlogEntries.push({
+              url: blogUrl,
+              lastModified: post.updated_at ? new Date(post.updated_at) : (post.published_at ? new Date(post.published_at) : now),
+              changeFrequency: "weekly",
+              priority: 0.7,
+            });
+          }
+        }
+      }
+    }
+  } catch {
+    // Graceful fallback during offline build
+  }
+
+  const staticSitemap = routes.map((route) => {
     let priority = 0.7;
     let changeFrequency: "daily" | "weekly" | "monthly" = "weekly";
 
@@ -137,4 +169,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority,
     };
   });
+
+  // Deduplicate entries by URL
+  const seenUrls = new Set<string>();
+  const finalSitemap: MetadataRoute.Sitemap = [];
+
+  for (const item of [...staticSitemap, ...dynamicBlogEntries]) {
+    if (!seenUrls.has(item.url)) {
+      seenUrls.add(item.url);
+      finalSitemap.push(item);
+    }
+  }
+
+  return finalSitemap;
 }

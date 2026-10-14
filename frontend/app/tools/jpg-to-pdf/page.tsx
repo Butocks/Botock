@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { FileText, ShieldCheck } from "lucide-react";
-import JpgToPdfClient from "./Client";
+import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const JpgToPdfClient = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading JPG to PDF Converter..." />,
+});
 
 export const metadata: Metadata = {
   title: "Convert JPG to PDF Online Free | Combine Images to PDF",
@@ -65,6 +71,27 @@ export default function JpgToPdfPage() {
           },
         ],
       },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Convert JPG to PDF really free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! Our JPG to PDF converter is 100% free with no file limits and no watermarks.",
+            },
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to create an account?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No sign-up is required. You can convert JPG images to PDF immediately directly in your browser.",
+            },
+          },
+        ],
+      },
     ],
   };
 
@@ -88,7 +115,9 @@ export default function JpgToPdfPage() {
         </p>
       </div>
 
-      <JpgToPdfClient />
+      <ToolErrorBoundary toolName="JPG to PDF">
+        <JpgToPdfClient />
+      </ToolErrorBoundary>
           
       {/* --- Enterprise SEO Content --- */}
       <section className="mt-16 pt-12 border-t border-slate-200 dark:border-white/[0.05]">

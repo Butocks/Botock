@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Sliders, Sparkles, Crop, Minimize2, CheckCircle2 } from "lucide-react";
-import Client from "./Client";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
+import { ToolLoader } from "@/components/ui/ToolLoader";
+
+const Client = dynamic(() => import("./Client"), {
+  loading: () => <ToolLoader message="Loading Image Filters Engine..." />,
+});
 
 export const metadata: Metadata = {
   title: "Photo Filters & Effects Online Free | Color Grading",
@@ -72,6 +77,27 @@ export default function ImageFiltersPage() {
             position: 3,
             name: "Image Filters",
             item: "https://botock.app/tools/image-filters",
+          },
+        ],
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "Is Photo Filters & Effects really free to use?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Yes! Our Photo Filters & Effects tool is 100% free with no watermarks and no hidden subscriptions.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Do I need to create an account?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "No sign-up is required. You can apply filters and adjust colors immediately in your browser.",
+            },
           },
         ],
       },
