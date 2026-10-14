@@ -17,14 +17,38 @@ export default function BlogCMS() {
 
   const supabase = createClient();
 
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const headers: Record<string, string> = {};
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+    } catch {
+      // Continue to local token check
+    }
+
+    const adminToken = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
+    if (adminToken) {
+      headers["x-admin-token"] = adminToken;
+      if (!headers["Authorization"]) {
+        headers["Authorization"] = `Bearer ${adminToken}`;
+      }
+    }
+    return headers;
+  };
+
   const fetchPosts = async () => {
     setIsLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
+    const headers = await getAuthHeaders();
+    if (!headers["Authorization"] && !headers["x-admin-token"]) {
+      setIsLoading(false);
+      return;
+    }
     
     try {
       const res = await fetch(`${await getBackendUrl()}/api/cms/posts`, {
-        headers: { "Authorization": `Bearer ${session.access_token}` }
+        headers,
       });
       if (res.ok) {
         const data = await res.json();
@@ -51,8 +75,12 @@ export default function BlogCMS() {
       return;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
+    const headers = await getAuthHeaders();
+    if (!headers["Authorization"] && !headers["x-admin-token"]) {
+      showToast("Authentication required.", "error");
+      return;
+    }
+    headers["Content-Type"] = "application/json";
 
     try {
       const isUpdate = !!editingPost.id;
@@ -61,10 +89,7 @@ export default function BlogCMS() {
       
       const res = await fetch(url, {
         method,
-        headers: { 
-          "Authorization": `Bearer ${session.access_token}`,
-          "Content-Type": "application/json"
-        },
+        headers,
         body: JSON.stringify(editingPost)
       });
       
@@ -84,13 +109,16 @@ export default function BlogCMS() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this post? This cannot be undone.")) return;
     
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
+    const headers = await getAuthHeaders();
+    if (!headers["Authorization"] && !headers["x-admin-token"]) {
+      showToast("Authentication required.", "error");
+      return;
+    }
 
     try {
       const res = await fetch(`${await getBackendUrl()}/api/cms/posts/${id}`, {
         method: "DELETE",
-        headers: { "Authorization": `Bearer ${session.access_token}` }
+        headers,
       });
       if (res.ok) {
         showToast("Post deleted");

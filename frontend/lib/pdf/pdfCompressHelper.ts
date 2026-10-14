@@ -101,12 +101,30 @@ async function downsampleImage(
     return null;
   }
 
-  // Draw white background to avoid transparent regions turning black in JPEG
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(0, 0, width, height);
+  // Draw image directly onto canvas to detect transparency
   ctx.drawImage(imageBitmap, 0, 0, width, height);
-
   imageBitmap.close();
+
+  // Check if image contains transparent pixels (e.g. logos, signatures)
+  // Transparent images should never be recompressed to opaque JPEGs
+  try {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    const len = data.length;
+    // Step through alpha bytes
+    for (let i = 3; i < len; i += 16) {
+      if (data[i] < 250) {
+        canvas.width = 0;
+        canvas.height = 0;
+        return null; // Preserve transparent image stream
+      }
+    }
+  } catch {
+    // In case getImageData fails, skip JPEG conversion to prevent corrupting transparent assets
+    canvas.width = 0;
+    canvas.height = 0;
+    return null;
+  }
 
   const compressedBlob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob((b) => resolve(b), "image/jpeg", quality)

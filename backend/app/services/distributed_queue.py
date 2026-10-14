@@ -94,19 +94,23 @@ class DistributedQueue:
                 """DELETE FROM video_jobs WHERE status = 'reserving'
                    AND created_at < now() - interval '5 minutes'"""
             )
+            # Release accounts for any jobs that will fail/re-queue due to expiry
+            try:
+                await conn.execute(
+                    """UPDATE flow_accounts SET status = 'ACTIVE' 
+                       WHERE id IN (
+                           SELECT account_id FROM video_jobs 
+                           WHERE status = 'running' AND lease_expires_at < now() AND account_id IS NOT NULL
+                       )"""
+                )
+            except Exception as acc_err:
+                logger.warning(f"flow_accounts release skipped: {acc_err}")
+
             failed = await conn.execute(
                 """UPDATE video_jobs SET status = 'failed', error_code = 'worker_lost',
                            lease_expires_at = NULL, updated_at = now()
                    WHERE status = 'running' AND lease_expires_at < now() AND attempts >= $1""",
                 settings.MAX_JOB_ATTEMPTS,
-            )
-            # Release accounts for any jobs that just failed/re-queued due to expiry
-            await conn.execute(
-                """UPDATE flow_accounts SET status = 'ACTIVE' 
-                   WHERE id IN (
-                       SELECT account_id FROM video_jobs 
-                       WHERE status = 'running' AND lease_expires_at < now() AND account_id IS NOT NULL
-                   )"""
             )
             queued = await conn.execute(
                 """UPDATE video_jobs SET status = 'queued', worker_id = NULL, account_id = NULL,
@@ -201,10 +205,21 @@ class DistributedQueue:
         async with pool.acquire() as conn:
             rows = await conn.fetch(
                 """SELECT id::text, user_id FROM video_jobs
-                   WHERE status = 'failed' ORDER BY updated_at ASC LIMIT $1""",
+                   WHERE status = 'failed' AND (refunded IS NOT TRUE)
+                   ORDER BY updated_at ASC LIMIT $1""",
                 limit,
             )
         return [dict(row) for row in rows]
+
+    async def mark_refunded(self, job_id: str) -> None:
+        pool = self._require_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """UPDATE video_jobs SET refunded = true, refunded_at = now()
+                   WHERE id = $1::uuid""",
+                job_id,
+            )
+
 
     async def get_for_user(self, job_id: str, user_id: str) -> dict[str, Any] | None:
         pool = self._require_pool()

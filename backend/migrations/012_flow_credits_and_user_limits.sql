@@ -281,7 +281,56 @@ FROM public.user_profiles p;
 
 
 -- =========================================================================
--- 7. ROW LEVEL SECURITY (RLS) POLICIES
+-- 6.5 FLOW ACCOUNTS & JOB RECOVERY SCHEMA
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS public.flow_accounts (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL DEFAULT 'ACTIVE',
+    last_used_at TIMESTAMPTZ DEFAULT now(),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Ensure video_jobs has refund tracking columns if video_jobs exists
+DO $$ 
+BEGIN 
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'video_jobs') THEN
+        ALTER TABLE public.video_jobs ADD COLUMN IF NOT EXISTS refunded BOOLEAN NOT NULL DEFAULT false;
+        ALTER TABLE public.video_jobs ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ DEFAULT NULL;
+    END IF;
+END $$;
+
+-- =========================================================================
+-- 6.6 BACKWARD COMPATIBILITY STUBS FOR LEGACY CALLERS
+-- =========================================================================
+CREATE OR REPLACE FUNCTION public.get_user_credit_balance(p_user_id UUID, p_daily_limit INT DEFAULT 50)
+RETURNS INT AS $$
+DECLARE
+    v_limit_res JSON;
+BEGIN
+    v_limit_res := public.check_generation_limit(p_user_id, NULL, 'video');
+    IF (v_limit_res->>'allowed')::BOOLEAN THEN
+        RETURN GREATEST(0, COALESCE((v_limit_res->>'limit_today')::INT - (v_limit_res->>'used_today')::INT, p_daily_limit));
+    END IF;
+    RETURN 0;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.consume_video_credits(p_user_id UUID, p_cost INT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.claim_tool_reward(p_tool_slug TEXT)
+RETURNS JSON AS $$
+BEGIN
+    RETURN json_build_object('success', true, 'message', 'Tool reward acknowledged');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =========================================================================
+-- 7. ROW LEVEL SECURITY (RLS) POLICIES & HARDENING
 -- =========================================================================
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.generation_logs ENABLE ROW LEVEL SECURITY;
@@ -296,16 +345,48 @@ DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
 CREATE POLICY "Users can update own profile" ON public.user_profiles
     FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
--- Generation Logs Policies
+-- Prevent Privilege Escalation on user_profiles (role, is_unlimited, is_restricted, custom limits)
+CREATE OR REPLACE FUNCTION public.protect_user_profiles_columns()
+RETURNS trigger AS $$
+BEGIN
+  IF current_user <> 'service_role' AND COALESCE(current_setting('request.jwt.claim.role', true), '') <> 'service_role' THEN
+    IF NEW.role IS DISTINCT FROM OLD.role OR
+       NEW.is_restricted IS DISTINCT FROM OLD.is_restricted OR
+       NEW.is_unlimited IS DISTINCT FROM OLD.is_unlimited OR
+       NEW.custom_daily_video_limit IS DISTINCT FROM OLD.custom_daily_video_limit OR
+       NEW.custom_monthly_video_limit IS DISTINCT FROM OLD.custom_monthly_video_limit OR
+       NEW.custom_daily_image_limit IS DISTINCT FROM OLD.custom_daily_image_limit OR
+       NEW.custom_monthly_image_limit IS DISTINCT FROM OLD.custom_monthly_image_limit THEN
+      RAISE EXCEPTION 'Privilege escalation blocked: Cannot modify protected user profile attributes';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_protect_user_profiles ON public.user_profiles;
+CREATE TRIGGER trg_protect_user_profiles
+  BEFORE UPDATE ON public.user_profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION public.protect_user_profiles_columns();
+
+-- Generation Logs Policies: Restrict INSERT to service_role only
 DROP POLICY IF EXISTS "Users can read own generation logs" ON public.generation_logs;
 CREATE POLICY "Users can read own generation logs" ON public.generation_logs
     FOR SELECT TO authenticated USING (auth.uid() = user_id);
 
 DROP POLICY IF EXISTS "Allow inserts on generation logs" ON public.generation_logs;
-CREATE POLICY "Allow inserts on generation logs" ON public.generation_logs
-    FOR INSERT TO anon, authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role insert generation logs" ON public.generation_logs;
+CREATE POLICY "Service role insert generation logs" ON public.generation_logs
+    FOR INSERT TO service_role WITH CHECK (true);
+
+REVOKE INSERT ON public.generation_logs FROM anon, authenticated;
 
 -- System Settings Policies
 DROP POLICY IF EXISTS "Public can read system settings" ON public.system_settings;
 CREATE POLICY "Public can read system settings" ON public.system_settings
     FOR SELECT TO anon, authenticated USING (true);
+
+-- Protect Admin User Overview View from Anonymous / Regular Authenticated Access
+REVOKE ALL ON public.admin_user_overview FROM public, anon, authenticated;
+GRANT ALL ON public.admin_user_overview TO service_role;

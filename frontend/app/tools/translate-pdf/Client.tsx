@@ -258,26 +258,10 @@ export default function TranslatePdfClient() {
           console.warn("Server translation route failed, trying direct browser fallback...", apiErr);
         }
 
-        // Direct fallback if server route failed or returned incomplete
+        // Fallback: If translation returned incomplete, keep original
         if (translatedChunks.length < page.paragraphs.length) {
           for (let i = translatedChunks.length; i < page.paragraphs.length; i++) {
-            const para = page.paragraphs[i];
-            try {
-              const langpair = `${sourceLang === "auto" ? "autodetect" : sourceLang}|${targetLang}`;
-              const directRes = await fetch(
-                `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-                  para.slice(0, 450)
-                )}&langpair=${encodeURIComponent(langpair)}`
-              );
-              if (directRes.ok) {
-                const d = await directRes.json();
-                translatedChunks.push(d?.responseData?.translatedText || para);
-              } else {
-                translatedChunks.push(para);
-              }
-            } catch {
-              translatedChunks.push(para);
-            }
+            translatedChunks.push(page.paragraphs[i]);
           }
         }
 
@@ -308,6 +292,83 @@ export default function TranslatePdfClient() {
     });
   };
 
+  // Unicode & Script-Safe Paragraph Renderer (handles Arabic, Urdu, Hindi, CJK without WinAnsi crashes)
+  const renderTextPara = (
+    doc: jsPDF,
+    text: string,
+    isRtl: boolean,
+    contentWidthMm: number,
+    marginMm: number,
+    currentYMm: number,
+    pageHeightMm: number,
+    textColor: [number, number, number] = [30, 41, 59]
+  ): number => {
+    const hasNonLatin = /[^\u0000-\u024F]/.test(text);
+
+    if (hasNonLatin && typeof document !== "undefined") {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        const pxWidth = Math.round(contentWidthMm * 3.78);
+        canvas.width = pxWidth;
+        const fontSizePx = 14;
+        ctx.font = `${fontSizePx}px system-ui, -apple-system, sans-serif`;
+        ctx.direction = isRtl ? "rtl" : "ltr";
+        ctx.fillStyle = `rgb(${textColor[0]}, ${textColor[1]}, ${textColor[2]})`;
+
+        const words = text.split(" ");
+        const lines: string[] = [];
+        let cur = "";
+        for (const w of words) {
+          const testL = cur ? `${cur} ${w}` : w;
+          if (ctx.measureText(testL).width > pxWidth - 10 && cur) {
+            lines.push(cur);
+            cur = w;
+          } else {
+            cur = testL;
+          }
+        }
+        if (cur) lines.push(cur);
+
+        const lineH = fontSizePx * 1.5;
+        canvas.height = Math.max(28, lines.length * lineH + 10);
+        ctx.font = `${fontSizePx}px system-ui, -apple-system, sans-serif`;
+        ctx.direction = isRtl ? "rtl" : "ltr";
+        ctx.fillStyle = `rgb(${textColor[0]}, ${textColor[1]}, ${textColor[2]})`;
+        ctx.textBaseline = "top";
+
+        lines.forEach((l, i) => {
+          const x = isRtl ? pxWidth - 5 : 5;
+          ctx.fillText(l, x, 5 + i * lineH);
+        });
+
+        const imgH_mm = canvas.height / 3.78;
+        if (currentYMm + imgH_mm > pageHeightMm - marginMm) {
+          doc.addPage();
+          currentYMm = 25;
+        }
+
+        const dataUrl = canvas.toDataURL("image/png");
+        doc.addImage(dataUrl, "PNG", marginMm, currentYMm, contentWidthMm, imgH_mm);
+        return currentYMm + imgH_mm + 4;
+      }
+    }
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+    const lines = doc.splitTextToSize(text, contentWidthMm);
+    const blockHeight = lines.length * 6;
+
+    if (currentYMm + blockHeight > pageHeightMm - marginMm) {
+      doc.addPage();
+      currentYMm = 25;
+    }
+
+    doc.text(lines, marginMm, currentYMm);
+    return currentYMm + blockHeight + 6;
+  };
+
   // Export 1: Generate Clean Translated PDF
   const handleDownloadTranslatedPdf = () => {
     if (pages.length === 0) return;
@@ -320,6 +381,7 @@ export default function TranslatePdfClient() {
 
     const targetLangName =
       SUPPORTED_LANGUAGES.find((l) => l.code === targetLang)?.name || targetLang;
+    const isRtl = ["ar", "ur", "he", "fa"].includes(targetLang);
     const pageWidth = 210;
     const pageHeight = 297;
     const margin = 20;
@@ -343,7 +405,7 @@ export default function TranslatePdfClient() {
       doc.setFontSize(10);
       doc.setTextColor(100, 116, 139);
       doc.text(
-        `Translated Document (${targetLangName}) • Page ${page.pageNum}`,
+        `Translated Document (${targetLangName}) - Page ${page.pageNum}`,
         margin,
         15
       );
@@ -354,21 +416,7 @@ export default function TranslatePdfClient() {
 
       paragraphsToPrint.forEach((para) => {
         if (!para.trim()) return;
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.setTextColor(30, 41, 59);
-
-        const lines = doc.splitTextToSize(para, contentWidth);
-        const blockHeight = lines.length * 6;
-
-        if (currentY + blockHeight > pageHeight - margin) {
-          doc.addPage();
-          currentY = 25;
-        }
-
-        doc.text(lines, margin, currentY);
-        currentY += blockHeight + 6;
+        currentY = renderTextPara(doc, para, isRtl, contentWidth, margin, currentY, pageHeight, [30, 41, 59]);
       });
 
       // Footer
@@ -397,6 +445,7 @@ export default function TranslatePdfClient() {
 
     const targetLangName =
       SUPPORTED_LANGUAGES.find((l) => l.code === targetLang)?.name || targetLang;
+    const isRtl = ["ar", "ur", "he", "fa"].includes(targetLang);
     const pageWidth = 210;
     const pageHeight = 297;
     const margin = 20;
@@ -413,7 +462,7 @@ export default function TranslatePdfClient() {
       doc.setFontSize(10);
       doc.setTextColor(100, 116, 139);
       doc.text(
-        `Bilingual Document (Original & ${targetLangName}) — Page ${page.pageNum}`,
+        `Bilingual Document (Original & ${targetLangName}) - Page ${page.pageNum}`,
         margin,
         15
       );
@@ -427,28 +476,22 @@ export default function TranslatePdfClient() {
 
         // Original paragraph
         doc.setFont("helvetica", "italic");
-        doc.setFontSize(10);
+        doc.setFontSize(9.5);
         doc.setTextColor(100, 116, 139);
         const origLines = doc.splitTextToSize(`[Original] ${orig}`, contentWidth);
-        const origHeight = origLines.length * 5;
+        const origHeight = origLines.length * 4.8;
 
-        // Translated paragraph
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10.5);
-        doc.setTextColor(15, 23, 42);
-        const transLines = doc.splitTextToSize(`[${targetLangName}] ${trans}`, contentWidth);
-        const transHeight = transLines.length * 5.5;
-
-        if (currentY + origHeight + transHeight + 8 > pageHeight - margin) {
+        if (currentY + origHeight + 10 > pageHeight - margin) {
           doc.addPage();
           currentY = 25;
         }
 
         doc.text(origLines, margin, currentY);
-        currentY += origHeight + 3;
+        currentY += origHeight + 2;
 
-        doc.text(transLines, margin, currentY);
-        currentY += transHeight + 8;
+        // Translated paragraph with Unicode & RTL safety
+        currentY = renderTextPara(doc, `[${targetLangName}] ${trans}`, isRtl, contentWidth, margin, currentY, pageHeight, [15, 23, 42]);
+        currentY += 4;
       });
 
       // Footer
@@ -506,33 +549,33 @@ export default function TranslatePdfClient() {
   const activePageObj = pages[currentPageView - 1];
 
   return (
-    <div className="w-full bg-[#080b0f] text-slate-100 py-8 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="w-full text-slate-900 dark:text-white flex flex-col justify-between selection:bg-blue-500/20 selection:text-blue-500 dark:selection:text-blue-400 py-8 px-4 sm:px-6">
+      <div className="max-w-6xl mx-auto space-y-8 w-full">
         {/* Tool Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold tracking-wide">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-semibold tracking-wide">
             <Languages className="w-4 h-4" />
             <span>AI Multi-Language Document Translation</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
             Translate PDF Documents Online Free
           </h1>
-          <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
             Translate PDF files into 18+ international languages. Maintain formatting, view synchronized side-by-side comparisons, and download translated or bilingual PDFs.
           </p>
         </div>
 
         {/* Error Notification */}
         {errorMsg && (
-          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0 text-rose-400 mt-0.5" />
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-sm flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-500 mt-0.5" />
             <div className="flex-1">
               <p className="font-semibold">Translation Notice</p>
-              <p className="text-xs text-rose-200/90 mt-0.5 leading-relaxed">{errorMsg}</p>
+              <p className="text-xs text-rose-700 dark:text-rose-200/90 mt-0.5 leading-relaxed">{errorMsg}</p>
             </div>
             <button
               onClick={() => setErrorMsg(null)}
-              className="text-xs text-rose-400 hover:text-white underline cursor-pointer"
+              className="text-xs text-rose-500 hover:underline cursor-pointer"
             >
               Dismiss
             </button>
@@ -543,27 +586,27 @@ export default function TranslatePdfClient() {
         {!file ? (
           <div
             {...getRootProps()}
-            className={`border-2 border-dashed rounded-3xl p-10 sm:p-14 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center ${
+            className={`border-2 border-dashed rounded-3xl p-10 sm:p-14 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center shadow-sm ${
               isDragActive
                 ? "border-blue-500 bg-blue-500/10 scale-[1.01]"
-                : "border-slate-800 hover:border-blue-500/50 bg-slate-900/40 hover:bg-slate-900/70"
+                : "border-slate-300 dark:border-white/[0.1] hover:border-blue-500 dark:hover:border-blue-500 bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-white/[0.02]"
             }`}
           >
             <input {...getInputProps()} />
-            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4 shadow-lg shadow-blue-500/10">
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4 shadow-lg shadow-blue-500/10">
               <Languages className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-1">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
               Choose or Drop PDF Document to Translate
             </h3>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-md mb-5 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-5 leading-relaxed">
               Upload any PDF report, contract, research paper, or manual to translate into Spanish, French, German, Japanese, and more.
             </p>
             <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-md">
               <FileText className="w-4 h-4" />
               <span>Select PDF File</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-4">
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-4">
               Private client extraction • Preserves document page structure
             </p>
           </div>
@@ -571,17 +614,17 @@ export default function TranslatePdfClient() {
           /* Active Translation Workbench */
           <div className="space-y-6">
             {/* Top Document Summary & Controls */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{file.name}</p>
-                  <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{file.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
                     <span>{formatBytes(file.size)}</span>
                     <span>•</span>
-                    <span className="text-blue-400 font-medium">{pageCount} Pages</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-medium">{pageCount} Pages</span>
                     <span>•</span>
                     <span>~{totalWords.toLocaleString()} Words</span>
                   </p>
@@ -591,12 +634,12 @@ export default function TranslatePdfClient() {
               {/* Language Selection Toolbar */}
               <div className="flex flex-wrap items-center gap-2.5">
                 {/* Source Lang */}
-                <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs">
-                  <span className="text-slate-400 text-[11px]">From:</span>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs">
+                  <span className="text-slate-500 dark:text-slate-400 text-[11px]">From:</span>
                   <select
                     value={sourceLang}
                     onChange={(e) => setSourceLang(e.target.value)}
-                    className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
+                    className="bg-transparent text-slate-900 dark:text-white font-medium focus:outline-none cursor-pointer"
                   >
                     <option value="auto">Auto Detect</option>
                     {SUPPORTED_LANGUAGES.map((lang) => (
@@ -612,18 +655,18 @@ export default function TranslatePdfClient() {
                   onClick={swapLanguages}
                   disabled={sourceLang === "auto"}
                   title="Swap languages"
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 transition cursor-pointer disabled:cursor-not-allowed"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-30 text-slate-700 dark:text-slate-300 transition cursor-pointer disabled:cursor-not-allowed"
                 >
                   <ArrowLeftRight className="w-3.5 h-3.5" />
                 </button>
 
                 {/* Target Lang */}
-                <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs">
-                  <span className="text-slate-400 text-[11px]">To:</span>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs">
+                  <span className="text-slate-500 dark:text-slate-400 text-[11px]">To:</span>
                   <select
                     value={targetLang}
                     onChange={(e) => setTargetLang(e.target.value)}
-                    className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
+                    className="bg-transparent text-slate-900 dark:text-white font-medium focus:outline-none cursor-pointer"
                   >
                     {SUPPORTED_LANGUAGES.map((lang) => (
                       <option key={lang.code} value={lang.code}>
@@ -636,7 +679,7 @@ export default function TranslatePdfClient() {
                 {/* Reset button */}
                 <button
                   onClick={resetAll}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-rose-500 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Clear</span>
@@ -645,13 +688,13 @@ export default function TranslatePdfClient() {
             </div>
 
             {/* Translation Settings & Trigger Panel */}
-            <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-4">
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 text-xs">
-                  <span className="text-slate-400 font-semibold uppercase tracking-wider">
+                  <span className="text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
                     Scope:
                   </span>
-                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-300">
                     <input
                       type="radio"
                       name="pageMode"
@@ -661,7 +704,7 @@ export default function TranslatePdfClient() {
                     />
                     <span>All Pages (1-{pageCount})</span>
                   </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-300">
                     <input
                       type="radio"
                       name="pageMode"
@@ -675,16 +718,16 @@ export default function TranslatePdfClient() {
 
                 {pageRangeMode === "custom" && (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-400">Pages:</span>
+                    <span className="text-slate-500 dark:text-slate-400">Pages:</span>
                     <input
                       type="number"
                       min={1}
                       max={pageCount}
                       value={startPage}
                       onChange={(e) => setStartPage(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-14 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-center text-white"
+                      className="w-14 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-center text-slate-900 dark:text-white"
                     />
-                    <span className="text-slate-500">to</span>
+                    <span className="text-slate-400 dark:text-slate-500">to</span>
                     <input
                       type="number"
                       min={1}
@@ -693,7 +736,7 @@ export default function TranslatePdfClient() {
                       onChange={(e) =>
                         setEndPage(Math.min(pageCount, parseInt(e.target.value) || 1))
                       }
-                      className="w-14 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-center text-white"
+                      className="w-14 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-center text-slate-900 dark:text-white"
                     />
                   </div>
                 )}
@@ -732,17 +775,17 @@ export default function TranslatePdfClient() {
 
             {/* Results Workbench (Tabs & Views) */}
             {pages.length > 0 && (
-              <div className="rounded-2xl bg-slate-900/50 border border-slate-800 overflow-hidden space-y-0">
+              <div className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm overflow-hidden space-y-0">
                 {/* View Mode Tabs & Page Navigator Header */}
-                <div className="p-4 bg-slate-900/80 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="p-4 bg-slate-50/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   {/* Tabs */}
                   <div className="flex items-center gap-2 text-xs">
                     <button
                       onClick={() => setActiveTab("dual")}
                       className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
                         activeTab === "dual"
-                          ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                          : "text-slate-400 hover:text-white"
+                          ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                          : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                       }`}
                     >
                       <BookOpen className="w-3.5 h-3.5" />
@@ -752,8 +795,8 @@ export default function TranslatePdfClient() {
                       onClick={() => setActiveTab("preview")}
                       className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
                         activeTab === "preview"
-                          ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                          : "text-slate-400 hover:text-white"
+                          ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                          : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                       }`}
                     >
                       <Eye className="w-3.5 h-3.5" />
@@ -763,8 +806,8 @@ export default function TranslatePdfClient() {
                       onClick={() => setActiveTab("edit")}
                       className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer ${
                         activeTab === "edit"
-                          ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                          : "text-slate-400 hover:text-white"
+                          ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                          : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                       }`}
                     >
                       <Edit3 className="w-3.5 h-3.5" />
@@ -777,17 +820,17 @@ export default function TranslatePdfClient() {
                     <button
                       onClick={() => setCurrentPageView((p) => Math.max(1, p - 1))}
                       disabled={currentPageView <= 1}
-                      className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition cursor-pointer"
+                      className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-white transition cursor-pointer"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <span className="text-slate-300 font-medium">
+                    <span className="text-slate-600 dark:text-slate-300 font-medium">
                       Page {currentPageView} of {pageCount}
                     </span>
                     <button
                       onClick={() => setCurrentPageView((p) => Math.min(pageCount, p + 1))}
                       disabled={currentPageView >= pageCount}
-                      className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition cursor-pointer"
+                      className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-white transition cursor-pointer"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -801,8 +844,8 @@ export default function TranslatePdfClient() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Left: Original Text */}
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/[0.08]">
+                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                             <FileText className="w-3.5 h-3.5 text-slate-400" />
                             Original Text (Page {activePageObj.pageNum})
                           </span>
@@ -811,7 +854,7 @@ export default function TranslatePdfClient() {
                           {activePageObj.paragraphs.map((para, idx) => (
                             <p
                               key={idx}
-                              className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs sm:text-sm text-slate-300 leading-relaxed select-text"
+                              className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed select-text"
                             >
                               {para}
                             </p>
@@ -821,9 +864,9 @@ export default function TranslatePdfClient() {
 
                       {/* Right: Translated Text */}
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                          <span className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <Languages className="w-3.5 h-3.5 text-blue-400" />
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/[0.08]">
+                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Languages className="w-3.5 h-3.5 text-blue-500" />
                             Translated (
                             {SUPPORTED_LANGUAGES.find((l) => l.code === targetLang)?.name ||
                               targetLang}
@@ -835,13 +878,13 @@ export default function TranslatePdfClient() {
                             activePageObj.translatedParagraphs.map((para, idx) => (
                               <p
                                 key={idx}
-                                className="p-3 rounded-xl bg-blue-950/20 border border-blue-500/20 text-xs sm:text-sm text-slate-200 leading-relaxed select-text"
+                                className="p-3 rounded-xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-500/20 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed select-text"
                               >
                                 {para}
                               </p>
                             ))
                           ) : (
-                            <div className="p-8 text-center text-slate-500 text-xs rounded-xl bg-slate-950/40 border border-dashed border-slate-800">
+                            <div className="p-8 text-center text-slate-500 text-xs rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-dashed border-slate-300 dark:border-slate-800">
                               Click &quot;Translate PDF Document&quot; above to generate translation for this page.
                             </div>
                           )}
@@ -853,13 +896,13 @@ export default function TranslatePdfClient() {
                   {/* Tab 2: Full Translated Preview */}
                   {activeTab === "preview" && activePageObj && (
                     <div className="max-w-3xl mx-auto space-y-4">
-                      <div className="p-4 rounded-xl bg-slate-950 border border-slate-800">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
-                          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
+                          <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                             Page {activePageObj.pageNum} — Full Translated View
                           </h3>
                         </div>
-                        <div className="space-y-4 text-xs sm:text-sm text-slate-200 leading-relaxed select-text">
+                        <div className="space-y-4 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed select-text">
                           {(activePageObj.translatedParagraphs.length > 0
                             ? activePageObj.translatedParagraphs
                             : activePageObj.paragraphs
@@ -874,7 +917,7 @@ export default function TranslatePdfClient() {
                   {/* Tab 3: Editor */}
                   {activeTab === "edit" && activePageObj && (
                     <div className="space-y-4">
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Edit translated paragraphs inline before exporting to PDF:
                       </p>
                       <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
@@ -886,9 +929,9 @@ export default function TranslatePdfClient() {
                           return (
                             <div
                               key={idx}
-                              className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2"
+                              className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2"
                             >
-                              <p className="text-[11px] text-slate-400 italic">
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
                                 Original: {orig}
                               </p>
                               <textarea
@@ -901,7 +944,7 @@ export default function TranslatePdfClient() {
                                   )
                                 }
                                 rows={2}
-                                className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
                               />
                             </div>
                           );
@@ -912,7 +955,7 @@ export default function TranslatePdfClient() {
                 </div>
 
                 {/* Export & Actions Footer */}
-                <div className="p-4 sm:p-5 bg-slate-950 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2.5">
                     {/* Download Translated PDF */}
                     <button
@@ -926,21 +969,21 @@ export default function TranslatePdfClient() {
                     {/* Download Bilingual PDF */}
                     <button
                       onClick={handleDownloadBilingualPdf}
-                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 border border-slate-700 transition cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-2 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
                     >
-                      <BookOpen className="w-3.5 h-3.5 text-blue-400" />
+                      <BookOpen className="w-3.5 h-3.5 text-blue-500" />
                       <span>Download Bilingual PDF</span>
                     </button>
 
                     {/* Copy Text */}
                     <button
                       onClick={handleCopyTranslatedText}
-                      className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                      className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
                     >
                       {copied ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400">Copied!</span>
+                          <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
                         </>
                       ) : (
                         <>
@@ -953,7 +996,7 @@ export default function TranslatePdfClient() {
                     {/* Download TXT */}
                     <button
                       onClick={handleDownloadTxt}
-                      className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                      className="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
                     >
                       <span>.TXT</span>
                     </button>
@@ -961,7 +1004,7 @@ export default function TranslatePdfClient() {
 
                   <button
                     onClick={resetAll}
-                    className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition cursor-pointer"
+                    className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center gap-1.5 transition cursor-pointer"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Translate another PDF</span>

@@ -18,6 +18,7 @@ import {
   Layers,
   ZoomIn,
   ZoomOut,
+  Download,
 } from "lucide-react";
 import * as pdfjsLib from "pdfjs-dist";
 
@@ -50,13 +51,28 @@ export default function PDFToBookClient() {
   const [zoom, setZoom] = useState<number>(1);
 
   const bookContainerRef = useRef<HTMLDivElement>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
+        audioCtxRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
 
   // Play realistic paper swish sound using Web Audio API
   const playPageTurnSound = () => {
     if (!soundEnabled || typeof window === "undefined") return;
     try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const bufferSize = audioCtx.sampleRate * 0.12;
+      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const audioCtx = audioCtxRef.current;
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+      const bufferSize = Math.floor(audioCtx.sampleRate * 0.12);
       const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
       const data = buffer.getChannelData(0);
 
@@ -339,6 +355,24 @@ export default function PDFToBookClient() {
                   {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
 
+                {file && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = URL.createObjectURL(file);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = file.name;
+                      a.click();
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    }}
+                    className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition"
+                    title="Download Original PDF"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={resetAll}
@@ -462,10 +496,12 @@ export default function PDFToBookClient() {
                 {/* Animated 3D Flip Leaf */}
                 {isFlipping && (
                   <div
-                    className={`absolute inset-y-2 z-40 w-1/2 bg-white/95 rounded-lg shadow-2xl pointer-events-none transition-transform duration-300 ${
-                      flipDirection === "next"
-                        ? "right-2 origin-left transform -rotate-y-90 opacity-80"
-                        : "left-2 origin-right transform rotate-y-90 opacity-80"
+                    style={{
+                      transform: flipDirection === "next" ? "perspective(1000px) rotateY(-90deg)" : "perspective(1000px) rotateY(90deg)",
+                      transformOrigin: flipDirection === "next" ? "left center" : "right center",
+                    }}
+                    className={`absolute inset-y-2 z-40 w-1/2 bg-white/95 rounded-lg shadow-2xl pointer-events-none transition-transform duration-300 opacity-80 ${
+                      flipDirection === "next" ? "right-2" : "left-2"
                     }`}
                   />
                 )}

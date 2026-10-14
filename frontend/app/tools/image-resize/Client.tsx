@@ -252,7 +252,8 @@ export default function ImageResizeClient() {
 
   const getDownloadFilename = () => {
     if (!file) return "Botock-Resized-Image.png";
-    const baseName = file.name.substring(0, file.name.lastIndexOf(".")) || "image";
+    const lastDot = file.name.lastIndexOf(".");
+    const baseName = lastDot > 0 ? file.name.substring(0, lastDot) : file.name || "image";
     const ext = outputFormat === "jpeg" ? "jpg" : outputFormat;
     return `Botock-Resized-${baseName}.${ext}`;
   };

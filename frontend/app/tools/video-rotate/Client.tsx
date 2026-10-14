@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { getBackendUrl } from "../../../utils/runtime-urls";
 
+type RotationAngle = 0 | 90 | 180 | 270 | number;
+
 export default function VideoRotateClient() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
@@ -82,17 +84,22 @@ export default function VideoRotateClient() {
     }
   };
 
-  const startProcessing = async () => {
+  const startProcessing = async (overrideAngle?: RotationAngle) => {
     if (!selectedFile) return;
     setStatus("processing");
     setErrorMessage("");
-    setExportedUrl(null);
+    if (exportedUrl) {
+      URL.revokeObjectURL(exportedUrl);
+      setExportedUrl(null);
+    }
+
+    const targetAngle = overrideAngle !== undefined ? overrideAngle : rotation;
 
     try {
       const backendUrl = await getBackendUrl();
       const formData = new FormData();
       formData.append("file", selectedFile);
-      formData.append("angle", rotation.toString());
+      formData.append("angle", targetAngle.toString());
       formData.append("flip_h", flipH ? "true" : "false");
 
       try {
@@ -113,7 +120,7 @@ export default function VideoRotateClient() {
       }
 
       // In-browser fallback rotation
-      const clientBlob = await rotateVideoInBrowser(selectedFile, rotation, flipH);
+      const clientBlob = await rotateVideoInBrowser(selectedFile, targetAngle, flipH);
       const url = URL.createObjectURL(clientBlob);
       setExportedUrl(url);
       setStatus("completed");
@@ -129,7 +136,6 @@ export default function VideoRotateClient() {
       const video = document.createElement("video");
       const srcUrl = URL.createObjectURL(file);
       video.src = srcUrl;
-      video.muted = true;
       video.playsInline = true;
 
       video.onloadedmetadata = () => {
@@ -150,8 +156,34 @@ export default function VideoRotateClient() {
         }
 
         const stream = canvas.captureStream(30);
+
+        // Preserve audio from video element if present
+        let audioCtx: AudioContext | null = null;
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+            const source = audioCtx.createMediaElementSource(video);
+            const dest = audioCtx.createMediaStreamDestination();
+            source.connect(dest);
+            source.connect(audioCtx.destination);
+            dest.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+          }
+        } catch (audioErr) {
+          try {
+            const vStream = (video as any).captureStream ? (video as any).captureStream() : (video as any).mozCaptureStream ? (video as any).mozCaptureStream() : null;
+            if (vStream) {
+              vStream.getAudioTracks().forEach((track: MediaStreamTrack) => stream.addTrack(track));
+            }
+          } catch {
+            console.warn("Could not attach audio track:", audioErr);
+          }
+        }
+
         let mimeType = "video/webm";
-        if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
+        if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")) {
+          mimeType = "video/mp4;codecs=avc1";
+        } else if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
           mimeType = "video/webm;codecs=vp9";
         }
 
@@ -164,6 +196,9 @@ export default function VideoRotateClient() {
 
         mediaRecorder.onstop = () => {
           URL.revokeObjectURL(srcUrl);
+          if (audioCtx && audioCtx.state !== "closed") {
+            audioCtx.close().catch(() => {});
+          }
           resolve(new Blob(chunks, { type: mimeType }));
         };
 
@@ -386,7 +421,7 @@ export default function VideoRotateClient() {
               {status !== "completed" && (
                 <button
                   type="button"
-                  onClick={startProcessing}
+                  onClick={() => startProcessing()}
                   disabled={status === "processing"}
                   className="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold text-base shadow-xl shadow-rose-600/25 transition flex items-center justify-center gap-2"
                 >

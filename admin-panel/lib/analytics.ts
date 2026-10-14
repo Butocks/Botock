@@ -16,13 +16,17 @@ export async function logToolUsage(
 ): Promise<void> {
   try {
     const supabase = createClient();
-    await supabase.from("tool_usage").insert({
+    const payload = {
       tool_id: toolId,
       tool_name: toolName,
       status,
       error_message: errorMessage ?? null,
       used_at: new Date().toISOString(),
-    });
+    };
+    const { error } = await supabase.from("tool_usage_log").insert(payload);
+    if (error) {
+      await supabase.from("tool_usage").insert(payload);
+    }
   } catch {
     // Silently swallow — analytics must never block UX
   }

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from typing import Optional
 from pydantic import BaseModel
 from app.config import settings
-from app.middleware.auth import get_current_user, _rpc
+from app.middleware.auth import get_optional_user, _rpc
 
 # ────────────────────────────────────────────────────────────
 # Two routers:
@@ -15,16 +15,31 @@ pub_router = APIRouter(prefix="/api/public", tags=["PublicBlog"])
 # ── backwards-compat alias so main.py can still `from app.routers import blog_cms; app.include_router(blog_cms.router)`
 # We'll expose a merged `router` below.
 
-def require_owner(user: dict = Depends(get_current_user)):
-    """Verifies that the user is the owner/super-admin."""
-    email = user.get("email", "").strip().lower()
-    allowed_admins = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
-    app_meta = user.get("payload", {}).get("app_metadata", {})
-    role = app_meta.get("role", "")
-    is_owner = role in ["owner", "super_admin"] or (email in allowed_admins)
-    if not is_owner:
-        raise HTTPException(status_code=403, detail="Forbidden. Owner or super-admin access required.")
-    return user
+def require_owner(
+    user: Optional[dict] = Depends(get_optional_user),
+    x_admin_token: Optional[str] = Header(None, alias="x-admin-token"),
+):
+    """Verifies that the user is the owner/super-admin via Supabase token OR valid admin token."""
+    if x_admin_token:
+        try:
+            from app.routers.auth_otp import verify_admin_token
+            verify_admin_token(x_admin_token)
+            return {"user_id": "admin", "email": "admin", "role": "owner"}
+        except HTTPException:
+            pass
+        if settings.ADMIN_API_KEY and x_admin_token == settings.ADMIN_API_KEY:
+            return {"user_id": "admin", "email": "admin", "role": "owner"}
+
+    if user:
+        email = user.get("email", "").strip().lower()
+        allowed_admins = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
+        app_meta = user.get("payload", {}).get("app_metadata", {})
+        role = app_meta.get("role", "")
+        is_owner = role in ["owner", "super_admin"] or (email in allowed_admins)
+        if is_owner:
+            return user
+
+    raise HTTPException(status_code=403, detail="Forbidden. Owner or super-admin access required.")
 
 
 # ── Pydantic models ─────────────────────────────────────────

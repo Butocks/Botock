@@ -71,7 +71,7 @@ export default function PDFPageDeleteClient() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const srcDoc = await PDFDocument.load(buffer);
+      const srcDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
       const newDoc = await PDFDocument.create();
 
       const keepIndices: number[] = [];
@@ -86,6 +86,15 @@ export default function PDFPageDeleteClient() {
 
       const pdfBytes = await newDoc.save();
       setBlob(pdfBytes);
+
+      // Refresh thumbnail proxy and document state with pruned PDF
+      const newFile = new File([pdfBytes as unknown as BlobPart], file.name, { type: "application/pdf" });
+      await loadFile(newFile);
+      setPagesToDelete([]);
+      try {
+        const doc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+        setPdfProxy(doc);
+      } catch (e) {}
     } catch (err: any) {
       console.error("Deletion failed:", err);
       setActionError(err.message || "Failed to remove selected pages from PDF.");

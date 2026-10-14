@@ -159,7 +159,7 @@ export default function ImageConvertClient() {
     a.href = url;
     a.download = `botock-converted-${targetFormat}.zip`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   };
 
   return (
@@ -211,8 +211,14 @@ export default function ImageConvertClient() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* File List & Converted Outputs */}
             <div className="lg:col-span-2 space-y-4">
+              {files.some((f) => f.type === "image/gif" || f.name.toLowerCase().endsWith(".gif")) && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Note: Animated GIF images will be converted using their primary frame into high-res static images.</span>
+                </div>
+              )}
+
               {convertedItems.length === 0 ? (
                 <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
                   {files.map((file, idx) => (

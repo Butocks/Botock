@@ -68,6 +68,21 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION clear_login_attempts(p_email VARCHAR)
 RETURNS VOID AS $$
 BEGIN
-    DELETE FROM login_attempts WHERE email = p_email;
+    DELETE FROM login_attempts WHERE LOWER(email) = LOWER(TRIM(p_email));
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Security hardening: Enable RLS and restrict access to service_role
+ALTER TABLE login_attempts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE login_attempts FROM public, anon, authenticated;
+GRANT ALL ON TABLE login_attempts TO service_role;
+
+REVOKE ALL ON FUNCTION record_failed_login(VARCHAR) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION record_failed_login(VARCHAR) TO service_role;
+
+REVOKE ALL ON FUNCTION clear_login_attempts(VARCHAR) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION clear_login_attempts(VARCHAR) TO service_role;
+
+REVOKE ALL ON FUNCTION check_login_status(VARCHAR) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION check_login_status(VARCHAR) TO service_role;
+

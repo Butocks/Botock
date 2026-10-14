@@ -89,6 +89,19 @@ export default function ImageGeneratorClient() {
         localStorage.setItem("botock_guest_id", gid);
       }
       setGuestId(gid);
+
+      const editRef = sessionStorage.getItem("botock_edit_image_ref");
+      if (editRef) {
+        sessionStorage.removeItem("botock_edit_image_ref");
+        setReferencePreview(editRef);
+        fetch(editRef)
+          .then((res) => res.blob())
+          .then((blob) => {
+            const file = new File([blob], "upscale_ref.png", { type: blob.type || "image/png" });
+            setReferenceImage(file);
+          })
+          .catch(() => {});
+      }
     }
   }, []);
 
@@ -326,6 +339,46 @@ export default function ImageGeneratorClient() {
     };
   }, [status, generationId, prompt]);
 
+  const handleDownload2K = async () => {
+    const targetUrl = imageBlobUrl || imageUrl;
+    if (!targetUrl) return;
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = targetUrl;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      const canvas = document.createElement("canvas");
+      const scale = Math.max(2048 / Math.max(img.width || 1024, img.height || 1024), 1.5);
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `botock-image-2k-${generationId || "art"}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+    } catch (e) {
+      // Fallback to direct download
+    }
+    const a = document.createElement("a");
+    a.href = targetUrl;
+    a.download = `botock-image-2k-${generationId || "art"}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const handleNotifyWaitlist = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subEmail) return;
@@ -434,14 +487,14 @@ export default function ImageGeneratorClient() {
                 <span>Download PNG</span>
               </a>
 
-              <a
-                href={imageUrl}
-                download={`botock-image-2k-${generationId || "art"}.png`}
+              <button
+                type="button"
+                onClick={handleDownload2K}
                 className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Download 2K</span>
-              </a>
+              </button>
 
               <Link
                 href="/tools?cat=image"

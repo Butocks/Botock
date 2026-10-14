@@ -115,6 +115,14 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
     href: "/tools/video-editor",
     icon: Scissors,
   },
+  {
+    id: "live-data-extractor",
+    name: "Live Search & Data Launcher",
+    desc: "Precision real-time query launcher and search intelligence filter for YouTube, Google, and social platforms.",
+    category: "ai",
+    href: "/tools/live-data-extractor",
+    icon: Search,
+  },
 
   // 2. PDF Suite
   {

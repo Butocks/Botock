@@ -85,7 +85,7 @@ export default function VideoGeneratorPage() {
             name: "Is Botock's AI Video Generator free?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "Yes, every user receives unlimited free video clips daily, with absolutely no charges.",
+              text: "Yes, every user receives free daily video generations with no credit card required. Pro members receive enhanced quotas and 720p HD generation.",
             },
           },
         ],
@@ -113,7 +113,7 @@ export default function VideoGeneratorPage() {
           <div className="flex items-center gap-4 text-muted-foreground">
             <span className="flex items-center gap-1.5 text-emerald-400">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Unlimited Free Video Generation</span>
+              <span>Free Daily Video Generations</span>
             </span>
             <Link
               href="/blog/guide-to-ai-video-generation"
@@ -203,7 +203,7 @@ export default function VideoGeneratorPage() {
                     Is Botock's AI Video Generator free?
                   </summary>
                   <p className="px-4 pb-4 text-sm text-muted-foreground leading-relaxed">
-                    Yes, every user receives unlimited free video clips daily, with absolutely no charges. No hidden fees or forced subscriptions to try our flagship cinematic engine.
+                    Yes! Every visitor and free user receives daily complimentary video generation credits. Pro members unlock expanded quotas, longer durations, and 720p HD rendering.
                   </p>
                 </details>
                 <details className="group border border-border/40 rounded-xl bg-card/50 [&_summary::-webkit-details-marker]:hidden">

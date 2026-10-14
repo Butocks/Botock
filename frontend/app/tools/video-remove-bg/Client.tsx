@@ -99,6 +99,30 @@ export default function VideoRemoveBgClient() {
         }
 
         const stream = canvas.captureStream(30);
+
+        // Preserve audio from video element if present
+        let audioCtx: AudioContext | null = null;
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+            const source = audioCtx.createMediaElementSource(video);
+            const dest = audioCtx.createMediaStreamDestination();
+            source.connect(dest);
+            source.connect(audioCtx.destination);
+            dest.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+          }
+        } catch (audioErr) {
+          try {
+            const vStream = (video as any).captureStream ? (video as any).captureStream() : (video as any).mozCaptureStream ? (video as any).mozCaptureStream() : null;
+            if (vStream) {
+              vStream.getAudioTracks().forEach((track: MediaStreamTrack) => stream.addTrack(track));
+            }
+          } catch {
+            console.warn("Could not attach audio track:", audioErr);
+          }
+        }
+
         let mimeType = "video/webm";
         if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
           mimeType = "video/webm;codecs=vp9";
@@ -113,6 +137,9 @@ export default function VideoRemoveBgClient() {
 
         mediaRecorder.onstop = () => {
           URL.revokeObjectURL(videoSrc);
+          if (audioCtx && audioCtx.state !== "closed") {
+            audioCtx.close().catch(() => {});
+          }
           resolve(new Blob(chunks, { type: mimeType }));
         };
 

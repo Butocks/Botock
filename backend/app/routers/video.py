@@ -12,9 +12,11 @@ from fastapi.responses import FileResponse, Response
 from app.models.schemas import VideoGenerateRequest, VideoGenerateResponse, VideoStatusResponse, VideoListResponse
 from app.services.flow_service import FlowVideoService
 from app.middleware.auth import get_current_user, get_optional_user, get_current_user_or_guest
+from app.middleware.anti_bot import get_safe_client_ip
 from app.config import settings
 from app.services.distributed_queue import QueueFullError, queue
 from app.services.blob_storage import download_video as download_blob_video
+
 
 router = APIRouter(prefix="/api/video", tags=["Video"])
 
@@ -93,19 +95,7 @@ async def safe_generate_task(
                 motion_hint=motion_hint,
                 image_base64=image_base64,
             )
-            if video_statuses.get(generation_id, {}).get("status") == "completed":
-                try:
-                    from app.services.gdrive_service import library_service
-                    video_path = os.path.join(settings.VIDEOS_DIR, f"{generation_id}.mp4")
-                    await library_service.register_item(
-                        generation_id=generation_id,
-                        media_type="video",
-                        file_path=video_path,
-                        prompt=prompt,
-                        aspect_ratio=aspect_ratio,
-                    )
-                except Exception as lib_err:
-                    logger.warning(f"Failed to register video in library: {lib_err}")
+            # Note: User generations remain strictly private to the user; do not auto-publish to public library.
             if not is_pro and user_id and video_statuses.get(generation_id, {}).get("status") == "failed":
                 from app.middleware.auth import refund_video_credit
                 await refund_video_credit(user_id, generation_id)
@@ -131,20 +121,20 @@ async def generate_video(
     user: dict = Depends(get_current_user_or_guest),
 ):
     global current_queued_jobs
-    client_ip = req.client.host if req.client else "unknown"
+    client_ip = get_safe_client_ip(req)
     check_rate_limit(client_ip)
 
     # Sanitize prompt (strip extra whitespace, length checked by Pydantic)
     clean_prompt = request.prompt.strip()
     is_pro = user.get("is_pro", False) if user else False
-    is_guest = user is None
+    is_guest = user.get("is_guest", False) if user else True
     
     from app.routers.auth_otp import get_platform_settings
     settings_data = get_platform_settings()
     guest_limits = settings_data.get("quotas", {}).get("guest_limits", {})
     
     if is_guest:
-        if not guest_limits.get("enabled", False):
+        if not guest_limits.get("enabled", True):
             raise HTTPException(status_code=401, detail="Guest generation is currently disabled. Please log in.")
         
         # Check daily guest limit
@@ -159,7 +149,6 @@ async def generate_video(
         # Override requested model and duration with admin settings
         request.model = guest_limits.get("video_model", "omni-1.1-flash-360p")
         request.duration_seconds = guest_limits.get("video_duration", 4)
-    is_guest = user.get("is_guest", False)
 
     # Queue limit: 1 user generating at a time, max 2 in queue, priority to subscribers
     if not is_pro and current_queued_jobs >= MAX_QUEUE_LIMIT:
@@ -167,12 +156,10 @@ async def generate_video(
             status_code=429,
             detail=f"Video generation queue is currently at capacity (maximum {MAX_QUEUE_LIMIT} queued). Pro subscribers receive instant priority. Please try again in 1-2 minutes."
         )
-    
-    if "baby songs" in clean_prompt.lower():
-        logger.info(f"TESTING/TRAINING LOG: Baby songs prompt detected by user {user['user_id']}")
 
     # Enforce Botock Engine Flash rules
     selected_model = request.model or "omni-1.1-flash-360p"
+
     if selected_model not in ["omni-1.1-flash-360p", "omni-1.1-flash-720p"]:
         selected_model = "omni-1.1-flash-360p"
 
@@ -337,6 +324,18 @@ async def get_credits(user: dict = Depends(get_optional_user)):
         "omni-1.1-flash-720p": 30
     })
 
+    if not user:
+
+        guest_limits = quotas.get("guest_limits", {})
+        guest_limit = guest_limits.get("max_videos_per_day", 1)
+        return {
+            "credits_remaining": guest_limit,
+            "daily_quota": guest_limit,
+            "video_model_costs": model_costs,
+            "is_pro": False,
+            "is_guest": True,
+        }
+
     if user.get("is_pro"):
         return {
             "credits_remaining": 999999,
@@ -351,6 +350,7 @@ async def get_credits(user: dict = Depends(get_optional_user)):
         "video_model_costs": model_costs,
         "is_pro": False
     }
+
 
 
 @router.get("/status/{generation_id}", response_model=VideoStatusResponse)
@@ -421,7 +421,10 @@ async def download_video(generation_id: str, user: dict = Depends(get_current_us
     validate_uuid(generation_id)
 
     if settings.DISTRIBUTED_QUEUE_ENABLED:
-        job = await queue.get_for_user(generation_id, user["user_id"])
+        try:
+            job = await queue.get_for_user(generation_id, user["user_id"])
+        except RuntimeError:
+            job = None
         if not job:
             raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
         if job["status"] != "completed" or not job["output_object_key"]:
@@ -457,8 +460,11 @@ async def download_video(generation_id: str, user: dict = Depends(get_current_us
 
 @router.get("/list", response_model=VideoListResponse)
 async def list_videos(user: dict = Depends(get_optional_user)):
+    if not user:
+        return VideoListResponse(videos=[])
     videos = []
     user_id = user["user_id"]
+
     for gen_id, data in video_statuses.items():
         if data.get("user_id") == user_id:
             videos.append(VideoStatusResponse(
@@ -540,6 +546,19 @@ async def video_remove_bg(
         if os.path.exists(out_path): os.remove(out_path)
         raise HTTPException(status_code=500, detail="Video AI processing failed.")
 
+async def read_bounded_video(file: UploadFile, max_size: int = 100 * 1024 * 1024) -> bytes:
+    chunks = []
+    total = 0
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_size:
+            raise HTTPException(status_code=413, detail=f"File exceeds maximum upload limit of {max_size // (1024 * 1024)}MB.")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
 @router.post("/auto-reframe")
 async def video_auto_reframe(file: UploadFile = File(...)):
     """
@@ -552,7 +571,7 @@ async def video_auto_reframe(file: UploadFile = File(...)):
     from fastapi.responses import FileResponse
     from starlette.background import BackgroundTask
     
-    file_bytes = await file.read()
+    file_bytes = await read_bounded_video(file, max_size=50 * 1024 * 1024)
     
     in_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
     in_f.write(file_bytes)
@@ -560,6 +579,7 @@ async def video_auto_reframe(file: UploadFile = File(...)):
     
     out_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
     out_f.close()
+
 
     # ffmpeg center crop for 9:16 aspect ratio with even dimensions for libx264
     filter_str = "crop=trunc(ih*9/16/2)*2:trunc(ih/2)*2"
@@ -631,12 +651,9 @@ async def reaction_combine(
         )
 
     # Size limit 100MB per file
-    MAX_SIZE = 100 * 1024 * 1024
-    bytes_top = await video_top.read()
-    bytes_bot = await video_bottom.read()
+    bytes_top = await read_bounded_video(video_top, max_size=100 * 1024 * 1024)
+    bytes_bot = await read_bounded_video(video_bottom, max_size=100 * 1024 * 1024)
 
-    if len(bytes_top) > MAX_SIZE or len(bytes_bot) > MAX_SIZE:
-        raise HTTPException(status_code=413, detail="Each video file must be under 100MB.")
 
     top_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
     top_f.write(bytes_top)

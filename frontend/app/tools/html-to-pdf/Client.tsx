@@ -16,6 +16,7 @@ import {
   Settings2,
 } from "lucide-react";
 import { jsPDF } from "jspdf";
+import DOMPurify from "dompurify";
 
 const DEFAULT_HTML = `<!DOCTYPE html>
 <html>
@@ -122,7 +123,10 @@ export default function HtmlToPdfClient() {
       container.style.left = "-9999px";
       container.style.width = orientation === "p" ? "794px" : "1123px"; // standard A4 pixel width at 96 DPI
       container.style.background = "#ffffff";
-      container.innerHTML = htmlCode;
+      const sanitized = typeof window !== "undefined" && DOMPurify.sanitize
+        ? DOMPurify.sanitize(htmlCode, { USE_PROFILES: { html: true } })
+        : htmlCode;
+      container.innerHTML = sanitized;
       document.body.appendChild(container);
 
       const doc = new jsPDF({
@@ -196,7 +200,7 @@ export default function HtmlToPdfClient() {
                 setHtmlCode(e.target.value);
                 setDownloadUrl(null);
               }}
-              className="w-full h-130 bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-xs font-mono text-sky-200 focus:outline-none focus:border-sky-500 resize-none leading-relaxed"
+              className="w-full h-[520px] bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-xs font-mono text-sky-200 focus:outline-none focus:border-sky-500 resize-none leading-relaxed"
             />
           </div>
 

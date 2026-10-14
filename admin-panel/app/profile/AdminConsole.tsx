@@ -325,10 +325,13 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
       }
 
       // 5. Analytics
-      
-      const resToolUsage = await fetch(`/api/analytics/tool-usage`);
-      if (resToolUsage.ok) {
-        setToolUsage(await resToolUsage.json());
+      try {
+        const resToolUsage = await fetch(`/api/analytics/tool-usage`);
+        if (resToolUsage.ok) {
+          setToolUsage(await resToolUsage.json());
+        }
+      } catch (e) {
+        console.warn("Failed to load tool usage analytics:", e);
       }
 
       const resAnalytics = await fetch(`${backendUrl}/api/admin/analytics`, {
@@ -365,6 +368,17 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
     } catch (err) {
       console.error("Error loading admin data:", err);
     }
+  };
+
+  const handleLockAndExit = () => {
+    try {
+      localStorage.removeItem("admin_token");
+      sessionStorage.removeItem("admin_token");
+      document.cookie = "admin_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    } catch {
+      // ignore
+    }
+    router.push("/login");
   };
 
   const handleToggleVip = async (userEmail: string) => {
@@ -854,6 +868,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             <div className="text-[10px] text-slate-500 font-mono">Master Administrator (.env)</div>
           </div>
           <button
+            onClick={handleLockAndExit}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-300 text-xs font-medium transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />

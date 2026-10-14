@@ -332,6 +332,7 @@ export default function ReactionVideoClient() {
                 { id: "60/40", label: "60/40 Top Focus" },
                 { id: "70/30", label: "70/30 Large Clip" },
                 { id: "40/60", label: "40/60 Cam Focus" },
+                { id: "30/70", label: "30/70 Bottom Focus" },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -348,6 +349,30 @@ export default function ReactionVideoClient() {
               ))}
             </div>
           )}
+
+          {/* Row 4: Duration Mode Selector */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none justify-start px-0.5 pt-0.5">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 min-w-[48px]">
+              Duration:
+            </span>
+            {[
+              { id: "shortest", label: "Shortest Video (Cut End)" },
+              { id: "longest", label: "Longest Video (Freeze End)" },
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setDurationMode(item.id as "shortest" | "longest")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                  durationMode === item.id
+                    ? "bg-pink-500/20 text-pink-600 dark:text-pink-400 border border-pink-500/40 font-bold"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-zinc-800/60 dark:hover:bg-zinc-700 dark:text-slate-400 border border-transparent"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* THE MAIN INTERACTIVE STAGE (Direct In-Canvas Uploaders) */}
@@ -376,6 +401,8 @@ export default function ReactionVideoClient() {
                         ? "70%"
                         : splitRatio === "40/60"
                         ? "40%"
+                        : splitRatio === "30/70"
+                        ? "30%"
                         : "50%",
                   }}
                   className="relative w-full overflow-hidden transition-all duration-200 border-b border-dashed border-zinc-700"
@@ -630,20 +657,44 @@ export default function ReactionVideoClient() {
                     <span className="text-[11px] text-zinc-400">Main Video</span>
                   </div>
                 ) : (
-                  <video
-                    ref={videoTopRef}
-                    src={urlTop}
-                    playsInline
-                    muted={isMuted || audioMode === "bottom_only" || audioMode === "mute"}
-                    onTimeUpdate={handleTimeUpdate}
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="relative w-full h-full">
+                    <video
+                      ref={videoTopRef}
+                      src={urlTop}
+                      playsInline
+                      muted={isMuted || audioMode === "bottom_only" || audioMode === "mute"}
+                      onTimeUpdate={handleTimeUpdate}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-2 right-2 flex items-center gap-1 z-20">
+                      <button
+                        type="button"
+                        onClick={() => inputTopRef.current?.click()}
+                        className="p-1 rounded-md bg-black/70 hover:bg-black text-white text-[10px] flex items-center gap-1 px-1.5 transition-colors cursor-pointer"
+                        title="Change Main Video"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFileTop(null);
+                          if (urlTop) URL.revokeObjectURL(urlTop);
+                          setUrlTop(null);
+                        }}
+                        className="p-1 rounded-md bg-red-600/80 hover:bg-red-600 text-white transition-colors cursor-pointer"
+                        title="Remove Main Video"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
                 )}
 
                 {/* Floating Corner Reaction Box */}
                 <div
                   onClick={() => !urlBottom && inputBottomRef.current?.click()}
-                  className="absolute bottom-3 right-3 w-1/3 aspect-video rounded-xl overflow-hidden border-2 border-pink-500 shadow-2xl bg-zinc-900 flex items-center justify-center cursor-pointer z-10"
+                  className="absolute bottom-3 right-3 w-1/3 aspect-video rounded-xl overflow-hidden border-2 border-pink-500 shadow-2xl bg-zinc-900 flex items-center justify-center cursor-pointer z-10 group"
                 >
                   {!urlBottom ? (
                     <div className="text-center p-1 text-white">
@@ -651,13 +702,41 @@ export default function ReactionVideoClient() {
                       <span className="text-[9px] font-bold block">Upload Cam</span>
                     </div>
                   ) : (
-                    <video
-                      ref={videoBottomRef}
-                      src={urlBottom}
-                      playsInline
-                      muted={isMuted || audioMode === "top_only" || audioMode === "mute"}
-                      className="w-full h-full object-cover"
-                    />
+                    <div className="relative w-full h-full">
+                      <video
+                        ref={videoBottomRef}
+                        src={urlBottom}
+                        playsInline
+                        muted={isMuted || audioMode === "top_only" || audioMode === "mute"}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-1 right-1 flex items-center gap-1 z-20">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            inputBottomRef.current?.click();
+                          }}
+                          className="p-0.5 rounded bg-black/70 hover:bg-black text-white cursor-pointer"
+                          title="Change Reaction Video"
+                        >
+                          <Edit2 className="w-2.5 h-2.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFileBottom(null);
+                            if (urlBottom) URL.revokeObjectURL(urlBottom);
+                            setUrlBottom(null);
+                          }}
+                          className="p-0.5 rounded bg-red-600/80 hover:bg-red-600 text-white cursor-pointer"
+                          title="Remove Reaction Video"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

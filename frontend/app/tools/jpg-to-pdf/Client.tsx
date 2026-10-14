@@ -127,12 +127,35 @@ export default function JpgToPdfClient() {
         const arrayBuffer = await item.file.arrayBuffer();
         let pdfImage;
 
-        const isPng = item.file.type.includes("png") || item.file.name.endsWith(".png");
+        const isPng = item.file.type.includes("png") || item.file.name.toLowerCase().endsWith(".png");
+        const isJpg = item.file.type.includes("jpeg") || item.file.type.includes("jpg") || item.file.name.toLowerCase().match(/\.(jpe?g)$/);
 
         if (isPng) {
           pdfImage = await pdfDoc.embedPng(arrayBuffer);
-        } else {
+        } else if (isJpg) {
           pdfImage = await pdfDoc.embedJpg(arrayBuffer);
+        } else {
+          // Convert WebP / other image formats to PNG array buffer via canvas
+          const img = new Image();
+          const objUrl = URL.createObjectURL(item.file);
+          img.src = objUrl;
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+          });
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width || item.width || 800;
+          canvas.height = img.height || item.height || 600;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0);
+          URL.revokeObjectURL(objUrl);
+          const pngBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+          if (pngBlob) {
+            const pngBuf = await pngBlob.arrayBuffer();
+            pdfImage = await pdfDoc.embedPng(pngBuf);
+          } else {
+            pdfImage = await pdfDoc.embedJpg(arrayBuffer);
+          }
         }
 
         // Determine margin points

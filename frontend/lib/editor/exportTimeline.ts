@@ -117,8 +117,8 @@ function buildClipAudioFilter(clip: TimelineClip, inputIndex: number, label: str
   const fadeOut = clip.audio?.fadeOutSeconds ?? 0;
   
   if (!hasAudio || muted || volPct === 0) {
-    const dur = (clip.sourceEnd - clip.sourceStart) / speed;
-    return `anullsrc=r=44100:cl=stereo,atrim=end=${dur.toFixed(3)},adelay=${Math.round(clip.timelineStart * 1000)}|${Math.round(clip.timelineStart * 1000)}[${label}]`;
+    const dur = Math.max(0.1, (clip.sourceEnd - clip.sourceStart) / speed);
+    return `anullsrc=r=44100:cl=stereo:d=${dur.toFixed(3)},asetpts=PTS-STARTPTS,adelay=${Math.round(clip.timelineStart * 1000)}|${Math.round(clip.timelineStart * 1000)}[${label}]`;
   }
   
   let fadeStr = "";
@@ -200,7 +200,7 @@ export async function exportEditorProject(
     sourceInputIndex.set(sourceId, i);
     sourceInputNames.set(sourceId, name);
 
-    const probeName = `${AUDIO_PROBE_PREFIX}${sourceId}.m4a`;
+    const probeName = `${AUDIO_PROBE_PREFIX}${i}.m4a`;
     try {
       const exit = await ffmpeg.exec(["-y", "-i", name, "-t", "0.1", "-map", "0:a:0", "-c", "copy", probeName]);
       sourceHasAudio.set(sourceId, exit === 0);

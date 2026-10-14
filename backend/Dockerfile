@@ -36,7 +36,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     fonts-liberation \
     libappindicator3-1 \
+    ffmpeg \
+    libreoffice \
     && rm -rf /var/lib/apt/lists/*
+
 
 # 2. Install Python dependencies
 COPY requirements.txt .

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   FileText,
@@ -66,6 +66,14 @@ export default function ExcelToPdfClient() {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (downloadUrl) {
+        URL.revokeObjectURL(downloadUrl);
+      }
+    };
+  }, [downloadUrl]);
+
   const handleConvert = () => {
     if (!sheetData || sheetData.length === 0) {
       setError("The selected sheet contains no data.");
@@ -75,6 +83,11 @@ export default function ExcelToPdfClient() {
     setError(null);
 
     try {
+      if (downloadUrl) {
+        URL.revokeObjectURL(downloadUrl);
+        setDownloadUrl(null);
+      }
+
       const doc = new jsPDF({
         orientation,
         unit: "pt",
@@ -216,28 +229,28 @@ export default function ExcelToPdfClient() {
               </div>
             </div>
 
-            {/* Sheet Preview Table (first 5 rows) */}
+            {/* Sheet Preview Table (first 50 rows & 20 columns) */}
             <div className="w-full mb-6">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2">
-                Data Preview ({sheetData.length} total rows)
+                Data Preview ({sheetData.length} total rows, displaying up to 50 rows &amp; 20 cols)
               </span>
-              <div className="w-full overflow-x-auto border border-slate-200 dark:border-white/[0.08] rounded-xl bg-slate-50 dark:bg-black/30">
+              <div className="w-full max-h-80 overflow-auto border border-slate-200 dark:border-white/[0.08] rounded-xl bg-slate-50 dark:bg-black/30">
                 <table className="w-full text-left text-[11px] text-slate-700 dark:text-slate-300">
-                  <thead className="bg-slate-100 dark:bg-white/[0.04] border-b border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 font-semibold">
+                  <thead className="sticky top-0 bg-slate-100 dark:bg-[#1a1a1f] border-b border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 font-semibold z-10">
                     <tr>
-                      {(sheetData[0] || []).slice(0, 6).map((h: any, idx: number) => (
-                        <th key={idx} className="p-2.5">
+                      {(sheetData[0] || []).slice(0, 20).map((h: any, idx: number) => (
+                        <th key={idx} className="p-2.5 whitespace-nowrap">
                           {String(h || `Col ${idx + 1}`)}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-white/[0.06]">
-                    {sheetData.slice(1, 5).map((row, rIdx) => (
-                      <tr key={rIdx}>
-                        {row.slice(0, 6).map((cell: any, cIdx: number) => (
-                          <td key={cIdx} className="p-2.5 truncate max-w-xs">
-                            {String(cell !== undefined ? cell : "")}
+                    {sheetData.slice(1, 51).map((row, rIdx) => (
+                      <tr key={rIdx} className="hover:bg-slate-100/50 dark:hover:bg-white/[0.02]">
+                        {(sheetData[0] || []).slice(0, 20).map((_, cIdx: number) => (
+                          <td key={cIdx} className="p-2.5 truncate max-w-xs whitespace-nowrap">
+                            {String(row[cIdx] !== undefined ? row[cIdx] : "")}
                           </td>
                         ))}
                       </tr>

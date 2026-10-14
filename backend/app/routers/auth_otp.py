@@ -347,8 +347,12 @@ class UserOtpVerifyRequest(BaseModel):
 
 class UserResetPasswordRequest(BaseModel):
     email: str
-    otp: str
     new_password: str
+    otp: Optional[str] = None
+    reset_token: Optional[str] = None
+
+class CheckAccountTypeRequest(BaseModel):
+    email: str
 
 class ComplaintSubmitRequest(BaseModel):
     email: str
@@ -1006,64 +1010,132 @@ async def verify_profile_otp(req: UserOtpVerifyRequest, request: Request):
     return {"success": True, "message": "Email verified successfully."}
 
 
+async def check_account_provider(email: str) -> dict:
+    """Checks user provider in Supabase (returns status: 'google_only', 'eligible', or 'not_found')."""
+    email_clean = email.strip().lower()
+
+    # 1. Try DB RPC
+    from app.middleware.auth import _rpc
+    try:
+        eligibility = await _rpc("check_password_reset_eligibility", {"p_email": email_clean})
+        if isinstance(eligibility, dict):
+            status = eligibility.get("status")
+            if status in ["google_only", "not_found", "eligible", "unverified"]:
+                return eligibility
+    except Exception as e:
+        logger.warning(f"RPC check_password_reset_eligibility error: {e}")
+
+    # 2. Direct Supabase GoTrue Admin API check
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                res = await client.get(
+                    f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/admin/users",
+                    headers={
+                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    },
+                    params={"email": email_clean},
+                )
+                if res.status_code == 200:
+                    users = res.json().get("users", [])
+                    matched = [u for u in users if u.get("email", "").strip().lower() == email_clean]
+                    if not matched:
+                        return {
+                            "status": "not_found",
+                            "eligible": False,
+                            "message": "Account not found. No account is registered with this email address."
+                        }
+                    user_data = matched[0]
+                    app_meta = user_data.get("app_metadata") or {}
+                    provider = app_meta.get("provider", "")
+                    providers = app_meta.get("providers", [])
+                    identities = user_data.get("identities", [])
+                    id_providers = [i.get("provider") for i in identities if isinstance(i, dict)]
+
+                    is_google = (
+                        provider == "google" or
+                        "google" in providers or
+                        "google" in id_providers
+                    )
+                    has_email = "email" in providers or "email" in id_providers
+
+                    if is_google and not has_email:
+                        return {
+                            "status": "google_only",
+                            "eligible": False,
+                            "provider": "google",
+                            "message": "This account is registered using Google Sign-In and does not have an application password. Please sign in using Google."
+                        }
+                    return {"status": "eligible", "eligible": True, "provider": "email", "message": "Eligible for password recovery."}
+        except Exception as e:
+            logger.warning(f"Supabase Admin API check error: {e}")
+
+    # 3. Fallback verification check
+    try:
+        is_verified_in_db = await _rpc("is_user_verified", {"p_email": email_clean})
+        if not is_verified_in_db:
+            return {
+                "status": "not_found",
+                "eligible": False,
+                "message": "Account not found. No account is registered with this email address."
+            }
+    except Exception:
+        pass
+
+    return {"status": "eligible", "eligible": True, "provider": "email", "message": "Proceeding with standard verification."}
+
+
+@router.post("/api/auth/check-account-type")
+async def check_account_type(req: CheckAccountTypeRequest):
+    email = req.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email address.")
+    res = await check_account_provider(email)
+    return res
+
+
 @router.post("/api/auth/forgot-password-otp")
 async def send_user_forgot_otp(req: UserOtpRequest, request: Request):
     client_ip = request.client.host if request.client else "unknown"
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
-        client_ip = request.client.host if request.client else "unknown" 
-        
-    is_locked, _ = check_lockout(client_ip)
+        client_ip = request.client.host if request.client else "unknown"
+
+    is_locked, seconds_left = check_lockout(client_ip)
     if is_locked:
-        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
-        
+        mins = max(1, seconds_left // 60)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Device temporarily blocked due to multiple failed verification attempts. Please try again in {mins} minutes."
+        )
+
     email = req.email.strip().lower()
 
-    # 1. DB Check for user existence, Google OAuth-only status, and application password
-    from app.middleware.auth import _rpc
-    try:
-        eligibility = await _rpc("check_password_reset_eligibility", {"p_email": email})
-        if isinstance(eligibility, dict):
-            status = eligibility.get("status")
-            if status == "not_found":
-                raise HTTPException(
-                    status_code=404,
-                    detail="Account not found. No account is registered with this email address. Please check your email or sign up."
-                )
-            elif status == "google_only":
-                raise HTTPException(
-                    status_code=400,
-                    detail="This account is registered using Google Sign-In and does not have an application password. Please sign in using Google."
-                )
-            elif status == "unverified":
-                raise HTTPException(
-                    status_code=403,
-                    detail="Your account is unverified. Please email us at info@botock.app for assistance with your account recovery."
-                )
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.warning(f"check_password_reset_eligibility check: {exc}. Trying fallback...")
-        try:
-            is_verified_in_db = await _rpc("is_user_verified", {"p_email": email})
-            if not is_verified_in_db:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Account not found. No account is registered with this email address."
-                )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Fallback verification check failed: {e}")
-            raise HTTPException(
-                status_code=503,
-                detail="Authentication service is temporarily unavailable. Please verify your Supabase API keys or try again shortly."
-            )
+    # 1. DB & Admin API Check for user existence, Google OAuth-only status, and application password
+    eligibility = await check_account_provider(email)
+    status = eligibility.get("status")
+    if status == "not_found":
+        raise HTTPException(
+            status_code=404,
+            detail="Account not found. No account is registered with this email address. Please check your email or sign up."
+        )
+    elif status == "google_only":
+        raise HTTPException(
+            status_code=400,
+            detail="This account is registered using Google Sign-In and does not have an application password. Please sign in using Google."
+        )
+    elif status == "unverified":
+        raise HTTPException(
+            status_code=403,
+            detail="Your account is unverified. Please email us at info@botock.app for assistance with your account recovery."
+        )
 
-    # Anti-spam cooldown & hourly limit check
+    # 2. Anti-spam cooldown & hourly limit check
     check_otp_spam_protection(email, client_ip)
-    
+
     otp_code = "".join(secrets.choice(string.digits) for _ in range(6))
     otp_hash = hashlib.sha256(otp_code.encode()).hexdigest()
     otps = _read_json(OTP_STORE_FILE, {})
@@ -1084,33 +1156,108 @@ async def verify_user_forgot_otp(req: UserOtpVerifyRequest, request: Request):
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
-        client_ip = request.client.host if request.client else "unknown" 
-        
-    is_locked, _ = check_lockout(client_ip)
+        client_ip = request.client.host if request.client else "unknown"
+
+    is_locked, seconds_left = check_lockout(client_ip)
     if is_locked:
-        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
-        
+        mins = max(1, seconds_left // 60)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Device temporarily blocked due to multiple failed verification attempts. Please try again in {mins} minutes."
+        )
+
     email = req.email.strip().lower()
     otps = _read_json(OTP_STORE_FILE, {})
     stored = otps.get(f"user_forgot_{email}")
     if not stored:
-        raise HTTPException(status_code=400, detail="No active password reset code found.")
+        raise HTTPException(status_code=400, detail="No active verification code found. Please request a new code.")
     if time.time() > stored["expires_at"]:
-        if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
-        raise HTTPException(status_code=400, detail="Reset code expired. Please request a new code.")
-    
+        if f"user_forgot_{email}" in otps:
+            del otps[f"user_forgot_{email}"]
+            _write_json(OTP_STORE_FILE, otps)
+        raise HTTPException(status_code=400, detail="Verification code has expired. Please request a new code.")
+
     input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
     if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
         record_failed_attempt(client_ip)
         stored["attempts_left"] -= 1
         if stored["attempts_left"] <= 0:
-            if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
-            raise HTTPException(status_code=400, detail="Too many failed attempts. Code invalidated.")
+            if f"user_forgot_{email}" in otps:
+                del otps[f"user_forgot_{email}"]
+                _write_json(OTP_STORE_FILE, otps)
+            raise HTTPException(
+                status_code=400,
+                detail="Too many failed attempts. Code has expired and been invalidated. Please request a new code."
+            )
         otps[f"user_forgot_{email}"] = stored
         _write_json(OTP_STORE_FILE, otps)
-        raise HTTPException(status_code=400, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
-    
-    return {"success": True, "message": "Reset code verified. You may now update your password."}
+        raise HTTPException(
+            status_code=400,
+            detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining."
+        )
+
+    # Clean up used OTP
+    if f"user_forgot_{email}" in otps:
+        del otps[f"user_forgot_{email}"]
+
+    # Generate temporary password reset token (15 mins) for Step 3
+    reset_token = secrets.token_urlsafe(32)
+    reset_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+    otps[f"verified_reset_{email}"] = {
+        "reset_hash": reset_hash,
+        "expires_at": time.time() + 900,
+    }
+    _write_json(OTP_STORE_FILE, otps)
+
+    # Generate Supabase magic link / recovery token for instant login
+    token_hash = None
+    action_link = None
+    verification_type = "magiclink"
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                res = await client.post(
+                    f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/admin/generate_link",
+                    headers={
+                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"type": "magiclink", "email": email},
+                )
+                if res.status_code == 200:
+                    props = res.json().get("properties") or {}
+                    token_hash = props.get("hashed_token")
+                    action_link = props.get("action_link")
+                    verification_type = props.get("verification_type") or "magiclink"
+                else:
+                    res_rec = await client.post(
+                        f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/admin/generate_link",
+                        headers={
+                            "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                            "Content-Type": "application/json",
+                        },
+                        json={"type": "recovery", "email": email},
+                    )
+                    if res_rec.status_code == 200:
+                        props = res_rec.json().get("properties") or {}
+                        token_hash = props.get("hashed_token")
+                        action_link = props.get("action_link")
+                        verification_type = props.get("verification_type") or "recovery"
+        except Exception as e:
+            logger.warning(f"Failed to generate Supabase login link: {e}")
+
+    return {
+        "success": True,
+        "message": "OTP verified successfully. You are now logged in.",
+        "token_hash": token_hash,
+        "action_link": action_link,
+        "verification_type": verification_type,
+        "reset_token": reset_token,
+        "email": email,
+    }
 
 
 @router.post("/api/auth/reset-password")
@@ -1119,45 +1266,108 @@ async def reset_user_password_with_otp(req: UserResetPasswordRequest, request: R
     if client_ip:
         client_ip = client_ip.split(",")[0].strip()
     else:
-        client_ip = request.client.host if request.client else "unknown" 
-        
-    is_locked, _ = check_lockout(client_ip)
+        client_ip = request.client.host if request.client else "unknown"
+
+    is_locked, seconds_left = check_lockout(client_ip)
     if is_locked:
-        raise HTTPException(status_code=429, detail="Too many requests. Try again later.")
-        
+        mins = max(1, seconds_left // 60)
+        raise HTTPException(
+            status_code=429,
+            detail=f"Device temporarily blocked due to multiple failed verification attempts. Please try again in {mins} minutes."
+        )
+
     email = req.email.strip().lower()
     if len(req.new_password) < 6:
         raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
-        
+
     otps = _read_json(OTP_STORE_FILE, {})
-    stored = otps.get(f"user_forgot_{email}")
-    if not stored:
-        raise HTTPException(status_code=400, detail="No active password reset code found. Please request a new code.")
-    if time.time() > stored["expires_at"]:
-        if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
-        raise HTTPException(status_code=400, detail="Reset code expired. Please request a new code.")
-    
-    input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
-    if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
-        record_failed_attempt(client_ip)
-        stored["attempts_left"] -= 1
-        if stored["attempts_left"] <= 0:
-            if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
-            raise HTTPException(status_code=400, detail="Too many failed attempts. Code invalidated.")
-        otps[f"user_forgot_{email}"] = stored
+    authorized = False
+
+    # 1. Authorize via reset_token (from Step 1)
+    if req.reset_token:
+        stored_reset = otps.get(f"verified_reset_{email}")
+        if stored_reset and time.time() <= stored_reset.get("expires_at", 0):
+            input_reset_hash = hashlib.sha256(req.reset_token.strip().encode()).hexdigest()
+            if hmac.compare_digest(input_reset_hash, stored_reset.get("reset_hash", "")):
+                authorized = True
+                del otps[f"verified_reset_{email}"]
+                _write_json(OTP_STORE_FILE, otps)
+
+    # 2. Authorize via direct OTP (backward compatibility)
+    if not authorized and req.otp:
+        stored = otps.get(f"user_forgot_{email}")
+        if not stored:
+            raise HTTPException(status_code=400, detail="No active password reset code found. Please request a new code.")
+        if time.time() > stored["expires_at"]:
+            if f"user_forgot_{email}" in otps:
+                del otps[f"user_forgot_{email}"]
+                _write_json(OTP_STORE_FILE, otps)
+            raise HTTPException(status_code=400, detail="Reset code expired. Please request a new code.")
+
+        input_hash = hashlib.sha256(req.otp.strip().encode()).hexdigest()
+        if not hmac.compare_digest(input_hash, stored.get("otp_hash", "")):
+            record_failed_attempt(client_ip)
+            stored["attempts_left"] -= 1
+            if stored["attempts_left"] <= 0:
+                if f"user_forgot_{email}" in otps:
+                    del otps[f"user_forgot_{email}"]
+                    _write_json(OTP_STORE_FILE, otps)
+                raise HTTPException(status_code=400, detail="Too many failed attempts. Code invalidated.")
+            otps[f"user_forgot_{email}"] = stored
+            _write_json(OTP_STORE_FILE, otps)
+            raise HTTPException(status_code=400, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
+
+        authorized = True
+        del otps[f"user_forgot_{email}"]
         _write_json(OTP_STORE_FILE, otps)
-        raise HTTPException(status_code=400, detail=f"Incorrect code. {stored['attempts_left']} attempt(s) remaining.")
-    
-    # OTP is valid! Now update the password in database
+
+    if not authorized:
+        raise HTTPException(status_code=401, detail="Password reset authorization expired or invalid. Please verify your OTP code.")
+
+    # Update password in database
     from app.middleware.auth import _rpc
+    password_updated = False
     try:
         await _rpc("admin_set_user_password", {"p_email": email, "p_password": req.new_password})
+        password_updated = True
     except Exception as e:
-        logger.error(f"Failed to update password in database: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update password in database. Please try again or contact support.")
+        logger.warning(f"RPC admin_set_user_password failed: {e}. Trying Supabase GoTrue Admin API...")
 
-    # Invalidate OTP on successful password change
-    if f"user_forgot_{email}" in otps: del otps[f"user_forgot_{email}"]; _write_json(OTP_STORE_FILE, otps)
+    # Also update via Supabase Admin API
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=6.0) as client:
+                u_res = await client.get(
+                    f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/admin/users",
+                    headers={
+                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    },
+                    params={"email": email},
+                )
+                if u_res.status_code == 200:
+                    users = u_res.json().get("users", [])
+                    matched = [u for u in users if u.get("email", "").strip().lower() == email]
+                    if matched:
+                        uid = matched[0]["id"]
+                        up_res = await client.put(
+                            f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/admin/users/{uid}",
+                            headers={
+                                "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                                "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                                "Content-Type": "application/json",
+                            },
+                            json={"password": req.new_password},
+                        )
+                        if up_res.status_code == 200:
+                            password_updated = True
+        except Exception as e:
+            logger.error(f"Supabase Admin API password update failed: {e}")
+
+    if not password_updated:
+        raise HTTPException(status_code=500, detail="Failed to update password in database. Please try again.")
+
     return {"success": True, "message": "Password updated successfully! You may now sign in with your new password."}
 
 
@@ -1186,7 +1396,12 @@ async def admin_send_update(
     req: SendUpdateEmailRequest,
     admin_token: str = Depends(verify_admin_token),
 ):
-    success = send_update_email(to_email=req.to_email, subject=req.subject, body_text=req.body_text)
+    success = send_update_email(
+        to_email=req.to_email,
+        subject=req.subject,
+        headline=req.subject,
+        message_body=req.body_text
+    )
     if not success:
         raise HTTPException(status_code=500, detail="Failed to dispatch update email via Zoho SMTP.")
     return {"success": True, "message": f"Update email dispatched to {req.to_email}"}

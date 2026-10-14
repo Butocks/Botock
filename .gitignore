@@ -38,6 +38,8 @@ otp_rate_limits.json
 # Video & debug storage
 backend/generated_videos/
 generated_videos/
+backend/generated_images/
+generated_images/
 backend/*.mp4
 backend/*.png
 backend/*.jpg

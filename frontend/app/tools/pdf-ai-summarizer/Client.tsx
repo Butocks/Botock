@@ -102,11 +102,16 @@ export default function PdfAiSummarizerClient() {
       return;
     }
 
-    const words = text.toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+    const words = text.toLowerCase().match(/\b[a-z]{3,}\b/g) || [];
     const freq: Record<string, number> = {};
     const stopWords = new Set([
-      "this", "that", "with", "from", "have", "were", "which", "there", "their",
-      "about", "would", "these", "other", "into", "more", "first", "been", "they"
+      "the", "and", "are", "for", "not", "but", "you", "all", "any", "can", "had", "her",
+      "was", "one", "our", "out", "day", "get", "has", "him", "his", "how", "man", "new",
+      "now", "old", "see", "two", "way", "who", "boy", "did", "its", "let", "put", "say",
+      "she", "too", "use", "this", "that", "with", "from", "have", "were", "which", "there",
+      "their", "about", "would", "these", "other", "into", "more", "first", "been", "they",
+      "each", "make", "like", "time", "just", "know", "take", "people", "year", "your",
+      "good", "some", "could", "them", "than", "then", "also", "such", "even", "most"
     ]);
 
     for (const w of words) {
@@ -195,6 +200,36 @@ export default function PdfAiSummarizerClient() {
     URL.revokeObjectURL(url);
   };
 
+  const reanalyzeRange = async () => {
+    if (!file) return;
+    setIsProcessing(true);
+    setSummary(null);
+    setError(null);
+    try {
+      const buffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: buffer });
+      const pdf = await loadingTask.promise;
+      let fullText = "";
+      const fromP = pageRangeMode === "custom" ? Math.max(1, startPage) : 1;
+      const toP = pageRangeMode === "custom" ? Math.min(pdf.numPages, endPage) : pdf.numPages;
+
+      for (let i = fromP; i <= toP; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageStr = textContent.items.map((it: any) => it.str).join(" ");
+        fullText += pageStr + " ";
+      }
+
+      const cleanText = fullText.trim();
+      setExtractedText(cleanText);
+      generateAdvancedSummary(cleanText);
+    } catch (err: any) {
+      setError(err.message || "Failed to analyze document.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const resetAll = () => {
     setFile(null);
     setSummary(null);
@@ -261,7 +296,56 @@ export default function PdfAiSummarizerClient() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                  <button
+                    onClick={() => {
+                      setPageRangeMode("all");
+                      if (file && pageRangeMode !== "all") {
+                        setTimeout(() => reanalyzeRange(), 50);
+                      }
+                    }}
+                    className={`px-2.5 py-1 rounded-lg transition ${pageRangeMode === "all" ? "bg-purple-600 text-white font-bold" : "text-slate-400 hover:text-white"}`}
+                  >
+                    All Pages
+                  </button>
+                  <button
+                    onClick={() => setPageRangeMode("custom")}
+                    className={`px-2.5 py-1 rounded-lg transition ${pageRangeMode === "custom" ? "bg-purple-600 text-white font-bold" : "text-slate-400 hover:text-white"}`}
+                  >
+                    Custom Range
+                  </button>
+                </div>
+
+                {pageRangeMode === "custom" && (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800">
+                    <span>Page</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={pageCount || 1}
+                      value={startPage}
+                      onChange={(e) => setStartPage(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-12 bg-slate-900 border border-slate-700 rounded px-1 text-center text-white"
+                    />
+                    <span>to</span>
+                    <input
+                      type="number"
+                      min={startPage}
+                      max={pageCount || 1}
+                      value={endPage}
+                      onChange={(e) => setEndPage(Math.min(pageCount || 1, Math.max(startPage, parseInt(e.target.value) || startPage)))}
+                      className="w-12 bg-slate-900 border border-slate-700 rounded px-1 text-center text-white"
+                    />
+                    <button
+                      onClick={reanalyzeRange}
+                      className="px-2 py-0.5 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-semibold text-xs"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+
                 <button
                   onClick={resetAll}
                   className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"

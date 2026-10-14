@@ -10,6 +10,22 @@ export function getSiteUrl() {
   return 'https://botock.app';
 }
 
+export function sanitizeRedirectUrl(url: string | null | undefined, fallback: string = "/"): string {
+  if (!url) return fallback;
+  const trimmed = url.trim();
+  if (
+    trimmed.startsWith("/") &&
+    !trimmed.startsWith("//") &&
+    !trimmed.startsWith("/\\") &&
+    !trimmed.includes("://") &&
+    !trimmed.includes("@")
+  ) {
+    return trimmed;
+  }
+  return fallback;
+}
+
+
 const HEALTH_CHECK_TIMEOUT_MS = 2_500;
 // A short cache makes an Azure outage switch to an available private tunnel
 // quickly, without probing on every UI render.

@@ -7,18 +7,27 @@ import "cropperjs/dist/cropper.css";
 import { Image as ImageIcon, Download, RotateCw, Trash2, RefreshCcw } from "lucide-react";
 
 export default function ImageCropClient() {
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [exportFormat, setExportFormat] = useState<"png" | "jpeg" | "webp">("jpeg");
+  const [quality, setQuality] = useState<number>(92);
   const cropperRef = useRef<ReactCropperElement>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
+      const f = acceptedFiles[0];
+      setOriginalFile(f);
+      const isPng = f.type === "image/png" || f.name.toLowerCase().endsWith(".png");
+      const isWebp = f.type === "image/webp" || f.name.toLowerCase().endsWith(".webp");
+      setExportFormat(isPng ? "png" : isWebp ? "webp" : "jpeg");
+
       const reader = new FileReader();
       reader.onload = () => {
         setImage(reader.result as string);
         setCroppedImage(null);
       };
-      reader.readAsDataURL(acceptedFiles[0]);
+      reader.readAsDataURL(f);
     }
   }, []);
 
@@ -39,7 +48,9 @@ export default function ImageCropClient() {
     if (cropper) {
       const canvas = cropper.getCroppedCanvas();
       if (canvas) {
-        setCroppedImage(canvas.toDataURL("image/png", 1.0));
+        const mime = exportFormat === "jpeg" ? "image/jpeg" : exportFormat === "webp" ? "image/webp" : "image/png";
+        const q = exportFormat === "png" ? 1.0 : quality / 100;
+        setCroppedImage(canvas.toDataURL(mime, q));
       }
     }
   };
@@ -60,6 +71,7 @@ export default function ImageCropClient() {
   };
 
   const resetImage = () => {
+    setOriginalFile(null);
     setImage(null);
     setCroppedImage(null);
   };
@@ -145,14 +157,55 @@ export default function ImageCropClient() {
             </div>
           </div>
 
-          <div className="flex flex-col border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-white/[0.08] pt-6 lg:pt-0 lg:pl-8">
-            <h3 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <RefreshCcw className="w-4 h-4 text-emerald-500" /> Process Output
+          <div className="flex flex-col border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-white/[0.08] pt-6 lg:pt-0 lg:pl-8 space-y-4">
+            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+              <RefreshCcw className="w-4 h-4 text-emerald-500" /> Export Options
             </h3>
+
+            {/* Format Selection */}
+            <div>
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                Output Format
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["jpeg", "webp", "png"] as const).map((fmt) => (
+                  <button
+                    key={fmt}
+                    type="button"
+                    onClick={() => setExportFormat(fmt)}
+                    className={`py-1.5 rounded-lg text-xs font-bold uppercase transition ${
+                      exportFormat === fmt
+                        ? "bg-emerald-600 text-white shadow-xs"
+                        : "bg-slate-100 dark:bg-white/[0.05] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/[0.1]"
+                    }`}
+                  >
+                    {fmt === "jpeg" ? "JPG" : fmt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quality Slider (for JPEG / WebP) */}
+            {exportFormat !== "png" && (
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase">Quality</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{quality}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={50}
+                  max={100}
+                  value={quality}
+                  onChange={(e) => setQuality(Number(e.target.value))}
+                  className="w-full accent-emerald-500 cursor-pointer"
+                />
+              </div>
+            )}
             
             <button
               onClick={handleCrop}
-              className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-all shadow-md active:scale-95 mb-6 flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
             >
               Apply Crop & Preview
             </button>
@@ -165,10 +218,10 @@ export default function ImageCropClient() {
                 </div>
                 <a
                   href={croppedImage}
-                  download="Botock-Cropped-Image.png"
+                  download={`${(originalFile?.name || "image").replace(/\.[^/.]+$/, "")}-cropped.${exportFormat === "jpeg" ? "jpg" : exportFormat}`}
                   className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md active:scale-95"
                 >
-                  <Download className="w-4 h-4" /> Download Result
+                  <Download className="w-4 h-4" /> Download Result ({exportFormat.toUpperCase()})
                 </a>
               </div>
             ) : (

@@ -143,6 +143,7 @@ export default function VideoTrimClient() {
 
   const objectUrlRef = useRef<string | null>(null);
   const resultUrlRef = useRef<string | null>(null);
+  const dragStartSegmentsRef = useRef<Segment[] | null>(null);
 
   const {
     load,
@@ -437,12 +438,13 @@ export default function VideoTrimClient() {
       event.preventDefault();
       event.stopPropagation();
 
+      dragStartSegmentsRef.current = cloneSegments(segments);
       setIsDraggingHandle(true);
       setDragHandle({ segmentId, side });
 
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    []
+    [segments]
   );
 
   useEffect(() => {
@@ -492,6 +494,11 @@ export default function VideoTrimClient() {
       setIsDraggingHandle(false);
       setDragHandle(null);
 
+      if (dragStartSegmentsRef.current) {
+        pushHistory(dragStartSegmentsRef.current);
+        dragStartSegmentsRef.current = null;
+      }
+
       setSegments((previous) =>
         mergeSegments(
           normalizeSegments(previous, duration)
@@ -511,6 +518,7 @@ export default function VideoTrimClient() {
     duration,
     getTimelineTimeFromPointer,
     isDraggingHandle,
+    pushHistory,
     seekTo,
   ]);
 

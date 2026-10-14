@@ -104,9 +104,12 @@ export default function VideoToMp3Client() {
     const qualityArgs =
       bitrate === "vbr" ? ["-q:a", "2"] : ["-b:a", bitrate];
 
+    const ext = originalFile.name.split('.').pop()?.toLowerCase() || "mp4";
+    const safeInputName = `input.${ext}`;
+
     const args = [
       "-i",
-      "input.mp4",
+      safeInputName,
       "-vn",
       "-c:a",
       "libmp3lame",
@@ -127,7 +130,7 @@ export default function VideoToMp3Client() {
     try {
       const outputBlob = await runFn({
         inputFile: originalFile,
-        inputFileName: "input.mp4",
+        inputFileName: safeInputName,
         outputFileName: "output.mp3",
         outputMimeType: "audio/mpeg",
         args,

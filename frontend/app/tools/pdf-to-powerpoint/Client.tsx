@@ -88,6 +88,12 @@ export default function PdfToPowerpointClient() {
       const pdf = await loadingTask.promise;
       const numPages = pdf.numPages;
 
+      // Inspect first page to preserve true aspect ratio (portrait or landscape)
+      const firstPage = await pdf.getPage(1);
+      const firstVp = firstPage.getViewport({ scale: 1.0 });
+      const slideWidthEMU = Math.round((firstVp.width / 72) * 914400);
+      const slideHeightEMU = Math.round((firstVp.height / 72) * 914400);
+
       const zip = new JSZip();
 
       // Standard PowerPoint PPTX structure files
@@ -99,7 +105,9 @@ export default function PdfToPowerpointClient() {
   <Default Extension="jpeg" ContentType="image/jpeg"/>
   <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
   <Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>
-  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>`;
+  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+  <Override PartName="/ppt/presProps.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presProps+xml"/>
+  <Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>`;
 
       for (let i = 1; i <= numPages; i++) {
         contentTypes += `\n  <Override PartName="/ppt/slides/slide${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`;
@@ -120,17 +128,18 @@ export default function PdfToPowerpointClient() {
       let sldIdList = "";
       let presRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>`;
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps" Target="presProps.xml"/>`;
 
       for (let i = 1; i <= numPages; i++) {
-        const id = i + 1;
+        const id = i + 2;
         sldIdList += `\n    <p:sldId id="${255 + i}" r:id="rId${id}"/>`;
         presRels += `\n  <Relationship Id="rId${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i}.xml"/>`;
       }
       presRels += `\n</Relationships>`;
       zip.file("ppt/_rels/presentation.xml.rels", presRels);
 
-      // 16:9 standard slide width (9144000 x 5143500 EMUs) or 4:3 standard (9144000 x 6858000)
+      // ppt/presentation.xml with dynamic aspect ratio
       zip.file(
         "ppt/presentation.xml",
         `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -140,9 +149,50 @@ export default function PdfToPowerpointClient() {
   </p:sldMasterIdLst>
   <p:sldIdLst>${sldIdList}
   </p:sldIdLst>
-  <p:sldSz cx="9144000" cy="5143500" type="screen16x9"/>
+  <p:sldSz cx="${slideWidthEMU}" cy="${slideHeightEMU}"/>
   <p:notesSz cx="6858000" cy="9144000"/>
 </p:presentation>`
+      );
+
+      // ppt/presProps.xml
+      zip.file(
+        "ppt/presProps.xml",
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentationPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"/>`
+      );
+
+      // ppt/theme/theme1.xml
+      zip.file(
+        "ppt/theme/theme1.xml",
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Office Theme">
+  <a:themeElements>
+    <a:clrScheme name="Office">
+      <a:dk1><a:sysClr val="windowText" lastClr="000000"/></a:dk1>
+      <a:lt1><a:sysClr val="window" lastClr="FFFFFF"/></a:lt1>
+      <a:dk2><a:srgbClr val="1F497D"/></a:dk2>
+      <a:lt2><a:srgbClr val="EEECE1"/></a:lt2>
+      <a:accent1><a:srgbClr val="4F81BD"/></a:accent1>
+      <a:accent2><a:srgbClr val="C0504D"/></a:accent2>
+      <a:accent3><a:srgbClr val="9BBB59"/></a:accent3>
+      <a:accent4><a:srgbClr val="8064A2"/></a:accent4>
+      <a:accent5><a:srgbClr val="4BACC6"/></a:accent5>
+      <a:accent6><a:srgbClr val="F79646"/></a:accent6>
+      <a:hlink><a:srgbClr val="0000FF"/></a:hlink>
+      <a:folHlink><a:srgbClr val="800080"/></a:folHlink>
+    </a:clrScheme>
+    <a:fontScheme name="Office">
+      <a:majorFont><a:latin typeface="Calibri"/></a:majorFont>
+      <a:minorFont><a:latin typeface="Calibri"/></a:minorFont>
+    </a:fontScheme>
+    <a:fmtScheme name="Office">
+      <a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst>
+      <a:lnStyleLst><a:ln w="9525"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="25400"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln><a:ln w="38100"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:ln></a:lnStyleLst>
+      <a:effectStyleLst><a:effectLst/><a:effectLst/><a:effectLst/></a:effectStyleLst>
+      <a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst>
+    </a:fmtScheme>
+  </a:themeElements>
+</a:theme>`
       );
 
       // 4. Slide Master & Layout placeholders
@@ -159,6 +209,7 @@ export default function PdfToPowerpointClient() {
         `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="../theme/theme1.xml"/>
 </Relationships>`
       );
       zip.file(
@@ -191,7 +242,7 @@ export default function PdfToPowerpointClient() {
         const base64Data = imgDataUrl.replace(/^data:image\/jpeg;base64,/, "");
         zip.file(`ppt/media/image${i}.jpeg`, base64Data, { base64: true });
 
-        // Slide XML
+        // Slide XML with matched slide dimensions
         const slideXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:cSld>
@@ -211,7 +262,7 @@ export default function PdfToPowerpointClient() {
         <p:spPr>
           <a:xfrm>
             <a:off x="0" y="0"/>
-            <a:ext cx="9144000" cy="5143500"/>
+            <a:ext cx="${slideWidthEMU}" cy="${slideHeightEMU}"/>
           </a:xfrm>
           <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
         </p:spPr>

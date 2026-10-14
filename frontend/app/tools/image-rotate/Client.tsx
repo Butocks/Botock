@@ -135,20 +135,10 @@ export default function ImageRotateClient() {
       const f = validImageFiles[i];
       try {
         const exif = await getExifOrientation(f);
-        let initialRotation = 0;
-        let autoStraight = false;
-
-        // Auto-fix orientation based on EXIF tag
-        if (exif === 6) {
-          initialRotation = 90;
-          autoStraight = true;
-        } else if (exif === 8) {
-          initialRotation = 270;
-          autoStraight = true;
-        } else if (exif === 3) {
-          initialRotation = 180;
-          autoStraight = true;
-        }
+        // Modern browsers already apply EXIF orientation automatically on decode.
+        // We track exif for diagnostics without forcing double rotation.
+        const initialRotation = 0;
+        const autoStraight = exif > 1;
 
         const dataUrl = await new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -239,36 +229,28 @@ export default function ImageRotateClient() {
 
   const handleAutoStraightenAll = () => {
     setImages((prev) =>
-      prev.map((item) => {
-        // If image has EXIF orientation, straighten it
-        let rot = 0;
-        let isAuto = false;
-        if (item.exifOrientation === 6) {
-          rot = 90;
-          isAuto = true;
-        } else if (item.exifOrientation === 8) {
-          rot = 270;
-          isAuto = true;
-        } else if (item.exifOrientation === 3) {
-          rot = 180;
-          isAuto = true;
-        } else if (item.width > item.height && item.rotation !== 0) {
-          // If already wide landscape, reset to 0
-          rot = 0;
-          isAuto = true;
-        }
-        return {
-          ...item,
-          rotation: rot,
-          autoStraightened: isAuto,
-        };
-      })
+      prev.map((item) => ({
+        ...item,
+        rotation: 0,
+        flipH: false,
+        autoStraightened: true,
+      }))
     );
   };
 
   const handleClearAll = () => {
     setImages([]);
     setIgnoredCount(0);
+  };
+
+  const getItemExtension = (item: ImageItem): string => {
+    const t = (item.file.type || "").toLowerCase();
+    if (t.includes("png")) return "png";
+    if (t.includes("webp")) return "webp";
+    if (t.includes("gif")) return "gif";
+    if (t.includes("bmp")) return "bmp";
+    const match = item.name.match(/\.([a-zA-Z0-9]+)$/);
+    return match ? match[1].toLowerCase() : "jpg";
   };
 
   const renderTransformedImage = async (item: ImageItem): Promise<Blob> => {
@@ -290,10 +272,11 @@ export default function ImageRotateClient() {
         ctx.scale(item.flipH ? -1 : 1, 1);
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
 
+        const outMime = item.file.type || "image/jpeg";
         canvas.toBlob((blob) => {
           if (blob) resolve(blob);
           else reject(new Error("Blob generation failed"));
-        }, item.file.type || "image/jpeg", 0.95);
+        }, outMime, 0.95);
       };
       img.onerror = reject;
     });
@@ -312,7 +295,9 @@ export default function ImageRotateClient() {
         const item = images[i];
         setStatusText(`Processing photo ${i + 1} of ${images.length}...`);
         const blob = await renderTransformedImage(item);
-        const fileName = item.name.replace(/\.[^/.]+$/, "") + "_straightened.jpg";
+        const ext = getItemExtension(item);
+        const base = item.name.replace(/\.[^/.]+$/, "");
+        const fileName = `${base}_straightened.${ext}`;
         zip.file(fileName, blob);
         setProgress(Math.round(((i + 1) / images.length) * 80));
       }
@@ -332,7 +317,7 @@ export default function ImageRotateClient() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 2000);
     } catch (err: any) {
       console.error("ZIP creation failed:", err);
       alert("Failed to build ZIP file. Please try again.");
@@ -347,13 +332,15 @@ export default function ImageRotateClient() {
     try {
       const blob = await renderTransformedImage(item);
       const url = URL.createObjectURL(blob);
+      const ext = getItemExtension(item);
+      const base = item.name.replace(/\.[^/.]+$/, "");
       const a = document.createElement("a");
       a.href = url;
-      a.download = item.name.replace(/\.[^/.]+$/, "") + "_straightened.jpg";
+      a.download = `${base}_straightened.${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
     } catch (err) {
       console.error("Export failed:", err);
     }

@@ -75,7 +75,14 @@ export default function AudioEnhanceClient() {
   const enhanceAudioInBrowser = async (file: File): Promise<Blob> => {
     const arrayBuffer = await file.arrayBuffer();
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+    let decoded: AudioBuffer;
+    try {
+      decoded = await audioCtx.decodeAudioData(arrayBuffer);
+    } finally {
+      try {
+        await audioCtx.close();
+      } catch (e) {}
+    }
 
     const offlineCtx = new OfflineAudioContext(
       decoded.numberOfChannels,
@@ -229,6 +236,11 @@ export default function AudioEnhanceClient() {
           {audioUrl && status === "completed" && (
             <div className="pt-6 text-center">
               <audio controls src={audioUrl} className="w-full mx-auto max-w-md mb-4" />
+              {selectedFile?.type.startsWith("video/") && (
+                <p className="text-xs text-amber-500 mb-3">
+                  Note: Audio track extracted and studio-enhanced as studio-quality WAV.
+                </p>
+              )}
               <a href={audioUrl} download="botock_enhanced.wav" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm">
                 <Download className="w-4 h-4" /> Download Enhanced Audio
               </a>

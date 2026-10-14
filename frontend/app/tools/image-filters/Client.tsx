@@ -89,11 +89,20 @@ export default function ImageFiltersClient() {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
+      const isJpeg = file?.type === "image/jpeg" || file?.name?.toLowerCase().endsWith(".jpg") || file?.name?.toLowerCase().endsWith(".jpeg");
+      const isWebp = file?.type === "image/webp" || file?.name?.toLowerCase().endsWith(".webp");
+      const mime = isJpeg ? "image/jpeg" : isWebp ? "image/webp" : "image/png";
+
+      if (isJpeg) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
       // Apply CSS filter to Canvas context
       ctx.filter = filterStyleString;
       ctx.drawImage(img, 0, 0, img.width, img.height);
 
-      const url = canvas.toDataURL("image/png", 0.95);
+      const url = canvas.toDataURL(mime, 0.95);
       setDownloadUrl(url);
     };
   };
@@ -147,12 +156,12 @@ export default function ImageFiltersClient() {
             {/* Visual Canvas View */}
             <div className="lg:col-span-8 flex flex-col items-center">
               <div className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col items-center">
-                <div className="relative max-h-130 w-full flex items-center justify-center overflow-hidden rounded-xl bg-black/40 border border-slate-800 p-2">
+                <div className="relative max-h-[520px] w-full flex items-center justify-center overflow-hidden rounded-xl bg-black/40 border border-slate-800 p-2">
                   <img
                     src={imageSrc}
                     alt="Preview"
                     style={{ filter: filterStyleString }}
-                    className="max-h-120 max-w-full object-contain rounded transition-all duration-75 select-none"
+                    className="max-h-[480px] max-w-full object-contain rounded transition-all duration-75 select-none"
                   />
                 </div>
 
@@ -314,6 +323,42 @@ export default function ImageFiltersClient() {
                     className="w-full accent-pink-500"
                   />
                 </div>
+
+                <div>
+                  <div className="flex justify-between text-slate-400 mb-1">
+                    <span>Invert Colors</span>
+                    <span>{invert}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={invert}
+                    onChange={(e) => {
+                      setInvert(parseInt(e.target.value));
+                      setDownloadUrl(null);
+                    }}
+                    className="w-full accent-pink-500"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-slate-400 mb-1">
+                    <span>Hue Rotation</span>
+                    <span>{hueRotate}°</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-180}
+                    max={180}
+                    value={hueRotate}
+                    onChange={(e) => {
+                      setHueRotate(parseInt(e.target.value));
+                      setDownloadUrl(null);
+                    }}
+                    className="w-full accent-pink-500"
+                  />
+                </div>
               </div>
 
               {!downloadUrl ? (
@@ -327,7 +372,13 @@ export default function ImageFiltersClient() {
               ) : (
                 <a
                   href={downloadUrl}
-                  download={`filtered-${file?.name || "image.png"}`}
+                  download={`filtered-${(file?.name || "image").replace(/\.[^/.]+$/, "")}.${
+                    file?.type === "image/jpeg" || file?.name?.toLowerCase().endsWith(".jpg") || file?.name?.toLowerCase().endsWith(".jpeg")
+                      ? "jpg"
+                      : file?.type === "image/webp" || file?.name?.toLowerCase().endsWith(".webp")
+                      ? "webp"
+                      : "png"
+                  }`}
                   className="w-full mt-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition"
                 >
                   <Download className="w-4 h-4" />

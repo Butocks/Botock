@@ -52,10 +52,11 @@ export default function PdfToJpgClient() {
 
   useEffect(() => {
     return () => {
-      pages.forEach((p) => URL.revokeObjectURL(p.thumbnailUrl));
+      pages.forEach((p) => p.thumbnailUrl && URL.revokeObjectURL(p.thumbnailUrl));
+      convertedPages.forEach((p) => p.thumbnailUrl && URL.revokeObjectURL(p.thumbnailUrl));
       if (zipUrl) URL.revokeObjectURL(zipUrl);
     };
-  }, [pages, zipUrl]);
+  }, [pages, convertedPages, zipUrl]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
@@ -71,7 +72,7 @@ export default function PdfToJpgClient() {
         const arrayBuffer = await f.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({
           data: new Uint8Array(arrayBuffer),
-          cMapUrl: "https://unpkg.com/pdfjs-dist@3.11.174/cmaps/",
+          cMapUrl: "https://unpkg.com/pdfjs-dist@4.4.168/cmaps/",
           cMapPacked: true,
         });
 
@@ -138,7 +139,8 @@ export default function PdfToJpgClient() {
   });
 
   const resetAll = () => {
-    pages.forEach((p) => URL.revokeObjectURL(p.thumbnailUrl));
+    pages.forEach((p) => p.thumbnailUrl && URL.revokeObjectURL(p.thumbnailUrl));
+    convertedPages.forEach((p) => p.thumbnailUrl && URL.revokeObjectURL(p.thumbnailUrl));
     if (zipUrl) URL.revokeObjectURL(zipUrl);
     setFile(null);
     setPdfDoc(null);
@@ -166,6 +168,11 @@ export default function PdfToJpgClient() {
       setErrorMsg("Please select at least one page to convert.");
       return;
     }
+
+    convertedPages.forEach((p) => p.thumbnailUrl && URL.revokeObjectURL(p.thumbnailUrl));
+    if (zipUrl) URL.revokeObjectURL(zipUrl);
+    setConvertedPages([]);
+    setZipUrl(null);
 
     setIsConverting(true);
     setErrorMsg(null);

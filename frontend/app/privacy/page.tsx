@@ -56,9 +56,9 @@ export default function PrivacyPolicyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">4. Client-Side Processing & Privacy</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">4. Client-Side & Ephemeral Processing</h2>
             <p>
-              Botock utilizes client-side technologies (e.g., WebAssembly, local browser APIs) for many of its utilities (PDF manipulation, image editing, etc.). This means your files are processed directly on your device, and the contents are never uploaded, stored, or transmitted to our servers. We cannot access, view, or retain your files processed in this manner, thereby guaranteeing maximum privacy.
+              Botock utilizes client-side technologies (e.g., WebAssembly, local browser APIs) for offline-capable utilities where files are processed directly on your device. For server-assisted tools (such as complex file format conversions, AI generation, and background removal), files are transmitted over TLS and processed ephemerally with strict automated deletion immediately upon task completion, with zero permanent retention or training on your content.
             </p>
           </section>
 

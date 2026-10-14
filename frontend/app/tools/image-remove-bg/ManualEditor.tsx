@@ -21,11 +21,14 @@ export default function ManualEditor({ originalFile, processedUrl, onSave, onCan
   
   const [history, setHistory] = useState<ImageData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const historyRef = useRef<ImageData[]>([]);
+  const historyIndexRef = useRef<number>(-1);
 
   // Initialize canvas with images
   useEffect(() => {
     const origImg = new Image();
     const procImg = new Image();
+    let origUrl = "";
     
     let loaded = 0;
     const init = () => {
@@ -58,11 +61,16 @@ export default function ManualEditor({ originalFile, processedUrl, onSave, onCan
     origImg.onload = init;
     procImg.onload = init;
     
-    origImg.src = URL.createObjectURL(originalFile);
+    origUrl = URL.createObjectURL(originalFile);
+    origImg.src = origUrl;
     procImg.src = processedUrl;
     
     originalImgRef.current = origImg;
     processedImgRef.current = procImg;
+
+    return () => {
+      if (origUrl) URL.revokeObjectURL(origUrl);
+    };
   }, [originalFile, processedUrl]);
 
   const saveState = () => {
@@ -71,7 +79,7 @@ export default function ManualEditor({ originalFile, processedUrl, onSave, onCan
     if (!canvas || !ctx) return;
     
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const newHistory = history.slice(0, historyIndex + 1);
+    const newHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
     newHistory.push(imageData);
     
     // Limit history to 20 steps to save memory
@@ -79,23 +87,27 @@ export default function ManualEditor({ originalFile, processedUrl, onSave, onCan
       newHistory.shift();
     }
     
+    historyRef.current = newHistory;
+    historyIndexRef.current = newHistory.length - 1;
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   };
 
   const undo = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
+    if (historyIndexRef.current > 0) {
+      const newIndex = historyIndexRef.current - 1;
+      historyIndexRef.current = newIndex;
       setHistoryIndex(newIndex);
-      putState(history[newIndex]);
+      putState(historyRef.current[newIndex]);
     }
   };
 
   const redo = () => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
+    if (historyIndexRef.current < historyRef.current.length - 1) {
+      const newIndex = historyIndexRef.current + 1;
+      historyIndexRef.current = newIndex;
       setHistoryIndex(newIndex);
-      putState(history[newIndex]);
+      putState(historyRef.current[newIndex]);
     }
   };
 

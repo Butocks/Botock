@@ -247,10 +247,19 @@ export default function PDFFormsClient() {
     resetDownload();
 
     try {
+      const sanitizeWinAnsi = (str: string) => {
+        if (!str) return "";
+        return str
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/[\u2013\u2014]/g, "-")
+          .replace(/[^\x20-\x7E\xA0-\xFF]/g, "");
+      };
+
       let pdfDoc: PDFDocument;
       if (templateFile) {
         const buffer = await templateFile.arrayBuffer();
-        pdfDoc = await PDFDocument.load(buffer);
+        pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
       } else {
         pdfDoc = await PDFDocument.create();
         for (let p = 0; p < pageCount; p++) {
@@ -274,7 +283,7 @@ export default function PDFFormsClient() {
         const pdfY = pH - (item.y / 100) * pH - item.height;
 
         if (item.type === "heading") {
-          page.drawText(item.label, {
+          page.drawText(sanitizeWinAnsi(item.label), {
             x: pdfX,
             y: pdfY + 10,
             size: 16,
@@ -285,7 +294,7 @@ export default function PDFFormsClient() {
         }
 
         // Draw label above the field
-        page.drawText(item.label + (item.required ? " *" : ""), {
+        page.drawText(sanitizeWinAnsi(item.label) + (item.required ? " *" : ""), {
           x: pdfX,
           y: pdfY + item.height + 4,
           size: 9,
@@ -293,9 +302,15 @@ export default function PDFFormsClient() {
           color: rgb(0.2, 0.2, 0.25),
         });
 
+        const val = testFormData[item.id];
+
         if (item.type === "text" || item.type === "date") {
           const tf = form.createTextField(item.id);
-          if (item.placeholder) tf.setText("");
+          if (val !== undefined && val !== null && String(val) !== "") {
+            tf.setText(sanitizeWinAnsi(String(val)));
+          } else if (item.placeholder) {
+            tf.setText("");
+          }
           tf.addToPage(page, {
             x: pdfX,
             y: pdfY,
@@ -308,6 +323,9 @@ export default function PDFFormsClient() {
         } else if (item.type === "textarea") {
           const tf = form.createTextField(item.id);
           tf.enableMultiline();
+          if (val !== undefined && val !== null && String(val) !== "") {
+            tf.setText(sanitizeWinAnsi(String(val)));
+          }
           tf.addToPage(page, {
             x: pdfX,
             y: pdfY,
@@ -319,6 +337,9 @@ export default function PDFFormsClient() {
           });
         } else if (item.type === "checkbox") {
           const cb = form.createCheckBox(item.id);
+          if (val) {
+            cb.check();
+          }
           cb.addToPage(page, {
             x: pdfX,
             y: pdfY,
@@ -339,7 +360,7 @@ export default function PDFFormsClient() {
             borderColor: rgb(0.65, 0.7, 0.75),
             color: rgb(0.97, 0.98, 1),
           });
-          page.drawText("✍ Click to Sign / Type Signature", {
+          page.drawText("Click to Sign / Type Signature", {
             x: pdfX + 8,
             y: pdfY + 12,
             size: 8,
@@ -347,6 +368,9 @@ export default function PDFFormsClient() {
             color: rgb(0.5, 0.5, 0.6),
           });
           const tf = form.createTextField(item.id);
+          if (val !== undefined && val !== null && String(val) !== "") {
+            tf.setText(sanitizeWinAnsi(String(val)));
+          }
           tf.addToPage(page, {
             x: pdfX,
             y: pdfY,
@@ -356,7 +380,11 @@ export default function PDFFormsClient() {
           });
         } else if (item.type === "dropdown") {
           const dd = form.createDropdown(item.id);
-          dd.setOptions(item.options && item.options.length > 0 ? item.options : ["Select...", "Option 1", "Option 2", "Option 3"]);
+          const opts = item.options && item.options.length > 0 ? item.options : ["Select...", "Option 1", "Option 2", "Option 3"];
+          dd.setOptions(opts.map(sanitizeWinAnsi));
+          if (val && opts.includes(String(val))) {
+            dd.select(sanitizeWinAnsi(String(val)));
+          }
           dd.addToPage(page, {
             x: pdfX,
             y: pdfY,
@@ -600,6 +628,25 @@ export default function PDFFormsClient() {
                           resetDownload();
                         }}
                         className="w-full mt-1 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white text-xs focus:outline-hidden focus:border-indigo-500"
+                      />
+                    </div>
+                  )}
+
+                  {selectedField.type === "dropdown" && (
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Dropdown Options (one per line or comma-separated)</label>
+                      <textarea
+                        rows={3}
+                        value={(selectedField.options || []).join("\n")}
+                        onChange={(e) => {
+                          const val = e.target.value.split(/[\n,]/).map((s) => s.trim()).filter(Boolean);
+                          setFields((prev) =>
+                            prev.map((f) => (f.id === selectedField.id ? { ...f, options: val } : f))
+                          );
+                          resetDownload();
+                        }}
+                        className="w-full mt-1 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-white/10 text-slate-900 dark:text-white text-xs focus:outline-hidden focus:border-indigo-500"
+                        placeholder="Option 1&#10;Option 2&#10;Option 3"
                       />
                     </div>
                   )}

@@ -78,35 +78,42 @@ export default function PDFSplitClient() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const srcDoc = await PDFDocument.load(buffer);
-      const newDoc = await PDFDocument.create();
+      const srcDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
+      const base = file.name.replace(/\.pdf$/i, "");
 
-      let targetIndices: number[] = [];
       if (rangeMode === "all") {
-        targetIndices = Array.from({ length: pageCount }, (_, i) => i);
+        const JSZip = (await import("jszip")).default;
+        const zip = new JSZip();
+        for (let i = 0; i < pageCount; i++) {
+          const singleDoc = await PDFDocument.create();
+          const [copied] = await singleDoc.copyPages(srcDoc, [i]);
+          singleDoc.addPage(copied);
+          const singleBytes = await singleDoc.save();
+          zip.file(`${base}-page-${i + 1}.pdf`, singleBytes);
+        }
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        setBlob(zipBlob);
+        setOutputFileName(`${base}-split-pages.zip`);
       } else {
+        const newDoc = await PDFDocument.create();
         const start = Math.max(1, Math.min(fromPage, pageCount)) - 1;
         const end = Math.max(start + 1, Math.min(toPage, pageCount));
+        const targetIndices: number[] = [];
         for (let i = start; i < end; i++) {
           targetIndices.push(i);
         }
+
+        if (targetIndices.length === 0) {
+          throw new Error("No valid pages selected.");
+        }
+
+        const copiedPages = await newDoc.copyPages(srcDoc, targetIndices);
+        copiedPages.forEach((p) => newDoc.addPage(p));
+
+        const pdfBytes = await newDoc.save();
+        setBlob(pdfBytes);
+        setOutputFileName(`${base}-p${fromPage}-to-p${toPage}.pdf`);
       }
-
-      if (targetIndices.length === 0) {
-        throw new Error("No valid pages selected.");
-      }
-
-      const copiedPages = await newDoc.copyPages(srcDoc, targetIndices);
-      copiedPages.forEach((p) => newDoc.addPage(p));
-
-      const pdfBytes = await newDoc.save();
-      setBlob(pdfBytes);
-
-      setOutputFileName(
-        rangeMode === "all"
-          ? `${file.name.replace(/\.pdf$/i, "")}-pages.pdf`
-          : `${file.name.replace(/\.pdf$/i, "")}-p${fromPage}-to-p${toPage}.pdf`
-      );
     } catch (err: any) {
       console.error("Error splitting PDF:", err);
       setActionError(err.message || "Failed to split PDF. Check file security/permissions.");

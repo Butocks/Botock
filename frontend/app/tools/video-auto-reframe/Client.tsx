@@ -88,6 +88,30 @@ export default function AutoReframeClient() {
         }
 
         const stream = canvas.captureStream(30);
+
+        // Preserve audio from video element if present
+        let audioCtx: AudioContext | null = null;
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtx = new AudioContextClass();
+            const source = audioCtx.createMediaElementSource(video);
+            const dest = audioCtx.createMediaStreamDestination();
+            source.connect(dest);
+            source.connect(audioCtx.destination);
+            dest.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+          }
+        } catch (audioErr) {
+          try {
+            const vStream = (video as any).captureStream ? (video as any).captureStream() : (video as any).mozCaptureStream ? (video as any).mozCaptureStream() : null;
+            if (vStream) {
+              vStream.getAudioTracks().forEach((track: MediaStreamTrack) => stream.addTrack(track));
+            }
+          } catch {
+            console.warn("Could not attach audio track:", audioErr);
+          }
+        }
+
         let mimeType = "video/webm";
         if (MediaRecorder.isTypeSupported("video/mp4;codecs=avc1")) {
           mimeType = "video/mp4;codecs=avc1";
@@ -104,6 +128,9 @@ export default function AutoReframeClient() {
 
         mediaRecorder.onstop = () => {
           URL.revokeObjectURL(videoSrc);
+          if (audioCtx && audioCtx.state !== "closed") {
+            audioCtx.close().catch(() => {});
+          }
           const finalBlob = new Blob(chunks, { type: mimeType });
           resolve(finalBlob);
         };

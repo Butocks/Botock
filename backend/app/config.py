@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     SUPABASE_JWT_SECRET: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_ANON_KEY: str = ""
-    SUPABASE_URL: str = "https://bumojafxwqukycgahmmd.supabase.co"
+    SUPABASE_URL: str = ""
 
     # Admin Security & Auth
     ADMIN_EMAILS: str = ""

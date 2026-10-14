@@ -29,19 +29,23 @@ function clamp(val: number, min: number, max: number): number {
 
 /**
  * Applies a gentle 3x3 noise reduction filter to suppress compression artifacts
- * prior to unsharp mask edge enhancement.
+ * prior to unsharp mask edge enhancement. Yields every 100 rows to prevent UI freeze.
  */
-export function applyNoiseReduction(
+export async function applyNoiseReduction(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number
-): void {
+): Promise<void> {
   if (width <= 1 || height <= 1) return;
   const imgData = ctx.getImageData(0, 0, width, height);
   const src = imgData.data;
   const dst = new Uint8ClampedArray(src.length);
 
+  const CHUNK_ROWS = 100;
   for (let y = 0; y < height; y++) {
+    if (y > 0 && y % CHUNK_ROWS === 0) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
     const y0 = clamp(y - 1, 0, height - 1) * width;
     const y1 = y * width;
     const y2 = clamp(y + 1, 0, height - 1) * width;
@@ -85,13 +89,14 @@ export function applyNoiseReduction(
 /**
  * Applies an unsharp mask convolution filter pass on Canvas 2D image data.
  * Enhances edge contrast and fine contours lost during interpolation.
+ * Yields every 100 rows to prevent UI tab freeze on 4K/8K.
  */
-export function applyUnsharpMask(
+export async function applyUnsharpMask(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
   amount: number = 1.1
-): void {
+): Promise<void> {
   if (width <= 0 || height <= 0) return;
   const imgData = ctx.getImageData(0, 0, width, height);
   const src = imgData.data;
@@ -107,8 +112,12 @@ export function applyUnsharpMask(
     return;
   }
 
+  const CHUNK_ROWS = 100;
   // 3x3 Gaussian smoothing kernel for unsharp masking
   for (let y = 0; y < height; y++) {
+    if (y > 0 && y % CHUNK_ROWS === 0) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
     const y0 = clamp(y - 1, 0, height - 1) * width;
     const y1 = y * width;
     const y2 = clamp(y + 1, 0, height - 1) * width;
@@ -210,10 +219,10 @@ export async function upscaleImage(
     ctx.drawImage(image, 0, 0, targetWidth, targetHeight);
 
     if (noiseReduction) {
-      applyNoiseReduction(ctx, targetWidth, targetHeight);
+      await applyNoiseReduction(ctx, targetWidth, targetHeight);
     }
     if (sharpness) {
-      applyUnsharpMask(ctx, targetWidth, targetHeight, sharpnessAmount);
+      await applyUnsharpMask(ctx, targetWidth, targetHeight, sharpnessAmount);
     }
   } else if (scale === 4) {
     // Multi-pass step scaling for 4x: 1x -> 2x -> 4x
@@ -250,10 +259,10 @@ export async function upscaleImage(
     intermediateCanvas.height = 0;
 
     if (noiseReduction) {
-      applyNoiseReduction(finalCtx, targetWidth, targetHeight);
+      await applyNoiseReduction(finalCtx, targetWidth, targetHeight);
     }
     if (sharpness) {
-      applyUnsharpMask(finalCtx, targetWidth, targetHeight, sharpnessAmount);
+      await applyUnsharpMask(finalCtx, targetWidth, targetHeight, sharpnessAmount);
     }
   } else {
     // Multi-pass step scaling for 8x: 1x -> 2x -> 4x -> 8x
@@ -291,10 +300,10 @@ export async function upscaleImage(
     pass2Canvas.height = 0;
 
     if (noiseReduction) {
-      applyNoiseReduction(finalCtx, targetWidth, targetHeight);
+      await applyNoiseReduction(finalCtx, targetWidth, targetHeight);
     }
     if (sharpness) {
-      applyUnsharpMask(finalCtx, targetWidth, targetHeight, sharpnessAmount);
+      await applyUnsharpMask(finalCtx, targetWidth, targetHeight, sharpnessAmount);
     }
   }
 

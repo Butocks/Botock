@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import GuestCTA from "../../components/GuestCTA";
 import ToolSuggestions from "../../components/ToolSuggestions";
 import Link from "next/link";
@@ -60,6 +60,15 @@ export default function VideoGeneratorClient() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
   const [guestId, setGuestId] = useState<string>("");
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -215,13 +224,14 @@ export default function VideoGeneratorClient() {
       else if (gid) headers["X-Guest-ID"] = gid;
 
       let consecutiveErrors = 0;
-      const intervalId = setInterval(async () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = setInterval(async () => {
         try {
           const res = await fetch(`${backendBaseUrl}/api/video/status/${id}`, { headers });
           if (!res.ok) {
             consecutiveErrors++;
             if (consecutiveErrors >= 6) {
-              clearInterval(intervalId);
+              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
               setStatus("error");
               setErrorMessage("Failed to fetch generation status after several attempts.");
             }
@@ -244,7 +254,7 @@ export default function VideoGeneratorClient() {
               setProgressPercent((prev) => Math.max(prev, 95));
             }
           } else if (data.status === "completed") {
-            clearInterval(intervalId);
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
             setProgressPercent(100);
             setProgressText("Video ready!");
             setStatus("completed");
@@ -254,22 +264,24 @@ export default function VideoGeneratorClient() {
               finalUrl = `${backendBaseUrl.replace(/\/$/, "")}${finalUrl}`;
             }
             
-            const authUrl = token
-              ? `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
-              : gid ? `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}guest_id=${encodeURIComponent(gid)}` : finalUrl;
-              
-            setVideoUrl(authUrl);
-            
-            // Generate local blob url for caching
+            // Fetch video safely with headers without leaking JWT access token in URL query params
             try {
-              const videoReq = await fetch(authUrl, { headers });
-              const blob = await videoReq.blob();
-              setVideoBlobUrl(URL.createObjectURL(blob));
-            } catch (e) { }
+              const videoReq = await fetch(finalUrl, { headers });
+              if (videoReq.ok) {
+                const blob = await videoReq.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                setVideoBlobUrl(blobUrl);
+                setVideoUrl(blobUrl);
+              } else {
+                setVideoUrl(finalUrl);
+              }
+            } catch (e) {
+              setVideoUrl(finalUrl);
+            }
 
             if (!user) setShowGuestCTA(true);
           } else if (data.status === "failed") {
-            clearInterval(intervalId);
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
             setStatus("error");
             setErrorMessage(data.message || data.error || "Generation failed. Please try again.");
           }
@@ -278,6 +290,7 @@ export default function VideoGeneratorClient() {
         }
       }, 3000);
     } catch (err: any) {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       setStatus("error");
       setErrorMessage(err.message);
     }
@@ -428,6 +441,33 @@ export default function VideoGeneratorClient() {
             >
               <option value={4} className="bg-white dark:bg-[#09090b]">4 Seconds</option>
               {user && resolution === "360p" && <option value={8} className="bg-white dark:bg-[#09090b]">8 Seconds</option>}
+            </select>
+
+            {/* Aspect Ratio Select */}
+            <select
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value as "16:9" | "9:16")}
+              disabled={status === "generating" || status === "polling"}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer disabled:opacity-50"
+            >
+              <option value="16:9" className="bg-white dark:bg-[#09090b]">16:9 Landscape</option>
+              <option value="9:16" className="bg-white dark:bg-[#09090b]">9:16 Portrait (Reel)</option>
+            </select>
+
+            {/* Motion Hint Select */}
+            <select
+              value={motionHint}
+              onChange={(e) => setMotionHint(e.target.value)}
+              disabled={status === "generating" || status === "polling"}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer disabled:opacity-50"
+            >
+              <option value="" className="bg-white dark:bg-[#09090b]">Motion: Auto</option>
+              <option value="pan right" className="bg-white dark:bg-[#09090b]">Pan Right</option>
+              <option value="pan left" className="bg-white dark:bg-[#09090b]">Pan Left</option>
+              <option value="zoom in" className="bg-white dark:bg-[#09090b]">Zoom In</option>
+              <option value="zoom out" className="bg-white dark:bg-[#09090b]">Zoom Out</option>
+              <option value="orbit" className="bg-white dark:bg-[#09090b]">Orbit</option>
+              <option value="slow motion" className="bg-white dark:bg-[#09090b]">Slow Motion</option>
             </select>
 
             {/* Reference Image chip */}

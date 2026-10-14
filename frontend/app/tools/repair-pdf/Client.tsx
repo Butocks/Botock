@@ -201,9 +201,20 @@ export default function RepairPdfClient() {
     repairedDocRef.current = null;
   };
 
+  useEffect(() => {
+    return () => {
+      if (repairedBlobUrl) URL.revokeObjectURL(repairedBlobUrl);
+    };
+  }, [repairedBlobUrl]);
+
   // Perform Repair Operation
   const handleRepair = async () => {
     if (!file || !fileBuffer || !diagnostics) return;
+
+    if (repairedBlobUrl) {
+      URL.revokeObjectURL(repairedBlobUrl);
+      setRepairedBlobUrl(null);
+    }
 
     setIsRepairing(true);
     setErrorMsg(null);
@@ -389,33 +400,33 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
   };
 
   return (
-    <div className="w-full bg-[#080b0f] text-slate-100 py-8 px-4 sm:px-6">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="w-full text-slate-900 dark:text-white flex flex-col justify-between selection:bg-emerald-500/20 selection:text-emerald-500 dark:selection:text-emerald-400 py-8 px-4 sm:px-6">
+      <div className="max-w-5xl mx-auto space-y-8 w-full">
         {/* Tool Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wide">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold tracking-wide">
             <ShieldCheck className="w-4 h-4" />
             <span>100% In-Browser Privacy • Zero Server Uploads</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
             Repair &amp; Recover Corrupted PDF Files
           </h1>
-          <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
             Rebuild damaged cross-reference tables, restore broken headers, and salvage unreadable pages from damaged PDF documents directly in your browser.
           </p>
         </div>
 
         {/* Error Notification */}
         {errorMsg && (
-          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 shrink-0 text-rose-400 mt-0.5" />
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-sm flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 text-rose-500 mt-0.5" />
             <div className="flex-1">
               <p className="font-semibold">Document Repair Notice</p>
-              <p className="text-xs text-rose-200/90 mt-0.5 leading-relaxed">{errorMsg}</p>
+              <p className="text-xs text-rose-700 dark:text-rose-200/90 mt-0.5 leading-relaxed">{errorMsg}</p>
             </div>
             <button
               onClick={() => setErrorMsg(null)}
-              className="text-xs text-rose-400 hover:text-white underline cursor-pointer"
+              className="text-xs text-rose-500 hover:underline cursor-pointer"
             >
               Dismiss
             </button>
@@ -426,27 +437,27 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
         {!file ? (
           <div
             {...getRootProps()}
-            className={`border-2 border-dashed rounded-3xl p-10 sm:p-14 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center ${
+            className={`border-2 border-dashed rounded-3xl p-10 sm:p-14 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center shadow-sm ${
               isDragActive
                 ? "border-emerald-500 bg-emerald-500/10 scale-[1.01]"
-                : "border-slate-800 hover:border-emerald-500/50 bg-slate-900/40 hover:bg-slate-900/70"
+                : "border-slate-300 dark:border-white/[0.1] hover:border-emerald-500 dark:hover:border-emerald-500 bg-white dark:bg-[#111114] hover:bg-slate-50 dark:hover:bg-white/[0.02]"
             }`}
           >
             <input {...getInputProps()} />
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 shadow-lg shadow-emerald-500/10">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 shadow-lg shadow-emerald-500/10">
               <Wrench className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-1">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
               Choose or Drop Corrupted PDF Document
             </h3>
-            <p className="text-xs sm:text-sm text-slate-400 max-w-md mb-5 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-5 leading-relaxed">
               Select any broken, damaged, or unreadable PDF. Our client-side diagnostics will analyze and reconstruct it automatically.
             </p>
             <div className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-all shadow-md">
               <FileCheck className="w-4 h-4" />
               <span>Select Broken PDF File</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-4">
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-4">
               Supports standard PDFs up to 100MB • Processed locally in WebAssembly
             </p>
           </div>
@@ -454,17 +465,17 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
           /* Active Document Workbench */
           <div className="space-y-6">
             {/* Top Info Bar */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                   <FileText className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{file.name}</p>
-                  <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{file.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
                     <span>{formatBytes(file.size)}</span>
                     <span>•</span>
-                    <span className="text-emerald-400 font-medium">
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                       PDF {diagnostics?.pdfVersion || ""}
                     </span>
                   </p>
@@ -474,9 +485,9 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
               <div className="flex items-center gap-2">
                 <button
                   onClick={resetAll}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition"
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                   <span>Remove File</span>
                 </button>
               </div>
@@ -484,33 +495,33 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
 
             {/* Diagnostic Inspection Report Card */}
             {diagnostics && (
-              <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-4">
+              <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-white/[0.08] pb-4">
                   <div className="flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-sm font-bold text-white">Document Diagnostic Health Check</h3>
+                    <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Document Diagnostic Health Check</h3>
                   </div>
                   <div className="flex items-center gap-3">
                     <span
                       className={`text-xs px-2.5 py-1 rounded-full font-bold ${
                         diagnostics.integrityScore >= 80
-                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                           : diagnostics.integrityScore >= 50
-                          ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                          : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                          : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
                       }`}
                     >
                       Integrity Score: {diagnostics.integrityScore}%
                     </span>
                     <button
                       onClick={copyDiagnosticReport}
-                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer transition"
+                      className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 cursor-pointer transition"
                       title="Copy diagnostic report"
                     >
                       {copiedLog ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400 text-[11px]">Copied</span>
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-emerald-600 dark:text-emerald-400 text-[11px]">Copied</span>
                         </>
                       ) : (
                         <>
@@ -524,73 +535,73 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
 
                 {/* 4 Health Badges */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                    <p className="text-[11px] text-slate-400 uppercase tracking-wider">Binary Header</p>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08]">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Binary Header</p>
                     <p className="text-xs font-bold mt-1 flex items-center gap-1.5">
                       {diagnostics.hasValidHeader ? (
                         <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-white">Clean (%PDF-{diagnostics.pdfVersion})</span>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-slate-900 dark:text-white">Clean (%PDF-{diagnostics.pdfVersion})</span>
                         </>
                       ) : (
                         <>
-                          <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-                          <span className="text-amber-300">Shifted (+{diagnostics.headerOffset}b)</span>
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="text-amber-600 dark:text-amber-300">Shifted (+{diagnostics.headerOffset}b)</span>
                         </>
                       )}
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                    <p className="text-[11px] text-slate-400 uppercase tracking-wider">EOF Trailer</p>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08]">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">EOF Trailer</p>
                     <p className="text-xs font-bold mt-1 flex items-center gap-1.5">
                       {diagnostics.hasEofMarker ? (
                         <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-white">Valid %%EOF</span>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-slate-900 dark:text-white">Valid %%EOF</span>
                         </>
                       ) : (
                         <>
-                          <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-                          <span className="text-rose-300">Truncated EOF</span>
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                          <span className="text-rose-600 dark:text-rose-300">Truncated EOF</span>
                         </>
                       )}
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                    <p className="text-[11px] text-slate-400 uppercase tracking-wider">XRef Table</p>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08]">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">XRef Table</p>
                     <p className="text-xs font-bold mt-1 flex items-center gap-1.5">
                       {diagnostics.hasXrefTable ? (
                         <>
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-white">Recognized</span>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-slate-900 dark:text-white">Recognized</span>
                         </>
                       ) : (
                         <>
-                          <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-                          <span className="text-amber-300">Broken Offsets</span>
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                          <span className="text-amber-600 dark:text-amber-300">Broken Offsets</span>
                         </>
                       )}
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
-                    <p className="text-[11px] text-slate-400 uppercase tracking-wider">Salvageable Pages</p>
+                  <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08]">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Salvageable Pages</p>
                     <p className="text-xs font-bold mt-1 flex items-center gap-1.5">
-                      <Layers className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-white">~{diagnostics.pageCount} Pages</span>
+                      <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-slate-900 dark:text-white">~{diagnostics.pageCount} Pages</span>
                     </p>
                   </div>
                 </div>
 
                 {/* Detected Issues Details */}
                 {diagnostics.issuesDetected.length > 0 && (
-                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 space-y-1">
-                    <p className="font-semibold text-amber-300 mb-1">Identified Anomalies:</p>
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-200/90 space-y-1">
+                    <p className="font-semibold text-amber-800 dark:text-amber-300 mb-1">Identified Anomalies:</p>
                     {diagnostics.issuesDetected.map((issue, idx) => (
                       <p key={idx} className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
                         <span>{issue}</span>
                       </p>
                     ))}
@@ -601,11 +612,11 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
 
             {/* Repair Controls & Strategy Options */}
             {!repairedBlobUrl && (
-              <div className="p-5 sm:p-6 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-5">
+              <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm space-y-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Cpu className="w-4 h-4 text-emerald-400" />
-                    <h3 className="text-sm font-bold text-white">Select Recovery Mode</h3>
+                    <Cpu className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Select Recovery Mode</h3>
                   </div>
                 </div>
 
@@ -614,21 +625,21 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
                     onClick={() => setRepairMode("smart")}
                     className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
                       repairMode === "smart"
-                        ? "border-emerald-500 bg-emerald-500/10 text-white"
-                        : "border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-700"
+                        ? "border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white"
+                        : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.02] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                           Smart Structural Rebuild
                         </span>
-                        <span className="text-[10px] uppercase font-bold text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10">
+                        <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10">
                           Recommended
                         </span>
                       </div>
-                      <p className="text-[11px] leading-relaxed text-slate-400">
+                      <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
                         Sanitizes headers, fixes trailers, and recalculates the entire cross-reference table. Retains full vector text, embedded fonts, and interactive form structures.
                       </p>
                     </div>
@@ -638,22 +649,22 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
                     onClick={() => setRepairMode("deep")}
                     className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
                       repairMode === "deep"
-                        ? "border-emerald-500 bg-emerald-500/10 text-white"
-                        : "border-slate-800 bg-slate-950/40 text-slate-400 hover:border-slate-700"
+                        ? "border-emerald-500 bg-emerald-500/10 text-slate-900 dark:text-white"
+                        : "border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.02] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                          <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                           Deep Page Salvage &amp; Synthesis
                         </span>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 px-2 py-0.5 rounded bg-slate-800">
+                        <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800">
                           Resilient
                         </span>
                       </div>
-                      <p className="text-[11px] leading-relaxed text-slate-400">
-                        Uses fault-tolerant recovery parser to extract every readable page individually and compile them into a pristine new PDF. Best for heavily corrupted files.
+                      <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                        Uses fault-tolerant recovery parser to extract every readable page individually and compile them into a pristine new PDF. Best for heavily corrupted files. (Note: Deep mode rasterizes pages, flattening selectable text layers).
                       </p>
                     </div>
                   </label>
@@ -682,17 +693,17 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
 
             {/* Repaired Result View & Live Preview */}
             {repairedBlobUrl && (
-              <div className="p-6 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-6">
+              <div className="p-6 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/30 shadow-sm space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-emerald-500/20 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                       <CheckCircle2 className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-white">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white">
                         PDF Successfully Repaired!
                       </h3>
-                      <p className="text-xs text-emerald-300/80">
+                      <p className="text-xs text-emerald-700 dark:text-emerald-300/80">
                         Reconstructed {repairedPages} page{repairedPages > 1 ? "s" : ""} • Clean XRef table generated
                       </p>
                     </div>
@@ -714,21 +725,21 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
 
                 {/* File size comparison stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <p className="text-[10px] text-slate-400 uppercase">Original Size</p>
-                    <p className="text-xs font-bold text-slate-300 mt-0.5">
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Original Size</p>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5">
                       {formatBytes(file.size)}
                     </p>
                   </div>
-                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-                    <p className="text-[10px] text-slate-400 uppercase">Repaired Size</p>
-                    <p className="text-xs font-bold text-emerald-400 mt-0.5">
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Repaired Size</p>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                       {repairedSize ? formatBytes(repairedSize) : "N/A"}
                     </p>
                   </div>
-                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 col-span-2 sm:col-span-1">
-                    <p className="text-[10px] text-slate-400 uppercase">Pages Salvaged</p>
-                    <p className="text-xs font-bold text-white mt-0.5">
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-1">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Pages Salvaged</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">
                       {repairedPages} of {diagnostics?.pageCount || repairedPages}
                     </p>
                   </div>
@@ -738,8 +749,8 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Eye className="w-4 h-4 text-emerald-400" />
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                      <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
                         Live Repaired Preview
                       </h4>
                     </div>
@@ -749,17 +760,17 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
                         <button
                           onClick={handlePrevPage}
                           disabled={previewPage <= 1}
-                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition"
+                          className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-white transition cursor-pointer"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
-                        <span className="text-slate-300">
+                        <span className="text-slate-600 dark:text-slate-300">
                           Page {previewPage} of {previewTotalPages}
                         </span>
                         <button
                           onClick={handleNextPage}
                           disabled={previewPage >= previewTotalPages}
-                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-white transition"
+                          className="p-1 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-white transition cursor-pointer"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -767,10 +778,10 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
                     )}
                   </div>
 
-                  <div className="w-full bg-slate-950 rounded-2xl p-4 border border-slate-800/80 flex items-center justify-center min-h-[320px] overflow-auto">
+                  <div className="w-full bg-slate-100 dark:bg-slate-950 rounded-2xl p-4 border border-slate-200 dark:border-slate-800/80 flex items-center justify-center min-h-[320px] overflow-auto">
                     {previewLoading && (
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <RefreshCw className="w-4 h-4 animate-spin text-emerald-600 dark:text-emerald-400" />
                         <span>Rendering page preview...</span>
                       </div>
                     )}
@@ -786,7 +797,7 @@ ${diagnostics.issuesDetected.length > 0 ? diagnostics.issuesDetected.map((i) => 
                 <div className="pt-2 flex justify-end">
                   <button
                     onClick={resetAll}
-                    className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 transition cursor-pointer"
+                    className="text-xs text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center gap-1.5 transition cursor-pointer"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Repair another document</span>

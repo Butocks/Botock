@@ -197,7 +197,7 @@ export default function OrganizePdfClient() {
 
     try {
       const sourceBytes = await file.arrayBuffer();
-      const sourceDoc = await PDFDocument.load(sourceBytes);
+      const sourceDoc = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
       const newDoc = await PDFDocument.create();
 
       for (const card of pages) {

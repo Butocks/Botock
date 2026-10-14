@@ -179,7 +179,7 @@ export default function Client() {
     }
   };
 
-  const handleUpscale = async () => {
+  const handleUpscale = async (overrideFormat?: "image/png" | "image/webp" | "image/jpeg") => {
     if (!imageSrc) return;
     setIsProcessing(true);
     setErrorMessage(null);
@@ -198,12 +198,13 @@ export default function Client() {
       setProcessStatus(`Executing ${scaleFactor}x multi-pass step scaling...`);
       await new Promise((r) => setTimeout(r, 60));
 
+      const targetFmt = overrideFormat || exportFormat;
       const upscaled = await upscaleImage(img, {
         scale: scaleFactor,
         sharpness: sharpnessEnabled,
         sharpnessAmount: sharpnessAmount,
         noiseReduction: noiseReduction,
-        format: exportFormat,
+        format: targetFmt,
       });
 
       setResult(upscaled);
@@ -770,7 +771,7 @@ export default function Client() {
               {/* Upscale CTA Button */}
               <button
                 type="button"
-                onClick={handleUpscale}
+                onClick={() => handleUpscale()}
                 disabled={isProcessing}
                 className="w-full py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-600/50 text-white font-bold text-sm transition-all shadow-md active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
               >
@@ -809,8 +810,8 @@ export default function Client() {
                         type="button"
                         onClick={() => {
                           setExportFormat(fmt);
-                          // Re-trigger generation for new format
-                          handleUpscale();
+                          // Re-trigger generation for new format with explicit parameter
+                          handleUpscale(fmt);
                         }}
                         className={`px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${
                           exportFormat === fmt

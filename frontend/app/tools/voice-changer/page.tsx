@@ -104,7 +104,7 @@ export default function VoiceChangerPage() {
               The Best Free AI Voice Changer & Pitch Shifter Online
             </h2>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              Experience the fastest and most secure way to use our <strong>AI Voice Changer & Pitch Shifter</strong>. Botock AI provides unlimited access with absolutely no charges, no hidden fees, and no sign-up required. Your privacy is our priority—all processing happens directly in your browser, ensuring your files are never uploaded to any remote servers. 
+              Experience the fastest and most secure way to use our <strong>AI Voice Changer & Pitch Shifter</strong>. Botock AI provides unlimited access with absolutely no charges, no hidden fees, and no sign-up required. Your privacy is our priority—all audio conversions are processed ephemerally with immediate automated purging, ensuring your files are never stored or retained on remote servers. 
             </p>
           </div>
 
@@ -124,7 +124,7 @@ export default function VoiceChangerPage() {
             <div className="p-5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05]">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Absolute Privacy</h3>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                We use cutting-edge client-side rendering technology. This means your files stay on your device and are processed locally, guaranteeing zero data retention.
+                We use secure ephemeral processing pipelines. Files uploaded for conversion are streamed in memory or temporary isolated directories and immediately deleted upon completion, guaranteeing zero data retention.
               </p>
             </div>
           </div>

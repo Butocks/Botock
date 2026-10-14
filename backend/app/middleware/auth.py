@@ -7,6 +7,10 @@ so it remains correct across Azure restarts and multiple replicas.
 
 import base64
 import logging
+import hmac
+import hashlib
+import secrets
+import re
 from typing import Any, Optional
 
 import httpx
@@ -16,6 +20,7 @@ from fastapi import Depends, Header, HTTPException, Query
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
 
 
 def get_current_user(authorization: Optional[str] = Header(None), token_query: Optional[str] = Query(None, alias="token")) -> dict:
@@ -82,30 +87,53 @@ def get_optional_user(authorization: Optional[str] = Header(None), token_query: 
     except HTTPException:
         return None
 
+def _sign_guest_id(raw_id: str) -> str:
+    secret = (settings.SECRET_KEY or settings.SESSION_ENCRYPTION_KEY or "botock_guest_sec").encode()
+    sig = hmac.new(secret, raw_id.encode(), hashlib.sha256).hexdigest()[:16]
+    return f"{raw_id}.{sig}"
+
+def _verify_guest_id(signed_id: str) -> Optional[str]:
+    if not signed_id or "." not in signed_id:
+        return None
+    raw_id, sig = signed_id.rsplit(".", 1)
+    secret = (settings.SECRET_KEY or settings.SESSION_ENCRYPTION_KEY or "botock_guest_sec").encode()
+    expected_sig = hmac.new(secret, raw_id.encode(), hashlib.sha256).hexdigest()[:16]
+    if hmac.compare_digest(sig, expected_sig):
+        return raw_id
+    return None
+
 def get_current_user_or_guest(
     authorization: Optional[str] = Header(None),
     token_query: Optional[str] = Query(None, alias="token"),
     x_guest_id: Optional[str] = Header(None, alias="X-Guest-ID"),
     guest_id_query: Optional[str] = Query(None, alias="guest_id"),
 ) -> dict:
-    """Returns authenticated user if token present, or guest user object if unauthenticated."""
+    """Returns authenticated user if token present, or cryptographically isolated guest object."""
     if (authorization and authorization.strip()) or (token_query and token_query.strip()):
         try:
             return get_current_user(authorization, token_query)
         except HTTPException:
             pass
 
-    guest_id = (x_guest_id or guest_id_query or "").strip()
-    if not guest_id or len(guest_id) < 5:
-        guest_id = "guest_anon_user"
+    raw_guest = (x_guest_id or guest_id_query or "").strip()
+    verified_id = _verify_guest_id(raw_guest)
+    if not verified_id:
+        if raw_guest and len(raw_guest) >= 12 and re.match(r"^[a-zA-Z0-9_\-]+$", raw_guest):
+            # Derive deterministic isolated guest ID using server secret
+            secret = (settings.SECRET_KEY or settings.SESSION_ENCRYPTION_KEY or "botock_guest_sec").encode()
+            derived_suffix = hmac.new(secret, raw_guest.encode(), hashlib.sha256).hexdigest()[:16]
+            verified_id = f"guest_{derived_suffix}"
+        else:
+            verified_id = f"guest_{secrets.token_hex(8)}"
 
     return {
-        "user_id": guest_id,
-        "email": "guest@botock.app",
+        "user_id": verified_id,
+        "email": f"{verified_id}@botock.app",
         "is_pro": False,
         "is_guest": True,
         "payload": {},
     }
+
 
 
 def _service_headers() -> dict[str, str]:

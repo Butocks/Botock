@@ -83,20 +83,36 @@ export default function PDFWatermarkClient() {
     setActionError(null);
 
     try {
+      const sanitizeWinAnsi = (str: string) => {
+        if (!str) return "WATERMARK";
+        return str
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"')
+          .replace(/[\u2013\u2014]/g, "-")
+          .replace(/[^\x20-\x7E\xA0-\xFF]/g, "");
+      };
+
+      const cleanText = sanitizeWinAnsi(watermarkText) || "WATERMARK";
+
       const buffer = await file.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(buffer);
+      const pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
       const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
       const pages = pdfDoc.getPages();
       const markColor = hexToRgb(colorHex);
 
       for (const page of pages) {
         const { width, height } = page.getSize();
-        const textWidth = font.widthOfTextAtSize(watermarkText, fontSize);
+        const textWidth = font.widthOfTextAtSize(cleanText, fontSize);
         const textHeight = font.heightAtSize(fontSize);
-        const x = (width - textWidth) / 2;
-        const y = (height - textHeight) / 2;
 
-        page.drawText(watermarkText, {
+        // Calculate origin such that rotated text center aligns with page center (width/2, height/2)
+        const rad = (rotationAngle * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const x = width / 2 - ((textWidth / 2) * cos - (textHeight / 2) * sin);
+        const y = height / 2 - ((textWidth / 2) * sin + (textHeight / 2) * cos);
+
+        page.drawText(cleanText, {
           x,
           y,
           size: fontSize,

@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { sanitizeRedirectUrl } from '@/utils/runtime-urls'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   const error = requestUrl.searchParams.get('error')
   const errorDescription = requestUrl.searchParams.get('error_description')
-  const next = requestUrl.searchParams.get('next') ?? '/tools/video-generator'
+  const next = sanitizeRedirectUrl(requestUrl.searchParams.get('next'), '/tools/video-generator')
   const origin = requestUrl.origin
+
 
   if (error || errorDescription) {
     console.error('OAuth Callback Error:', error, errorDescription)

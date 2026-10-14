@@ -178,9 +178,9 @@ const VOICE_MODES = [
   { id: "echo_chamber", label: "⛰️ Echo Chamber" },
   { id: "telephone", label: "📞 Telephone" },
   { id: "privacy_disguiser", label: "🕵️ Privacy Disguiser" },
-  { id: "clone_elon", label: "🚀 Elon (Clone)" },
-  { id: "clone_morgan", label: "🎙️ Morgan (Clone)" },
-  { id: "clone_anime_girl", label: "🌸 Anime Girl (Clone)" },
+  { id: "clone_elon", label: "🚀 Tech Voice Shift (0.96x)" },
+  { id: "clone_morgan", label: "🎙️ Deep Cinematic Shift (0.78x)" },
+  { id: "clone_anime_girl", label: "🌸 Anime Pitch Shift (1.42x)" },
 ];
 
 export default function VoiceChangerClient() {
@@ -221,8 +221,12 @@ export default function VoiceChangerClient() {
       }
     };
     checkTransfer();
-    return () => { mounted = false; };
-  }, []);
+    return () => {
+      mounted = false;
+      if (ttsAudioUrl) URL.revokeObjectURL(ttsAudioUrl);
+      if (v2vAudioUrl) URL.revokeObjectURL(v2vAudioUrl);
+    };
+  }, [ttsAudioUrl, v2vAudioUrl]);
 
   const handleVoiceSelect = (voice: TTSVoice) => {
     setSelectedVoice(voice);
@@ -264,6 +268,9 @@ export default function VoiceChangerClient() {
       }
 
       const blob = await response.blob();
+      if (ttsAudioUrl) {
+        URL.revokeObjectURL(ttsAudioUrl);
+      }
       const url = URL.createObjectURL(blob);
       setTtsAudioUrl(url);
       setTtsStatus("completed");
@@ -330,6 +337,9 @@ export default function VoiceChangerClient() {
       }
 
       const blob = await response.blob();
+      if (v2vAudioUrl) {
+        URL.revokeObjectURL(v2vAudioUrl);
+      }
       const url = URL.createObjectURL(blob);
       setV2vAudioUrl(url);
       setV2vStatus("completed");

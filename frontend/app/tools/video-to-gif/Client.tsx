@@ -36,7 +36,7 @@ export default function VideoToGifClient() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const { run, isProcessing, progress } = useFFmpeg();
+  const { run, cancel, isProcessing, progress } = useFFmpeg();
 
   useEffect(() => {
     return () => {
@@ -96,6 +96,8 @@ export default function VideoToGifClient() {
     const filter = `[0:v]fps=${fps},${scaleFilter}split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer`;
 
     const clipDuration = Math.max(0.5, endTime - startTime);
+    const ext = originalFile.name.split('.').pop()?.toLowerCase() || "mp4";
+    const safeInputName = `input_video.${ext}`;
 
     const args = [
       "-ss",
@@ -103,7 +105,7 @@ export default function VideoToGifClient() {
       "-t",
       String(clipDuration),
       "-i",
-      "input_video.mp4",
+      safeInputName,
       "-filter_complex",
       filter,
       "-loop",
@@ -120,7 +122,7 @@ export default function VideoToGifClient() {
     try {
       const blob = await run({
         inputFile: originalFile,
-        inputFileName: "input_video.mp4",
+        inputFileName: safeInputName,
         outputFileName: "output.gif",
         outputMimeType: "image/gif",
         args,
@@ -350,6 +352,17 @@ export default function VideoToGifClient() {
                   </>
                 )}
               </button>
+
+              {isProcessing && (
+                <button
+                  type="button"
+                  onClick={cancel}
+                  className="w-full py-2.5 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Cancel GIF Processing</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

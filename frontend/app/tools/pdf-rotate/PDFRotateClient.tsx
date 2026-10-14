@@ -130,8 +130,16 @@ export default function PDFRotateClient() {
   };
 
   const handleAutoStraighten = () => {
-    // Automatically detect pages whose orientation doesn't match standard portrait
-    // If a page is landscape (width > height), rotate 90° CW to make it straight upright!
+    // Only auto-straighten isolated sideways pages in predominantly portrait documents
+    // (Preserve legitimate landscape documents like slides and wide reports)
+    const landscapeCount = pdfPages.filter((p) => p.isLandscape).length;
+    const totalCount = pdfPages.length;
+
+    if (totalCount > 0 && landscapeCount / totalCount > 0.5) {
+      setActionError("Document is primarily landscape. Auto-straighten skipped to preserve intended slide/sheet orientation.");
+      return;
+    }
+
     const newRots = [...rotations];
     const newAutoMap: Record<number, boolean> = {};
 
@@ -160,7 +168,7 @@ export default function PDFRotateClient() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(buffer);
+      const pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
       const pages = pdfDoc.getPages();
 
       for (let i = 0; i < pages.length; i++) {

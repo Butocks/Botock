@@ -29,12 +29,31 @@ const formatMsToTimestamp = (ms: number, format: "srt" | "vtt"): string => {
   return `${pad(h)}:${pad(m)}:${pad(s)}${sep}${pad(millis, 3)}`;
 };
 
+const convertSubtitles = (input: string, toFormat: 'srt' | 'vtt'): string => {
+  if (!input.trim()) return "";
+  let text = input.trim();
+  if (toFormat === 'vtt') {
+    text = text.replace(/^WEBVTT[^\n]*\n+/i, "").trim();
+    text = text.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
+    return `WEBVTT\n\n${text}`;
+  } else {
+    text = text.replace(/^WEBVTT[^\n]*\n+/i, "").trim();
+    text = text.replace(/(\d{2}:\d{2}:\d{2})\.(\d{3})/g, "$1,$2");
+    return text;
+  }
+};
+
 export default function SubtitlesClient() {
   const [content, setContent] = useState("");
   const [fileName, setFileName] = useState("subtitles");
   const [targetFormat, setTargetFormat] = useState<"srt" | "vtt">("srt");
+  const targetFormatRef = useRef<"srt" | "vtt">("srt");
   const [copied, setCopied] = useState(false);
   
+  useEffect(() => {
+    targetFormatRef.current = targetFormat;
+  }, [targetFormat]);
+
   // AI State
   const [isProcessing, setIsProcessing] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -74,21 +93,22 @@ export default function SubtitlesClient() {
   }, []);
 
   const generateSubtitlesFromChunks = (chunks: any[]) => {
+    const fmt = targetFormatRef.current;
     let srt = "";
     chunks.forEach((chunk, index) => {
       // whisper timestamps are in seconds
       const startTimeMs = chunk.timestamp[0] * 1000;
       const endTimeMs = chunk.timestamp[1] * 1000 || (chunk.timestamp[0] * 1000 + 2000);
       
-      const startFmt = formatMsToTimestamp(startTimeMs, targetFormat);
-      const endFmt = formatMsToTimestamp(endTimeMs, targetFormat);
+      const startFmt = formatMsToTimestamp(startTimeMs, fmt);
+      const endFmt = formatMsToTimestamp(endTimeMs, fmt);
       
       srt += `${index + 1}\n`;
       srt += `${startFmt} --> ${endFmt}\n`;
       srt += `${chunk.text.trim()}\n\n`;
     });
     
-    if (targetFormat === 'vtt') {
+    if (fmt === 'vtt') {
         srt = "WEBVTT\n\n" + srt;
     }
     
@@ -99,9 +119,15 @@ export default function SubtitlesClient() {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
       sampleRate: 16000
     });
-    const arrayBuffer = await file.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    return audioBuffer.getChannelData(0);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      return audioBuffer.getChannelData(0);
+    } finally {
+      try {
+        await audioContext.close();
+      } catch (e) {}
+    }
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
@@ -163,9 +189,17 @@ export default function SubtitlesClient() {
     multiple: false,
   });
 
+  const switchFormat = (newFmt: "srt" | "vtt") => {
+    setTargetFormat(newFmt);
+    if (content) {
+      setContent(convertSubtitles(content, newFmt));
+    }
+  };
+
   const handleDownload = () => {
     if (!content) return;
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const finalContent = convertSubtitles(content, targetFormat);
+    const blob = new Blob([finalContent], { type: targetFormat === "vtt" ? "text/vtt;charset=utf-8" : "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -272,7 +306,7 @@ export default function SubtitlesClient() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setTargetFormat("vtt")}
+                onClick={() => switchFormat("vtt")}
                 className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   targetFormat === "vtt"
                     ? "border-sky-500 bg-sky-600/10 text-sky-600 dark:text-sky-400"
@@ -283,7 +317,7 @@ export default function SubtitlesClient() {
               </button>
               <button
                 type="button"
-                onClick={() => setTargetFormat("srt")}
+                onClick={() => switchFormat("srt")}
                 className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   targetFormat === "srt"
                     ? "border-sky-500 bg-sky-600/10 text-sky-600 dark:text-sky-400"

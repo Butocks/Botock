@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { formatBytes } from "@/lib/utils/formatters";
 import {
@@ -20,8 +20,8 @@ import {
 const FORMAT_OPTIONS = [
   { ext: "mp4", label: "MP4 (H.264 / AAC)", mime: "video/mp4", vcodec: "libx264", acodec: "aac" },
   { ext: "webm", label: "WebM (VP8 / Vorbis)", mime: "video/webm", vcodec: "libvpx", acodec: "libvorbis" },
-  { ext: "mkv", label: "MKV (Matroska)", mime: "video/x-matroska", vcodec: "copy", acodec: "copy" },
-  { ext: "mov", label: "MOV (QuickTime)", mime: "video/quicktime", vcodec: "copy", acodec: "copy" },
+  { ext: "mkv", label: "MKV (Matroska / H.264)", mime: "video/x-matroska", vcodec: "libx264", acodec: "aac" },
+  { ext: "mov", label: "MOV (QuickTime / H.264)", mime: "video/quicktime", vcodec: "libx264", acodec: "aac" },
   { ext: "avi", label: "AVI Container", mime: "video/x-msvideo", vcodec: "libx264", acodec: "mp3" },
 ];
 
@@ -37,8 +37,17 @@ export default function VideoConvertClient() {
 
   const { run, cancel, isProcessing, progress, statusMessage, error } = useFFmpeg();
 
+  useEffect(() => {
+    return () => {
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
+    };
+  }, [videoUrl, resultUrl]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
       const selected = e.target.files[0];
       setFile(selected);
       setResultUrl(null);
@@ -50,18 +59,21 @@ export default function VideoConvertClient() {
   const handleConvert = async () => {
     if (!file) return;
     setErrorMsg(null);
-    setResultUrl(null);
+    if (resultUrl) {
+      URL.revokeObjectURL(resultUrl);
+      setResultUrl(null);
+    }
 
     try {
       const selectedOption = FORMAT_OPTIONS.find((f) => f.ext === targetExt) || FORMAT_OPTIONS[0];
       const outputName = `converted.${selectedOption.ext}`;
+      const safeInputName = (file.name || "input.mp4").replace(/[^a-zA-Z0-9._-]/g, "_");
 
       const args = [
-        "-i", file.name,
+        "-i", safeInputName,
       ];
 
       if (selectedOption.vcodec !== "copy") {
-        // ✅ -preset only makes sense when actually encoding (not stream copying)
         args.push("-c:v", selectedOption.vcodec, "-preset", "ultrafast");
       } else {
         args.push("-c:v", "copy");
@@ -73,9 +85,11 @@ export default function VideoConvertClient() {
         args.push("-c:a", "copy");
       }
 
+      args.push(outputName);
+
       const outputBlob = await run({
         inputFile: file,
-        inputFileName: file.name,
+        inputFileName: safeInputName,
         outputFileName: outputName,
         outputMimeType: selectedOption.mime,
         args,
@@ -218,6 +232,8 @@ export default function VideoConvertClient() {
 
             <button
               onClick={() => {
+                if (videoUrl) URL.revokeObjectURL(videoUrl);
+                if (resultUrl) URL.revokeObjectURL(resultUrl);
                 setFile(null);
                 setVideoUrl(null);
                 setResultUrl(null);

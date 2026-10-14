@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Download, Loader2, Image as ImageIcon, Trash2, CheckCircle2, AlertCircle, Edit2, Palette } from "lucide-react";
 import UploadDropzone from "../../components/tool-ui/UploadDropzone";
 import { getBackendUrl } from "@/utils/runtime-urls";
@@ -9,6 +9,7 @@ import ManualEditor from "./ManualEditor";
 interface BatchFile {
   id: string;
   file: File;
+  previewUrl: string;
   status: "pending" | "processing" | "done" | "error";
   resultUrl?: string;
   error?: string;
@@ -31,12 +32,22 @@ export default function Client() {
   const [bgColor, setBgColor] = useState<string>("transparent");
   const [editingFileId, setEditingFileId] = useState<string | null>(null);
 
+  useEffect(() => {
+    return () => {
+      batchFiles.forEach((bf) => {
+        if (bf.previewUrl) URL.revokeObjectURL(bf.previewUrl);
+        if (bf.resultUrl) URL.revokeObjectURL(bf.resultUrl);
+      });
+    };
+  }, [batchFiles]);
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (!acceptedFiles || acceptedFiles.length === 0) return;
     
     const newFiles = acceptedFiles.map((f) => ({
       id: Math.random().toString(36).substring(7),
       file: f,
+      previewUrl: URL.createObjectURL(f),
       status: "pending" as const,
     }));
     
@@ -44,7 +55,12 @@ export default function Client() {
   }, []);
 
   const removeFile = (id: string) => {
-    setBatchFiles((prev) => prev.filter((f) => f.id !== id));
+    setBatchFiles((prev) => {
+      const target = prev.find((f) => f.id === id);
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+      if (target?.resultUrl) URL.revokeObjectURL(target.resultUrl);
+      return prev.filter((f) => f.id !== id);
+    });
   };
 
   const processSingleFile = async (bf: BatchFile) => {
@@ -252,7 +268,7 @@ export default function Client() {
                   {bf.resultUrl ? (
                     <img src={bf.resultUrl} className="w-full h-full object-contain" alt="Result" />
                   ) : (
-                    <img src={URL.createObjectURL(bf.file)} className="w-full h-full object-cover opacity-50" alt="Original" />
+                    <img src={bf.previewUrl} className="w-full h-full object-cover opacity-50" alt="Original" />
                   )}
                   
                   {bf.status === "processing" && (

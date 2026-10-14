@@ -8,13 +8,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
     const supabase = await createClient();
-    await supabase.from("tool_usage").insert({
+    const payload = {
       tool_id: toolId,
       tool_name: toolName ?? toolId,
       status,
       error_message: errorMessage ?? null,
       used_at: new Date().toISOString(),
-    });
+    };
+    const { error } = await supabase.from("tool_usage_log").insert(payload);
+    if (error) {
+      await supabase.from("tool_usage").insert(payload);
+    }
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Failed to log" }, { status: 500 });
@@ -25,10 +29,18 @@ export async function GET() {
   try {
     const supabase = await createClient();
 
-    const { data: usageRows } = await supabase
-      .from("tool_usage")
+    let { data: usageRows } = await supabase
+      .from("tool_usage_log")
       .select("tool_id, tool_name, status, error_message, used_at")
       .order("used_at", { ascending: false });
+
+    if (!usageRows) {
+      const res = await supabase
+        .from("tool_usage")
+        .select("tool_id, tool_name, status, error_message, used_at")
+        .order("used_at", { ascending: false });
+      usageRows = res.data;
+    }
 
     if (!usageRows) return NextResponse.json({ summary: [], errors: [] });
 

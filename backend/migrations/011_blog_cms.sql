@@ -150,13 +150,54 @@ BEGIN
 END;
 $$;
 
--- View function
+-- View function (Restricted to published posts for public)
 CREATE OR REPLACE FUNCTION get_blog_posts(p_status VARCHAR DEFAULT NULL)
 RETURNS SETOF public.blog_posts
 LANGUAGE sql
 SECURITY DEFINER
 AS $$
     SELECT * FROM public.blog_posts
-    WHERE (p_status IS NULL OR status = p_status)
+    WHERE (
+        (status = 'PUBLISHED')
+        OR (current_user = 'service_role')
+        OR (p_status IS NOT NULL AND status = p_status AND current_user = 'service_role')
+    )
     ORDER BY created_at DESC;
 $$;
+
+-- 5. Row Level Security & Access Control
+ALTER TABLE public.blog_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.blog_redirects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view published blog posts" ON public.blog_posts;
+CREATE POLICY "Public can view published blog posts" ON public.blog_posts
+    FOR SELECT TO anon, authenticated
+    USING (status = 'PUBLISHED');
+
+DROP POLICY IF EXISTS "Service role full access blog_posts" ON public.blog_posts;
+CREATE POLICY "Service role full access blog_posts" ON public.blog_posts
+    FOR ALL TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public can view blog redirects" ON public.blog_redirects;
+CREATE POLICY "Public can view blog redirects" ON public.blog_redirects
+    FOR SELECT TO anon, authenticated
+    USING (true);
+
+DROP POLICY IF EXISTS "Service role full access blog_redirects" ON public.blog_redirects;
+CREATE POLICY "Service role full access blog_redirects" ON public.blog_redirects
+    FOR ALL TO service_role
+    USING (true)
+    WITH CHECK (true);
+
+-- Revoke dangerous RPC execution from public/anon/authenticated
+REVOKE ALL ON FUNCTION admin_create_blog(VARCHAR, VARCHAR, TEXT, TEXT, VARCHAR, VARCHAR, TEXT, UUID, VARCHAR, VARCHAR, TEXT, VARCHAR, TEXT, BOOLEAN, VARCHAR, VARCHAR, VARCHAR) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION admin_create_blog(VARCHAR, VARCHAR, TEXT, TEXT, VARCHAR, VARCHAR, TEXT, UUID, VARCHAR, VARCHAR, TEXT, VARCHAR, TEXT, BOOLEAN, VARCHAR, VARCHAR, VARCHAR) TO service_role;
+
+REVOKE ALL ON FUNCTION admin_update_blog(UUID, VARCHAR, VARCHAR, TEXT, TEXT, VARCHAR, VARCHAR, TEXT, UUID, VARCHAR, VARCHAR, TEXT, VARCHAR, TEXT, BOOLEAN, VARCHAR, VARCHAR, VARCHAR) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION admin_update_blog(UUID, VARCHAR, VARCHAR, TEXT, TEXT, VARCHAR, VARCHAR, TEXT, UUID, VARCHAR, VARCHAR, TEXT, VARCHAR, TEXT, BOOLEAN, VARCHAR, VARCHAR, VARCHAR) TO service_role;
+
+REVOKE ALL ON FUNCTION admin_delete_blog(UUID) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION admin_delete_blog(UUID) TO service_role;
+

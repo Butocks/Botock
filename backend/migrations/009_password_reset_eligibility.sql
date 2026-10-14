@@ -9,6 +9,8 @@ RETURNS JSON AS $$
 DECLARE
     v_user RECORD;
     v_has_password BOOLEAN := FALSE;
+    v_is_google BOOLEAN := FALSE;
+    v_has_email_provider BOOLEAN := FALSE;
 BEGIN
     -- Query user from auth.users (case-insensitive)
     SELECT 
@@ -36,12 +38,44 @@ BEGIN
         v_has_password := TRUE;
     END IF;
 
-    -- Case 2: User registered via Google and has NO application password
+    -- Check if provider is google in metadata
+    IF (v_user.raw_app_meta_data->>'provider' = 'google' OR v_user.raw_app_meta_data->'providers' @> '["google"]'::jsonb) THEN
+        v_is_google := TRUE;
+    END IF;
+
+    -- Check if user has email provider in metadata
+    IF (v_user.raw_app_meta_data->>'provider' = 'email' OR v_user.raw_app_meta_data->'providers' @> '["email"]'::jsonb) THEN
+        v_has_email_provider := TRUE;
+    END IF;
+
+    -- Check identities table
+    IF EXISTS (
+        SELECT 1 FROM auth.identities 
+        WHERE user_id = v_user.id AND provider = 'google'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM auth.identities 
+        WHERE user_id = v_user.id AND provider = 'email'
+    ) THEN
+        v_is_google := TRUE;
+        v_has_email_provider := FALSE;
+    END IF;
+
+    -- Case 2: User registered via Google and has NO email application password
+    IF v_is_google AND (NOT v_has_email_provider OR NOT v_has_password) THEN
+        RETURN json_build_object(
+            'status', 'google_only',
+            'eligible', FALSE,
+            'provider', 'google',
+            'message', 'This account is registered using Google Sign-In and does not have an application password. Please sign in with Google.'
+        );
+    END IF;
+
     IF NOT v_has_password THEN
         RETURN json_build_object(
             'status', 'google_only',
             'eligible', FALSE,
-            'message', 'This account is registered using Google Sign-In and does not have an application password. Please sign in with Google.'
+            'provider', 'google',
+            'message', 'This account does not have an application password. Please sign in with Google.'
         );
     END IF;
 
@@ -50,6 +84,7 @@ BEGIN
         'status', 'eligible',
         'eligible', TRUE,
         'user_id', v_user.id,
+        'provider', 'email',
         'message', 'Eligible for password recovery.'
     );
 END;
@@ -67,3 +102,7 @@ BEGIN
     RETURN FOUND;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION admin_set_user_password(VARCHAR, VARCHAR) FROM public, anon, authenticated;
+GRANT EXECUTE ON FUNCTION admin_set_user_password(VARCHAR, VARCHAR) TO service_role;
+

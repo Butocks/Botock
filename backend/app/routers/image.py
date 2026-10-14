@@ -2,12 +2,17 @@ import os
 import re
 import uuid
 import asyncio
+import logging
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends
 from fastapi.responses import FileResponse
 from app.models.schemas import ImageGenerateRequest, ImageGenerateResponse, ImageStatusResponse, ImageListResponse
 from app.services.image_service import NanoBananaImageService
 from app.middleware.auth import check_daily_image_quota, get_current_user, get_current_user_or_guest
+from app.middleware.anti_bot import get_safe_client_ip
 from app.config import settings
+
+logger = logging.getLogger(__name__)
+
 
 router = APIRouter(prefix="/api/image", tags=["Image"])
 
@@ -49,20 +54,7 @@ async def safe_image_generate_task(
             style=style,
             is_pro=is_pro,
         )
-        if image_statuses.get(generation_id, {}).get("status") == "completed":
-            try:
-                from app.services.gdrive_service import library_service
-                img_path = os.path.join(settings.IMAGES_DIR, f"{generation_id}.png")
-                await library_service.register_item(
-                    generation_id=generation_id,
-                    media_type="photo",
-                    file_path=img_path,
-                    prompt=prompt,
-                    aspect_ratio=aspect_ratio,
-                )
-            except Exception as lib_err:
-                import logging
-                logging.getLogger(__name__).warning(f"Failed to register photo in library: {lib_err}")
+        # User generated images remain strictly private; do not auto-publish to public library.
 
 
 @router.post("/generate", response_model=ImageGenerateResponse)
@@ -78,16 +70,31 @@ async def generate_image(
     
     from app.middleware.auth import _rpc
     from app.routers.auth_otp import get_platform_settings
+
+    # Verify daily quota
+    if not is_pro:
+        client_ip = get_safe_client_ip(req)
+        try:
+            limit_res = await _rpc("check_generation_limit", {
+                "p_user_id": None if is_guest else user["user_id"],
+                "p_guest_ip": client_ip if is_guest else None,
+                "p_type": "image"
+            })
+            if limit_res and not limit_res.get("allowed", True):
+                raise HTTPException(status_code=429, detail=limit_res.get("reason", "Daily image quota reached. Please try again tomorrow."))
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"Image quota verification check non-fatal error: {e}")
     
     generation_id = str(uuid.uuid4())
     
-    # Unlimited generation via queue (No credits/quota deduction)
-    
-    # We enforce a single lightweight model to minimize costs
-    selected_model = "botockGen"
+    # Model selection from request, defaulting to botockGen
+    selected_model = request.model or "botockGen"
 
     allowed_aspect_ratios = ["16:9", "4:3", "1:1", "3:4", "9:16"]
     selected_ratio = request.aspect_ratio if request.aspect_ratio in allowed_aspect_ratios else "1:1"
+
 
     save_ownership(generation_id, user["user_id"])
     image_statuses[generation_id] = {

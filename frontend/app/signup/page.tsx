@@ -5,7 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "../../utils/supabase/client";
-import { getSiteUrl, getBackendUrl } from "../../utils/runtime-urls";
+import { getSiteUrl, getBackendUrl, sanitizeRedirectUrl } from "../../utils/runtime-urls";
+
 import {
   User,
   Mail,
@@ -226,7 +227,7 @@ function SignUpPageInner() {
         });
         setTimeout(() => {
           const params = new URLSearchParams(window.location.search);
-          const nextUrl = params.get("next") || "/";
+          const nextUrl = sanitizeRedirectUrl(params.get("next"));
           window.location.href = `${getSiteUrl()}${nextUrl === "/" ? "" : nextUrl}`;
         }, 1000);
       }
@@ -282,7 +283,7 @@ function SignUpPageInner() {
         });
         setTimeout(() => {
           const params = new URLSearchParams(window.location.search);
-          const nextUrl = params.get("next") || "/";
+          const nextUrl = sanitizeRedirectUrl(params.get("next"));
           window.location.href = `${getSiteUrl()}${nextUrl === "/" ? "" : nextUrl}`;
         }, 1200);
       }

@@ -12,6 +12,7 @@ export default function PDFMergeClient() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { url: mergedPdfUrl, setBlob, reset: resetDownload } = useObjectUrlDownload();
 
   useEffect(() => {
@@ -68,12 +69,13 @@ export default function PDFMergeClient() {
     if (files.length < 2) return;
 
     setIsProcessing(true);
+    setError(null);
     try {
       const mergedPdf = await PDFDocument.create();
 
       for (const file of files) {
         const arrayBuffer = await file.arrayBuffer();
-        const pdf = await PDFDocument.load(arrayBuffer);
+        const pdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
         const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
         copiedPages.forEach((page) => mergedPdf.addPage(page));
       }
@@ -81,11 +83,12 @@ export default function PDFMergeClient() {
       const mergedPdfBytes = await mergedPdf.save();
       setBlob(mergedPdfBytes);
 
-      // Award credits to logged-in user (24h expiration)
-      claimToolReward("pdf-merge");
-    } catch (error) {
+      try {
+        claimToolReward("pdf-merge");
+      } catch (e) {}
+    } catch (error: any) {
       console.error("Failed to merge PDFs:", error);
-      throw new Error("Failed to process PDFs. They might be encrypted or corrupted.");
+      setError("Failed to process PDFs. One or more files might be encrypted or corrupted.");
     } finally {
       setIsProcessing(false);
     }
@@ -94,6 +97,11 @@ export default function PDFMergeClient() {
     <div className="w-full">
       {!mergedPdfUrl ? (
         <>
+          {error && (
+            <div className="p-4 mb-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 font-semibold text-sm">
+              {error}
+            </div>
+          )}
           <div
             {...getRootProps()}
             className={`border-2 border-dashed rounded-3xl p-12 text-center cursor-pointer transition-colors ${

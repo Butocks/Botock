@@ -138,9 +138,12 @@ export default function VideoCompressClient() {
       // ✅ FIXED: Single FFmpeg command with optional audio mapping (-map 0:a?)
       // This handles both videos with AND without audio tracks in one pass.
       // Previous code ran 2 full encodes when audio was absent (try+catch).
+      const ext = originalFile.name.split('.').pop()?.toLowerCase() || "mp4";
+      const safeInputName = `input.${ext}`;
+
       const args = [
         "-i",
-        "input.mp4",
+        safeInputName,
         "-map", "0:v",
         "-map", "0:a?",   // "?" = optional — silently skipped if no audio stream
         "-c:v",
@@ -161,7 +164,7 @@ export default function VideoCompressClient() {
 
       const outputBlob = await runFn({
         inputFile: originalFile,
-        inputFileName: "input.mp4",
+        inputFileName: safeInputName,
         outputFileName: "output.mp4",
         outputMimeType: "video/mp4",
         args,

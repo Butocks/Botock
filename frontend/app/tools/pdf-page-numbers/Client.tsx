@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   FileText,
@@ -37,6 +37,12 @@ export default function PdfPageNumbersClient() {
   const [resultBlobSize, setResultBlobSize] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (resultPdfUrl) URL.revokeObjectURL(resultPdfUrl);
+    };
+  }, [resultPdfUrl]);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -66,7 +72,7 @@ export default function PdfPageNumbersClient() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const doc = await PDFDocument.load(buffer);
+      const doc = await PDFDocument.load(buffer, { ignoreEncryption: true });
       const font = await doc.embedFont(StandardFonts.Helvetica);
       const pages = doc.getPages();
       const total = pages.length;
@@ -132,6 +138,9 @@ export default function PdfPageNumbersClient() {
 
       const pdfBytes = await doc.save();
       const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+      if (resultPdfUrl) {
+        URL.revokeObjectURL(resultPdfUrl);
+      }
       const url = URL.createObjectURL(blob);
       setResultPdfUrl(url);
       setResultBlobSize(blob.size);
@@ -403,6 +412,18 @@ export default function PdfPageNumbersClient() {
                     onChange={(e) => setFontSize(parseInt(e.target.value))}
                     className="w-full accent-rose-500"
                   />
+                </div>
+                <div className="col-span-2 flex items-center justify-between bg-slate-50 dark:bg-black/40 border border-slate-300 dark:border-white/10 rounded-lg p-2.5">
+                  <label className="text-xs text-slate-700 dark:text-slate-300 font-medium">Font Color</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={fontColor}
+                      onChange={(e) => setFontColor(e.target.value)}
+                      className="w-7 h-7 rounded border border-slate-300 dark:border-white/20 cursor-pointer bg-transparent"
+                    />
+                    <span className="text-xs font-mono text-slate-600 dark:text-slate-400 uppercase">{fontColor}</span>
+                  </div>
                 </div>
               </div>
 

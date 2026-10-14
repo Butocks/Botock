@@ -98,10 +98,10 @@ export default function ProfilePage() {
       setDob(u.user_metadata?.dob || "");
       setGender(u.user_metadata?.gender || "male");
       setCountry(u.user_metadata?.country || "Pakistan");
-      setIsVerified(Boolean(u.user_metadata?.is_verified ?? (u.app_metadata?.provider === "google")));
+      setIsVerified(Boolean(u.app_metadata?.is_verified ?? (u.email_confirmed_at != null || u.app_metadata?.provider === "google")));
       
-      // Professional Admin Role Check (No hardcoded email in frontend code)
-      const userRole = u.app_metadata?.role || u.user_metadata?.role;
+      // Professional Admin Role Check (Rely strictly on server-set app_metadata)
+      const userRole = u.app_metadata?.role;
       if (userRole === "admin") {
         setIsAdmin(true);
       } else {

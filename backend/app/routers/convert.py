@@ -11,16 +11,51 @@ from pdf2docx import Converter
 import pdfplumber
 import pandas as pd
 
+from starlette.background import BackgroundTask
+
 router = APIRouter(prefix="/api/convert", tags=["Conversion & PDF Tools"])
 logger = logging.getLogger(__name__)
+
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB limit
+
+async def read_bounded_file(file: UploadFile, max_size: int = MAX_FILE_SIZE) -> bytes:
+    """Safely reads upload streams up to max_size to prevent /tmp and memory exhaustion DoS."""
+    chunks = []
+    total_size = 0
+    chunk_size = 1024 * 1024
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        total_size += len(chunk)
+        if total_size > max_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Uploaded file exceeds maximum limit of {max_size // (1024 * 1024)}MB."
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+def cleanup_files(*paths):
+    """Safely cleans up temporary files and directories after response is served."""
+    for p in paths:
+        if p and os.path.exists(p):
+            try:
+                if os.path.isdir(p):
+                    shutil.rmtree(p, ignore_errors=True)
+                else:
+                    os.remove(p)
+            except Exception:
+                pass
 
 @router.post("/pdf-to-docx")
 async def convert_pdf_to_docx(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="File must be a PDF")
     
+    file_bytes = await read_bounded_file(file)
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as in_f:
-        in_f.write(await file.read())
+        in_f.write(file_bytes)
         in_path = in_f.name
         
     out_path = in_path.replace(".pdf", ".docx")
@@ -33,17 +68,13 @@ async def convert_pdf_to_docx(file: UploadFile = File(...)):
         return FileResponse(
             out_path, 
             filename=file.filename.replace(".pdf", ".docx"),
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            background=BackgroundTask(cleanup_files, in_path, out_path)
         )
     except Exception:
+        cleanup_files(in_path, out_path)
         logger.exception("PDF-to-DOCX conversion failed")
         raise HTTPException(status_code=503, detail="The conversion service is temporarily unavailable. Please try again shortly.")
-    finally:
-        if os.path.exists(in_path):
-            try:
-                os.remove(in_path)
-            except Exception:
-                pass
 
 
 @router.post("/pdf-to-excel")
@@ -52,7 +83,7 @@ async def convert_pdf_to_excel(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be a PDF")
     
     try:
-        pdf_bytes = await file.read()
+        pdf_bytes = await read_bounded_file(file)
         output = io.BytesIO()
         
         with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf, \
@@ -81,7 +112,8 @@ async def convert_pdf_to_excel(file: UploadFile = File(...)):
         return FileResponse(
             out_path, 
             filename=file.filename.replace(".pdf", ".xlsx"),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            background=BackgroundTask(cleanup_files, out_path)
         )
     except HTTPException:
         raise
@@ -99,8 +131,9 @@ async def convert_docx_to_pdf(file: UploadFile = File(...)):
     if not soffice_cmd:
         raise HTTPException(status_code=501, detail="LibreOffice is not installed on the server for Word-to-PDF conversion.")
         
+    file_bytes = await read_bounded_file(file)
     with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as in_f:
-        in_f.write(await file.read())
+        in_f.write(file_bytes)
         in_path = in_f.name
         
     out_dir = tempfile.mkdtemp()
@@ -125,19 +158,16 @@ async def convert_docx_to_pdf(file: UploadFile = File(...)):
         return FileResponse(
             out_path, 
             filename=file.filename.rsplit(".", 1)[0] + ".pdf",
-            media_type="application/pdf"
+            media_type="application/pdf",
+            background=BackgroundTask(cleanup_files, in_path, out_dir)
         )
     except HTTPException:
+        cleanup_files(in_path, out_dir)
         raise
     except Exception:
+        cleanup_files(in_path, out_dir)
         logger.exception("Word-to-PDF conversion failed")
         raise HTTPException(status_code=503, detail="The conversion service is temporarily unavailable. Please try again shortly.")
-    finally:
-        if os.path.exists(in_path):
-            try:
-                os.remove(in_path)
-            except Exception:
-                pass
 
 
 @router.post("/pdf-protect")
@@ -156,8 +186,9 @@ async def protect_pdf(
     if not password:
         raise HTTPException(status_code=400, detail="Password is required to protect the document")
     
+    out_path = None
     try:
-        pdf_bytes = await file.read()
+        pdf_bytes = await read_bounded_file(file)
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         
         perm = (
@@ -182,11 +213,15 @@ async def protect_pdf(
         return FileResponse(
             out_path,
             filename=file.filename.replace(".pdf", "-protected.pdf"),
-            media_type="application/pdf"
+            media_type="application/pdf",
+            background=BackgroundTask(cleanup_files, out_path)
         )
     except Exception:
+        if out_path:
+            cleanup_files(out_path)
         logger.exception("PDF protection failed")
         raise HTTPException(status_code=503, detail="The document service is temporarily unavailable. Please try again shortly.")
+
 
 @router.get("/tts-voices")
 async def get_tts_voices():
@@ -641,9 +676,10 @@ async def audio_enhance(file: UploadFile = File(...)):
     if not is_audio and not is_video:
         raise HTTPException(status_code=400, detail="Invalid format. Please upload MP3, WAV, M4A, OGG, or MP4, MOV, WebM.")
 
-    file_bytes = await file.read()
+    file_bytes = await read_bounded_file(file)
     if len(file_bytes) == 0:
         raise HTTPException(status_code=400, detail="Empty file uploaded.")
+
 
     in_path = None
     audio_raw_path = None

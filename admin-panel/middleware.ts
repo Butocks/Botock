@@ -14,13 +14,14 @@ export function middleware(request: NextRequest) {
     }
   }
   
-  // Device verification could check for a specific cookie
-  const deviceVerified = request.cookies.get('admin_device_verified');
+  // Admin authorization: require valid server-issued admin session token
+  const adminToken = request.cookies.get('admin_token')?.value || request.cookies.get('botock_admin_token')?.value;
   const isDashboard = request.nextUrl.pathname.startsWith('/dashboard');
   
-  if (isDashboard && !deviceVerified) {
+  if (isDashboard && (!adminToken || !adminToken.startsWith('adm_') || adminToken.length < 32)) {
     return NextResponse.redirect(new URL('/', request.url));
   }
+
   
   return NextResponse.next();
 }

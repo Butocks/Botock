@@ -91,13 +91,13 @@ export default function SecurityPage() {
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-4">
                 <EyeOff className="w-5 h-5" />
               </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">In-Browser Client Isolation</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">Client-Side & Ephemeral Isolation</h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Standard PDF, image, and video utilities process locally using WebAssembly and HTML5 Canvas. Your source documents are never uploaded to any remote server.
+                Offline utilities execute locally via WebAssembly. For server-assisted conversions, files are handled in ephemeral memory and automatically purged immediately upon completion.
               </p>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-emerald-400 font-semibold">
-              ✓ 100% Zero-Cloud Footprint
+              ✓ Zero Permanent Data Retention
             </div>
           </div>
 

@@ -25,6 +25,8 @@ async def _queue_maintenance() -> None:
             await queue.reclaim_expired()
             for job in await queue.failed_jobs_for_refund():
                 await refund_video_credit(job["user_id"], job["id"])
+                await queue.mark_refunded(job["id"])
+
         except asyncio.CancelledError:
             raise
         except Exception:

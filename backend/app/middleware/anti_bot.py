@@ -58,6 +58,53 @@ SCRIPT_AGENTS = [
 ]
 
 
+import ipaddress
+
+TRUSTED_PROXIES = [
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("::1/128"),
+]
+
+def is_trusted_proxy(host: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(host)
+        return any(ip in net for net in TRUSTED_PROXIES)
+    except ValueError:
+        return False
+
+def get_safe_client_ip(request: Request) -> str:
+    """
+    Safely resolves the true client IP.
+    Only trusts proxy headers when the direct socket connection is from a trusted proxy/localhost.
+    Prevents both rate-limit header spoofing and single-proxy global user lockouts.
+    """
+    direct_ip = request.client.host if request.client else "127.0.0.1"
+
+    if is_trusted_proxy(direct_ip):
+        for header_name in ("cf-connecting-ip", "x-client-ip", "x-real-ip"):
+            val = request.headers.get(header_name)
+            if val and val.strip():
+                return val.strip()
+
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            ips = [i.strip() for i in forwarded_for.split(",") if i.strip()]
+            for ip_str in ips:
+                try:
+                    parsed = ipaddress.ip_address(ip_str)
+                    if not parsed.is_private and not parsed.is_loopback:
+                        return str(parsed)
+                except ValueError:
+                    pass
+            if ips:
+                return ips[0]
+
+    return direct_ip
+
+
 class AntiBotMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
@@ -69,26 +116,7 @@ class AntiBotMiddleware(BaseHTTPMiddleware):
         self.gen_request_history: Dict[str, List[float]] = defaultdict(list)
 
     def _get_client_ip(self, request: Request) -> str:
-        """
-        Extracts real client IP safely.
-        - Supports Azure Front Door / Application Gateway via X-Client-IP or X-Forwarded-For (first entry).
-        - Defaults to request.client.host if direct connection or proxy headers absent.
-        """
-        forwarded_for = request.headers.get("x-forwarded-for")
-        if forwarded_for:
-            return forwarded_for.split(",")[0].strip()
-            
-        client_ip = request.headers.get("x-client-ip")
-        if client_ip:
-            return client_ip.strip()
-            
-        real_ip = request.headers.get("x-real-ip")
-        if real_ip:
-            return real_ip.strip()
-            
-        # Never trust client-supplied forwarding headers here. Uvicorn can
-        # normalize request.client only when its proxy is explicitly trusted.
-        return request.client.host if request.client else "127.0.0.1"
+        return get_safe_client_ip(request)
 
     async def dispatch(self, request: Request, call_next):
         # 1. Allow health check, root endpoints, and CORS preflight OPTIONS freely

@@ -50,6 +50,7 @@ export interface ToolSchema {
   // The actual executable function or API endpoint for the AI to call
   endpoint: string; // Internal API route or client-side worker path
   isClientSideOnly: boolean; // True if it runs entirely in WASM/Browser
+  status?: "active" | "coming_soon";
 }
 
 export interface ToolResult {
@@ -73,6 +74,10 @@ export class ToolRegistry {
 
   static getAllTools(): ToolSchema[] {
     return Array.from(this.tools.values());
+  }
+
+  static getActiveTools(): ToolSchema[] {
+    return this.getAllTools().filter(tool => tool.status !== "coming_soon");
   }
 
   // AI Agent helper: find tools by natural language keyword matching (basic implementation)
@@ -206,7 +211,7 @@ ToolRegistry.registerTool({
   seoTitle: "Remove Image Background Online - Botock",
   seoDescription: "Free client-side AI background remover. Automatically cut out image backgrounds locally in your browser.",
   endpoint: "/tools/image-remove-bg",
-  isClientSideOnly: true,
+  isClientSideOnly: false,
   parameters: [
     {
       name: "image",
@@ -219,6 +224,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "image-to-webp",
+  status: "coming_soon",
   name: "Image to WebP Converter",
   description: "Convert JPG, PNG, and other image formats to fast, modern WebP format locally in the browser.",
   category: "image",
@@ -437,6 +443,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "video-speed",
+  status: "coming_soon",
   name: "Change Video Speed",
   description: "Speed up or slow down video playback from 0.25x to 4.0x with pitch-preserved audio synchronization via FFmpeg WebAssembly.",
   category: "video",
@@ -592,6 +599,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "pdf-ocr",
+  status: "coming_soon",
   name: "OCR PDF (Scanned to Text)",
   description: "Extract plain, editable text from scanned documents and images within PDF files using PDF.js and Tesseract.js client-side OCR.",
   category: "pdf",
@@ -768,6 +776,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "audio-converter",
+  status: "coming_soon",
   name: "Audio Format Converter",
   description: "Convert audio files between MP3, WAV, AAC, OGG, and FLAC formats with custom bitrates and sample rates.",
   category: "ai",
@@ -845,6 +854,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "video-mute",
+  status: "coming_soon",
   name: "Mute & Reverse Video",
   description: "Remove audio streams from video files or reverse video frame playback.",
   category: "video",
@@ -914,6 +924,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "generate-qr",
+  status: "coming_soon",
   name: "QR Code Generator",
   description: "Generate customized high-resolution QR codes for websites, Wi-Fi networks, text, email, and phone numbers.",
   category: "image",
@@ -975,6 +986,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "zip-compressor",
+  status: "coming_soon",
   name: "ZIP File Compressor",
   description: "Compress multiple files and folders into an encrypted ZIP archive locally in your browser.",
   category: "pdf",
@@ -1002,6 +1014,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "image-to-svg",
+  status: "coming_soon",
   name: "Image to SVG Vectorizer",
   description: "Trace and convert PNG and JPG raster images into scalable SVG vector graphics.",
   category: "image",
@@ -1055,6 +1068,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "convert-document",
+  status: "coming_soon",
   name: "Document Format Converter",
   description: "Convert documents between DOCX, PDF, Text, and HTML formats locally in your browser.",
   category: "pdf",
@@ -1110,6 +1124,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "sign-pdf",
+  status: "coming_soon",
   name: "Sign PDF",
   description: "Sign PDF documents online by drawing, typing cursive script, or uploading signature images directly into PDF coordinates.",
   category: "pdf",
@@ -1124,6 +1139,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "unlock-pdf",
+  status: "coming_soon",
   name: "Unlock PDF",
   description: "Decrypt password-protected PDF documents and produce permanently unencrypted PDFs.",
   category: "pdf",
@@ -1195,6 +1211,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "pdf-to-markdown",
+  status: "coming_soon",
   name: "PDF to Markdown",
   description: "Extract structured headings, tables, and text into clean Markdown (.md) formatted text.",
   category: "pdf",
@@ -1209,6 +1226,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "pdf-to-json",
+  status: "coming_soon",
   name: "PDF to JSON",
   description: "Extract structured JSON schema, page dimensions, text content, and coordinates.",
   category: "pdf",
@@ -1223,6 +1241,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "pdf-whiteout",
+  status: "coming_soon",
   name: "PDF Whiteout & Redact",
   description: "Permanently erase confidential text or numbers using paper-white or black vector redactions.",
   category: "pdf",
@@ -1269,6 +1288,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "pdf-to-pdfa",
+  status: "coming_soon",
   name: "PDF to PDF/A",
   description: "Convert documents to ISO 19005 standard for legal and archival preservation.",
   category: "pdf",
@@ -1283,6 +1303,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "compare-pdf",
+  status: "coming_soon",
   name: "Compare PDF",
   description: "Side-by-side text diffing to spot changes between document revisions.",
   category: "pdf",
@@ -1332,7 +1353,7 @@ ToolRegistry.registerTool({
   seoTitle: "Translate PDF Online Free - Botock",
   seoDescription: "Translate PDF text into 12+ languages directly in your browser.",
   endpoint: "/tools/translate-pdf",
-  isClientSideOnly: true,
+  isClientSideOnly: false,
   parameters: [
     { name: "file", type: "file", description: "PDF document to translate", required: true },
     { name: "targetLang", type: "string", description: "Language code (e.g. es, fr, ur)", required: true }
@@ -1390,6 +1411,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "image-watermark",
+  status: "coming_soon",
   name: "Watermark Image",
   description: "Add customizable text watermarks, copyright notices, and custom opacity stamps to photos.",
   category: "image",
@@ -1406,6 +1428,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "image-color-picker",
+  status: "coming_soon",
   name: "Image Color Picker",
   description: "Eyedropper tool to inspect exact HEX, RGB, and HSL codes and palettes directly on images.",
   category: "image",
@@ -1420,6 +1443,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "video-filters",
+  status: "coming_soon",
   name: "Video Filters & Effects",
   description: "Color grade, adjust brightness/contrast, and apply cinematic presets via WASM FFmpeg.",
   category: "video",
@@ -1434,6 +1458,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "video-volume",
+  status: "coming_soon",
   name: "Adjust Video Volume",
   description: "Boost quiet audio up to 500% or lower volume with lossless video stream copy in browser.",
   category: "video",
@@ -1464,6 +1489,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "audio-volume",
+  status: "coming_soon",
   name: "Adjust Audio Volume",
   description: "Boost quiet audio levels up to 500% or lower volume directly in browser via WASM FFmpeg.",
   category: "video",
@@ -1479,6 +1505,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "audio-trim",
+  status: "coming_soon",
   name: "Audio Cutter & Trimmer",
   description: "Cut unwanted audio segments and create ringtones with stream copy via WASM FFmpeg.",
   category: "video",
@@ -1495,6 +1522,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "xml-formatter",
+  status: "coming_soon",
   name: "XML Formatter & Beautifier",
   description: "Format, validate, beautify, and minify XML and SVG code with client DOMParser.",
   category: "ai",
@@ -1509,6 +1537,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "html-formatter",
+  status: "coming_soon",
   name: "HTML Formatter & Beautifier",
   description: "Format, beautify, and minify HTML markup directly in browser memory.",
   category: "ai",
@@ -1589,3 +1618,69 @@ ToolRegistry.registerTool({
   ]
 });
 
+
+
+ToolRegistry.registerTool({
+  id: "audio-enhance",
+  name: "AI Audio Enhancer",
+  description: "Remove background noise, hums, and artifacts with AI speech enhancement.",
+  category: "ai",
+  seoTitle: "AI Audio Enhancer Online - Botock",
+  seoDescription: "Enhance audio quality and remove noise using deep learning.",
+  endpoint: "/tools/audio-enhance",
+  isClientSideOnly: false,
+  parameters: [{ name: "file", type: "file", description: "Audio or video file", required: true }],
+  outputs: [{ name: "output", type: "file", description: "Enhanced audio file" }]
+});
+
+ToolRegistry.registerTool({
+  id: "video-remove-bg",
+  name: "AI Video Background Remover",
+  description: "Remove video backgrounds or apply chroma key green-screen effects.",
+  category: "video",
+  seoTitle: "Remove Video Background Online - Botock",
+  seoDescription: "Remove video backgrounds automatically online.",
+  endpoint: "/tools/video-remove-bg",
+  isClientSideOnly: false,
+  parameters: [{ name: "file", type: "file", description: "Video file", required: true }],
+  outputs: [{ name: "output", type: "file", description: "Processed video file" }]
+});
+
+ToolRegistry.registerTool({
+  id: "video-auto-reframe",
+  name: "AI Video Auto-Reframe",
+  description: "Auto-crop and reframe widescreen videos into vertical 9:16 Shorts/Reels.",
+  category: "video",
+  seoTitle: "Auto Reframe Video to 9:16 - Botock",
+  seoDescription: "Convert landscape videos to portrait format with subject centering.",
+  endpoint: "/tools/video-auto-reframe",
+  isClientSideOnly: false,
+  parameters: [{ name: "file", type: "file", description: "Video file", required: true }],
+  outputs: [{ name: "output", type: "file", description: "Reframed video" }]
+});
+
+ToolRegistry.registerTool({
+  id: "video-rotate",
+  name: "Rotate Video",
+  description: "Rotate video orientations 90, 180, 270 degrees.",
+  category: "video",
+  seoTitle: "Rotate Video Online - Botock",
+  seoDescription: "Rotate video clips clockwise or counterclockwise.",
+  endpoint: "/tools/video-rotate",
+  isClientSideOnly: false,
+  parameters: [{ name: "file", type: "file", description: "Video file", required: true }],
+  outputs: [{ name: "output", type: "file", description: "Rotated video" }]
+});
+
+ToolRegistry.registerTool({
+  id: "live-data-extractor",
+  name: "Live Search and Data Launcher",
+  description: "Execute precision real-time searches for YouTube, Google News, and social feeds.",
+  category: "ai",
+  seoTitle: "Live Search and OSINT Launcher - Botock",
+  seoDescription: "Launch real-time intelligence search queries across major platforms.",
+  endpoint: "/tools/live-data-extractor",
+  isClientSideOnly: true,
+  parameters: [{ name: "keyword", type: "string", description: "Search query", required: true }],
+  outputs: [{ name: "output", type: "string", description: "Target search URL" }]
+});

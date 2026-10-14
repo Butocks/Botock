@@ -50,6 +50,31 @@ export default function CropPdfClient() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  const handleCropMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleContainerMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const deltaXPercent = ((e.clientX - dragStart.x) / rect.width) * 100;
+    const deltaYPercent = ((e.clientY - dragStart.y) / rect.height) * 100;
+
+    setCropBox((prev) => {
+      const newX = Math.max(0, Math.min(100 - prev.width, prev.x + deltaXPercent));
+      const newY = Math.max(0, Math.min(100 - prev.height, prev.y + deltaYPercent));
+      return { ...prev, x: Math.round(newX), y: Math.round(newY) };
+    });
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleContainerMouseUp = () => {
+    if (isDragging) setIsDragging(false);
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selected = e.target.files[0];
@@ -105,7 +130,7 @@ export default function CropPdfClient() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(buffer);
+      const pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: true });
       const pages = pdfDoc.getPages();
 
       const cropStart = applyToAll ? 0 : currentPage - 1;
@@ -123,6 +148,7 @@ export default function CropPdfClient() {
         const bottom = height - ((cropBox.y + cropBox.height) / 100) * height;
 
         page.setCropBox(left, bottom, right - left, top - bottom);
+        page.setMediaBox(left, bottom, right - left, top - bottom);
       }
 
       const croppedBytes = await pdfDoc.save();
@@ -226,6 +252,9 @@ export default function CropPdfClient() {
                 {pageImage && (
                   <div
                     ref={containerRef}
+                    onMouseMove={handleContainerMouseMove}
+                    onMouseUp={handleContainerMouseUp}
+                    onMouseLeave={handleContainerMouseUp}
                     className="relative max-w-md w-full border border-slate-200 dark:border-white/10 rounded-lg overflow-hidden select-none shadow-xl bg-white"
                   >
                     <img src={pageImage} alt="Crop preview" className="w-full h-auto pointer-events-none" />
@@ -264,6 +293,7 @@ export default function CropPdfClient() {
 
                     {/* Active Crop Border Box */}
                     <div
+                      onMouseDown={handleCropMouseDown}
                       style={{
                         top: `${cropBox.y}%`,
                         left: `${cropBox.x}%`,
@@ -336,7 +366,7 @@ export default function CropPdfClient() {
                     <input
                       type="range"
                       min={0}
-                      max={40}
+                      max={80}
                       value={cropBox.x}
                       onChange={(e) => {
                         const newX = parseInt(e.target.value);
@@ -357,7 +387,7 @@ export default function CropPdfClient() {
                     <input
                       type="range"
                       min={0}
-                      max={40}
+                      max={80}
                       value={cropBox.y}
                       onChange={(e) => {
                         const newY = parseInt(e.target.value);

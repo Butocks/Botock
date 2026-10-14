@@ -107,10 +107,9 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "Admin Login Ver
     
     text_content = f"Botock Security Code for {purpose}: {otp_code}\nExpires in 10 minutes (3 attempts max). Do not share."
 
-    # Terminal visibility
+    # Dispatch status logging (never log secret OTP in production)
     logger.info("=" * 60)
     logger.info(f"📧 [EMAIL OTP DISPATCH] To: {to_email} | Purpose: {purpose}")
-    logger.info(f"🔑 OTP CODE: >>> {otp_code} <<< (Valid for 10 minutes)")
     logger.info("=" * 60)
 
     # Attempt real Zoho SMTP delivery if password provided
@@ -131,10 +130,12 @@ def send_otp_email(to_email: str, otp_code: str, purpose: str = "Admin Login Ver
             logger.info(f"✅ Real email successfully sent via Zoho SMTP to {to_email}")
             return True
         except Exception as e:
-            logger.warning(f"⚠️ Zoho SMTP send failed ({e}). Fallback logged to terminal.")
-            return True
+            logger.error(f"❌ Zoho SMTP send failed to {to_email}: {e}")
+            return False
 
-    return True
+    logger.warning("⚠️ SMTP_PASSWORD not configured. Email could not be sent.")
+    return False
+
 
 
 def send_update_email(to_email: str, subject: str, headline: str, message_body: str, cta_text: str = None, cta_link: str = None) -> bool:

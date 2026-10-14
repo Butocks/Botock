@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AlertCircle, Send, CheckCircle2, Mail } from "lucide-react";
+import { getBackendUrl } from "@/utils/runtime-urls";
 
 export default function ComplaintClient() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,8 @@ export default function ComplaintClient() {
   });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [ticketId, setTicketId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -28,13 +31,39 @@ export default function ComplaintClient() {
   const handleComplaintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage(null);
     
-    // Simulate submission to backend that forwards to email
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const backendUrl = await getBackendUrl();
+      const res = await fetch(`${backendUrl}/api/public/complaints`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          category: formData.subject.trim() || "General Complaint",
+          severity: "Normal",
+          referenceId: "",
+          description: formData.description.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Failed to submit complaint. Please try again.");
+      }
+
+      const data = await res.json();
+      if (data.ticket_id) {
+        setTicketId(data.ticket_id);
+      }
       setSubmitted(true);
-    }, 1500);
+    } catch (err: any) {
+      setErrorMessage(err.message || "An unexpected error occurred. Please try again or email complaint@botock.app.");
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   return (
     <div className="flex-1 flex flex-col py-12">
@@ -61,12 +90,18 @@ export default function ComplaintClient() {
             <div className="text-center py-8">
               <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Complaint Submitted Successfully</h3>
+              {ticketId && (
+                <div className="inline-block px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.1] font-mono text-xs font-bold text-blue-600 dark:text-blue-400 mb-3">
+                  Ticket Reference: {ticketId}
+                </div>
+              )}
               <p className="text-slate-600 dark:text-slate-400 text-sm">
-                Your complaint has been forwarded to our team. We will review it and get back to you at {formData.email} as soon as possible.
+                Your complaint has been registered. Our security and compliance team will review it and follow up with you at {formData.email}.
               </p>
               <button
                 onClick={() => {
                   setSubmitted(false);
+                  setTicketId(null);
                   setFormData({ email: "", subject: "", description: "", attachment: null });
                 }}
                 className="mt-6 px-6 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.1] text-slate-900 dark:text-white text-xs font-bold transition-all"
@@ -76,6 +111,13 @@ export default function ComplaintClient() {
             </div>
           ) : (
             <form onSubmit={handleComplaintSubmit} className="space-y-5">
+              {errorMessage && (
+                <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Your Email Address *
