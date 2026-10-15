@@ -287,7 +287,7 @@ export default function VideoEditorComponent() {
       const generated = await thumbs.generate(item.url, item.duration, 8);
       setThumbnailsBySource((prev) => ({ ...prev, [item.id]: generated }));
     }
-    addItemToTimeline(item);
+    showToast(`Added "${item.name}" to Media Bin`);
   };
 
   const addItemToTimeline = (item: MediaBinItem, targetTrackId?: string) => {

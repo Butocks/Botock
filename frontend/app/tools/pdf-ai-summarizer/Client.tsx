@@ -238,7 +238,7 @@ export default function PdfAiSummarizerClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-purple-500/20 selection:text-purple-400">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#080b0f] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-purple-500/20 selection:text-purple-400">
       <div className="max-w-5xl mx-auto px-4 py-8 w-full">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">
@@ -246,20 +246,20 @@ export default function PdfAiSummarizerClient() {
             <Brain className="w-3.5 h-3.5" />
             Document Intelligence Synthesizer
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight flex items-center justify-center gap-3">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center justify-center gap-3">
             <span>AI PDF Document Summarizer</span>
             <span className="px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
               Beta
             </span>
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-xl">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
             Extract executive summaries, key directives, actionable obligations, and question-answer pairs directly in your browser.
           </p>
         </div>
 
         {/* File Upload & Settings Card */}
         {!file ? (
-          <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-12 text-center shadow-xl">
+          <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-3xl p-12 text-center shadow-sm">
             <input
               type="file"
               id="pdf-upload"
@@ -274,10 +274,10 @@ export default function PdfAiSummarizerClient() {
               <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <FileText className="w-8 h-8" />
               </div>
-              <span className="text-lg font-bold text-white mb-2">
+              <span className="text-lg font-bold text-slate-900 dark:text-white mb-2">
                 Click or Drop PDF to Summarize
               </span>
-              <span className="text-xs text-slate-400 max-w-sm">
+              <span className="text-xs text-slate-600 dark:text-slate-400 max-w-sm">
                 Contracts, research papers, legal deeds, and quarterly earnings reports analyzed in private WASM memory.
               </span>
             </label>
@@ -285,19 +285,19 @@ export default function PdfAiSummarizerClient() {
         ) : (
           <div className="space-y-6">
             {/* Active File Bar */}
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <FileText className="w-6 h-6 text-purple-400" />
                 <div>
-                  <span className="text-sm font-bold text-white block">{file.name}</span>
-                  <span className="text-xs text-slate-400 font-mono">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white block">{file.name}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
                     {pageCount} Pages • {summary ? summary.totalWords.toLocaleString() : 0} Words
                   </span>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
                   <button
                     onClick={() => {
                       setPageRangeMode("all");
@@ -305,20 +305,20 @@ export default function PdfAiSummarizerClient() {
                         setTimeout(() => reanalyzeRange(), 50);
                       }
                     }}
-                    className={`px-2.5 py-1 rounded-lg transition ${pageRangeMode === "all" ? "bg-purple-600 text-white font-bold" : "text-slate-400 hover:text-white"}`}
+                    className={`px-2.5 py-1 rounded-lg transition ${pageRangeMode === "all" ? "bg-purple-600 text-white font-bold" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"}`}
                   >
                     All Pages
                   </button>
                   <button
                     onClick={() => setPageRangeMode("custom")}
-                    className={`px-2.5 py-1 rounded-lg transition ${pageRangeMode === "custom" ? "bg-purple-600 text-white font-bold" : "text-slate-400 hover:text-white"}`}
+                    className={`px-2.5 py-1 rounded-lg transition ${pageRangeMode === "custom" ? "bg-purple-600 text-white font-bold" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"}`}
                   >
                     Custom Range
                   </button>
                 </div>
 
                 {pageRangeMode === "custom" && (
-                  <div className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-950 px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-800">
                     <span>Page</span>
                     <input
                       type="number"
@@ -326,7 +326,7 @@ export default function PdfAiSummarizerClient() {
                       max={pageCount || 1}
                       value={startPage}
                       onChange={(e) => setStartPage(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-12 bg-slate-900 border border-slate-700 rounded px-1 text-center text-white"
+                      className="w-12 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-1 text-center text-slate-900 dark:text-white"
                     />
                     <span>to</span>
                     <input
@@ -335,7 +335,7 @@ export default function PdfAiSummarizerClient() {
                       max={pageCount || 1}
                       value={endPage}
                       onChange={(e) => setEndPage(Math.min(pageCount || 1, Math.max(startPage, parseInt(e.target.value) || startPage)))}
-                      className="w-12 bg-slate-900 border border-slate-700 rounded px-1 text-center text-white"
+                      className="w-12 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-1 text-center text-slate-900 dark:text-white"
                     />
                     <button
                       onClick={reanalyzeRange}
@@ -348,7 +348,7 @@ export default function PdfAiSummarizerClient() {
 
                 <button
                   onClick={resetAll}
-                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer border border-slate-200 dark:border-transparent"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Start Over
                 </button>
@@ -357,9 +357,9 @@ export default function PdfAiSummarizerClient() {
 
             {/* Processing Spinner */}
             {isProcessing && (
-              <div className="p-12 text-center bg-slate-900/40 border border-slate-800 rounded-2xl">
+              <div className="p-12 text-center bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
                 <div className="inline-block animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mb-3"></div>
-                <p className="text-sm font-bold text-white">Synthesizing Document Insights...</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-white">Synthesizing Document Insights...</p>
               </div>
             )}
 
@@ -375,7 +375,7 @@ export default function PdfAiSummarizerClient() {
             {summary && !isProcessing && (
               <div className="space-y-6">
                 {/* Mode Selector Tabs */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
                   <div className="flex gap-2">
                     {[
                       { id: "executive", label: "Executive Summary" },
@@ -388,7 +388,7 @@ export default function PdfAiSummarizerClient() {
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                           summaryMode === tab.id
                             ? "bg-purple-600 text-white shadow-md shadow-purple-600/25"
-                            : "text-slate-400 hover:text-white hover:bg-slate-800"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
                         }`}
                       >
                         {tab.label}
@@ -406,7 +406,7 @@ export default function PdfAiSummarizerClient() {
                     </button>
                     <button
                       onClick={handleDownload}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 transition cursor-pointer border border-slate-200 dark:border-transparent"
                     >
                       <Download className="w-3.5 h-3.5" /> Export Markdown
                     </button>
@@ -415,12 +415,12 @@ export default function PdfAiSummarizerClient() {
 
                 {/* Content Views */}
                 {summaryMode === "executive" && (
-                  <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+                  <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-6">
                     <div>
                       <span className="text-xs font-bold uppercase tracking-wider text-purple-400 block mb-2">
                         Executive Overview
                       </span>
-                      <p className="text-sm sm:text-base text-slate-200 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800/80">
+                      <p className="text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800/80">
                         {summary.executiveSummary}
                       </p>
                     </div>
@@ -433,7 +433,7 @@ export default function PdfAiSummarizerClient() {
                         {summary.bulletPoints.map((point, i) => (
                           <div
                             key={i}
-                            className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 flex items-start gap-2.5"
+                            className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5"
                           >
                             <span className="w-5 h-5 rounded-full bg-purple-500/20 text-purple-300 font-bold flex items-center justify-center shrink-0 text-[10px]">
                               {i + 1}
@@ -447,7 +447,7 @@ export default function PdfAiSummarizerClient() {
                 )}
 
                 {summaryMode === "action-items" && (
-                  <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                  <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
                     <span className="text-xs font-bold uppercase tracking-wider text-purple-400 block">
                       Directives, Requirements & Obligations
                     </span>
@@ -455,7 +455,7 @@ export default function PdfAiSummarizerClient() {
                       {summary.actionItems.map((item, i) => (
                         <div
                           key={i}
-                          className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-3 text-xs text-slate-200"
+                          className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-start gap-3 text-xs text-slate-700 dark:text-slate-200"
                         >
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                           <span>{item}</span>
@@ -466,13 +466,13 @@ export default function PdfAiSummarizerClient() {
                 )}
 
                 {summaryMode === "qna" && (
-                  <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                  <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
                     <span className="text-xs font-bold uppercase tracking-wider text-purple-400 block">
                       Automated Synthesis Q&A
                     </span>
                     <div className="space-y-3">
                       {summary.qnaPairs.map((pair, i) => (
-                        <div key={i} className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                        <div key={i} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
                           <p className="text-xs font-bold text-purple-300">{pair.q}</p>
                           <p className="text-xs text-slate-300 pl-3 border-l-2 border-purple-500/40">
                             {pair.a}
@@ -484,7 +484,7 @@ export default function PdfAiSummarizerClient() {
                 )}
 
                 {/* Ask This Document Search Bar */}
-                <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
                   <div className="flex items-center gap-2">
                     <Search className="w-4 h-4 text-purple-400" />
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
@@ -498,7 +498,7 @@ export default function PdfAiSummarizerClient() {
                       value={searchTopic}
                       onChange={(e) => setSearchTopic(e.target.value)}
                       placeholder="e.g. payment terms, termination, warranty, revenue..."
-                      className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                      className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:border-purple-500 font-mono"
                     />
                     <button
                       type="submit"
@@ -510,13 +510,13 @@ export default function PdfAiSummarizerClient() {
 
                   {topicResults.length > 0 && (
                     <div className="space-y-2 pt-2">
-                      <span className="text-[11px] text-slate-400 font-bold">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold">
                         Matching Passages ({topicResults.length}):
                       </span>
                       {topicResults.map((t, idx) => (
                         <div
                           key={idx}
-                          className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-200 font-mono"
+                          className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 font-mono"
                         >
                           &quot;{t}&quot;
                         </div>

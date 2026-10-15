@@ -281,28 +281,28 @@ export default function CompleteBotockVideoEditorGuidePage() {
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 not-prose">
               <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 text-center">
                 <span className="text-[10px] font-mono text-purple-400 font-bold block">1. Top Priority</span>
-                <span className="text-xs font-extrabold text-white">Sub / Text</span>
-                <span className="text-[9px] text-gray-400 block mt-0.5">Captions, Stickers</span>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white">Sub / Text</span>
+                <span className="text-[9px] text-slate-600 dark:text-gray-400 block mt-0.5">Captions, Stickers</span>
               </div>
               <div className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/30 text-center">
                 <span className="text-[10px] font-mono text-pink-400 font-bold block">2. FX Layer</span>
-                <span className="text-xs font-extrabold text-white">FX Track</span>
-                <span className="text-[9px] text-gray-400 block mt-0.5">Zooms, Glitch, Blur</span>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white">FX Track</span>
+                <span className="text-[9px] text-slate-600 dark:text-gray-400 block mt-0.5">Zooms, Glitch, Blur</span>
               </div>
               <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-center">
                 <span className="text-[10px] font-mono text-blue-400 font-bold block">3. Overlays</span>
-                <span className="text-xs font-extrabold text-white">V2 / PIP</span>
-                <span className="text-[9px] text-gray-400 block mt-0.5">GIFs, Memes, Reaction</span>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white">V2 / PIP</span>
+                <span className="text-[9px] text-slate-600 dark:text-gray-400 block mt-0.5">GIFs, Memes, Reaction</span>
               </div>
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center">
                 <span className="text-[10px] font-mono text-emerald-400 font-bold block">4. Base Layer</span>
-                <span className="text-xs font-extrabold text-white">V1 Footage</span>
-                <span className="text-[9px] text-gray-400 block mt-0.5">Main Video Media</span>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white">V1 Footage</span>
+                <span className="text-[9px] text-slate-600 dark:text-gray-400 block mt-0.5">Main Video Media</span>
               </div>
               <div className="p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-center">
                 <span className="text-[10px] font-mono text-cyan-400 font-bold block">5. Audio</span>
-                <span className="text-xs font-extrabold text-white">A1 / A2</span>
-                <span className="text-[9px] text-gray-400 block mt-0.5">Music &amp; Voiceover</span>
+                <span className="text-xs font-extrabold text-slate-900 dark:text-white">A1 / A2</span>
+                <span className="text-[9px] text-slate-600 dark:text-gray-400 block mt-0.5">Music &amp; Voiceover</span>
               </div>
             </div>
           </div>

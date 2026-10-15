@@ -108,7 +108,7 @@ export default function ImageFiltersClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-pink-500/20 selection:text-pink-400">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#080b0f] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-pink-500/20 selection:text-pink-400">
       <div className="max-w-6xl mx-auto px-4 py-8 w-full">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">
@@ -116,10 +116,10 @@ export default function ImageFiltersClient() {
             <Sliders className="w-3.5 h-3.5" />
             Photo Effects & Color Grading
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Photo Filters & Effects Online Free
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-xl">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
             Fine-tune brightness, contrast, saturation, and cinematic film presets directly on your photos with GPU-accelerated canvas filters.
           </p>
         </div>
@@ -128,15 +128,15 @@ export default function ImageFiltersClient() {
           <div className="max-w-2xl mx-auto">
             <label
               htmlFor="image-upload"
-              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-700/60 hover:border-pink-500/50 rounded-2xl bg-slate-900/40 hover:bg-slate-900/80 transition-all duration-300 cursor-pointer text-center"
+              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-300 dark:border-slate-700/60 hover:border-pink-500/50 rounded-2xl bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all duration-300 cursor-pointer text-center shadow-sm"
             >
               <div className="w-16 h-16 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 mb-4 group-hover:scale-110 transition-transform">
                 <ImageIcon className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
                 Select photo or graphic image
               </h3>
-              <p className="text-xs text-slate-400 max-w-xs mb-4">
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs mb-4">
                 Full-resolution GPU rendering: 100% private in-browser editing.
               </p>
               <span className="px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-medium text-xs shadow-lg shadow-pink-600/25 transition">
@@ -155,8 +155,8 @@ export default function ImageFiltersClient() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Visual Canvas View */}
             <div className="lg:col-span-8 flex flex-col items-center">
-              <div className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col items-center">
-                <div className="relative max-h-[520px] w-full flex items-center justify-center overflow-hidden rounded-xl bg-black/40 border border-slate-800 p-2">
+              <div className="w-full bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col items-center shadow-sm">
+                <div className="relative max-h-[520px] w-full flex items-center justify-center overflow-hidden rounded-xl bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 p-2">
                   <img
                     src={imageSrc}
                     alt="Preview"
@@ -174,7 +174,7 @@ export default function ImageFiltersClient() {
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
                         activePreset === p.id
                           ? "bg-pink-600 text-white shadow-sm"
-                          : "bg-slate-800 text-slate-400 hover:text-white"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-transparent"
                       }`}
                     >
                       {p.label}
@@ -182,7 +182,7 @@ export default function ImageFiltersClient() {
                   ))}
                 </div>
 
-                <div className="w-full flex items-center justify-between mt-4 text-xs text-slate-400">
+                <div className="w-full flex items-center justify-between mt-4 text-xs text-slate-500 dark:text-slate-400">
                   <span>{file?.name}</span>
                   <button
                     onClick={() => {
@@ -200,9 +200,9 @@ export default function ImageFiltersClient() {
             </div>
 
             {/* Adjustments Sidebar */}
-            <div className="lg:col-span-4 bg-slate-900/80 border border-slate-800 rounded-2xl p-6 flex flex-col gap-5">
+            <div className="lg:col-span-4 bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col gap-5 shadow-sm">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-white tracking-wide uppercase">
+                <h3 className="text-xs font-semibold text-slate-900 dark:text-white tracking-wide uppercase">
                   Manual Adjustments
                 </h3>
                 <button
@@ -217,7 +217,7 @@ export default function ImageFiltersClient() {
               {/* Sliders */}
               <div className="space-y-3.5 text-xs">
                 <div>
-                  <div className="flex justify-between text-slate-400 mb-1">
+                  <div className="flex justify-between text-slate-700 dark:text-slate-400 mb-1">
                     <span>Brightness</span>
                     <span>{brightness}%</span>
                   </div>
@@ -235,7 +235,7 @@ export default function ImageFiltersClient() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-slate-400 mb-1">
+                  <div className="flex justify-between text-slate-700 dark:text-slate-400 mb-1">
                     <span>Contrast</span>
                     <span>{contrast}%</span>
                   </div>
@@ -253,7 +253,7 @@ export default function ImageFiltersClient() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-slate-400 mb-1">
+                  <div className="flex justify-between text-slate-700 dark:text-slate-400 mb-1">
                     <span>Saturation</span>
                     <span>{saturation}%</span>
                   </div>
@@ -271,7 +271,7 @@ export default function ImageFiltersClient() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-slate-400 mb-1">
+                  <div className="flex justify-between text-slate-700 dark:text-slate-400 mb-1">
                     <span>Sepia Warmth</span>
                     <span>{sepia}%</span>
                   </div>
@@ -289,7 +289,7 @@ export default function ImageFiltersClient() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-slate-400 mb-1">
+                  <div className="flex justify-between text-slate-700 dark:text-slate-400 mb-1">
                     <span>Grayscale</span>
                     <span>{grayscale}%</span>
                   </div>
@@ -307,7 +307,7 @@ export default function ImageFiltersClient() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-slate-400 mb-1">
+                  <div className="flex justify-between text-slate-700 dark:text-slate-400 mb-1">
                     <span>Soft Blur</span>
                     <span>{blur}px</span>
                   </div>
@@ -325,7 +325,7 @@ export default function ImageFiltersClient() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-slate-400 mb-1">
+                  <div className="flex justify-between text-slate-700 dark:text-slate-400 mb-1">
                     <span>Invert Colors</span>
                     <span>{invert}%</span>
                   </div>
@@ -343,7 +343,7 @@ export default function ImageFiltersClient() {
                 </div>
 
                 <div>
-                  <div className="flex justify-between text-slate-400 mb-1">
+                  <div className="flex justify-between text-slate-700 dark:text-slate-400 mb-1">
                     <span>Hue Rotation</span>
                     <span>{hueRotate}°</span>
                   </div>
@@ -390,30 +390,30 @@ export default function ImageFiltersClient() {
         )}
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 mb-3">
               <Sliders className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">GPU Accelerated Rendering</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">GPU Accelerated Rendering</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Hardware-accelerated color matrices compute instant adjustments at 60 FPS without lag.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-3">
               <Shield className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Zero File Uploads</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Zero File Uploads</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Photos remain strictly in your browser memory for absolute privacy and zero server bandwidth costs.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3">
               <CheckCircle2 className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Full Source Resolution</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Full Source Resolution</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Preserves original pixel dimensions upon export without downscaling or lossy compression artifacts.
             </p>
           </div>

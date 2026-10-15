@@ -349,7 +349,7 @@ export default function ImageRotateClient() {
   const autoStraightenedCount = images.filter((i) => i.autoStraightened).length;
 
   return (
-    <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-cyan-500/20 selection:text-cyan-400">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#080b0f] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-cyan-500/20 selection:text-cyan-400">
       <div className="max-w-6xl mx-auto px-4 py-8 w-full">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">
@@ -357,10 +357,10 @@ export default function ImageRotateClient() {
             <Sparkles className="w-3.5 h-3.5" />
             AI Batch Photo Straightener &amp; Orientation Studio
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             AI Batch Image Rotate &amp; Auto-Straighten
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-2xl">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-2xl">
             Upload individual photos or a full folder with 100+ images. AI automatically detects and straightens crooked or sideways photos, ignores non-images (PDFs/docs), and bundles everything into a convenient ZIP.
           </p>
         </div>
@@ -370,16 +370,16 @@ export default function ImageRotateClient() {
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
-            className="max-w-2xl mx-auto p-12 border-2 border-dashed border-slate-700/60 hover:border-cyan-500/50 rounded-3xl bg-slate-900/40 hover:bg-slate-900/80 transition-all text-center space-y-4"
+            className="max-w-2xl mx-auto p-12 border-2 border-dashed border-slate-300 dark:border-slate-700/60 hover:border-cyan-500/50 rounded-3xl bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all text-center space-y-4 shadow-sm"
           >
             <div className="w-20 h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mx-auto">
               <RotateCw className="w-10 h-10" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white mb-1">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
                 Drop Photos or Select Full Folder
               </h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto">
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-md mx-auto">
                 Batch upload up to 100+ photos. Non-image files (PDFs, Word docs) are automatically filtered out.
               </p>
             </div>
@@ -395,7 +395,7 @@ export default function ImageRotateClient() {
               <button
                 type="button"
                 onClick={() => folderInputRef.current?.click()}
-                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/10 text-white font-bold text-sm transition flex items-center gap-2"
+                className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-white/10 text-slate-800 dark:text-white font-bold text-sm transition flex items-center gap-2"
               >
                 <FolderUp className="w-4 h-4 text-cyan-400" /> Upload Full Folder
               </button>
@@ -423,9 +423,9 @@ export default function ImageRotateClient() {
         ) : (
           <div className="space-y-6">
             {/* Action Bar & Stats Banner */}
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-sm font-bold text-white flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-cyan-400" />
                   {images.length} Photos Loaded
                 </span>
@@ -436,7 +436,7 @@ export default function ImageRotateClient() {
                   </span>
                 )}
                 {ignoredCount > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 text-xs font-medium">
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-medium">
                     {ignoredCount} Non-images skipped
                   </span>
                 )}
@@ -453,21 +453,21 @@ export default function ImageRotateClient() {
                 <button
                   type="button"
                   onClick={() => handleRotateAll(90)}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold transition flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
                 >
                   <RotateCw className="w-3.5 h-3.5" /> Rotate All 90° CW
                 </button>
                 <button
                   type="button"
                   onClick={() => handleRotateAll(270)}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold transition flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
                 >
                   <RotateCcw className="w-3.5 h-3.5" /> Rotate All 90° CCW
                 </button>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium transition flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
                 >
                   <Upload className="w-3.5 h-3.5" /> Add More
                 </button>
@@ -491,7 +491,7 @@ export default function ImageRotateClient() {
                   </span>
                   <span>{progress}%</span>
                 </div>
-                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-cyan-500 h-full transition-all duration-200"
                     style={{ width: `${progress}%` }}
@@ -507,10 +507,10 @@ export default function ImageRotateClient() {
                 return (
                   <div
                     key={item.id}
-                    className="group relative rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 p-2.5 flex flex-col justify-between transition-all"
+                    className="group relative rounded-2xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-cyan-500/50 p-2.5 flex flex-col justify-between transition-all shadow-sm"
                   >
                     {/* Thumbnail Viewport */}
-                    <div className="relative w-full aspect-square rounded-xl bg-black/60 overflow-hidden flex items-center justify-center p-2 mb-2">
+                    <div className="relative w-full aspect-square rounded-xl bg-slate-100 dark:bg-black/60 overflow-hidden flex items-center justify-center p-2 mb-2">
                       <img
                         src={item.dataUrl}
                         alt={item.name}
@@ -539,20 +539,20 @@ export default function ImageRotateClient() {
 
                     {/* Meta info */}
                     <div className="mb-2">
-                      <p className="text-[11px] font-semibold text-white truncate" title={item.name}>
+                      <p className="text-[11px] font-semibold text-slate-900 dark:text-white truncate" title={item.name}>
                         {item.name}
                       </p>
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
                         {item.width}×{item.height} px • {formatBytes(item.size)}
                       </p>
                     </div>
 
                     {/* Quick Rotate Buttons */}
-                    <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-800/80">
+                    <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-200 dark:border-slate-800/80">
                       <button
                         type="button"
                         onClick={() => handleRotateSingle(item.id, -90)}
-                        className="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-center flex items-center justify-center transition"
+                        className="flex-1 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-center flex items-center justify-center transition border border-slate-200 dark:border-transparent"
                         title="Rotate 90° CCW"
                       >
                         <RotateCcw className="w-3 h-3" />
@@ -560,7 +560,7 @@ export default function ImageRotateClient() {
                       <button
                         type="button"
                         onClick={() => handleRotateSingle(item.id, 90)}
-                        className="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-center flex items-center justify-center transition"
+                        className="flex-1 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-center flex items-center justify-center transition border border-slate-200 dark:border-transparent"
                         title="Rotate 90° CW"
                       >
                         <RotateCw className="w-3 h-3" />
@@ -568,7 +568,7 @@ export default function ImageRotateClient() {
                       <button
                         type="button"
                         onClick={() => handleFlipSingle(item.id)}
-                        className="flex-1 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-center flex items-center justify-center transition"
+                        className="flex-1 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-center flex items-center justify-center transition border border-slate-200 dark:border-transparent"
                         title="Flip Horizontal"
                       >
                         <FlipHorizontal className="w-3 h-3" />
@@ -588,12 +588,12 @@ export default function ImageRotateClient() {
             </div>
 
             {/* Bottom Export Bar */}
-            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
               <div>
-                <h4 className="text-base font-bold text-white">
+                <h4 className="text-base font-bold text-slate-900 dark:text-white">
                   Ready to download {images.length} processed {images.length === 1 ? "photo" : "photos"}
                 </h4>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Loss-free canvas export preserving high resolution in a single ZIP file.
                 </p>
               </div>
@@ -627,30 +627,30 @@ export default function ImageRotateClient() {
         )}
 
         {/* Feature Badges */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 pt-8 border-t border-slate-800/60">
-          <div className="p-4 rounded-2xl bg-slate-900/30 border border-slate-800 flex items-start gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 pt-8 border-t border-slate-200 dark:border-slate-800/60">
+          <div className="p-4 rounded-2xl bg-slate-100/70 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-white">AI Auto-Straighten</h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">AI Auto-Straighten</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 Detects camera sensor EXIF metadata to automatically orient upside-down or sideways photos straight.
               </p>
             </div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/30 border border-slate-800 flex items-start gap-3">
+          <div className="p-4 rounded-2xl bg-slate-100/70 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
             <FolderUp className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-white">Batch &amp; Full Folder Upload</h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Batch &amp; Full Folder Upload</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 Drop 100+ files or an entire folder. Non-image files like PDFs and Word documents are automatically filtered out.
               </p>
             </div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/30 border border-slate-800 flex items-start gap-3">
+          <div className="p-4 rounded-2xl bg-slate-100/70 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
             <Shield className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-white">100% Private in Browser</h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">100% Private in Browser</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 Zero server uploads. All images are processed and packaged into a ZIP entirely on your local device.
               </p>
             </div>

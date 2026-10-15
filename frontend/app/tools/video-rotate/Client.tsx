@@ -319,7 +319,7 @@ export default function VideoRotateClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-rose-500/20 selection:text-rose-400">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#080b0f] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-rose-500/20 selection:text-rose-400">
       <div className="max-w-4xl mx-auto px-4 py-8 w-full">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">
@@ -327,10 +327,10 @@ export default function VideoRotateClient() {
             <RotateCw className="w-3.5 h-3.5" />
             Video Orientation &amp; Straightener
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Rotate Video Online Free
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-xl">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
             Upload your video to automatically straighten sideways footage or rotate 90°, 180°, 270° and mirror with instant live preview.
           </p>
         </div>
@@ -350,16 +350,16 @@ export default function VideoRotateClient() {
               }
             }}
             onClick={() => fileInputRef.current?.click()}
-            className="max-w-xl mx-auto p-12 border-2 border-dashed border-slate-700/60 hover:border-rose-500/50 rounded-3xl bg-slate-900/40 hover:bg-slate-900/80 transition-all text-center cursor-pointer group space-y-4"
+            className="max-w-xl mx-auto p-12 border-2 border-dashed border-slate-300 dark:border-slate-700/60 hover:border-rose-500/50 rounded-3xl bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all text-center cursor-pointer group space-y-4 shadow-sm"
           >
             <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mx-auto group-hover:scale-110 transition-transform">
               <Video className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white mb-1">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
                 Choose Video to Rotate
               </h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
                 MP4, MOV, WebM, MKV (Up to 200MB). Straightens sideways phone clips in seconds.
               </p>
             </div>
@@ -377,18 +377,18 @@ export default function VideoRotateClient() {
         ) : (
           <div className="space-y-6">
             {/* Main Interactive Stage */}
-            <div className="p-6 rounded-3xl bg-slate-900/70 border border-slate-800 space-y-6">
+            <div className="p-6 rounded-3xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 space-y-6 shadow-sm">
               {/* File Info Header */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
                     <Video className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-white truncate max-w-xs sm:max-w-md">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate max-w-xs sm:max-w-md">
                       {selectedFile.name}
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Current angle: <span className="text-rose-400 font-semibold">{rotation}°</span>
                       {flipH && " • Flipped horizontally"}
                     </p>
@@ -398,14 +398,14 @@ export default function VideoRotateClient() {
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Remove
                 </button>
               </div>
 
               {/* Live Video Preview Box */}
-              <div className="relative w-full h-[360px] sm:h-[440px] rounded-2xl bg-black flex items-center justify-center overflow-hidden border border-slate-800">
+              <div className="relative w-full h-[360px] sm:h-[440px] rounded-2xl bg-black flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-800">
                 {videoSrc && (
                   <video
                     ref={videoRef}
@@ -442,21 +442,21 @@ export default function VideoRotateClient() {
                   <button
                     type="button"
                     onClick={() => handleRotate(90)}
-                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center justify-center gap-2 border border-white/5"
+                    className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold transition flex items-center justify-center gap-2 border border-slate-200 dark:border-white/5"
                   >
                     <RotateCw className="w-4 h-4 text-rose-400" /> Rotate 90° CW
                   </button>
                   <button
                     type="button"
                     onClick={() => handleRotate(180)}
-                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center justify-center gap-2 border border-white/5"
+                    className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold transition flex items-center justify-center gap-2 border border-slate-200 dark:border-white/5"
                   >
                     <RotateCw className="w-4 h-4 text-rose-400" /> Rotate 180°
                   </button>
                   <button
                     type="button"
                     onClick={() => handleRotate(-90)}
-                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center justify-center gap-2 border border-white/5"
+                    className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold transition flex items-center justify-center gap-2 border border-slate-200 dark:border-white/5"
                   >
                     <RotateCcw className="w-4 h-4 text-rose-400" /> Rotate 90° CCW
                   </button>
@@ -466,7 +466,7 @@ export default function VideoRotateClient() {
                     className={`py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 border ${
                       flipH
                         ? "bg-rose-500/20 border-rose-500 text-rose-400"
-                        : "bg-slate-800 hover:bg-slate-700 text-white border-white/5"
+                        : "bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white border-slate-200 dark:border-white/5"
                     }`}
                   >
                     <FlipHorizontal className="w-4 h-4 text-rose-400" /> Flip Horizontal
@@ -477,7 +477,7 @@ export default function VideoRotateClient() {
                       setRotation(0);
                       setFlipH(false);
                     }}
-                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-medium transition flex items-center justify-center gap-2 border border-white/5"
+                    className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 dark:hover:text-white text-xs font-medium transition flex items-center justify-center gap-2 border border-slate-200 dark:border-white/5"
                   >
                     Reset Angle
                   </button>
@@ -536,14 +536,14 @@ export default function VideoRotateClient() {
 
                   {/* Manual Further Adjustment Buttons as requested */}
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">Need another angle?</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Need another angle?</span>
                     <button
                       type="button"
                       onClick={() => {
                         handleRotate(90);
                         startProcessing();
                       }}
-                      className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center gap-1.5"
+                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold transition flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
                     >
                       <RotateCw className="w-3.5 h-3.5 text-rose-400" /> Rotate +90° Again
                     </button>
@@ -553,7 +553,7 @@ export default function VideoRotateClient() {
                         handleRotate(180);
                         startProcessing();
                       }}
-                      className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition flex items-center gap-1.5"
+                      className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-semibold transition flex items-center gap-1.5 border border-slate-200 dark:border-transparent"
                     >
                       <RotateCw className="w-3.5 h-3.5 text-rose-400" /> Rotate 180°
                     </button>
@@ -565,30 +565,30 @@ export default function VideoRotateClient() {
         )}
 
         {/* Feature Highlights */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 pt-8 border-t border-slate-800/60">
-          <div className="p-4 rounded-2xl bg-slate-900/30 border border-slate-800 flex items-start gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12 pt-8 border-t border-slate-200 dark:border-slate-800/60">
+          <div className="p-4 rounded-2xl bg-slate-100/70 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
             <Sparkles className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-white">Smart Auto-Orientation</h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Smart Auto-Orientation</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 Automatically straightens sideways smartphone video recordings to proper upright orientation.
               </p>
             </div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/30 border border-slate-800 flex items-start gap-3">
+          <div className="p-4 rounded-2xl bg-slate-100/70 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
             <Sliders className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-white">Post-Execution Angle Tweaks</h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Post-Execution Angle Tweaks</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 Quickly adjust to other angles with dedicated post-render buttons if you need a different perspective.
               </p>
             </div>
           </div>
-          <div className="p-4 rounded-2xl bg-slate-900/30 border border-slate-800 flex items-start gap-3">
+          <div className="p-4 rounded-2xl bg-slate-100/70 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 flex items-start gap-3">
             <Shield className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-xs font-bold text-white">No Quality Loss</h4>
-              <p className="text-[11px] text-slate-400 mt-0.5">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">No Quality Loss</h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 High-fidelity hardware-accelerated encoding maintains video clarity, frame rate, and full audio tracks.
               </p>
             </div>

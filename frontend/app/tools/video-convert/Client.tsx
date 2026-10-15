@@ -105,7 +105,7 @@ export default function VideoConvertClient() {
 
 
   return (
-    <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-rose-500/20 selection:text-rose-400">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#080b0f] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-rose-500/20 selection:text-rose-400">
       <div className="max-w-5xl mx-auto px-4 py-8 w-full">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">
@@ -113,10 +113,10 @@ export default function VideoConvertClient() {
             <RefreshCw className="w-3.5 h-3.5" />
             Universal Transcoder
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Video Format Converter Online Free
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-xl">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
             Convert videos between MP4, WebM, MKV, MOV, and AVI formats directly in your browser with high-speed WASM FFmpeg.
           </p>
         </div>
@@ -132,15 +132,15 @@ export default function VideoConvertClient() {
           <div className="max-w-xl mx-auto">
             <label
               htmlFor="video-upload"
-              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-700/60 hover:border-rose-500/50 rounded-2xl bg-slate-900/40 hover:bg-slate-900/80 transition-all duration-300 cursor-pointer text-center"
+              className="relative group flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-300 dark:border-slate-700/60 hover:border-rose-500/50 rounded-2xl bg-white dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all duration-300 cursor-pointer text-center shadow-sm"
             >
               <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-4 group-hover:scale-110 transition-transform">
                 <FileVideo className="w-8 h-8" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
                 Select video file to convert
               </h3>
-              <p className="text-xs text-slate-400 max-w-xs mb-4">
+              <p className="text-xs text-slate-600 dark:text-slate-400 max-w-xs mb-4">
                 Transcode containers and codecs natively in your browser.
               </p>
               <span className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs shadow-lg shadow-rose-600/25 transition">
@@ -156,9 +156,9 @@ export default function VideoConvertClient() {
             </label>
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col items-center">
+          <div className="max-w-3xl mx-auto bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col items-center shadow-sm">
             {/* Player View */}
-            <div className="w-full rounded-xl overflow-hidden bg-black/40 border border-slate-800 mb-6 flex items-center justify-center">
+            <div className="w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-800 mb-6 flex items-center justify-center">
               <video controlsList="nodownload" onContextMenu={(e) => e.preventDefault()}
                 src={resultUrl || videoUrl}
                 controls
@@ -168,7 +168,7 @@ export default function VideoConvertClient() {
 
             {/* Target Format Options */}
             <div className="w-full mb-6">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 block mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400 block mb-3">
                 Target Output Container
               </span>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -182,11 +182,11 @@ export default function VideoConvertClient() {
                     className={`p-3 rounded-xl border text-left text-xs transition ${
                       targetExt === f.ext
                         ? "bg-rose-600/20 border-rose-500 text-rose-300 font-bold"
-                        : "bg-slate-800/40 border-slate-700 text-slate-400 hover:text-white"
+                        : "bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800/40 dark:border-slate-700 dark:text-slate-400 dark:hover:text-white border border-slate-200"
                     }`}
                   >
-                    <span className="block font-bold text-sm text-white uppercase">{f.ext}</span>
-                    <span className="text-[10px] text-slate-400">{f.label}</span>
+                    <span className="block font-bold text-sm text-slate-900 dark:text-white uppercase">{f.ext}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">{f.label}</span>
                   </button>
                 ))}
               </div>
@@ -238,7 +238,7 @@ export default function VideoConvertClient() {
                 setVideoUrl(null);
                 setResultUrl(null);
               }}
-              className="mt-4 text-xs text-slate-400 hover:text-red-400 transition flex items-center gap-1"
+              className="mt-4 text-xs text-slate-500 dark:text-slate-400 hover:text-red-500 transition flex items-center gap-1"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Choose different video
@@ -247,30 +247,30 @@ export default function VideoConvertClient() {
         )}
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-3">
               <RefreshCw className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Universal Multi-Format</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Universal Multi-Format</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Convert across standard web formats (MP4, WebM, MOV, MKV, AVI) compatible with YouTube, Instagram, and TikTok.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3">
               <Shield className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Zero Server Bandwidth</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Zero Server Bandwidth</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Heavy video data is processed locally in browser RAM using WebAssembly FFmpeg. No bandwidth limits.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3">
               <CheckCircle2 className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Lossless Container Remuxing</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Lossless Container Remuxing</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Where streams are compatible (like MOV to MP4), remuxing finishes in seconds without transcoding loss.
             </p>
           </div>

@@ -50,7 +50,7 @@ const TOP_USED_TOOLS = [
     name: "AI Video Generator",
     desc: "Generate 4–10s realistic scenes from text prompts and photos via Cinematic AI AI.",
     category: "AI Studio",
-    badge: "Daily Credits",
+    badge: "Free AI Video",
     badgeColor: "bg-violet-500/15 text-violet-600 dark:text-violet-300 border-violet-500/20",
     href: "/tools/video-generator",
     icon: Film,

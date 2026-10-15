@@ -147,15 +147,29 @@ function MediaCard({
         </button>
       )}
 
-      {/* Hover overlay with + */}
-      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 pointer-events-none">
-        <div className="w-7 h-7 rounded-full bg-[#ff6b4a] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+      {/* Explicit Add to Timeline Button (Accessible on both Mobile & Desktop) */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onAddToTimeline(item);
+        }}
+        title={`Add "${item.name}" to timeline`}
+        className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-[#ff6b4a] hover:bg-[#ff856b] active:scale-95 text-white text-[9px] font-bold flex items-center gap-0.5 shadow-md transition-all z-20 cursor-pointer"
+      >
+        <Plus className="w-2.5 h-2.5" />
+        <span>Add</span>
+      </button>
+
+      {/* Hover overlay with large + icon */}
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 pointer-events-none">
+        <div className="w-8 h-8 rounded-full bg-[#ff6b4a] flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
           <Plus className="w-4 h-4 text-white" />
         </div>
       </div>
 
       {/* Name + duration badge */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-1.5 py-1 pointer-events-none">
+      <div className="absolute bottom-0 left-0 right-14 bg-gradient-to-t from-black/95 via-black/60 to-transparent px-1.5 py-1 pointer-events-none">
         <p className="text-[9px] font-semibold text-white truncate">{item.name}</p>
         {!isAudio && (
           <p className="text-[8px] text-gray-400 font-mono">{fmt(item.duration)}</p>

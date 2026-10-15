@@ -22,6 +22,8 @@ export interface ClipFilters {
   brightness: number;
   contrast: number;
   saturation: number;
+  vignette?: number; // 0 to 100 percentage
+  hueRotate?: number; // -180 to 180 degrees
 }
 
 export type AspectRatioPreset = "16:9" | "9:16" | "1:1" | "4:5";
@@ -32,14 +34,22 @@ export type AnimationPreset =
   | "zoom-in"
   | "zoom-out"
   | "slide-up"
+  | "slide-down"
+  | "slide-left"
   | "slide-right"
-  | "pop-bounce";
+  | "pop-bounce"
+  | "spin-in"
+  | "whip-pan"
+  | "elastic-scale"
+  | "blur-reveal";
 
 export interface AnimationMatrix {
   scale: number;
   offsetX: number; // percentage offset: -100 to 100
   offsetY: number; // percentage offset: -100 to 100
   opacity: number; // 0 to 1
+  rotation?: number; // degrees
+  blur?: number; // blur px
 }
 
 export interface ClipColorFilter {
@@ -47,6 +57,8 @@ export interface ClipColorFilter {
   contrast: number;
   saturation: number;
   blur?: number;
+  vignette?: number;
+  hueRotate?: number;
 }
 
 export function computeAnimationMatrix(
@@ -55,7 +67,7 @@ export function computeAnimationMatrix(
   animDuration: number = 0.6
 ): AnimationMatrix {
   if (!preset || preset === "none" || elapsedInClip >= animDuration || animDuration <= 0) {
-    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1, rotation: 0, blur: 0 };
   }
 
   const p = Math.max(0, Math.min(1, elapsedInClip / animDuration));
@@ -95,6 +107,22 @@ export function computeAnimationMatrix(
         opacity: Math.min(1, p * 2.5),
       };
 
+    case "slide-down":
+      return {
+        scale: 1,
+        offsetX: 0,
+        offsetY: -(1 - easeOut) * 40,
+        opacity: Math.min(1, p * 2.5),
+      };
+
+    case "slide-left":
+      return {
+        scale: 1,
+        offsetX: (1 - easeOut) * 40,
+        offsetY: 0,
+        opacity: Math.min(1, p * 2.5),
+      };
+
     case "slide-right":
       return {
         scale: 1,
@@ -119,8 +147,46 @@ export function computeAnimationMatrix(
       };
     }
 
+    case "spin-in":
+      return {
+        scale: 0.2 + 0.8 * easeOut,
+        offsetX: 0,
+        offsetY: 0,
+        opacity: easeOut,
+        rotation: (1 - easeOut) * -180,
+      };
+
+    case "whip-pan":
+      return {
+        scale: 1,
+        offsetX: -(1 - easeOut) * 60,
+        offsetY: 0,
+        opacity: Math.min(1, p * 3),
+        blur: (1 - easeOut) * 8,
+      };
+
+    case "elastic-scale": {
+      const decay = Math.pow(2, -10 * p);
+      const elastic = 1 - decay * Math.cos((p * 10 - 0.75) * ((2 * Math.PI) / 3));
+      return {
+        scale: Math.max(0.01, elastic),
+        offsetX: 0,
+        offsetY: 0,
+        opacity: Math.min(1, p * 3),
+      };
+    }
+
+    case "blur-reveal":
+      return {
+        scale: 1.15 - 0.15 * easeOut,
+        offsetX: 0,
+        offsetY: 0,
+        opacity: easeOut,
+        blur: (1 - easeOut) * 12,
+      };
+
     default:
-      return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+      return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1, rotation: 0, blur: 0 };
   }
 }
 
@@ -128,9 +194,13 @@ export type AnimationOutPreset =
   | "none"
   | "fade-out"
   | "zoom-out"
+  | "zoom-in-out"
   | "slide-down"
+  | "slide-up"
   | "slide-left"
-  | "pop-out";
+  | "slide-right"
+  | "pop-out"
+  | "spin-out";
 
 export function computeAnimationOutMatrix(
   preset?: AnimationOutPreset,
@@ -139,12 +209,12 @@ export function computeAnimationOutMatrix(
   animDuration: number = 0.6
 ): AnimationMatrix {
   if (!preset || preset === "none" || animDuration <= 0 || clipDuration <= 0) {
-    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1, rotation: 0, blur: 0 };
   }
 
   const remaining = clipDuration - elapsedInClip;
   if (remaining >= animDuration) {
-    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1, rotation: 0, blur: 0 };
   }
 
   const p = Math.max(0, Math.min(1, 1 - Math.max(0, remaining) / animDuration));
@@ -167,6 +237,14 @@ export function computeAnimationOutMatrix(
         opacity: Math.max(0, 1 - p * 1.5),
       };
 
+    case "zoom-in-out":
+      return {
+        scale: 1 + 0.8 * easeIn,
+        offsetX: 0,
+        offsetY: 0,
+        opacity: Math.max(0, 1 - p * 1.5),
+      };
+
     case "slide-down":
       return {
         scale: 1,
@@ -175,10 +253,26 @@ export function computeAnimationOutMatrix(
         opacity: Math.max(0, 1 - p * 1.5),
       };
 
+    case "slide-up":
+      return {
+        scale: 1,
+        offsetX: 0,
+        offsetY: -easeIn * 40,
+        opacity: Math.max(0, 1 - p * 1.5),
+      };
+
     case "slide-left":
       return {
         scale: 1,
         offsetX: -easeIn * 40,
+        offsetY: 0,
+        opacity: Math.max(0, 1 - p * 1.5),
+      };
+
+    case "slide-right":
+      return {
+        scale: 1,
+        offsetX: easeIn * 40,
         offsetY: 0,
         opacity: Math.max(0, 1 - p * 1.5),
       };
@@ -198,8 +292,92 @@ export function computeAnimationOutMatrix(
       };
     }
 
+    case "spin-out":
+      return {
+        scale: Math.max(0.01, 1 - 0.8 * easeIn),
+        offsetX: 0,
+        offsetY: 0,
+        opacity: Math.max(0, 1 - easeIn),
+        rotation: easeIn * 180,
+      };
+
     default:
-      return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+      return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1, rotation: 0, blur: 0 };
+  }
+}
+
+export type AnimationLoopPreset =
+  | "none"
+  | "pulse-beat"
+  | "floating"
+  | "handheld-shake"
+  | "pendulum-swing"
+  | "glitch-jitter"
+  | "slow-ken-burns"
+  | "spin-continuous"
+  | "breathe";
+
+export function computeAnimationLoopMatrix(
+  preset?: AnimationLoopPreset,
+  elapsedInClip: number = 0,
+  clipDuration: number = 0,
+  speed: number = 1
+): AnimationMatrix {
+  if (!preset || preset === "none") {
+    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1, rotation: 0, blur: 0 };
+  }
+
+  const s = Math.max(0.1, speed || 1);
+  const t = elapsedInClip * s;
+
+  switch (preset) {
+    case "pulse-beat": {
+      const beat = Math.pow(Math.abs(Math.sin(t * 3.5)), 3);
+      return { scale: 1 + 0.12 * beat, offsetX: 0, offsetY: 0, opacity: 1, rotation: 0 };
+    }
+    case "floating": {
+      const offsetY = Math.sin(t * 2) * 5;
+      const offsetX = Math.cos(t * 1.2) * 2.5;
+      return { scale: 1, offsetX, offsetY, opacity: 1, rotation: Math.sin(t) * 1.5 };
+    }
+    case "handheld-shake": {
+      const offsetX = (Math.sin(t * 7) + Math.cos(t * 11)) * 1.8;
+      const offsetY = (Math.cos(t * 8) + Math.sin(t * 13)) * 1.5;
+      const rot = Math.sin(t * 5) * 1.2;
+      return { scale: 1.04, offsetX, offsetY, opacity: 1, rotation: rot };
+    }
+    case "pendulum-swing": {
+      const rot = Math.sin(t * 2.5) * 8;
+      return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1, rotation: rot };
+    }
+    case "glitch-jitter": {
+      const cycle = Math.floor(t * 15);
+      const isGlitch = cycle % 7 === 0;
+      const offsetX = isGlitch ? Math.sin(cycle * 33) * 6 : 0;
+      const offsetY = isGlitch ? Math.cos(cycle * 47) * 4 : 0;
+      return {
+        scale: isGlitch ? 1.03 : 1,
+        offsetX,
+        offsetY,
+        opacity: 1,
+        rotation: isGlitch ? (Math.random() - 0.5) * 2 : 0,
+      };
+    }
+    case "slow-ken-burns": {
+      const dur = Math.max(0.1, clipDuration);
+      const p = Math.min(1, Math.max(0, elapsedInClip / dur));
+      return { scale: 1 + 0.18 * p, offsetX: p * 2, offsetY: -p * 1.5, opacity: 1, rotation: 0 };
+    }
+    case "spin-continuous": {
+      const rot = (t * 60) % 360;
+      return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1, rotation: rot };
+    }
+    case "breathe": {
+      const breathe = (Math.sin(t * 1.8) + 1) / 2;
+      return { scale: 0.96 + 0.08 * breathe, offsetX: 0, offsetY: 0, opacity: 0.95 + 0.05 * breathe, rotation: 0 };
+    }
+    default:
+      return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1, rotation: 0, blur: 0 };
   }
 }
 
@@ -321,6 +499,8 @@ export interface TimelineClip {
   animationDuration?: number;
   animationOut?: AnimationOutPreset;
   animationOutDuration?: number;
+  animationLoop?: AnimationLoopPreset;
+  animationLoopSpeed?: number;
 
   // Extra specific properties
   text?: string;
@@ -355,7 +535,7 @@ export const DEFAULT_TRANSFORM: Transform = {
   x: 50, y: 50, width: 100, height: 100, rotation: 0, scaleX: 1, scaleY: 1, opacity: 100
 };
 
-export const DEFAULT_FILTERS: ClipFilters = { brightness: 0, contrast: 1, saturation: 1 };
+export const DEFAULT_FILTERS: ClipFilters = { brightness: 0, contrast: 1, saturation: 1, vignette: 0, hueRotate: 0 };
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   volumePercent: 100,

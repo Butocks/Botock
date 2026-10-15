@@ -50,6 +50,9 @@ function buildClipVideoFilter(
 
   if (clip.filters) {
     filterParts.push(buildColorFilter(clip.filters.brightness, clip.filters.contrast, clip.filters.saturation));
+    if (clip.filters.hueRotate && clip.filters.hueRotate !== 0) {
+      filterParts.push(`hue=h=${Math.round(clip.filters.hueRotate)}`);
+    }
   }
 
   const t_rel = `(t-${clip.timelineStart.toFixed(3)})`;
@@ -94,12 +97,27 @@ function buildClipVideoFilter(
     } else if (clip.animationIn === "slide-right") {
       animPanX = `(-${targetW}*0.4*(1-${a_prog}))`;
       animOpacity = `min(1,2.5*${a_prog})`;
+    } else if (clip.animationIn === "slide-left") {
+      animPanX = `(${targetW}*0.4*(1-${a_prog}))`;
+      animOpacity = `min(1,2.5*${a_prog})`;
     } else if (clip.animationIn === "slide-up") {
       animPanY = `(${targetH}*0.4*(1-${a_prog}))`;
       animOpacity = `min(1,2.5*${a_prog})`;
-    } else if (clip.animationIn === "pop-bounce") {
+    } else if (clip.animationIn === "slide-down") {
+      animPanY = `(-${targetH}*0.4*(1-${a_prog}))`;
+      animOpacity = `min(1,2.5*${a_prog})`;
+    } else if (clip.animationIn === "pop-bounce" || clip.animationIn === "elastic-scale") {
       animScale = `(0.4+0.6*${a_prog})`;
       animOpacity = `min(1,3*${a_prog})`;
+    } else if (clip.animationIn === "spin-in") {
+      animScale = `(0.2+0.8*${a_prog})`;
+      animOpacity = a_prog;
+    } else if (clip.animationIn === "whip-pan") {
+      animPanX = `(-${targetW}*0.6*(1-${a_prog}))`;
+      animOpacity = `min(1,3*${a_prog})`;
+    } else if (clip.animationIn === "blur-reveal") {
+      animScale = `(1.15-0.15*${a_prog})`;
+      animOpacity = a_prog;
     }
   }
 
@@ -115,15 +133,46 @@ function buildClipVideoFilter(
     } else if (clip.animationOut === "zoom-out") {
       animScale = `(${animScale}*(1-0.65*${o_prog}))`;
       animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
+    } else if (clip.animationOut === "zoom-in-out") {
+      animScale = `(${animScale}*(1+0.8*${o_prog}))`;
+      animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
     } else if (clip.animationOut === "slide-down") {
       animPanY = `(${animPanY}+${targetH}*0.4*${o_prog})`;
+      animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
+    } else if (clip.animationOut === "slide-up") {
+      animPanY = `(${animPanY}-${targetH}*0.4*${o_prog})`;
       animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
     } else if (clip.animationOut === "slide-left") {
       animPanX = `(${animPanX}-${targetW}*0.4*${o_prog})`;
       animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
-    } else if (clip.animationOut === "pop-out") {
+    } else if (clip.animationOut === "slide-right") {
+      animPanX = `(${animPanX}+${targetW}*0.4*${o_prog})`;
+      animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
+    } else if (clip.animationOut === "pop-out" || clip.animationOut === "spin-out") {
       animScale = `(${animScale}*max(0.01,1-0.9*${o_prog}))`;
       animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
+    }
+  }
+
+  // Continuous Loop Animation for FFmpeg export
+  if (clip.animationLoop && clip.animationLoop !== "none") {
+    const s = Math.max(0.1, clip.animationLoopSpeed || 1.0);
+    const loopTime = `${s}*${t_rel}`;
+    if (clip.animationLoop === "pulse-beat") {
+      animScale = `(${animScale}*(1+0.12*abs(sin(${loopTime}*3.5))))`;
+    } else if (clip.animationLoop === "floating") {
+      animPanY = `(${animPanY}+${targetH}*0.05*sin(${loopTime}*2))`;
+      animPanX = `(${animPanX}+${targetW}*0.025*cos(${loopTime}*1.2))`;
+    } else if (clip.animationLoop === "handheld-shake") {
+      animScale = `(${animScale}*1.04)`;
+      animPanX = `(${animPanX}+${targetW}*0.018*(sin(${loopTime}*7)+cos(${loopTime}*11)))`;
+      animPanY = `(${animPanY}+${targetH}*0.015*(cos(${loopTime}*8)+sin(${loopTime}*13)))`;
+    } else if (clip.animationLoop === "slow-ken-burns") {
+      animScale = `(${animScale}*(1+0.18*${prog}))`;
+      animPanX = `(${animPanX}+${targetW}*0.02*${prog})`;
+      animPanY = `(${animPanY}-${targetH}*0.015*${prog})`;
+    } else if (clip.animationLoop === "breathe") {
+      animScale = `(${animScale}*(0.96+0.08*(sin(${loopTime}*1.8)+1)/2))`;
     }
   }
 

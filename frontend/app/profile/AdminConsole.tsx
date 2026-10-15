@@ -985,13 +985,13 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
           {activeTab === "analytics" && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-bold text-white">Visitors & Demographics Intelligence</h2>
-                <p className="text-xs text-slate-400 mt-1">Live metrics across daily, weekly, and monthly active timeframes</p>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Visitors & Demographics Intelligence</h2>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Live metrics across daily, weekly, and monthly active timeframes</p>
               </div>
 
               {/* Metric Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div className="flex items-center justify-between text-slate-400 text-xs mb-2">
                     <span>Live Visitors</span>
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -1000,28 +1000,28 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                   <div className="text-[11px] text-slate-500 mt-1">Active within last 5 mins</div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div className="text-slate-400 text-xs mb-2">Daily Visitors</div>
-                  <div className="text-3xl font-extrabold text-white font-mono">{analytics.visitors.daily.toLocaleString()}</div>
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">{analytics.visitors.daily.toLocaleString()}</div>
                   <div className="text-[11px] text-indigo-400 mt-1">+14.2% vs yesterday</div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div className="text-slate-400 text-xs mb-2">Weekly Visitors</div>
-                  <div className="text-3xl font-extrabold text-white font-mono">{analytics.visitors.weekly.toLocaleString()}</div>
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">{analytics.visitors.weekly.toLocaleString()}</div>
                   <div className="text-[11px] text-indigo-400 mt-1">Active this week</div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm">
                   <div className="text-slate-400 text-xs mb-2">Monthly Visitors</div>
-                  <div className="text-3xl font-extrabold text-white font-mono">{analytics.visitors.monthly.toLocaleString()}</div>
+                  <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">{analytics.visitors.monthly.toLocaleString()}</div>
                   <div className="text-[11px] text-purple-400 mt-1">MRR: {analytics.mrr}</div>
                 </div>
               </div>
 
               {/* Countries Breakdown Table */}
-              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800">
-                <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                   <Globe className="w-4 h-4 text-indigo-400" />
                   <span>Geographic Distribution (Users Kis Country Se Zyada Hain)</span>
                 </h3>
@@ -1050,11 +1050,11 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Zap className="w-5 h-5 text-amber-400" />
                     <span>Google Flow Pool & Video Generation Quotas</span>
                   </h2>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                     Set your Google Flow monthly credit pool and daily/monthly video limits. Generation stops automatically when quota is reached.
                   </p>
                 </div>
@@ -1107,13 +1107,13 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               </div>
 
               {/* Monthly Flow Pool Gauge & Live Usage */}
-              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                       Google Flow Monthly Credit Pool Budget
                     </span>
-                    <div className="text-2xl font-black text-white mt-1 flex items-center gap-3">
+                    <div className="text-2xl font-black text-slate-900 dark:text-white mt-1 flex items-center gap-3">
                       <span>{videoStats.this_month_flow_credits || 0}</span>
                       <span className="text-slate-500 text-sm font-normal">
                         / {(quotas.flow_monthly_credit_pool || 5000).toLocaleString()} Flow Credits Used This Month
@@ -1122,7 +1122,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <label className="text-xs text-slate-400 whitespace-nowrap">Monthly Pool Size:</label>
+                    <label className="text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">Monthly Pool Size:</label>
                     <input
                       type="number"
                       min={100}
@@ -1160,7 +1160,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 {/* Platform Daily Video Cap */}
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                   <label className="block text-xs font-semibold text-slate-300">
                     Platform Daily Video Cap
                   </label>
@@ -1175,7 +1175,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                 </div>
 
                 {/* Platform Monthly Video Cap */}
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                   <label className="block text-xs font-semibold text-slate-300">
                     Platform Monthly Video Cap
                   </label>
@@ -1190,7 +1190,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                 </div>
 
                 {/* Per-User Daily Limit */}
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                   <label className="block text-xs font-semibold text-slate-300">
                     Per-User Daily Limit
                   </label>
@@ -1205,7 +1205,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                 </div>
 
                 {/* Guest Daily Limit & Lock */}
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-2 flex flex-col justify-between">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2 flex flex-col justify-between">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300">
                       Guest Daily Limit (Per IP)
@@ -1234,7 +1234,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               </div>
 
               {/* End-User Privacy Protection Banner */}
-              <div className="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 text-xs text-slate-400 flex items-center gap-3">
+              <div className="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 text-xs text-slate-600 dark:text-slate-400 flex items-center gap-3">
                 <span className="text-lg">🛡️</span>
                 <div>
                   <span className="font-bold text-slate-300">User Experience Guarantee: </span>
@@ -1247,7 +1247,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               <div className="space-y-4 mt-6">
                 <h3 className="text-sm font-bold text-slate-200">Video Generation Models & Base Rates</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                  <div className="p-4 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                     <label className="block text-xs font-semibold text-slate-300">
                       Omni Flash 360p (10s Base)
                     </label>
@@ -1265,7 +1265,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                     <p className="text-[10px] text-slate-500">Flow: 4-7 cr | Us: 8-14 cr (4s, 6s, 8s, 10s)</p>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                  <div className="p-4 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                     <label className="block text-xs font-semibold text-slate-300">
                       Omni Flash 720p (10s Base)
                     </label>
@@ -1283,7 +1283,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                     <p className="text-[10px] text-slate-500">Flow: 7-15 cr | Us: 14-30 cr (4s, 6s, 8s, 10s)</p>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                  <div className="p-4 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                     <label className="block text-xs font-semibold text-slate-300">
                       Veo 3.1 Lite (720p 8s)
                     </label>
@@ -1301,7 +1301,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                     <p className="text-[10px] text-slate-500">Flow: 10 cr | Our Charge: 20 cr (8s 720p)</p>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                  <div className="p-4 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                     <label className="block text-xs font-semibold text-slate-300">
                       Veo 3.1 Fast (720p 8s)
                     </label>
@@ -1319,7 +1319,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                     <p className="text-[10px] text-slate-500">Flow: 20 cr | Our Charge: 40 cr (8s 720p)</p>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                  <div className="p-4 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                     <label className="block text-xs font-semibold text-slate-300">
                       Veo 3.1 Quality (720p 8s)
                     </label>
@@ -1343,11 +1343,11 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               <div className="pt-6 border-t border-slate-800/80 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <Gift className="w-5 h-5 text-amber-400" />
                       <span>Tool Usage Reward Credits (24h Expiration)</span>
                     </h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                       Award credit points to users whenever they use a creative tool. Credits automatically expire 24 hours after being earned.
                     </p>
                   </div>
@@ -1372,7 +1372,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                   {Object.entries(toolRewards).map(([slug, cfg]) => (
                     <div
                       key={slug}
-                      className="p-3.5 rounded-xl bg-[#111116] border border-slate-800 flex items-center justify-between gap-3"
+                      className="p-3.5 rounded-xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <button
@@ -1496,8 +1496,8 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Gift Offer & Discount Campaign</h2>
-                  <p className="text-xs text-slate-400 mt-1">Show a promotional discount banner across pricing and header</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Gift Offer & Discount Campaign</h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Show a promotional discount banner across pricing and header</p>
                 </div>
                 <button
                   onClick={handleSavePromotions}
@@ -1508,11 +1508,11 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                 </button>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-5">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
                 <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
                   <div>
-                    <div className="text-sm font-bold text-white">Enable Discount Banner on Platform</div>
-                    <div className="text-xs text-slate-400">Toggles visibility on live /services and announcement bar</div>
+                    <div className="text-sm font-bold text-slate-900 dark:text-white">Enable Discount Banner on Platform</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">Toggles visibility on live /services and announcement bar</div>
                   </div>
                   <button
                     onClick={() => setPromotions({ ...promotions, active: !promotions.active })}
@@ -1585,11 +1585,11 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <KeyRound className="w-5 h-5 text-emerald-400" />
                     <span>User Management & VIP Unlimited Engine</span>
                   </h2>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                     Track generations per user, grant special VIP access (bypass all limits), or restrict abusive accounts.
                   </p>
                 </div>
@@ -1605,7 +1605,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               {/* Add VIP Form & Search */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Search Bar */}
-                <div className="p-4 rounded-2xl bg-[#111116] border border-slate-800 flex items-center gap-3">
+                <div className="p-4 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
                   <Search className="w-4 h-4 text-slate-400" />
                   <input
                     type="text"
@@ -1627,7 +1627,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                 {/* Add VIP Fast */}
                 <form
                   onSubmit={handleAddVipManual}
-                  className="p-4 rounded-2xl bg-[#111116] border border-slate-800 flex items-center gap-3"
+                  className="p-4 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3"
                 >
                   <Crown className="w-4 h-4 text-amber-400 shrink-0" />
                   <input
@@ -1647,7 +1647,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               </div>
 
               {/* Users Table */}
-              <div className="bg-[#111116] border border-slate-800 rounded-2xl overflow-hidden">
+              <div className="bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
                 <div className="p-4 border-b border-slate-800 flex justify-between items-center">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     Registered User Accounts ({usersList.length})
@@ -1700,7 +1700,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                                 {u.is_vip ? (
                                   <span className="text-[11px] font-bold text-amber-400">Unlimited (Bypasses Limits)</span>
                                 ) : (
-                                  <span className="text-[11px] text-slate-400">Standard Daily Quota</span>
+                                  <span className="text-[11px] text-slate-600 dark:text-slate-400">Standard Daily Quota</span>
                                 )}
                               </td>
                               <td className="p-3 text-right space-x-2">
@@ -1744,8 +1744,8 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               <Activity className="w-6 h-6 text-violet-500" /> Tool Usage Analytics
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="p-6 rounded-2xl bg-[#111115] border border-white/[0.05]">
-                 <h3 className="text-sm font-bold text-white mb-4">Most Used Tools</h3>
+               <div className="p-6 rounded-2xl bg-white dark:bg-[#111115] border border-slate-200 dark:border-white/[0.05] shadow-sm">
+                 <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Most Used Tools</h3>
                  <div className="space-y-3">
                    {toolUsage.summary.slice(0, 10).map((tool, i) => (
                       <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
@@ -1759,7 +1759,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                    {toolUsage.summary.length === 0 && <p className="text-xs text-slate-500">No usage data yet.</p>}
                  </div>
                </div>
-               <div className="p-6 rounded-2xl bg-[#111115] border border-white/[0.05] overflow-auto max-h-[400px]">
+               <div className="p-6 rounded-2xl bg-white dark:bg-[#111115] border border-slate-200 dark:border-white/[0.05] shadow-sm overflow-auto max-h-[400px]">
                  <h3 className="text-sm font-bold text-rose-500 mb-4">Recent Errors & Failures</h3>
                  <div className="space-y-3">
                    {toolUsage.errors.map((err, i) => (
@@ -1779,8 +1779,8 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Complaints & Grievance Tickets</h2>
-                  <p className="text-xs text-slate-400 mt-1">Live customer dispute resolution under 24h SLA</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Complaints & Grievance Tickets</h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Live customer dispute resolution under 24h SLA</p>
                 </div>
                 <div className="relative w-64">
                   <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-500" />
@@ -1796,7 +1796,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
 
               <div className="space-y-3">
                 {complaints.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-slate-500 bg-[#111116] border border-slate-800 rounded-2xl">
+                  <div className="p-8 text-center text-xs text-slate-500 bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl">
                     No active complaint tickets filed.
                   </div>
                 ) : (
@@ -1807,7 +1807,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                         c.email.toLowerCase().includes(complaintSearch.toLowerCase())
                     )
                     .map((c) => (
-                      <div key={c.id} className="p-5 rounded-2xl bg-[#111116] border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div key={c.id} className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs font-bold text-indigo-400">{c.id}</span>
@@ -1827,7 +1827,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                             </span>
                           </div>
                           <div className="text-xs text-slate-300 font-medium">{c.email}</div>
-                          <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">{c.description}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">{c.description}</p>
                           <div className="text-[10px] text-slate-500">{c.createdAt}</div>
                         </div>
 
@@ -1856,19 +1856,19 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
           {activeTab === "jobs" && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-xl font-bold text-white">Join Us Careers Portal Manager</h2>
-                <p className="text-xs text-slate-400 mt-1">Live vacancies posted here will directly render on /join-us</p>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Join Us Careers Portal Manager</h2>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Live vacancies posted here will directly render on /join-us</p>
               </div>
 
               {/* Add Job Form */}
-              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Plus className="w-4 h-4 text-indigo-400" />
                   <span>Post New Career Opening</span>
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Job Title</label>
+                    <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Job Title</label>
                     <input
                       type="text"
                       placeholder="e.g. Senior Backend Engineer (FastAPI)"
@@ -1878,7 +1878,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Department</label>
+                    <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Department</label>
                     <input
                       type="text"
                       placeholder="AI Research / Engineering"
@@ -1888,7 +1888,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Location</label>
+                    <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Location</label>
                     <input
                       type="text"
                       placeholder="Global Remote / Hybrid"
@@ -1898,7 +1898,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Job Type</label>
+                    <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Job Type</label>
                     <input
                       type="text"
                       placeholder="Full-Time / Contract"
@@ -1910,7 +1910,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Role Description</label>
+                  <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Role Description</label>
                   <textarea
                     rows={3}
                     placeholder="Describe role mission and responsibilities..."
@@ -1921,7 +1921,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                 </div>
 
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Requirements (1 per line)</label>
+                  <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Requirements (1 per line)</label>
                   <textarea
                     rows={3}
                     placeholder="4+ years experience with Next.js&#10;Deep understanding of Playwright&#10;Proficiency in Python"
@@ -1944,11 +1944,11 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               <div className="space-y-3">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Openings ({jobs.length})</h3>
                 {jobs.map((j) => (
-                  <div key={j.id} className="p-5 rounded-2xl bg-[#111116] border border-slate-800 flex items-start justify-between gap-4">
+                  <div key={j.id} className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between gap-4">
                     <div>
-                      <div className="text-sm font-bold text-white">{j.title}</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white">{j.title}</div>
                       <div className="text-xs text-indigo-400 mt-0.5">{j.department} • {j.location} • {j.type}</div>
-                      <p className="text-xs text-slate-400 mt-2 max-w-2xl">{j.desc}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 max-w-2xl">{j.desc}</p>
                       <ul className="mt-2 text-[11px] text-slate-500 list-disc list-inside">
                         {j.requirements?.map((r, rIdx) => (
                           <li key={rIdx}>{r}</li>
@@ -1975,8 +1975,8 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Tool Access & In-Development Controls</h2>
-                  <p className="text-xs text-slate-400 mt-1">Lock tools for free users or restrict completely with "In Development" notice</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Tool Access & In-Development Controls</h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Lock tools for free users or restrict completely with "In Development" notice</p>
                 </div>
                 <button
                   onClick={handleSaveToolRules}
@@ -1989,9 +1989,9 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
 
               <div className="space-y-3">
                 {toolRules.map((t, idx) => (
-                  <div key={t.id} className="p-5 rounded-2xl bg-[#111116] border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div key={t.id} className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                      <div className="text-sm font-bold text-white">{t.name}</div>
+                      <div className="text-sm font-bold text-slate-900 dark:text-white">{t.name}</div>
                       <div className="text-[11px] font-mono text-slate-500">ID: {t.id}</div>
                     </div>
 
@@ -2043,8 +2043,8 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Privacy Policy & Terms Editor</h2>
-                  <p className="text-xs text-slate-400 mt-1">Live platform agreements and compliance text</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Privacy Policy & Terms Editor</h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Live platform agreements and compliance text</p>
                 </div>
                 <button
                   onClick={handleSavePolicies}
@@ -2056,7 +2056,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               </div>
 
               <div className="space-y-4">
-                <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                <div className="p-6 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                   <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Privacy Policy</label>
                   <textarea
                     rows={8}
@@ -2066,7 +2066,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                   />
                 </div>
 
-                <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-2">
+                <div className="p-6 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
                   <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">Terms of Service</label>
                   <textarea
                     rows={8}
@@ -2084,11 +2084,11 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Mail className="w-5 h-5 text-emerald-400" />
                     <span>Zoho Mail (info@botock.app) & Updates</span>
                   </h2>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                     Connected domain email service for OTPs, Password Resets, Admin Alerts & User Announcements
                   </p>
                 </div>
@@ -2096,37 +2096,37 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
 
               {/* Status & Security Metrics */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-1.5">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-1.5">
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Connected Sender</div>
                   <div className="text-base font-semibold text-emerald-400 font-mono">info@botock.app</div>
-                  <div className="text-xs text-slate-400">Zoho Mail Pro SMTP (smtppro.zoho.com:587)</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400">Zoho Mail Pro SMTP (smtppro.zoho.com:587)</div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-1.5">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-1.5">
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Credential Security</div>
                   <div className="text-base font-semibold text-amber-400 flex items-center gap-1.5">
                     <Lock className="w-4 h-4" />
                     <span>App Password Protected</span>
                   </div>
-                  <div className="text-xs text-slate-400">Strictly stored in backend/.env (Never exposed)</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400">Strictly stored in backend/.env (Never exposed)</div>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-1.5">
+                <div className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-1.5">
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Anti-Spam Shield</div>
                   <div className="text-base font-semibold text-indigo-400">60s Cooldown Active</div>
-                  <div className="text-xs text-slate-400">Max 4 OTP/hr per email • Max 8/15m per IP</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400">Max 4 OTP/hr per email • Max 8/15m per IP</div>
                 </div>
               </div>
 
               {/* Manual SMTP Diagnostic Card */}
-              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <Zap className="w-4 h-4 text-emerald-400" />
                       <span>Manual SMTP Diagnostic Test</span>
                     </h3>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                       Send a live test ping to ensure your Zoho 12-digit App Password is connected and sending emails smoothly.
                     </p>
                   </div>
@@ -2172,13 +2172,13 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
               </div>
 
               {/* Direct User Announcement / Update Dispatcher */}
-              <div className="p-6 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
+              <div className="p-6 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
                 <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-indigo-400" />
                     <span>Send Announcement / Update to User</span>
                   </h3>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                     Send branded notifications or feature update announcements from info@botock.app to any user.
                   </p>
                 </div>

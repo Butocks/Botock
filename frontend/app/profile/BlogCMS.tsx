@@ -147,11 +147,11 @@ export default function BlogCMS() {
       <div className="space-y-6 animate-fade-in text-slate-200">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-white">{editingPost.id ? "Edit Post" : "Create New Post"}</h2>
-            <p className="text-xs text-slate-400 mt-1">Status: {editingPost.status}</p>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{editingPost.id ? "Edit Post" : "Create New Post"}</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Status: {editingPost.status}</p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setView("list")} className="px-4 py-2 rounded-lg text-sm bg-slate-800 hover:bg-slate-700">Cancel</button>
+            <button onClick={() => setView("list")} className="px-4 py-2 rounded-lg text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white border border-slate-200 dark:border-transparent">Cancel</button>
             <button onClick={handleSave} className="px-4 py-2 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-2">
               <Save className="w-4 h-4" /> Save Post
             </button>
@@ -160,48 +160,48 @@ export default function BlogCMS() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
-              <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-2">Content Editor</h3>
+            <div className="p-5 rounded-2xl bg-white dark:bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-800 pb-2">Content Editor</h3>
               
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Title</label>
-                <input type="text" value={editingPost.title} onChange={e => setEditingPost({...editingPost, title: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm" placeholder="e.g. 5 AI Video Trends" />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Title</label>
+                <input type="text" value={editingPost.title} onChange={e => setEditingPost({...editingPost, title: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white" placeholder="e.g. 5 AI Video Trends" />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">H1 Heading (Optional, defaults to Title)</label>
-                <input type="text" value={editingPost.h1 || ""} onChange={e => setEditingPost({...editingPost, h1: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm" />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">H1 Heading (Optional, defaults to Title)</label>
+                <input type="text" value={editingPost.h1 || ""} onChange={e => setEditingPost({...editingPost, h1: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white" />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Featured Image URL</label>
-                <input type="text" value={editingPost.featured_image || ""} onChange={e => setEditingPost({...editingPost, featured_image: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm" placeholder="https://..." />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Featured Image URL</label>
+                <input type="text" value={editingPost.featured_image || ""} onChange={e => setEditingPost({...editingPost, featured_image: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white" placeholder="https://..." />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Markdown Content</label>
-                <textarea rows={16} value={editingPost.content} onChange={e => setEditingPost({...editingPost, content: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm font-mono leading-relaxed" placeholder="# Heading 1\n\nWrite your markdown here..." />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Markdown Content</label>
+                <textarea rows={16} value={editingPost.content} onChange={e => setEditingPost({...editingPost, content: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white font-mono leading-relaxed" placeholder="# Heading 1\n\nWrite your markdown here..." />
               </div>
               
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Excerpt (Summary)</label>
-                <textarea rows={3} value={editingPost.excerpt || ""} onChange={e => setEditingPost({...editingPost, excerpt: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm" />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Excerpt (Summary)</label>
+                <textarea rows={3} value={editingPost.excerpt || ""} onChange={e => setEditingPost({...editingPost, excerpt: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white" />
               </div>
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="p-5 rounded-2xl bg-[#111116] border border-slate-800 space-y-4">
-              <h3 className="text-sm font-bold text-white border-b border-slate-800 pb-2">SEO & Settings</h3>
+            <div className="p-5 rounded-2xl bg-white dark:bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white border-b border-slate-800 pb-2">SEO & Settings</h3>
               
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Slug</label>
-                <input type="text" value={editingPost.slug} onChange={e => setEditingPost({...editingPost, slug: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm" placeholder="e.g. 5-ai-video-trends" />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Slug</label>
+                <input type="text" value={editingPost.slug} onChange={e => setEditingPost({...editingPost, slug: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white" placeholder="e.g. 5-ai-video-trends" />
               </div>
               
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Status</label>
-                <select value={editingPost.status} onChange={e => setEditingPost({...editingPost, status: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm">
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Status</label>
+                <select value={editingPost.status} onChange={e => setEditingPost({...editingPost, status: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white">
                   <option value="DRAFT">DRAFT</option>
                   <option value="PLANNED">PLANNED</option>
                   <option value="REVIEW">REVIEW</option>
@@ -212,8 +212,8 @@ export default function BlogCMS() {
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Parent Post (Hierarchy)</label>
-                <select value={editingPost.parent_id || ""} onChange={e => setEditingPost({...editingPost, parent_id: e.target.value || null})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm">
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Parent Post (Hierarchy)</label>
+                <select value={editingPost.parent_id || ""} onChange={e => setEditingPost({...editingPost, parent_id: e.target.value || null})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white">
                   <option value="">-- None (Top Level) --</option>
                   {posts.filter(p => p.id !== editingPost.id).map(p => (
                     <option key={p.id} value={p.id}>{p.title}</option>
@@ -222,23 +222,23 @@ export default function BlogCMS() {
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Primary Keyword</label>
-                <input type="text" value={editingPost.primary_keyword || ""} onChange={e => setEditingPost({...editingPost, primary_keyword: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm" />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Primary Keyword</label>
+                <input type="text" value={editingPost.primary_keyword || ""} onChange={e => setEditingPost({...editingPost, primary_keyword: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white" />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Content Cluster</label>
-                <input type="text" value={editingPost.content_cluster || ""} onChange={e => setEditingPost({...editingPost, content_cluster: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm" placeholder="e.g. AI Video Generation" />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Content Cluster</label>
+                <input type="text" value={editingPost.content_cluster || ""} onChange={e => setEditingPost({...editingPost, content_cluster: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white" placeholder="e.g. AI Video Generation" />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Meta Title</label>
-                <input type="text" value={editingPost.meta_title || ""} onChange={e => setEditingPost({...editingPost, meta_title: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm" />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Meta Title</label>
+                <input type="text" value={editingPost.meta_title || ""} onChange={e => setEditingPost({...editingPost, meta_title: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white" />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">Meta Description</label>
-                <textarea rows={3} value={editingPost.meta_description || ""} onChange={e => setEditingPost({...editingPost, meta_description: e.target.value})} className="w-full px-3 py-2 bg-black/60 border border-slate-700 rounded-xl text-sm" />
+                <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Meta Description</label>
+                <textarea rows={3} value={editingPost.meta_description || ""} onChange={e => setEditingPost({...editingPost, meta_description: e.target.value})} className="w-full px-3 py-2 bg-slate-50 dark:bg-black/60 border border-slate-300 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white" />
               </div>
 
               <div className="flex items-center gap-2 mt-4">
@@ -263,8 +263,8 @@ export default function BlogCMS() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Knowledge Hub CMS</h2>
-          <p className="text-xs text-slate-400 mt-1">Manage educational pages, blog posts, and site hierarchy.</p>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Knowledge Hub CMS</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Manage educational pages, blog posts, and site hierarchy.</p>
         </div>
         <button onClick={() => openEditor()} className="px-4 py-2 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-2">
           <Plus className="w-4 h-4" /> New Article
@@ -273,14 +273,14 @@ export default function BlogCMS() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {["PUBLISHED", "DRAFT", "REVIEW", "NEEDS_UPDATE"].map(status => (
-          <div key={status} className="p-4 rounded-xl bg-[#111116] border border-slate-800 flex flex-col gap-1">
+          <div key={status} className="p-4 rounded-xl bg-white dark:bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-1">
             <span className="text-[10px] uppercase font-bold text-slate-500">{status}</span>
             <span className="text-2xl font-black text-white">{posts.filter(p => p.status === status).length}</span>
           </div>
         ))}
       </div>
 
-      <div className="bg-[#111116] border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/40">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">All Content</h3>
           <div className="relative">

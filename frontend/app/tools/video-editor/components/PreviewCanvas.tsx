@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { EditorProject, MediaBinItem, TimelineClip, computeAnimationMatrix, computeAnimationOutMatrix } from "@/lib/editor/types";
+import {
+  EditorProject,
+  MediaBinItem,
+  TimelineClip,
+  computeAnimationMatrix,
+  computeAnimationOutMatrix,
+  computeAnimationLoopMatrix,
+} from "@/lib/editor/types";
 
 interface Props {
   project: EditorProject;
@@ -183,6 +190,7 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
       const activeVisualClips: { track: typeof project.tracks[0]; clip: TimelineClip; el: any }[] = [];
       const activeTextClips: { track: typeof project.tracks[0]; clip: TimelineClip }[] = [];
       const activeEffectClips: TimelineClip[] = [];
+      const activeClipIds = new Set<string>();
       let anyBuffering = false;
 
       // Pass 1: Sync media pool elements and collect active clips
@@ -194,6 +202,7 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           const el = mediaPool.current[clip.id];
 
           if (isActiveClip) {
+            activeClipIds.add(clip.id);
             const elapsed = currT - clip.timelineStart;
             const sourceTime = clip.sourceStart + elapsed * clip.speed;
 
@@ -256,16 +265,14 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
                   }
                 } else {
                   // Media is actively PLAYING forward!
-                  // CRITICAL: DO NOT call el.currentTime = sourceTime every frame!
-                  // Constant seeking interrupts video decoding pipeline and causes single-frame freezing!
+                  // CapCut / NLE architecture: Never seek on every frame! Seek only when drift exceeds 0.35s
                   const drift = el.currentTime - sourceTime;
 
-                  if (Math.abs(drift) > 0.6 && !el.seeking) {
-                    // Big jump (user scrubbed/jumped far): perform single seek
+                  if (Math.abs(drift) > 0.35 && !el.seeking) {
                     try { el.currentTime = sourceTime; } catch (e) {}
                     el.playbackRate = clip.speed || 1;
-                  } else if (Math.abs(drift) > 0.05 && Math.abs(drift) <= 0.6) {
-                    // Soft sync: smoothly adjust playback speed to catch up or slow down without interrupting playback
+                  } else if (Math.abs(drift) > 0.04 && Math.abs(drift) <= 0.35) {
+                    // Soft sync: smoothly adjust playback speed without decoder reset
                     const correction = drift < 0 ? 1.05 : 0.95;
                     el.playbackRate = (clip.speed || 1) * correction;
                   } else {
@@ -291,13 +298,17 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
             } else if (clip.type === "effect" || track.type === "effect") {
               activeEffectClips.push(clip);
             }
-          } else {
-            // Clip is not active (out of bounds)
-            if (el && (el instanceof HTMLVideoElement || el instanceof HTMLAudioElement) && !el.paused) {
-              el.pause();
-            }
           }
         });
+      });
+
+      // Silence & pause all media elements in pool that are not active in this frame
+      Object.entries(mediaPool.current).forEach(([id, el]) => {
+        if (!activeClipIds.has(id)) {
+          if (el instanceof HTMLVideoElement || el instanceof HTMLAudioElement) {
+            if (!el.paused) el.pause();
+          }
+        }
       });
 
       // Synchronize buffering status with editor timeline clock
@@ -546,24 +557,44 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           });
         }
 
-        // 1-Click Keyframe Entrance Animation (fade-in, zoom-in, zoom-out, slide-up, slide-right, pop-bounce)
+        // 1-Click Keyframe Entrance Animation (fade-in, zoom-in, zoom-out, slide-up, slide-right, pop-bounce, spin-in, whip-pan, etc.)
         if (clip.animationIn && clip.animationIn !== "none") {
           const animDur = Math.max(0.05, clip.animationDuration || 0.6);
           const animMatrix = computeAnimationMatrix(clip.animationIn, elapsed, animDur);
           animScale *= animMatrix.scale;
           animPanX += (animMatrix.offsetX / 100) * canvas.width;
           animPanY += (animMatrix.offsetY / 100) * canvas.height;
+          animRotation += animMatrix.rotation || 0;
+          if (animMatrix.blur) blurPx = Math.max(blurPx, animMatrix.blur);
           t.opacity *= animMatrix.opacity;
         }
 
-        // 1-Click Keyframe Exit Animation (fade-out, zoom-out, slide-down, slide-left, pop-out)
+        // 1-Click Keyframe Exit Animation (fade-out, zoom-out, slide-down, slide-left, pop-out, spin-out, etc.)
         if (clip.animationOut && clip.animationOut !== "none") {
           const animDur = Math.max(0.05, clip.animationOutDuration || 0.6);
           const outMatrix = computeAnimationOutMatrix(clip.animationOut, elapsed, clip.duration, animDur);
           animScale *= outMatrix.scale;
           animPanX += (outMatrix.offsetX / 100) * canvas.width;
           animPanY += (outMatrix.offsetY / 100) * canvas.height;
+          animRotation += outMatrix.rotation || 0;
+          if (outMatrix.blur) blurPx = Math.max(blurPx, outMatrix.blur);
           t.opacity *= outMatrix.opacity;
+        }
+
+        // Continuous Loop Animation (Pulse, Floating, Shake, Swing, Glitch, Ken-Burns, Spin, Breathe)
+        if (clip.animationLoop && clip.animationLoop !== "none") {
+          const loopMatrix = computeAnimationLoopMatrix(
+            clip.animationLoop,
+            elapsed,
+            clip.duration,
+            clip.animationLoopSpeed || 1
+          );
+          animScale *= loopMatrix.scale;
+          animPanX += (loopMatrix.offsetX / 100) * canvas.width;
+          animPanY += (loopMatrix.offsetY / 100) * canvas.height;
+          animRotation += loopMatrix.rotation || 0;
+          if (loopMatrix.blur) blurPx = Math.max(blurPx, loopMatrix.blur);
+          t.opacity *= loopMatrix.opacity;
         }
 
         // Motion Path (PowerPoint-style Point A to Point B animation)
@@ -637,11 +668,14 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           ctx.scale(isMirrored ? -animScale : animScale, animScale);
           ctx.globalAlpha = Math.max(0, Math.min(1, t.opacity / 100));
 
-          // Apply Filters
+          // Apply Filters & Color Grading
           const b = Math.round(100 + f.brightness * 100);
           const c = Math.round(f.contrast * 100);
           const s = Math.round(f.saturation * 100);
           let filterStr = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+          if (f.hueRotate && f.hueRotate !== 0) {
+            filterStr += ` hue-rotate(${Math.round(f.hueRotate)}deg)`;
+          }
           if (blurPx > 0) filterStr += ` blur(${blurPx}px)`;
           ctx.filter = filterStr;
 
@@ -695,6 +729,17 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
             // Ignore drawImage errors during rapid seek
           }
           ctx.filter = "none";
+
+          // Vignette effect overlay
+          if (f.vignette && f.vignette > 0 && finalW > 0 && finalH > 0) {
+            const vigAlpha = Math.min(1, Math.max(0, f.vignette / 100));
+            const r = Math.hypot(finalW, finalH) / 2;
+            const vigGrad = ctx.createRadialGradient(0, 0, r * 0.35, 0, 0, r);
+            vigGrad.addColorStop(0, "rgba(0,0,0,0)");
+            vigGrad.addColorStop(1, `rgba(0,0,0,${vigAlpha * 0.9})`);
+            ctx.fillStyle = vigGrad;
+            ctx.fillRect(-finalW / 2, -finalH / 2, finalW, finalH);
+          }
         }
         ctx.restore();
       });
@@ -828,6 +873,7 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           animScale *= animMatrix.scale;
           moveAnimX += (animMatrix.offsetX / 100) * canvas.width;
           moveAnimY += (animMatrix.offsetY / 100) * canvas.height;
+          motionRot += animMatrix.rotation || 0;
           t.opacity = (t.opacity ?? 100) * animMatrix.opacity;
         }
 
@@ -838,7 +884,23 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           animScale *= outMatrix.scale;
           moveAnimX += (outMatrix.offsetX / 100) * canvas.width;
           moveAnimY += (outMatrix.offsetY / 100) * canvas.height;
+          motionRot += outMatrix.rotation || 0;
           t.opacity = (t.opacity ?? 100) * outMatrix.opacity;
+        }
+
+        // Continuous Loop Animation for Text
+        if (clip.animationLoop && clip.animationLoop !== "none") {
+          const loopMatrix = computeAnimationLoopMatrix(
+            clip.animationLoop,
+            elapsed,
+            dur,
+            clip.animationLoopSpeed || 1
+          );
+          animScale *= loopMatrix.scale;
+          moveAnimX += (loopMatrix.offsetX / 100) * canvas.width;
+          moveAnimY += (loopMatrix.offsetY / 100) * canvas.height;
+          motionRot += loopMatrix.rotation || 0;
+          t.opacity = (t.opacity ?? 100) * loopMatrix.opacity;
         }
 
         const posX = ((t.x ?? 50) / 100) * canvas.width + motionX + moveAnimX;

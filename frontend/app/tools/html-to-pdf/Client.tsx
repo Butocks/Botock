@@ -165,10 +165,10 @@ export default function HtmlToPdfClient() {
             <Code className="w-3.5 h-3.5" />
             HTML to PDF Studio
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Convert HTML Code to PDF Document
           </h1>
-          <p className="mt-2 text-sm sm:text-base text-slate-400 max-w-xl">
+          <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl">
             Render raw HTML code, CSS stylesheets, tables, and web templates into pixel-perfect PDF documents in your browser.
           </p>
         </div>
@@ -184,7 +184,7 @@ export default function HtmlToPdfClient() {
           {/* Code Editor Pane */}
           <div className="lg:col-span-6 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                 HTML & CSS Template
               </span>
               <button
@@ -200,17 +200,17 @@ export default function HtmlToPdfClient() {
                 setHtmlCode(e.target.value);
                 setDownloadUrl(null);
               }}
-              className="w-full h-[520px] bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-xs font-mono text-sky-200 focus:outline-none focus:border-sky-500 resize-none leading-relaxed"
+              className="w-full h-[520px] bg-slate-900 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl p-4 text-xs font-mono text-sky-200 focus:outline-none focus:border-sky-500 resize-none leading-relaxed"
             />
           </div>
 
           {/* Right Live Preview & Export Settings */}
           <div className="lg:col-span-6 flex flex-col gap-6">
             <div>
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider block mb-2">
                 Live Document Preview
               </span>
-              <div className="w-full h-80 bg-white rounded-xl overflow-hidden border border-slate-700 shadow-2xl">
+              <div className="w-full h-80 bg-white rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-lg">
                 <iframe
                   ref={previewFrameRef}
                   srcDoc={htmlCode}
@@ -222,37 +222,37 @@ export default function HtmlToPdfClient() {
             </div>
 
             {/* Layout Options */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
-              <h3 className="text-xs font-semibold text-white tracking-wide uppercase flex items-center gap-2">
+            <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
+              <h3 className="text-xs font-semibold text-slate-900 dark:text-white tracking-wide uppercase flex items-center gap-2">
                 <Settings2 className="w-4 h-4 text-sky-400" />
                 Document Setup
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Page Format</label>
+                  <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Page Format</label>
                   <select
                     value={pageSize}
                     onChange={(e) => setPageSize(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
                   >
                     <option value="a4">A4 (210 x 297 mm)</option>
                     <option value="letter">US Letter (8.5 x 11 in)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Orientation</label>
+                  <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">Orientation</label>
                   <select
                     value={orientation}
                     onChange={(e) => setOrientation(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-sky-500"
                   >
                     <option value="p">Portrait (Vertical)</option>
                     <option value="l">Landscape (Horizontal)</option>
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <div className="flex justify-between text-xs text-slate-400 mb-1">
+                  <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400 mb-1">
                     <span>Page Margin ({margin}mm)</span>
                   </div>
                   <input
@@ -308,30 +308,30 @@ export default function HtmlToPdfClient() {
 
         {/* Feature Highlights */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 mb-3">
               <Code className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Full CSS3 & Styling Support</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Full CSS3 & Styling Support</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Style your documents with modern CSS, flexbox, custom fonts, borders, colored tables, and pro-forma invoice layouts.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-3">
               <Shield className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Completely Private</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Completely Private</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Your HTML code and generated PDF are created natively in your browser using DOM rasterization. No remote server rendering.
             </p>
           </div>
-          <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/80">
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-3">
               <CheckCircle2 className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-semibold text-white mb-1">Standard Paper Formats</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Standard Paper Formats</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Export in standard International A4 or US Letter formats in both portrait and landscape orientations with custom margins.
             </p>
           </div>

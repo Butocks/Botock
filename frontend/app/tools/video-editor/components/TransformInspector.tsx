@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { TimelineClip, TransitionType, MotionPath, MotionDirection, AnimationPreset, AnimationOutPreset } from "@/lib/editor/types";
+import { TimelineClip, TransitionType, MotionPath, MotionDirection, AnimationPreset, AnimationOutPreset, AnimationLoopPreset } from "@/lib/editor/types";
 import {
   Scissors, Volume2, Type, Image as ImageIcon, Sliders, Play, Settings, Sparkles,
-  Layers, Move, Wand2, Trash2, Zap, ArrowRight, Info, Check, Maximize2,
+  Layers, Move, Wand2, Trash2, Zap, ArrowRight, Info, Check, Maximize2, Repeat,
   Compass, ArrowUpLeft, ArrowUp, ArrowUpRight, ArrowLeft, ArrowDownLeft, ArrowDown, ArrowDownRight, Clock
 } from "lucide-react";
 
@@ -799,10 +799,12 @@ export default function TransformInspector({
       { color: "#000000", label: "Black" },
     ];
 
-    const f = {
-      brightness: Number.isFinite(clip.filters?.brightness) ? clip.filters!.brightness : 0,
-      contrast: Number.isFinite(clip.filters?.contrast) ? clip.filters!.contrast : 1,
-      saturation: Number.isFinite(clip.filters?.saturation) ? clip.filters!.saturation : 1,
+    const f: { brightness: number; contrast: number; saturation: number; vignette: number; hueRotate: number } = {
+      brightness: typeof clip.filters?.brightness === "number" ? clip.filters.brightness : 0,
+      contrast: typeof clip.filters?.contrast === "number" ? clip.filters.contrast : 1,
+      saturation: typeof clip.filters?.saturation === "number" ? clip.filters.saturation : 1,
+      vignette: typeof clip.filters?.vignette === "number" ? clip.filters.vignette : 0,
+      hueRotate: typeof clip.filters?.hueRotate === "number" ? clip.filters.hueRotate : 0,
     };
 
     return (
@@ -843,36 +845,55 @@ export default function TransformInspector({
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Color Grading & Filters</h4>
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Color Grading & Pro LUTs</h4>
             </div>
             <button
               type="button"
-              onClick={() => onUpdate({ filters: { brightness: 0, contrast: 1, saturation: 1 } })}
+              onClick={() => onUpdate({ filters: { brightness: 0, contrast: 1, saturation: 1, vignette: 0, hueRotate: 0 } })}
               className="text-[10px] text-gray-400 hover:text-white transition-colors"
             >
               Reset
             </button>
           </div>
 
-          {/* 1-Click Color Grading Presets */}
+          {/* 1-Click Pro Color Grading & LUT Presets */}
           <div className="grid grid-cols-3 gap-1.5 pt-1 pb-1">
             {[
-              { id: "normal", label: "Normal", b: 0, c: 1, s: 1 },
-              { id: "vibrant", label: "Vibrant", b: 0.05, c: 1.2, s: 1.4 },
-              { id: "cinematic", label: "Cinematic", b: -0.05, c: 1.25, s: 0.85 },
-              { id: "warm", label: "Warm Sun", b: 0.08, c: 1.1, s: 1.25 },
-              { id: "cool", label: "Cool Blue", b: 0, c: 1.15, s: 0.85 },
-              { id: "noir", label: "B&W Noir", b: 0.05, c: 1.4, s: 0 },
+              { id: "normal", label: "Normal", b: 0, c: 1, s: 1, v: 0, h: 0 },
+              { id: "vibrant", label: "Vibrant", b: 0.05, c: 1.2, s: 1.4, v: 0, h: 0 },
+              { id: "cinematic", label: "Cinematic", b: -0.05, c: 1.25, s: 0.85, v: 15, h: 0 },
+              { id: "warm", label: "Warm Sun", b: 0.08, c: 1.1, s: 1.25, v: 0, h: -10 },
+              { id: "cool", label: "Cool Blue", b: 0, c: 1.15, s: 0.85, v: 0, h: 15 },
+              { id: "noir", label: "B&W Noir", b: 0.05, c: 1.4, s: 0, v: 25, h: 0 },
+              { id: "cyberpunk", label: "Cyberpunk", b: 0.06, c: 1.35, s: 1.6, v: 20, h: 45 },
+              { id: "vintage-90s", label: "Vintage 90s", b: 0.08, c: 0.95, s: 0.75, v: 40, h: -5 },
+              { id: "golden-hour", label: "Golden Hour", b: 0.1, c: 1.15, s: 1.3, v: 10, h: -20 },
+              { id: "matrix-green", label: "Matrix Green", b: 0.02, c: 1.3, s: 1.1, v: 15, h: 90 },
+              { id: "high-contrast", label: "High Contrast", b: -0.02, c: 1.6, s: 1.2, v: 0, h: 0 },
+              { id: "dreamy-glow", label: "Dreamy Glow", b: 0.15, c: 0.9, s: 1.15, v: 0, h: 5 },
+              { id: "muted-film", label: "Muted Film", b: -0.04, c: 1.1, s: 0.65, v: 30, h: 0 },
             ].map((p) => {
               const isSelected =
                 Math.abs(f.brightness - p.b) < 0.02 &&
                 Math.abs(f.contrast - p.c) < 0.02 &&
-                Math.abs(f.saturation - p.s) < 0.02;
+                Math.abs(f.saturation - p.s) < 0.02 &&
+                Math.abs(f.vignette - p.v) < 5 &&
+                Math.abs(f.hueRotate - p.h) < 5;
               return (
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => onUpdate({ filters: { brightness: p.b, contrast: p.c, saturation: p.s } })}
+                  onClick={() =>
+                    onUpdate({
+                      filters: {
+                        brightness: p.b,
+                        contrast: p.c,
+                        saturation: p.s,
+                        vignette: p.v,
+                        hueRotate: p.h,
+                      },
+                    })
+                  }
                   className={`py-1.5 px-2 rounded-lg text-left text-[10px] font-semibold border transition-all truncate ${
                     isSelected
                       ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-sm"
@@ -941,6 +962,46 @@ export default function TransformInspector({
               onChange={(e) => {
                 const num = parseFloat(e.target.value);
                 onUpdateLive({ filters: { ...f, saturation: Number.isFinite(num) ? num : 1 } });
+              }}
+              className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between items-center text-[10px] mb-1">
+              <span className="text-gray-400">Vignette</span>
+              <span className="text-gray-300 font-mono">{Math.round(f.vignette)}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={f.vignette}
+              onPointerDown={handleSliderStart}
+              onPointerUp={handleSliderEnd}
+              onChange={(e) => {
+                const num = parseFloat(e.target.value);
+                onUpdateLive({ filters: { ...f, vignette: Number.isFinite(num) ? num : 0 } });
+              }}
+              className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between items-center text-[10px] mb-1">
+              <span className="text-gray-400">Hue Rotate</span>
+              <span className="text-gray-300 font-mono">{Math.round(f.hueRotate)}°</span>
+            </div>
+            <input
+              type="range"
+              min="-180"
+              max="180"
+              step="5"
+              value={f.hueRotate}
+              onPointerDown={handleSliderStart}
+              onPointerUp={handleSliderEnd}
+              onChange={(e) => {
+                const num = parseFloat(e.target.value);
+                onUpdateLive({ filters: { ...f, hueRotate: Number.isFinite(num) ? num : 0 } });
               }}
               className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]"
             />
@@ -1154,12 +1215,14 @@ export default function TransformInspector({
     </div>
   );
 
-  // ─── TAB: 60FPS KEYFRAME ENTRANCE & EXIT ANIMATIONS ───
+  // ─── TAB: 60FPS KEYFRAME ENTRANCE, EXIT & LOOP ANIMATIONS ───
   const renderAnimation = () => {
     const currentAnim = clip.animationIn || "none";
     const animDur = clip.animationDuration ?? 0.6;
     const currentAnimOut = clip.animationOut || "none";
     const animOutDur = clip.animationOutDuration ?? 0.6;
+    const currentLoop = clip.animationLoop || "none";
+    const loopSpeed = clip.animationLoopSpeed ?? 1.0;
     const isTypewriter = clip.textAnimation === "typewriter";
     const typewriterSpeed = clip.typewriterSpeed || 15;
     const movement = clip.textMovement || "none";
@@ -1170,17 +1233,39 @@ export default function TransformInspector({
       { id: "zoom-in", label: "Zoom In", desc: "Scale up into frame", icon: "🔍" },
       { id: "zoom-out", label: "Zoom Out", desc: "Dramatic scale-down reveal", icon: "🔎" },
       { id: "slide-up", label: "Slide Up", desc: "Smooth bottom-up entrance", icon: "⬆️" },
-      { id: "slide-right", label: "Slide Right", desc: "Swoop in from the left", icon: "➡️" },
+      { id: "slide-down", label: "Slide Down", desc: "Drop from top", icon: "⬇️" },
+      { id: "slide-left", label: "Slide Left", desc: "Glide from right", icon: "⬅️" },
+      { id: "slide-right", label: "Slide Right", desc: "Swoop in from left", icon: "➡️" },
       { id: "pop-bounce", label: "Pop Bounce", desc: "Snappy punch overshoot", icon: "💥" },
+      { id: "spin-in", label: "Spin In", desc: "Rotate & scale reveal", icon: "💫" },
+      { id: "whip-pan", label: "Whip Pan", desc: "Fast swoosh with blur", icon: "⚡" },
+      { id: "elastic-scale", label: "Elastic Scale", desc: "Springy overshoot bounce", icon: "🌀" },
+      { id: "blur-reveal", label: "Blur Reveal", desc: "Cinematic focal unblur", icon: "🌫️" },
     ];
 
     const animationOutPresets: { id: AnimationOutPreset; label: string; desc: string; icon: string }[] = [
       { id: "none", label: "None", desc: "No exit animation", icon: "⏹️" },
       { id: "fade-out", label: "Fade Out", desc: "Smooth opacity fade", icon: "✨" },
       { id: "zoom-out", label: "Zoom Out", desc: "Scale down departure", icon: "🔎" },
+      { id: "zoom-in-out", label: "Zoom Punch", desc: "Zoom punch & vanish", icon: "🔍" },
       { id: "slide-down", label: "Slide Down", desc: "Drop out of frame", icon: "⬇️" },
+      { id: "slide-up", label: "Slide Up", desc: "Fly up out of frame", icon: "⬆️" },
       { id: "slide-left", label: "Slide Left", desc: "Slide out to left", icon: "⬅️" },
+      { id: "slide-right", label: "Slide Right", desc: "Slide out to right", icon: "➡️" },
       { id: "pop-out", label: "Pop Out", desc: "Punch & shrink exit", icon: "💥" },
+      { id: "spin-out", label: "Spin Out", desc: "Whirl away & disappear", icon: "💫" },
+    ];
+
+    const animationLoopPresets: { id: AnimationLoopPreset; label: string; desc: string; icon: string }[] = [
+      { id: "none", label: "None", desc: "No loop motion", icon: "⏹️" },
+      { id: "pulse-beat", label: "Pulse Beat", desc: "Rhythmic heartbeat pulse", icon: "💓" },
+      { id: "floating", label: "Floating Hover", desc: "Gentle levitation drift", icon: "🎈" },
+      { id: "handheld-shake", label: "Handheld Shake", desc: "Organic camera wobble", icon: "📱" },
+      { id: "pendulum-swing", label: "Pendulum Swing", desc: "Harmonic pendulum tilt", icon: "🕰️" },
+      { id: "glitch-jitter", label: "Glitch Jitter", desc: "Cyberpunk micro-jitter", icon: "👾" },
+      { id: "slow-ken-burns", label: "Ken Burns", desc: "Slow cinematic push-in", icon: "🎬" },
+      { id: "spin-continuous", label: "Continuous 360", desc: "Smooth endless rotation", icon: "🔄" },
+      { id: "breathe", label: "Gentle Breathe", desc: "Calm inhaling scale", icon: "🌊" },
     ];
 
     return (
@@ -1341,6 +1426,85 @@ export default function TransformInspector({
           >
             <Play className="w-3 h-3 fill-current" />
             <span>Test Play Exit</span>
+          </button>
+        </div>
+
+        {/* 3. Continuous Loop Animation Presets */}
+        <div className="bg-[#181822] rounded-xl border border-[#2b2b36] p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Repeat className="w-3.5 h-3.5 text-emerald-400" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Loop Motion</h4>
+            </div>
+            <span
+              title="Continuous looping motion applied seamlessly across the entire clip duration."
+              className="text-gray-500 hover:text-gray-300 cursor-pointer"
+            >
+              <Info className="w-3 h-3" />
+            </span>
+          </div>
+          <p className="text-[10px] text-gray-400 leading-relaxed">
+            Choose an endless loop motion (Ken Burns, Shake, Pulse, Float) that plays smoothly for the entire clip.
+          </p>
+
+          <div className="grid grid-cols-2 gap-1.5 pt-1">
+            {animationLoopPresets.map(({ id, label, desc, icon }) => {
+              const isSelected = currentLoop === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onUpdate({ animationLoop: id })}
+                  className={`p-2 rounded-lg text-left border transition-all ${
+                    isSelected
+                      ? "bg-emerald-500/20 border-emerald-500 text-white shadow-sm"
+                      : "bg-[#0a0a0c] text-gray-400 border-[#2b2b36] hover:text-white hover:border-[#3b3b4a]"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs">{icon}</span>
+                    <span className="text-[11px] font-bold text-gray-200">{label}</span>
+                  </div>
+                  <div className="text-[9px] text-gray-500 truncate">{desc}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {currentLoop !== "none" && (
+            <div className="pt-2 border-t border-[#2b2b36] space-y-1.5">
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="text-gray-400">Loop Speed</span>
+                <span className="text-emerald-400 font-mono font-bold">{loopSpeed.toFixed(1)}x</span>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="3.0"
+                step="0.1"
+                value={loopSpeed}
+                onPointerDown={handleSliderStart}
+                onPointerUp={handleSliderEnd}
+                onChange={(e) => {
+                  const num = parseFloat(e.target.value);
+                  onUpdateLive({ animationLoopSpeed: Number.isFinite(num) ? num : 1.0 });
+                }}
+                className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+            </div>
+          )}
+
+          {/* Test Play Loop Animation */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onPreview) onPreview(clip.timelineStart, Math.min(3, clip.duration));
+              else if (onSeek) onSeek(clip.timelineStart);
+            }}
+            className="w-full py-1.5 mt-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-emerald-500/30"
+          >
+            <Play className="w-3 h-3 fill-current" />
+            <span>Test Play Loop</span>
           </button>
         </div>
 

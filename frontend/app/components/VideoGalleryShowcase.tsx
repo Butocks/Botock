@@ -132,20 +132,20 @@ export default function VideoGalleryShowcase() {
             <Sparkles className="w-3.5 h-3.5" />
             <span>Real AI Output Gallery</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
             Generative Video & Image Gallery
           </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
             Sample high-fidelity outputs generated with Botock Engine Flash 360p and Nano Banana. Click to launch with prompt.
           </p>
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 bg-white/[0.04] p-1.5 rounded-xl border border-white/[0.08] self-start sm:self-auto">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-white/[0.04] p-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] self-start sm:self-auto">
           <button
             onClick={() => setActiveFilter("all")}
             className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-              activeFilter === "all" ? "bg-white text-zinc-950 shadow-sm" : "text-slate-400 hover:text-white"
+              activeFilter === "all" ? "bg-slate-900 text-white dark:bg-white dark:text-zinc-950 shadow-sm" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
             All Works
@@ -153,7 +153,7 @@ export default function VideoGalleryShowcase() {
           <button
             onClick={() => setActiveFilter("video")}
             className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeFilter === "video" ? "bg-violet-600 text-white shadow-sm" : "text-slate-400 hover:text-white"
+              activeFilter === "video" ? "bg-violet-600 text-white shadow-sm" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
             <Film className="w-3.5 h-3.5" />
@@ -162,7 +162,7 @@ export default function VideoGalleryShowcase() {
           <button
             onClick={() => setActiveFilter("image")}
             className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeFilter === "image" ? "bg-amber-500 text-zinc-950 shadow-sm" : "text-slate-400 hover:text-white"
+              activeFilter === "image" ? "bg-amber-500 text-zinc-950 shadow-sm" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
             <Wand2 className="w-3.5 h-3.5" />
@@ -176,7 +176,7 @@ export default function VideoGalleryShowcase() {
         {filteredItems.map((item) => (
           <div
             key={item.id}
-            className="group rounded-2xl bg-[#111114] border border-white/[0.08] hover:border-violet-500/40 overflow-hidden flex flex-col justify-between transition-all hover:shadow-2xl hover:shadow-violet-950/20"
+            className="group rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] hover:border-violet-500/40 shadow-sm overflow-hidden flex flex-col justify-between transition-all hover:shadow-2xl hover:shadow-violet-950/20"
           >
             {/* Visual Cinema Screen Preview */}
             <div className={`relative w-full aspect-video bg-gradient-to-br ${item.previewGradient} flex items-center justify-center overflow-hidden`}>
@@ -215,19 +215,19 @@ export default function VideoGalleryShowcase() {
             {/* Content & Prompt */}
             <div className="p-5 flex-1 flex flex-col justify-between">
               <div>
-                <h3 className="text-sm font-bold text-white mb-2 group-hover:text-violet-300 transition-colors flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors flex items-center justify-between">
                   <span>{item.title}</span>
-                  <span className="text-[10px] text-slate-400 font-normal">{item.model}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">{item.model}</span>
                 </h3>
 
                 {/* Prompt Box */}
-                <div className="p-2.5 rounded-xl bg-black/40 border border-white/[0.05] relative mb-4">
-                  <p className="text-[11px] text-slate-300 font-mono line-clamp-3 leading-relaxed">
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-black/40 border border-slate-200 dark:border-white/[0.05] relative mb-4">
+                  <p className="text-[11px] text-slate-700 dark:text-slate-300 font-mono line-clamp-3 leading-relaxed">
                     "{item.prompt}"
                   </p>
                   <button
                     onClick={(e) => handleCopyPrompt(item.id, item.prompt, e)}
-                    className="absolute top-2 right-2 p-1 rounded-md bg-white/[0.08] hover:bg-white/[0.15] text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    className="absolute top-2 right-2 p-1 rounded-md bg-slate-200 dark:bg-white/[0.08] hover:bg-slate-300 dark:hover:bg-white/[0.15] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                     title="Copy Prompt"
                   >
                     {copiedId === item.id ? (
@@ -242,7 +242,7 @@ export default function VideoGalleryShowcase() {
               {/* Direct Launch CTA */}
               <Link
                 href={item.targetUrl}
-                className="w-full py-2.5 px-3 rounded-xl bg-white/[0.05] hover:bg-violet-600 border border-white/[0.08] hover:border-violet-500 text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer group/btn"
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-white/[0.05] hover:bg-violet-600 border border-slate-200 dark:border-white/[0.08] hover:border-violet-500 text-slate-700 dark:text-slate-300 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer group/btn"
               >
                 <span>Use This Prompt in Studio</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
