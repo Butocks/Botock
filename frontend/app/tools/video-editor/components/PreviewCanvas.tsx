@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { EditorProject, MediaBinItem, TimelineClip } from "@/lib/editor/types";
+import { EditorProject, MediaBinItem, TimelineClip, computeAnimationMatrix } from "@/lib/editor/types";
 
 interface Props {
   project: EditorProject;
@@ -546,6 +546,16 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           });
         }
 
+        // 1-Click Keyframe Entrance Animation (fade-in, zoom-in, zoom-out, slide-up, slide-right, pop-bounce)
+        if (clip.animationIn && clip.animationIn !== "none") {
+          const animDur = Math.max(0.05, clip.animationDuration || 0.6);
+          const animMatrix = computeAnimationMatrix(clip.animationIn, elapsed, animDur);
+          animScale *= animMatrix.scale;
+          animPanX += (animMatrix.offsetX / 100) * canvas.width;
+          animPanY += (animMatrix.offsetY / 100) * canvas.height;
+          t.opacity *= animMatrix.opacity;
+        }
+
         // Motion Path (PowerPoint-style Point A to Point B animation)
         let motionX = 0;
         let motionY = 0;
@@ -799,6 +809,16 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
         } else if (clip.textAnimation === "fade-in") {
           const fadeDur = Math.min(0.8, dur * 0.3);
           t.opacity *= Math.min(1, Math.max(0, elapsed / fadeDur));
+        }
+
+        // 1-Click Keyframe Entrance Animation for Text
+        if (clip.animationIn && clip.animationIn !== "none") {
+          const animDur = Math.max(0.05, clip.animationDuration || 0.6);
+          const animMatrix = computeAnimationMatrix(clip.animationIn, elapsed, animDur);
+          animScale *= animMatrix.scale;
+          moveAnimX += (animMatrix.offsetX / 100) * canvas.width;
+          moveAnimY += (animMatrix.offsetY / 100) * canvas.height;
+          t.opacity = (t.opacity ?? 100) * animMatrix.opacity;
         }
 
         const posX = ((t.x ?? 50) / 100) * canvas.width + motionX + moveAnimX;

@@ -57,6 +57,7 @@ function buildClipVideoFilter(
 
   let animScale = `1`;
   let animPanX = `0`;
+  let animPanY = `0`;
   let animOpacity = `1`;
 
   if (clip.effects && clip.effects.length > 0) {
@@ -75,6 +76,30 @@ function buildClipVideoFilter(
         const out_start = Math.max(0, clip.duration - dur);
         const out_rel = `(t-${(clip.timelineStart + out_start).toFixed(3)})`;
         animOpacity = `max(0,min(1,1-${out_rel}/${dur.toFixed(3)}))`;
+    }
+  }
+
+  // 1-Click Keyframe Entrance Animation for FFmpeg export
+  if (clip.animationIn && clip.animationIn !== "none") {
+    const animDur = clip.animationDuration || 0.6;
+    const a_prog = `min(1,max(0,${t_rel}/${animDur.toFixed(3)}))`;
+    if (clip.animationIn === "fade-in") {
+      animOpacity = a_prog;
+    } else if (clip.animationIn === "zoom-in") {
+      animScale = `(0.35+0.65*${a_prog})`;
+      animOpacity = `min(1,2.5*${a_prog})`;
+    } else if (clip.animationIn === "zoom-out") {
+      animScale = `(1.5-0.5*${a_prog})`;
+      animOpacity = `min(1,2.5*${a_prog})`;
+    } else if (clip.animationIn === "slide-right") {
+      animPanX = `(-${targetW}*0.4*(1-${a_prog}))`;
+      animOpacity = `min(1,2.5*${a_prog})`;
+    } else if (clip.animationIn === "slide-up") {
+      animPanY = `(${targetH}*0.4*(1-${a_prog}))`;
+      animOpacity = `min(1,2.5*${a_prog})`;
+    } else if (clip.animationIn === "pop-bounce") {
+      animScale = `(0.4+0.6*${a_prog})`;
+      animOpacity = `min(1,3*${a_prog})`;
     }
   }
 
@@ -103,7 +128,7 @@ function buildClipVideoFilter(
   const filterStr = `${filterParts.join(",")}[${label}]`;
 
   const overlayX = `(${targetW}*${(tForm.x / 100).toFixed(4)} - w/2 + ${animPanX})`;
-  const overlayY = `(${targetH}*${(tForm.y / 100).toFixed(4)} - h/2)`;
+  const overlayY = `(${targetH}*${(tForm.y / 100).toFixed(4)} - h/2 + ${animPanY})`;
 
   return { filterStr, overlayX, overlayY };
 }

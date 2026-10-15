@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TimelineClip, TransitionType, MotionPath, MotionDirection } from "@/lib/editor/types";
+import { TimelineClip, TransitionType, MotionPath, MotionDirection, AnimationPreset } from "@/lib/editor/types";
 import {
   Scissors, Volume2, Type, Image as ImageIcon, Sliders, Play, Settings, Sparkles,
   Layers, Move, Wand2, Trash2, Zap, ArrowRight, Info, Check, Maximize2,
@@ -838,12 +838,53 @@ export default function TransformInspector({
           </div>
         </div>
 
-        {/* 3. COLOR ADJUSTMENTS */}
+        {/* 3. COLOR ADJUSTMENTS & COLOR GRADING PRESETS */}
         <div className="bg-[#181822] rounded-xl border border-[#2b2b36] p-3 space-y-2.5">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-            <h4 className="text-xs font-bold text-white uppercase tracking-wider">Color Adjustments</h4>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Color Grading & Filters</h4>
+            </div>
+            <button
+              type="button"
+              onClick={() => onUpdate({ filters: { brightness: 0, contrast: 1, saturation: 1 } })}
+              className="text-[10px] text-gray-400 hover:text-white transition-colors"
+            >
+              Reset
+            </button>
           </div>
+
+          {/* 1-Click Color Grading Presets */}
+          <div className="grid grid-cols-3 gap-1.5 pt-1 pb-1">
+            {[
+              { id: "normal", label: "Normal", b: 0, c: 1, s: 1 },
+              { id: "vibrant", label: "Vibrant", b: 0.05, c: 1.2, s: 1.4 },
+              { id: "cinematic", label: "Cinematic", b: -0.05, c: 1.25, s: 0.85 },
+              { id: "warm", label: "Warm Sun", b: 0.08, c: 1.1, s: 1.25 },
+              { id: "cool", label: "Cool Blue", b: 0, c: 1.15, s: 0.85 },
+              { id: "noir", label: "B&W Noir", b: 0.05, c: 1.4, s: 0 },
+            ].map((p) => {
+              const isSelected =
+                Math.abs(f.brightness - p.b) < 0.02 &&
+                Math.abs(f.contrast - p.c) < 0.02 &&
+                Math.abs(f.saturation - p.s) < 0.02;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => onUpdate({ filters: { brightness: p.b, contrast: p.c, saturation: p.s } })}
+                  className={`py-1.5 px-2 rounded-lg text-left text-[10px] font-semibold border transition-all truncate ${
+                    isSelected
+                      ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-sm"
+                      : "bg-[#0a0a0c] text-gray-400 border-[#2b2b36] hover:text-white"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+
           <div>
             <div className="flex justify-between items-center text-[10px] mb-1">
               <span className="text-gray-400">Brightness</span>
@@ -1113,137 +1154,194 @@ export default function TransformInspector({
     </div>
   );
 
-  // ─── TAB FOR TEXT: ANIMATION & MOVEMENT ───
-  const renderTextAnimation = () => {
+  // ─── TAB: 60FPS KEYFRAME ENTRANCE ANIMATIONS ───
+  const renderAnimation = () => {
+    const currentAnim = clip.animationIn || "none";
+    const animDur = clip.animationDuration ?? 0.6;
     const isTypewriter = clip.textAnimation === "typewriter";
     const typewriterSpeed = clip.typewriterSpeed || 15;
     const movement = clip.textMovement || "none";
-    const appearance = clip.textAnimation && clip.textAnimation !== "typewriter" ? clip.textAnimation : "none";
+
+    const animationPresets: { id: AnimationPreset; label: string; desc: string; icon: string }[] = [
+      { id: "none", label: "None", desc: "No entrance animation", icon: "⏹️" },
+      { id: "fade-in", label: "Fade In", desc: "Smooth opacity fade", icon: "✨" },
+      { id: "zoom-in", label: "Zoom In", desc: "Scale up into frame", icon: "🔍" },
+      { id: "zoom-out", label: "Zoom Out", desc: "Dramatic scale-down reveal", icon: "🔎" },
+      { id: "slide-up", label: "Slide Up", desc: "Smooth bottom-up entrance", icon: "⬆️" },
+      { id: "slide-right", label: "Slide Right", desc: "Swoop in from the left", icon: "➡️" },
+      { id: "pop-bounce", label: "Pop Bounce", desc: "Snappy punch overshoot", icon: "💥" },
+    ];
 
     return (
       <div className="space-y-4 p-3.5">
-        {/* 1. Character-by-character Typewriter Animation */}
+        {/* 1. 1-Click Keyframe Entrance Animation Presets */}
         <div className="bg-[#181822] rounded-xl border border-[#2b2b36] p-3 space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <Type className="w-3.5 h-3.5 text-amber-400" />
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Typewriter Effect</h4>
-              <span title="Animates text character by character progressively." className="text-gray-500 hover:text-gray-300 cursor-pointer">
-                <Info className="w-3 h-3" />
-              </span>
+              <Sparkles className="w-3.5 h-3.5 text-[#ff6b4a]" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Entrance Animations</h4>
             </div>
-            <button
-              type="button"
-              onClick={() =>
-                onUpdate({
-                  textAnimation: isTypewriter ? "none" : "typewriter",
-                  typewriterSpeed: isTypewriter ? undefined : 15,
-                })
-              }
-              className={`w-8 h-4 rounded-full transition-colors relative cursor-pointer ${
-                isTypewriter ? "bg-amber-500" : "bg-[#2b2b36]"
-              }`}
+            <span
+              title="Real-time 60fps keyframe entrance animations calculated instantly on canvas."
+              className="text-gray-500 hover:text-gray-300 cursor-pointer"
             >
-              <div
-                className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-transform ${
-                  isTypewriter ? "translate-x-4" : "translate-x-0.5"
-                }`}
-              />
-            </button>
+              <Info className="w-3 h-3" />
+            </span>
+          </div>
+          <p className="text-[10px] text-gray-400 leading-relaxed">
+            Choose a dynamic entrance preset with zero-lag 60fps canvas playback.
+          </p>
+
+          <div className="grid grid-cols-2 gap-1.5 pt-1">
+            {animationPresets.map(({ id, label, desc, icon }) => {
+              const isSelected = currentAnim === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onUpdate({ animationIn: id })}
+                  className={`p-2 rounded-lg text-left border transition-all ${
+                    isSelected
+                      ? "bg-[#ff6b4a]/20 border-[#ff6b4a] text-white shadow-sm"
+                      : "bg-[#0a0a0c] text-gray-400 border-[#2b2b36] hover:text-white hover:border-[#3b3b4a]"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs">{icon}</span>
+                    <span className="text-[11px] font-bold text-gray-200">{label}</span>
+                  </div>
+                  <div className="text-[9px] text-gray-500 truncate">{desc}</div>
+                </button>
+              );
+            })}
           </div>
 
-          {isTypewriter && (
+          {currentAnim !== "none" && (
             <div className="pt-2 border-t border-[#2b2b36] space-y-1.5">
               <div className="flex justify-between items-center text-[10px]">
-                <span className="text-gray-400">Typing Speed</span>
-                <span className="text-amber-400 font-mono font-bold">{typewriterSpeed} chars/s</span>
+                <span className="text-gray-400">Animation Duration</span>
+                <span className="text-[#ff6b4a] font-mono font-bold">{animDur.toFixed(1)}s</span>
               </div>
               <input
                 type="range"
-                min="4"
-                max="40"
-                step="1"
-                value={typewriterSpeed}
+                min="0.2"
+                max="2.5"
+                step="0.1"
+                value={animDur}
                 onPointerDown={handleSliderStart}
                 onPointerUp={handleSliderEnd}
-                onChange={(e) => onUpdateLive({ typewriterSpeed: parseInt(e.target.value) || 15 })}
-                className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-amber-500"
+                onChange={(e) => {
+                  const num = parseFloat(e.target.value);
+                  onUpdateLive({ animationDuration: Number.isFinite(num) ? num : 0.6 });
+                }}
+                className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]"
               />
             </div>
           )}
+
+          {/* Test Play Animation */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onPreview) onPreview(clip.timelineStart, animDur + 0.3);
+              else if (onSeek) onSeek(clip.timelineStart);
+            }}
+            className="w-full py-1.5 mt-1 rounded bg-[#ff6b4a]/15 hover:bg-[#ff6b4a]/25 text-[#ff6b4a] text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-[#ff6b4a]/30"
+          >
+            <Play className="w-3 h-3 fill-current" />
+            <span>Test Play Entrance</span>
+          </button>
         </div>
 
-        {/* 2. Text Movement Animation (Across Canvas) */}
-        <div className="bg-[#181822] rounded-xl border border-[#2b2b36] p-3 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Move className="w-3.5 h-3.5 text-blue-400" />
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Text Movement</h4>
-              <span title="Moves the text box across screen." className="text-gray-500 hover:text-gray-300 cursor-pointer">
-                <Info className="w-3 h-3" />
-              </span>
+        {/* Text-specific animations if clip is text */}
+        {clip.type === "text" && (
+          <>
+            {/* Typewriter Effect */}
+            <div className="bg-[#181822] rounded-xl border border-[#2b2b36] p-3 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Type className="w-3.5 h-3.5 text-amber-400" />
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Typewriter Effect</h4>
+                  <span title="Animates text character by character progressively." className="text-gray-500 hover:text-gray-300 cursor-pointer">
+                    <Info className="w-3 h-3" />
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onUpdate({
+                      textAnimation: isTypewriter ? "none" : "typewriter",
+                      typewriterSpeed: isTypewriter ? undefined : 15,
+                    })
+                  }
+                  className={`w-8 h-4 rounded-full transition-colors relative cursor-pointer ${
+                    isTypewriter ? "bg-amber-500" : "bg-[#2b2b36]"
+                  }`}
+                >
+                  <div
+                    className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-transform ${
+                      isTypewriter ? "translate-x-4" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {isTypewriter && (
+                <div className="pt-2 border-t border-[#2b2b36] space-y-1.5">
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-gray-400">Typing Speed</span>
+                    <span className="text-amber-400 font-mono font-bold">{typewriterSpeed} chars/s</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="4"
+                    max="40"
+                    step="1"
+                    value={typewriterSpeed}
+                    onPointerDown={handleSliderStart}
+                    onPointerUp={handleSliderEnd}
+                    onChange={(e) => onUpdateLive({ typewriterSpeed: parseInt(e.target.value) || 15 })}
+                    className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  />
+                </div>
+              )}
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-1.5">
-            {[
-              { id: "none", label: "Static" },
-              { id: "slide-left-to-right", label: "👉 Left to Right" },
-              { id: "slide-right-to-left", label: "👈 Right to Left" },
-              { id: "slide-bottom-to-top", label: "👆 Bottom to Top" },
-            ].map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onUpdate({ textMovement: id as any })}
-                className={`p-1.5 rounded-lg text-left text-[11px] font-semibold border transition-all truncate ${
-                  movement === id
-                    ? "bg-blue-500/20 text-blue-300 border-blue-500/60 shadow-sm"
-                    : "bg-[#0a0a0c] text-gray-400 border-[#2b2b36] hover:text-white"
-                }`}
-              >
-                {movement === id ? "✓ " : ""}{label}
-              </button>
-            ))}
-          </div>
-        </div>
 
-        {/* 3. Text Entrance Appearance */}
-        <div className="bg-[#181822] rounded-xl border border-[#2b2b36] p-3 space-y-2.5">
-          <h4 className="text-xs font-bold text-white uppercase tracking-wider">Appearance</h4>
-          <div className="grid grid-cols-3 gap-1">
-            {[
-              { id: "none", label: "None" },
-              { id: "fade-in", label: "Fade In" },
-              { id: "pop-in", label: "Pop In" },
-            ].map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onUpdate({ textAnimation: id as any })}
-                className={`py-1 rounded text-center text-[10px] font-bold border transition-all ${
-                  appearance === id
-                    ? "bg-[#ff6b4a] text-white border-[#ff6b4a] shadow-sm"
-                    : "bg-[#0a0a0c] text-gray-400 border-[#2b2b36] hover:text-white"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Test Play */}
-        <button
-          type="button"
-          onClick={() => {
-            if (onPreview) onPreview(clip.timelineStart, clip.duration);
-            else if (onSeek) onSeek(clip.timelineStart);
-          }}
-          className="w-full py-1.5 rounded bg-white/5 hover:bg-white/10 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-[#2b2b36]"
-        >
-          <Play className="w-3 h-3 fill-current" />
-          <span>Test Play Animation</span>
-        </button>
+            {/* Text Movement */}
+            <div className="bg-[#181822] rounded-xl border border-[#2b2b36] p-3 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Move className="w-3.5 h-3.5 text-blue-400" />
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Text Movement</h4>
+                  <span title="Moves the text box across screen." className="text-gray-500 hover:text-gray-300 cursor-pointer">
+                    <Info className="w-3 h-3" />
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { id: "none", label: "Static" },
+                  { id: "slide-left-to-right", label: "👉 Left to Right" },
+                  { id: "slide-right-to-left", label: "👈 Right to Left" },
+                  { id: "slide-bottom-to-top", label: "👆 Bottom to Top" },
+                ].map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onUpdate({ textMovement: id as any })}
+                    className={`p-1.5 rounded-lg text-left text-[11px] font-semibold border transition-all truncate ${
+                      movement === id
+                        ? "bg-blue-500/20 text-blue-300 border-blue-500/60 shadow-sm"
+                        : "bg-[#0a0a0c] text-gray-400 border-[#2b2b36] hover:text-white"
+                    }`}
+                  >
+                    {movement === id ? "✓ " : ""}{label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     );
   };
@@ -1410,8 +1508,8 @@ export default function TransformInspector({
   }
 
   let tabs: InspectorTab[] = ["Basic"];
-  if (clip.type === "video" || clip.type === "image") tabs = ["Basic", "Motion", "Effects", "Transitions", "Audio"];
-  if (clip.type === "text") tabs = ["Text", "Motion", "Animation", "Basic"];
+  if (clip.type === "video" || clip.type === "image") tabs = ["Basic", "Animation", "Motion", "Effects", "Transitions", "Audio"];
+  if (clip.type === "text") tabs = ["Text", "Animation", "Motion", "Basic"];
   if (clip.type === "audio") tabs = ["Audio"];
 
   if (!tabs.includes(activeTab)) {
@@ -1443,12 +1541,12 @@ export default function TransformInspector({
 
       <div className="flex-1 overflow-y-auto">
         {activeTab === "Basic" && renderBasic()}
+        {activeTab === "Animation" && renderAnimation()}
         {activeTab === "Motion" && renderMotion()}
         {activeTab === "Transitions" && renderTransitions()}
         {activeTab === "Effects" && renderEffects()}
         {activeTab === "Audio" && renderAudio()}
         {activeTab === "Text" && renderText()}
-        {activeTab === "Animation" && renderTextAnimation()}
       </div>
     </div>
   );

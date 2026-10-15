@@ -24,6 +24,106 @@ export interface ClipFilters {
   saturation: number;
 }
 
+export type AspectRatioPreset = "16:9" | "9:16" | "1:1" | "4:5";
+
+export type AnimationPreset =
+  | "none"
+  | "fade-in"
+  | "zoom-in"
+  | "zoom-out"
+  | "slide-up"
+  | "slide-right"
+  | "pop-bounce";
+
+export interface AnimationMatrix {
+  scale: number;
+  offsetX: number; // percentage offset: -100 to 100
+  offsetY: number; // percentage offset: -100 to 100
+  opacity: number; // 0 to 1
+}
+
+export interface ClipColorFilter {
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  blur?: number;
+}
+
+export function computeAnimationMatrix(
+  preset?: AnimationPreset,
+  elapsedInClip: number = 0,
+  animDuration: number = 0.6
+): AnimationMatrix {
+  if (!preset || preset === "none" || elapsedInClip >= animDuration || animDuration <= 0) {
+    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+  }
+
+  const p = Math.max(0, Math.min(1, elapsedInClip / animDuration));
+  // Cubic ease-out
+  const easeOut = 1 - Math.pow(1 - p, 3);
+
+  switch (preset) {
+    case "fade-in":
+      return {
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        opacity: easeOut,
+      };
+
+    case "zoom-in":
+      return {
+        scale: 0.35 + 0.65 * easeOut,
+        offsetX: 0,
+        offsetY: 0,
+        opacity: Math.min(1, p * 2.5),
+      };
+
+    case "zoom-out":
+      return {
+        scale: 1.5 - 0.5 * easeOut,
+        offsetX: 0,
+        offsetY: 0,
+        opacity: Math.min(1, p * 2.5),
+      };
+
+    case "slide-up":
+      return {
+        scale: 1,
+        offsetX: 0,
+        offsetY: (1 - easeOut) * 40,
+        opacity: Math.min(1, p * 2.5),
+      };
+
+    case "slide-right":
+      return {
+        scale: 1,
+        offsetX: -(1 - easeOut) * 40,
+        offsetY: 0,
+        opacity: Math.min(1, p * 2.5),
+      };
+
+    case "pop-bounce": {
+      let bounceScale = 1;
+      if (p < 0.65) {
+        bounceScale = (p / 0.65) * 1.15;
+      } else {
+        const settle = (p - 0.65) / 0.35;
+        bounceScale = 1.15 - 0.15 * (1 - Math.pow(1 - settle, 2));
+      }
+      return {
+        scale: Math.max(0.01, bounceScale),
+        offsetX: 0,
+        offsetY: 0,
+        opacity: Math.min(1, p * 3),
+      };
+    }
+
+    default:
+      return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+  }
+}
+
 export type TransitionType = 
   | "none" 
   | "fade" 
@@ -137,6 +237,10 @@ export interface TimelineClip {
   keyframes?: Keyframe[];
   chromaKey?: ChromaKeySettings;
   
+  // Animation Presets
+  animationIn?: AnimationPreset;
+  animationDuration?: number;
+
   // Extra specific properties
   text?: string;
   color?: string;
