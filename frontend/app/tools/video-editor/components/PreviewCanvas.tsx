@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { EditorProject, MediaBinItem, TimelineClip, computeAnimationMatrix } from "@/lib/editor/types";
+import { EditorProject, MediaBinItem, TimelineClip, computeAnimationMatrix, computeAnimationOutMatrix } from "@/lib/editor/types";
 
 interface Props {
   project: EditorProject;
@@ -556,6 +556,16 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           t.opacity *= animMatrix.opacity;
         }
 
+        // 1-Click Keyframe Exit Animation (fade-out, zoom-out, slide-down, slide-left, pop-out)
+        if (clip.animationOut && clip.animationOut !== "none") {
+          const animDur = Math.max(0.05, clip.animationOutDuration || 0.6);
+          const outMatrix = computeAnimationOutMatrix(clip.animationOut, elapsed, clip.duration, animDur);
+          animScale *= outMatrix.scale;
+          animPanX += (outMatrix.offsetX / 100) * canvas.width;
+          animPanY += (outMatrix.offsetY / 100) * canvas.height;
+          t.opacity *= outMatrix.opacity;
+        }
+
         // Motion Path (PowerPoint-style Point A to Point B animation)
         let motionX = 0;
         let motionY = 0;
@@ -819,6 +829,16 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           moveAnimX += (animMatrix.offsetX / 100) * canvas.width;
           moveAnimY += (animMatrix.offsetY / 100) * canvas.height;
           t.opacity = (t.opacity ?? 100) * animMatrix.opacity;
+        }
+
+        // 1-Click Keyframe Exit Animation for Text
+        if (clip.animationOut && clip.animationOut !== "none") {
+          const animDur = Math.max(0.05, clip.animationOutDuration || 0.6);
+          const outMatrix = computeAnimationOutMatrix(clip.animationOut, elapsed, dur, animDur);
+          animScale *= outMatrix.scale;
+          moveAnimX += (outMatrix.offsetX / 100) * canvas.width;
+          moveAnimY += (outMatrix.offsetY / 100) * canvas.height;
+          t.opacity = (t.opacity ?? 100) * outMatrix.opacity;
         }
 
         const posX = ((t.x ?? 50) / 100) * canvas.width + motionX + moveAnimX;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TimelineClip, TransitionType, MotionPath, MotionDirection, AnimationPreset } from "@/lib/editor/types";
+import { TimelineClip, TransitionType, MotionPath, MotionDirection, AnimationPreset, AnimationOutPreset } from "@/lib/editor/types";
 import {
   Scissors, Volume2, Type, Image as ImageIcon, Sliders, Play, Settings, Sparkles,
   Layers, Move, Wand2, Trash2, Zap, ArrowRight, Info, Check, Maximize2,
@@ -1154,10 +1154,12 @@ export default function TransformInspector({
     </div>
   );
 
-  // ─── TAB: 60FPS KEYFRAME ENTRANCE ANIMATIONS ───
+  // ─── TAB: 60FPS KEYFRAME ENTRANCE & EXIT ANIMATIONS ───
   const renderAnimation = () => {
     const currentAnim = clip.animationIn || "none";
     const animDur = clip.animationDuration ?? 0.6;
+    const currentAnimOut = clip.animationOut || "none";
+    const animOutDur = clip.animationOutDuration ?? 0.6;
     const isTypewriter = clip.textAnimation === "typewriter";
     const typewriterSpeed = clip.typewriterSpeed || 15;
     const movement = clip.textMovement || "none";
@@ -1172,6 +1174,15 @@ export default function TransformInspector({
       { id: "pop-bounce", label: "Pop Bounce", desc: "Snappy punch overshoot", icon: "💥" },
     ];
 
+    const animationOutPresets: { id: AnimationOutPreset; label: string; desc: string; icon: string }[] = [
+      { id: "none", label: "None", desc: "No exit animation", icon: "⏹️" },
+      { id: "fade-out", label: "Fade Out", desc: "Smooth opacity fade", icon: "✨" },
+      { id: "zoom-out", label: "Zoom Out", desc: "Scale down departure", icon: "🔎" },
+      { id: "slide-down", label: "Slide Down", desc: "Drop out of frame", icon: "⬇️" },
+      { id: "slide-left", label: "Slide Left", desc: "Slide out to left", icon: "⬅️" },
+      { id: "pop-out", label: "Pop Out", desc: "Punch & shrink exit", icon: "💥" },
+    ];
+
     return (
       <div className="space-y-4 p-3.5">
         {/* 1. 1-Click Keyframe Entrance Animation Presets */}
@@ -1179,7 +1190,7 @@ export default function TransformInspector({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[#ff6b4a]" />
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Entrance Animations</h4>
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Entrance (In)</h4>
             </div>
             <span
               title="Real-time 60fps keyframe entrance animations calculated instantly on canvas."
@@ -1250,6 +1261,86 @@ export default function TransformInspector({
           >
             <Play className="w-3 h-3 fill-current" />
             <span>Test Play Entrance</span>
+          </button>
+        </div>
+
+        {/* 2. 1-Click Keyframe Exit Animation Presets */}
+        <div className="bg-[#181822] rounded-xl border border-[#2b2b36] p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Exit (Out)</h4>
+            </div>
+            <span
+              title="Real-time 60fps keyframe exit animations calculated on canvas as clip ends."
+              className="text-gray-500 hover:text-gray-300 cursor-pointer"
+            >
+              <Info className="w-3 h-3" />
+            </span>
+          </div>
+          <p className="text-[10px] text-gray-400 leading-relaxed">
+            Choose an exit preset to transition smoothly into the next scene.
+          </p>
+
+          <div className="grid grid-cols-2 gap-1.5 pt-1">
+            {animationOutPresets.map(({ id, label, desc, icon }) => {
+              const isSelected = currentAnimOut === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onUpdate({ animationOut: id })}
+                  className={`p-2 rounded-lg text-left border transition-all ${
+                    isSelected
+                      ? "bg-rose-500/20 border-rose-500 text-white shadow-sm"
+                      : "bg-[#0a0a0c] text-gray-400 border-[#2b2b36] hover:text-white hover:border-[#3b3b4a]"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <span className="text-xs">{icon}</span>
+                    <span className="text-[11px] font-bold text-gray-200">{label}</span>
+                  </div>
+                  <div className="text-[9px] text-gray-500 truncate">{desc}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {currentAnimOut !== "none" && (
+            <div className="pt-2 border-t border-[#2b2b36] space-y-1.5">
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="text-gray-400">Exit Duration</span>
+                <span className="text-rose-400 font-mono font-bold">{animOutDur.toFixed(1)}s</span>
+              </div>
+              <input
+                type="range"
+                min="0.2"
+                max="2.5"
+                step="0.1"
+                value={animOutDur}
+                onPointerDown={handleSliderStart}
+                onPointerUp={handleSliderEnd}
+                onChange={(e) => {
+                  const num = parseFloat(e.target.value);
+                  onUpdateLive({ animationOutDuration: Number.isFinite(num) ? num : 0.6 });
+                }}
+                className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-rose-500"
+              />
+            </div>
+          )}
+
+          {/* Test Play Exit Animation */}
+          <button
+            type="button"
+            onClick={() => {
+              const previewStart = Math.max(clip.timelineStart, clip.timelineStart + clip.duration - animOutDur - 0.2);
+              if (onPreview) onPreview(previewStart, animOutDur + 0.3);
+              else if (onSeek) onSeek(previewStart);
+            }}
+            className="w-full py-1.5 mt-1 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-rose-500/30"
+          >
+            <Play className="w-3 h-3 fill-current" />
+            <span>Test Play Exit</span>
           </button>
         </div>
 

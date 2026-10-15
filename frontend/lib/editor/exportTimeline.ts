@@ -103,6 +103,30 @@ function buildClipVideoFilter(
     }
   }
 
+  // 1-Click Keyframe Exit Animation for FFmpeg export
+  if (clip.animationOut && clip.animationOut !== "none") {
+    const outDur = clip.animationOutDuration || 0.6;
+    const out_start = Math.max(0, clip.duration - outDur);
+    const out_rel = `(t-${(clip.timelineStart + out_start).toFixed(3)})`;
+    const o_prog = `min(1,max(0,${out_rel}/${outDur.toFixed(3)}))`;
+
+    if (clip.animationOut === "fade-out") {
+      animOpacity = `(${animOpacity}*(1-${o_prog}))`;
+    } else if (clip.animationOut === "zoom-out") {
+      animScale = `(${animScale}*(1-0.65*${o_prog}))`;
+      animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
+    } else if (clip.animationOut === "slide-down") {
+      animPanY = `(${animPanY}+${targetH}*0.4*${o_prog})`;
+      animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
+    } else if (clip.animationOut === "slide-left") {
+      animPanX = `(${animPanX}-${targetW}*0.4*${o_prog})`;
+      animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
+    } else if (clip.animationOut === "pop-out") {
+      animScale = `(${animScale}*max(0.01,1-0.9*${o_prog}))`;
+      animOpacity = `(${animOpacity}*max(0,1-1.5*${o_prog}))`;
+    }
+  }
+
   const tForm = clip.transform || { x: 50, y: 50, width: 100, height: 100, rotation: 0, scaleX: 1, scaleY: 1, opacity: 100 };
   
   filterParts.push(`scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease`);

@@ -491,7 +491,21 @@ export default function EditorTimeline({
             onPointerDown={handleTrackPointerDown}
           >
             {/* Time Ruler (00:00, 00:05, etc.) */}
-            <div className="h-7 border-b border-[#2b2b36] bg-[#0f0f15] relative select-none pointer-events-none">
+            <div
+              className="h-7 border-b border-[#2b2b36] bg-[#0f0f15] relative select-none cursor-pointer touch-none"
+              onPointerDown={(e) => {
+                try {
+                  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                } catch (_) {}
+                if (!trackAreaRef.current) return;
+                const rect = trackAreaRef.current.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                if (x < 0) return;
+                const t = Math.max(0, Math.min(totalDuration, (x / rect.width) * totalDuration));
+                onSeek(t);
+                setDraggingPlayhead(true);
+              }}
+            >
               <TimeRuler totalDuration={totalDuration} />
             </div>
 
@@ -530,6 +544,9 @@ export default function EditorTimeline({
                         data-timeline-clip="true"
                         onPointerDown={(e) => {
                           e.stopPropagation();
+                          try {
+                            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                          } catch (_) {}
                           onSelectClip(clip.id);
 
                           // Double tap / click detection
@@ -599,6 +616,9 @@ export default function EditorTimeline({
                             <button
                               onPointerDown={(e) => {
                                 e.stopPropagation();
+                                try {
+                                  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                                } catch (_) {}
                                 onEdgeBegin();
                                 const media = mediaItems.find((m) => m.id === clip.sourceId);
                                 const isSynthetic =
@@ -628,6 +648,9 @@ export default function EditorTimeline({
                             <button
                               onPointerDown={(e) => {
                                 e.stopPropagation();
+                                try {
+                                  (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                                } catch (_) {}
                                 onEdgeBegin();
                                 const media = mediaItems.find((m) => m.id === clip.sourceId);
                                 const isSynthetic =
@@ -792,6 +815,9 @@ export default function EditorTimeline({
                   style={{ left: `${(currentTime / totalDuration) * 100}%`, width: "18px" }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
+                    try {
+                      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                    } catch (_) {}
                     setDraggingPlayhead(true);
                   }}
                 >

@@ -94,6 +94,9 @@ export default function TransformOverlay({
   const handlePointerDownMove = (e: React.PointerEvent) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
     e.stopPropagation();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
     onBeginLive?.();
     setIsDragging(true);
     setStartPos({ x: e.clientX, y: e.clientY });
@@ -105,6 +108,9 @@ export default function TransformOverlay({
     if (e.button !== 0 && e.pointerType === "mouse") return;
     e.stopPropagation();
     if (!containerRef.current) return;
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
     onBeginLive?.();
     setIsScaling(corner);
 
@@ -122,6 +128,9 @@ export default function TransformOverlay({
     if (e.button !== 0 && e.pointerType === "mouse") return;
     e.stopPropagation();
     if (!containerRef.current) return;
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
     onBeginLive?.();
     setIsRotating(true);
 
@@ -138,6 +147,9 @@ export default function TransformOverlay({
   const handlePointerDownA = (e: React.PointerEvent) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
     e.stopPropagation();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
     onBeginLive?.();
     setIsDraggingA(true);
     setStartPos({ x: e.clientX, y: e.clientY });
@@ -156,6 +168,9 @@ export default function TransformOverlay({
   const handlePointerDownB = (e: React.PointerEvent) => {
     if (e.button !== 0 && e.pointerType === "mouse") return;
     e.stopPropagation();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch (_) {}
     onBeginLive?.();
     setIsDraggingB(true);
     setStartPos({ x: e.clientX, y: e.clientY });

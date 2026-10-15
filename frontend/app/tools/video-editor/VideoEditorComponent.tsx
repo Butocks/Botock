@@ -197,9 +197,11 @@ export default function VideoEditorComponent() {
   const [isAspectRatioOpen, setIsAspectRatioOpen] = useState(false);
   const [isTransformActive, setIsTransformActive] = useState(false);
 
-  // Voice recording state
+  // Voice recording & AI Subtitles state
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [isAutoCaptioning, setIsAutoCaptioning] = useState(false);
+  const [autoCaptionProgress, setAutoCaptionProgress] = useState("");
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -321,6 +323,7 @@ export default function VideoEditorComponent() {
       return;
     }
     let lastTs: number | null = null;
+    let lastStateUpdateTs = 0;
     const tick = (ts: number) => {
       if (lastTs === null) {
         lastTs = ts;
@@ -349,6 +352,14 @@ export default function VideoEditorComponent() {
       }
       timeRef.current = next;
       window.dispatchEvent(new CustomEvent("editor-time-update", { detail: next }));
+
+      // Throttle React state setCurrentTime to ~12.5fps (every 80ms) during active playback
+      // to eliminate React tree re-rendering lag while PreviewCanvas renders at full 60fps via refs
+      if (ts - lastStateUpdateTs >= 80) {
+        lastStateUpdateTs = ts;
+        setCurrentTime(next);
+      }
+
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -509,6 +520,97 @@ export default function VideoEditorComponent() {
     showToast("Added subtitle at playhead");
     setOpenTool(null);
     setActiveDrawer(null);
+  };
+
+  const handleGenerateAutoCaptions = async () => {
+    const sourceClip = allClips.find((c) => c.type === "video" || c.type === "audio");
+    const mediaItem = mediaBin.items.find((m) => m.id === sourceClip?.sourceId) || mediaBin.items[0];
+
+    if (!mediaItem || !mediaItem.file) {
+      showToast("Please upload a video or audio file first to generate auto-captions!");
+      return;
+    }
+
+    try {
+      setIsAutoCaptioning(true);
+      setAutoCaptionProgress("Decoding audio for AI transcription...");
+
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+        sampleRate: 16000,
+      });
+
+      let channelData: Float32Array;
+      try {
+        const arrayBuffer = await mediaItem.file.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        channelData = audioBuffer.getChannelData(0);
+      } finally {
+        try {
+          await audioContext.close();
+        } catch (_) {}
+      }
+
+      setAutoCaptionProgress("AI Whisper model transcribing speech...");
+
+      const worker = new Worker(new URL("../subtitles/worker.ts", import.meta.url), {
+        type: "module",
+      });
+
+      worker.onmessage = (e) => {
+        const { status, message, output, error } = e.data;
+        if (status === "loading" || status === "processing") {
+          setAutoCaptionProgress(message || "Processing speech...");
+        } else if (status === "done") {
+          setIsAutoCaptioning(false);
+          setAutoCaptionProgress("");
+          worker.terminate();
+
+          if (output && output.chunks && output.chunks.length > 0) {
+            let srt = "";
+            output.chunks.forEach((chunk: any, index: number) => {
+              const startMs = (chunk.timestamp?.[0] || 0) * 1000;
+              const endMs = (chunk.timestamp?.[1] || ((chunk.timestamp?.[0] || 0) + 2.5)) * 1000;
+              const pad = (n: number, z = 2) => String(n).padStart(z, "0");
+              const formatTime = (ms: number) => {
+                const h = Math.floor(ms / 3600000);
+                const m = Math.floor((ms % 3600000) / 60000);
+                const s = Math.floor((ms % 60000) / 1000);
+                const millis = Math.floor(ms % 1000);
+                return `${pad(h)}:${pad(m)}:${pad(s)},${pad(millis, 3)}`;
+              };
+              srt += `${index + 1}\n${formatTime(startMs)} --> ${formatTime(endMs)}\n${(chunk.text || "").trim()}\n\n`;
+            });
+            timeline.importSRT(srt);
+            showToast(`✨ Generated ${output.chunks.length} AI auto-captions!`);
+            setOpenTool(null);
+            setActiveDrawer(null);
+          } else {
+            showToast("No spoken words detected in audio.");
+          }
+        } else if (status === "error") {
+          setIsAutoCaptioning(false);
+          setAutoCaptionProgress("");
+          worker.terminate();
+          showToast(`Auto-captions error: ${error || "Model failed to load"}`);
+        }
+      };
+
+      worker.onerror = () => {
+        setIsAutoCaptioning(false);
+        setAutoCaptionProgress("");
+        worker.terminate();
+        showToast("AI worker failed to initialize.");
+      };
+
+      worker.postMessage({
+        type: "generate",
+        audioData: channelData,
+      });
+    } catch (err: any) {
+      setIsAutoCaptioning(false);
+      setAutoCaptionProgress("");
+      showToast(`Could not decode audio: ${err?.message || "Unknown error"}`);
+    }
   };
 
   const addStickerClip = (sticker: string) => {
@@ -719,6 +821,16 @@ export default function VideoEditorComponent() {
             setOpenTool={setOpenTool}
           >
             <div className="w-64 p-3 space-y-3">
+              {/* 1-Click AI Auto Captions Button */}
+              <button
+                onClick={handleGenerateAutoCaptions}
+                disabled={isAutoCaptioning}
+                className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-[#ff6b4a]/20 to-purple-500/20 hover:from-amber-500/30 hover:via-[#ff6b4a]/30 hover:to-purple-500/30 border border-[#ff6b4a]/50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md group disabled:opacity-50"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
+                <span className="truncate">{isAutoCaptioning ? (autoCaptionProgress || "Transcribing...") : "✨ 1-Click AI Auto Captions"}</span>
+              </button>
+
               <div className="flex items-center justify-between border-b border-[#2b2b36] pb-2">
                 <span className="text-xs font-bold text-white flex items-center gap-1.5">
                   <Type className="w-3.5 h-3.5 text-[#ff6b4a]" /> Subtitle Styles
@@ -1596,6 +1708,16 @@ export default function VideoEditorComponent() {
               {/* Drawer: Subtitles */}
               {activeDrawer === "subtitles" && (
                 <div className="space-y-3">
+                  {/* 1-Click AI Auto Captions Button */}
+                  <button
+                    onClick={handleGenerateAutoCaptions}
+                    disabled={isAutoCaptioning}
+                    className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500/20 via-[#ff6b4a]/20 to-purple-500/20 active:scale-95 border border-[#ff6b4a]/50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md group disabled:opacity-50"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
+                    <span className="truncate">{isAutoCaptioning ? (autoCaptionProgress || "Transcribing...") : "✨ 1-Click AI Auto Captions"}</span>
+                  </button>
+
                   <div className="flex items-center justify-between pb-2 border-b border-[#2b2b36]">
                     <span className="text-xs font-bold text-white">Choose Subtitle Style</span>
                     <button

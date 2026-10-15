@@ -303,10 +303,10 @@ export default function HomeClient() {
               <div className="text-2xl font-black text-slate-900 dark:text-white">Studio Suite</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Video Suite (Editor, Cutter, MP3)</div>
             </div>
-            <div className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04]">
-              <div className="text-2xl font-black text-violet-600 dark:text-violet-400">Daily Quota</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">3 AI Videos + 5 AI Images</div>
-            </div>
+            <Link href="/blog" className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04] hover:border-violet-500/40 hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-all group block">
+              <div className="text-2xl font-black text-violet-600 dark:text-violet-400 group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors">Latest Guides</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Tutorials &amp; Creator Tips →</div>
+            </Link>
           </div>
         </div>
       </section>
@@ -376,16 +376,16 @@ export default function HomeClient() {
               </p>
             </div>
 
-            {/* Pillar 4: Daily Free Allocations */}
+            {/* Pillar 4: Open Access */}
             <div className="rounded-2xl bg-slate-50 dark:bg-[#111114] p-6 border border-slate-200 dark:border-white/[0.08]">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3">
                 <Sparkles className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-                Daily Quotas
+                Open Access Tools
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Every registered user receives 3 video clips (Botock Engine) and 5 images (Nano Banana) refreshed automatically every 24 hours.
+                100+ PDF, image, video, and audio utilities are completely free. No account needed for standard tools — just upload and process instantly.
               </p>
             </div>
           </div>

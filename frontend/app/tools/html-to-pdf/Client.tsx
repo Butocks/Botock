@@ -157,7 +157,7 @@ export default function HtmlToPdfClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080b0f] text-slate-100 flex flex-col justify-between selection:bg-sky-500/20 selection:text-sky-400">
+    <div className="min-h-screen bg-white dark:bg-[#080b0f] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-sky-500/20 selection:text-sky-400 dark:selection:text-sky-400">
       <div className="max-w-6xl mx-auto px-4 py-8 w-full">
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-8">

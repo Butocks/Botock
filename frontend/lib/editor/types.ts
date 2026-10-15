@@ -124,6 +124,85 @@ export function computeAnimationMatrix(
   }
 }
 
+export type AnimationOutPreset =
+  | "none"
+  | "fade-out"
+  | "zoom-out"
+  | "slide-down"
+  | "slide-left"
+  | "pop-out";
+
+export function computeAnimationOutMatrix(
+  preset?: AnimationOutPreset,
+  elapsedInClip: number = 0,
+  clipDuration: number = 0,
+  animDuration: number = 0.6
+): AnimationMatrix {
+  if (!preset || preset === "none" || animDuration <= 0 || clipDuration <= 0) {
+    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+  }
+
+  const remaining = clipDuration - elapsedInClip;
+  if (remaining >= animDuration) {
+    return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+  }
+
+  const p = Math.max(0, Math.min(1, 1 - Math.max(0, remaining) / animDuration));
+  const easeIn = p * p * p;
+
+  switch (preset) {
+    case "fade-out":
+      return {
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        opacity: Math.max(0, 1 - easeIn),
+      };
+
+    case "zoom-out":
+      return {
+        scale: Math.max(0.05, 1 - 0.65 * easeIn),
+        offsetX: 0,
+        offsetY: 0,
+        opacity: Math.max(0, 1 - p * 1.5),
+      };
+
+    case "slide-down":
+      return {
+        scale: 1,
+        offsetX: 0,
+        offsetY: easeIn * 40,
+        opacity: Math.max(0, 1 - p * 1.5),
+      };
+
+    case "slide-left":
+      return {
+        scale: 1,
+        offsetX: -easeIn * 40,
+        offsetY: 0,
+        opacity: Math.max(0, 1 - p * 1.5),
+      };
+
+    case "pop-out": {
+      let popScale = 1;
+      if (p < 0.25) {
+        popScale = 1 + (p / 0.25) * 0.15;
+      } else {
+        popScale = 1.15 - ((p - 0.25) / 0.75) * 1.15;
+      }
+      return {
+        scale: Math.max(0.01, popScale),
+        offsetX: 0,
+        offsetY: 0,
+        opacity: Math.max(0, 1 - p * 1.5),
+      };
+    }
+
+    default:
+      return { scale: 1, offsetX: 0, offsetY: 0, opacity: 1 };
+  }
+}
+
 export type TransitionType = 
   | "none" 
   | "fade" 
@@ -240,6 +319,8 @@ export interface TimelineClip {
   // Animation Presets
   animationIn?: AnimationPreset;
   animationDuration?: number;
+  animationOut?: AnimationOutPreset;
+  animationOutDuration?: number;
 
   // Extra specific properties
   text?: string;
