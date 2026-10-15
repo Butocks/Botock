@@ -17,3 +17,4 @@ htmlcov/
 session/
 generated_videos/
 generated_images/
+.agents/

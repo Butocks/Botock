@@ -4,6 +4,54 @@ import { toBlobURL } from "@ffmpeg/util";
 export type FFmpegProgressCallback = (event: { progress: number; time: number }) => void;
 export type FFmpegLogCallback = (event: { type: string; message: string }) => void;
 
+// Magic byte signatures for strict client-side video validation
+const VIDEO_SIGNATURES: { mime: string; check: (bytes: Uint8Array) => boolean }[] = [
+  {
+    mime: "video/mp4",
+    // ftyp box at offset 4
+    check: (b) => b.length > 12 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70,
+  },
+  {
+    mime: "video/webm",
+    // EBML header 0x1A 0x45 0xDF 0xA3
+    check: (b) => b.length > 4 && b[0] === 0x1a && b[1] === 0x45 && b[2] === 0xdf && b[3] === 0xa3,
+  },
+  {
+    mime: "video/quicktime",
+    // moov / wide / ftyp
+    check: (b) =>
+      b.length > 8 &&
+      ((b[4] === 0x6d && b[5] === 0x6f && b[6] === 0x6f && b[7] === 0x76) ||
+        (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70)),
+  },
+];
+
+export async function validateVideoFileSecurity(
+  file: File
+): Promise<{ valid: boolean; reason?: string }> {
+  const MAX_SIZE_BYTES = 2 * 1024 * 1024 * 1024; // 2GB Client-Side Limit
+  if (file.size === 0) return { valid: false, reason: "File is empty (0 bytes)." };
+  if (file.size > MAX_SIZE_BYTES) return { valid: false, reason: "File exceeds 2GB browser limit." };
+
+  try {
+    const headerSlice = file.slice(0, 16);
+    const buffer = await headerSlice.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+
+    const isValidSignature = VIDEO_SIGNATURES.some((sig) => sig.check(bytes));
+    if (!isValidSignature) {
+      return {
+        valid: false,
+        reason: "Invalid video signature. Please upload an authentic MP4, WebM, or MOV file.",
+      };
+    }
+  } catch {
+    // If reading header fails, fallback gracefully
+  }
+
+  return { valid: true };
+}
+
 /**
  * High-performance WebAssembly FFmpeg Manager
  * Features:
@@ -21,6 +69,7 @@ export class FastFFmpegManager {
 
   private static progressCallbacks: Set<FFmpegProgressCallback> = new Set();
   private static logCallbacks: Set<FFmpegLogCallback> = new Set();
+  private static activeObjectUrls = new Set<string>();
 
   private readonly CORE_VERSION = "0.12.6";
   private readonly CACHE_NAME = "botock-wasm-cache-v1";
@@ -321,6 +370,25 @@ export class FastFFmpegManager {
       onProgress
     );
   }
+
+  public static createManagedObjectURL(blob: Blob): string {
+    const url = URL.createObjectURL(blob);
+    FastFFmpegManager.activeObjectUrls.add(url);
+    return url;
+  }
+
+  public static revokeAllObjectURLs(): void {
+    FastFFmpegManager.activeObjectUrls.forEach((url) => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {}
+    });
+    FastFFmpegManager.activeObjectUrls.clear();
+  }
+
+  public static async safeDeleteFile(name: string): Promise<void> {
+    await FastFFmpegManager.deleteFile(name);
+  }
 }
 
 // Named singleton exports for convenience and multiple usage styles
@@ -333,7 +401,10 @@ export const terminate = FastFFmpegManager.terminate.bind(FastFFmpegManager);
 export const writeFile = FastFFmpegManager.writeFile.bind(FastFFmpegManager);
 export const readFile = FastFFmpegManager.readFile.bind(FastFFmpegManager);
 export const deleteFile = FastFFmpegManager.deleteFile.bind(FastFFmpegManager);
+export const safeDeleteFile = FastFFmpegManager.safeDeleteFile.bind(FastFFmpegManager);
 export const exec = FastFFmpegManager.exec.bind(FastFFmpegManager);
 export const fastTrimVideo = FastFFmpegManager.fastTrimVideo.bind(FastFFmpegManager);
+export const createManagedObjectURL = FastFFmpegManager.createManagedObjectURL.bind(FastFFmpegManager);
+export const revokeAllObjectURLs = FastFFmpegManager.revokeAllObjectURLs.bind(FastFFmpegManager);
 
 export default FastFFmpegManager;

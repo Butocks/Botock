@@ -15,7 +15,7 @@ import { useMediaStore } from "../../store/useMediaStore";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { useEditorTimeline } from "@/lib/editor/useEditorTimeline";
 import { useThumbnails } from "@/lib/editor/useThumbnails";
-import { useWaveforms } from "@/lib/editor/useWaveforms";
+import { useWaveforms } from "@/lib/editor/useWaveform";
 import { useMediaBin } from "@/lib/editor/useMediaBin";
 import { exportEditorProject } from "@/lib/editor/exportTimeline";
 import { MediaBinItem } from "@/lib/editor/types";

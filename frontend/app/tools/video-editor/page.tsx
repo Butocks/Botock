@@ -1,41 +1,48 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Scissors, Film, Sparkles, Music, CheckCircle2 } from "lucide-react";
 import { Suspense } from "react";
 import VideoEditorComponent from "./VideoEditorComponent";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "Free Online Video Editor | In-Browser Studio",
+  title: "Free Online AI Video Editor - No Watermark, 4K Export | Botock",
   description:
-    "Edit videos online directly in your browser with multi-track timeline, trimming, splitting, speed controls, aspect ratio presets, and zero server uploads using WebAssembly.",
+    "Edit videos online for free with Botock's ultra-fast browser Video Editor. Multi-track magnetic timeline, AI auto-subtitles, 9:16 TikTok/Reels reframe, and instant MP4 export with zero watermark.",
   keywords: [
-    "video editor online",
-    "free video editor browser",
-    "cut video online",
-    "trim video fast",
-    "split video clips",
-    "wasm video editor",
-    "botock tools",
+    "free online video editor",
+    "video editor no watermark",
+    "browser video editor",
+    "ai video editor online",
+    "tiktok video editor web",
+    "capcut web alternative",
+    "botock video editor",
+    "4k browser video editor",
+    "multi-track timeline video editor",
   ],
   alternates: {
     canonical: "/tools/video-editor",
   },
   openGraph: {
-    title: "Free Online Video Editor | In-Browser Studio",
+    title: "Botock Free AI Video Editor — Instant 60fps Browser Editing",
     description:
-      "Edit videos online directly in your browser with multi-track timeline, trimming, splitting, and color presets.",
+      "Trim, split, add AI subtitles, and export 1080p/4K videos directly in your browser. 100% private & no watermark.",
     url: "https://botock.app/tools/video-editor",
-    siteName: "Botock AI",
+    siteName: "Botock",
+    images: [
+      {
+        url: "/images/blog/botock-video-editor.png",
+        width: 1200,
+        height: 630,
+        alt: "Botock Online Multi-Track AI Video Editor Interface",
+      },
+    ],
     type: "website",
-    images: ["https://botock.app/og-image.jpg"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Free Online Video Editor",
+    title: "Free Online Video Editor | In-Browser Studio",
     description:
       "In-browser multi-track video editing with 0ms lag and complete client-side privacy.",
-    images: ["https://botock.app/og-image.jpg"],
+    images: ["/images/blog/botock-video-editor.png"],
   },
 };
 
@@ -45,17 +52,24 @@ export default function VideoEditorPage() {
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Online Video Editor - Botock AI",
+        name: "Botock Pro Online Video Editor",
         url: "https://botock.app/tools/video-editor",
         description:
-          "Edit videos online directly in your browser with multi-track timeline, trimming, and effects.",
+          "Desktop-class non-linear video editing (NLE) directly inside your web browser. Multi-track timeline, visual effects, and WebAssembly MP4 rendering.",
         applicationCategory: "MultimediaApplication",
-        operatingSystem: "All",
+        operatingSystem: "Web Browser (Windows, macOS, Linux, Android, iOS)",
         offers: {
           "@type": "Offer",
           price: "0",
           priceCurrency: "USD",
         },
+        featureList: [
+          "Multi-track Magnetic Timeline",
+          "Client-side WebAssembly 60fps Rendering",
+          "Zero Server Upload Privacy",
+          "9:16, 16:9, and 1:1 Aspect Ratio Presets",
+          "Split, Ripple Delete, and Speed Control",
+        ],
       },
       {
         "@type": "BreadcrumbList",
@@ -81,14 +95,58 @@ export default function VideoEditorPage() {
         ],
       },
       {
+        "@type": "HowTo",
+        name: "How to Edit Videos in the Browser Using Botock Video Editor",
+        description:
+          "Step-by-step guide to importing clips, arranging tracks, splitting footage, and exporting MP4 videos locally.",
+        step: [
+          {
+            "@type": "HowToStep",
+            name: "Import Media",
+            text: "Drag and drop your video clips, photos, music, or GIFs into the Botock Media Bin.",
+          },
+          {
+            "@type": "HowToStep",
+            name: "Arrange Timeline Tracks",
+            text: "Place your video footage on primary and secondary video tracks, and add audio to the music track.",
+          },
+          {
+            "@type": "HowToStep",
+            name: "Split and Trim",
+            text: "Position the playhead and press 'S' to split clips, or drag duration handles to trim precisely.",
+          },
+          {
+            "@type": "HowToStep",
+            name: "Export Clean MP4",
+            text: "Click Export to render 1080p/4K MP4 with zero watermark directly inside your browser.",
+          },
+        ],
+      },
+      {
         "@type": "FAQPage",
         mainEntity: [
           {
             "@type": "Question",
-            name: "Does Botock upload my videos to a server while editing?",
+            name: "Does Botock Video Editor add a watermark?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "No, Botock's Video Studio processes your media locally using WebAssembly and Web Codecs in your browser. Your files never leave your computer.",
+              text: "No. Botock exports clean 1080p and 4K MP4 videos with zero watermarks for free.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Are my videos uploaded to a server?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "No. Timeline editing, trimming, and rendering happen locally inside your browser using hardware-accelerated WebAssembly, keeping your media 100% private and ultra-fast.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Can I edit vertical videos for TikTok and YouTube Shorts?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "Yes. Botock supports 9:16 vertical (Shorts/TikTok/Reels), 16:9 landscape (YouTube), and 1:1 square canvas formats with one click.",
             },
           },
         ],
@@ -102,75 +160,60 @@ export default function VideoEditorPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      
+
       {/* Editor Container - Takes exactly full viewport height */}
       <div className="w-full h-full flex-1 overflow-hidden">
         <ToolErrorBoundary toolName="Video Editor">
-          <Suspense fallback={<div className="flex h-full items-center justify-center text-slate-500">Loading Video Editor...</div>}>
+          <Suspense
+            fallback={
+              <div className="flex h-full items-center justify-center text-slate-500">
+                Loading Video Editor...
+              </div>
+            }
+          >
             <VideoEditorComponent />
           </Suspense>
         </ToolErrorBoundary>
       </div>
-    
+
       {/* --- Enterprise SEO Content (Crawlable by search engines without disrupting full-screen studio) --- */}
       <div className="sr-only">
         <div className="space-y-12">
           <div className="space-y-4">
-            <h2 className="text-2xl sm:text-3xl font-black text-white">
-              The Best Free Video Editor Online
-            </h2>
-            <p className="text-sm sm:text-base text-slate-400 leading-relaxed">
-              Experience the fastest and most secure way to edit videos. Botock AI provides unlimited access with absolutely no charges, no hidden fees, and no sign-up required. Your privacy is our priority—all processing happens directly in your browser, ensuring your files are never uploaded to any remote servers. 
+            <h2>The Best Free Online Video Editor — Fast, Private & No Watermark</h2>
+            <p>
+              Botock brings desktop-class non-linear video editing (NLE) directly to your browser.
+              Powered by multi-threaded WebAssembly and hardware-accelerated canvas rendering, you can
+              cut, split, reframe for YouTube Shorts or TikTok, and export MP4 files without waiting
+              for slow cloud uploads.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-5 rounded-2xl bg-[#141419] border border-white/[0.05]">
-              <h3 className="text-lg font-bold text-white mb-2">100% Free of Cost</h3>
-              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Enjoy unlimited usage without ever pulling out your credit card. We believe premium tools should be accessible to everyone, completely free of charge.
+            <div>
+              <h3>1. Zero-Upload Speed</h3>
+              <p>
+                Your 4K footage opens instantly from local disk. No waiting for gigabytes of video to
+                upload to a remote server.
               </p>
             </div>
-            <div className="p-5 rounded-2xl bg-[#141419] border border-white/[0.05]">
-              <h3 className="text-lg font-bold text-white mb-2">No Sign-Up Required</h3>
-              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Skip the tedious registration process. You don't need to create an account or provide your email address to access our full suite of features.
+            <div>
+              <h3>2. Magnetic Multi-Track Timeline</h3>
+              <p>
+                Frame-accurate splitting (Shortcut: S), ripple deletion, and multi-step undo/redo history
+                built for fast creator workflows.
               </p>
             </div>
-            <div className="p-5 rounded-2xl bg-[#141419] border border-white/[0.05]">
-              <h3 className="text-lg font-bold text-white mb-2">Absolute Privacy</h3>
-              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                We use cutting-edge client-side rendering technology. This means your files stay on your device and are processed locally, guaranteeing zero data retention.
+            <div>
+              <h3>3. Multi-Aspect Export</h3>
+              <p>
+                Switch between 16:9 (YouTube), 9:16 (Reels/TikTok), and 1:1 (Square) with one click
+                before exporting.
               </p>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <h2 className="text-xl sm:text-2xl font-black text-white">
-              Frequently Asked Questions
-            </h2>
-            <div className="space-y-4">
-              <details className="group border border-white/[0.05] rounded-xl bg-[#141419] [&_summary::-webkit-details-marker]:hidden">
-                <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-4 text-white font-semibold">
-                  Is this Video Editor really free to use?
-                </summary>
-                <p className="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
-                  Yes! Our Video Editor is completely free of cost. There are no hidden charges, no trial periods, and no watermarks placed on your final output.
-                </p>
-              </details>
-              <details className="group border border-white/[0.05] rounded-xl bg-[#141419] [&_summary::-webkit-details-marker]:hidden">
-                <summary className="flex cursor-pointer items-center justify-between gap-1.5 p-4 text-white font-semibold">
-                  Do I need to create an account?
-                </summary>
-                <p className="px-4 pb-4 text-sm text-slate-400 leading-relaxed">
-                  No sign-up is required. You can start editing your videos immediately without logging in or providing any personal information.
-                </p>
-              </details>
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 }

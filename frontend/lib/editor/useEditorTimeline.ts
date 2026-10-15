@@ -297,6 +297,31 @@ export function useEditorTimeline() {
     });
   }, [pushHistory, selectedClipId]);
 
+  const rippleDeleteClip = useCallback((clipId: string) => {
+    setProject(prev => {
+      pushHistory(prev);
+      const next = cloneProject(prev);
+      for (const track of next.tracks) {
+        const target = track.clips.find(c => c.id === clipId);
+        if (target) {
+          const removedStart = target.timelineStart;
+          const removedDuration = target.duration;
+          track.clips = track.clips
+            .filter(c => c.id !== clipId)
+            .map(c => {
+              if (c.timelineStart > removedStart) {
+                return { ...c, timelineStart: Math.max(0, c.timelineStart - removedDuration) };
+              }
+              return c;
+            });
+          break;
+        }
+      }
+      if (selectedClipId === clipId) setSelectedClipId(null);
+      return next;
+    });
+  }, [pushHistory, selectedClipId]);
+
   const splitAt = useCallback((virtualTime: number, targetClipId?: string | null) => {
     setProject(prev => {
       let madeChanges = false;
@@ -583,6 +608,7 @@ export function useEditorTimeline() {
     addOverlayClip,
     splitAt,
     deleteClip,
+    rippleDeleteClip,
     duplicateClip,
     updateClipLive,
     updateClipEdgeLive,

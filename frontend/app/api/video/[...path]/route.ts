@@ -14,23 +14,25 @@ const ALLOWED_VIDEO_ACTIONS = new Set([
   "auto-reframe",
   "reaction-combine",
   "rotate",
+  "upload",
+  "compress",
+  "convert",
+  "trim",
+  "subtitles",
 ]);
 
 const MAX_VIDEO_PAYLOAD_BYTES = 100 * 1024 * 1024; // 100MB limit
 
 function isAllowedVideoSubpath(pathSegments: string[] | string): boolean {
   const segments = Array.isArray(pathSegments) ? pathSegments : [pathSegments];
-  if (!segments.length || segments.some((s) => !s || s.includes("..") || s.includes("\\"))) {
-    return false;
-  }
-  const [action, id, ...rest] = segments;
-  if (rest.length > 0) return false;
-  if (!ALLOWED_VIDEO_ACTIONS.has(action)) return false;
+  if (!segments.length || segments.length > 3) return false;
+  
+  // Prevent path traversal, null bytes, or dangerous chars
+  const isSafeChars = segments.every((seg) => /^[a-zA-Z0-9_\-\.]+$/.test(seg) && !seg.includes("..") && !seg.includes("\\"));
+  if (!isSafeChars) return false;
 
-  if (action === "status" || action === "download") {
-    return Boolean(id && /^[a-zA-Z0-9_\-\.]+$/.test(id));
-  }
-  return !id;
+  const root = segments[0];
+  return ALLOWED_VIDEO_ACTIONS.has(root);
 }
 
 export async function POST(
