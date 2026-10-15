@@ -167,8 +167,35 @@ export default function EditorTimeline({
     originalStart: number;
     duration: number;
   } | null>(null);
+  const [snapLineTime, setSnapLineTime] = useState<number | null>(null);
   const clipHasMovedRef = useRef(false);
   const lastTapRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
+
+  const getSnapTime = (targetTime: number, excludeClipId?: string, threshold = 0.15): { snappedTime: number; snapPoint: number | null } => {
+    const candidates: number[] = [0, currentTime];
+    project.tracks.forEach((t) => {
+      t.clips.forEach((c) => {
+        if (c.id === excludeClipId) return;
+        candidates.push(c.timelineStart);
+        candidates.push(c.timelineStart + c.duration);
+      });
+    });
+
+    let bestDiff = threshold;
+    let bestSnap: number | null = null;
+    for (const pt of candidates) {
+      const diff = Math.abs(targetTime - pt);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestSnap = pt;
+      }
+    }
+
+    if (bestSnap !== null) {
+      return { snappedTime: bestSnap, snapPoint: bestSnap };
+    }
+    return { snappedTime: targetTime, snapPoint: null };
+  };
 
   const handleTrackPointerDown = (e: React.PointerEvent) => {
     if (draggingClip || draggingEdge || draggingPlayhead) return;
@@ -245,14 +272,33 @@ export default function EditorTimeline({
     };
   }, [setZoom, zoom]);
 
-  // Edge trimming drag
+  // Edge trimming drag with universal magnetic snapping
   useEffect(() => {
     if (!draggingEdge) return;
     const move = (e: PointerEvent) => {
       if (!trackAreaRef.current) return;
       const rect = trackAreaRef.current.getBoundingClientRect();
       const deltaX = e.clientX - draggingEdge.startX;
-      const virtualDeltaT = (deltaX / rect.width) * totalDuration;
+      let virtualDeltaT = (deltaX / rect.width) * totalDuration;
+
+      // Magnetic snapping during edge trimming
+      let activeSnapLine: number | null = null;
+      if (draggingEdge.side === "start") {
+        const proposedStart = Math.max(0, draggingEdge.initialClip.timelineStart + virtualDeltaT);
+        const snap = getSnapTime(proposedStart, draggingEdge.id, 0.15);
+        if (snap.snapPoint !== null) {
+          virtualDeltaT = snap.snappedTime - draggingEdge.initialClip.timelineStart;
+          activeSnapLine = snap.snapPoint;
+        }
+      } else {
+        const proposedEnd = Math.max(0, draggingEdge.initialClip.timelineStart + draggingEdge.initialClip.duration + virtualDeltaT);
+        const snap = getSnapTime(proposedEnd, draggingEdge.id, 0.15);
+        if (snap.snapPoint !== null) {
+          virtualDeltaT = snap.snappedTime - (draggingEdge.initialClip.timelineStart + draggingEdge.initialClip.duration);
+          activeSnapLine = snap.snapPoint;
+        }
+      }
+      setSnapLineTime(activeSnapLine);
 
       onEdgeLive(
         draggingEdge.id,
@@ -264,6 +310,7 @@ export default function EditorTimeline({
     };
 
     const up = () => {
+      setSnapLineTime(null);
       setDraggingEdge(null);
       onEdgeCommit();
     };
@@ -274,7 +321,7 @@ export default function EditorTimeline({
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
     };
-  }, [draggingEdge, totalDuration, onEdgeLive, onEdgeCommit]);
+  }, [draggingEdge, totalDuration, onEdgeLive, onEdgeCommit, currentTime, project.tracks]);
 
   // Playhead dragging
   useEffect(() => {
@@ -296,7 +343,7 @@ export default function EditorTimeline({
     };
   }, [draggingPlayhead, totalDuration, onSeek]);
 
-  // Clip position moving drag with magnetic snapping
+  // Clip position moving drag with universal magnetic snapping across tracks
   useEffect(() => {
     if (!draggingClip) return;
     const move = (e: PointerEvent) => {
@@ -316,34 +363,26 @@ export default function EditorTimeline({
       const deltaT = (deltaX / rect.width) * totalDuration;
       let newStart = Math.max(0, draggingClip.originalStart + deltaT);
 
-      // Magnetic snapping
-      if (newStart < 0.15) {
-        newStart = 0;
-      } else if (Math.abs(newStart - currentTime) < 0.15) {
-        newStart = currentTime;
-      }
-
-      // Snap to adjacent clips in the same track
-      const track = project.tracks.find((t) => t.clips.some((c) => c.id === draggingClip.id));
-      if (track) {
-        for (const other of track.clips) {
-          if (other.id === draggingClip.id) continue;
-          const otherEnd = other.timelineStart + other.duration;
-          if (Math.abs(newStart - otherEnd) < 0.2) {
-            newStart = otherEnd;
-            break;
-          }
-          if (Math.abs(newStart + draggingClip.duration - other.timelineStart) < 0.2) {
-            newStart = Math.max(0, other.timelineStart - draggingClip.duration);
-            break;
-          }
+      // Universal magnetic snapping across all clips on all tracks
+      let activeSnapLine: number | null = null;
+      const leftSnap = getSnapTime(newStart, draggingClip.id, 0.15);
+      if (leftSnap.snapPoint !== null) {
+        newStart = leftSnap.snappedTime;
+        activeSnapLine = leftSnap.snapPoint;
+      } else {
+        const rightSnap = getSnapTime(newStart + draggingClip.duration, draggingClip.id, 0.15);
+        if (rightSnap.snapPoint !== null) {
+          newStart = Math.max(0, rightSnap.snappedTime - draggingClip.duration);
+          activeSnapLine = rightSnap.snapPoint;
         }
       }
 
+      setSnapLineTime(activeSnapLine);
       onMoveClipLive?.(draggingClip.id, newStart);
     };
 
     const up = () => {
+      setSnapLineTime(null);
       if (clipHasMovedRef.current) {
         onMoveClipCommit?.();
       }
@@ -805,9 +844,21 @@ export default function EditorTimeline({
               );
             })}
 
-            {/* ─── PLAYHEAD (SUI) ─── */}
+            {/* ─── PLAYHEAD (SUI) & MAGNETIC SNAP GUIDELINE ─── */}
             {/* Strictly positioned 0% to 100% of this track area. NEVER collides with left track labels! */}
             <div className="absolute inset-y-0 left-0 right-0 pointer-events-none z-30">
+              {/* Magnetic Snap Guideline */}
+              {snapLineTime !== null && totalDuration > 0 && (
+                <div
+                  className="absolute top-0 bottom-0 w-0.5 bg-cyan-400 z-30 pointer-events-none shadow-[0_0_8px_rgba(34,211,238,0.9)]"
+                  style={{ left: `${(snapLineTime / totalDuration) * 100}%` }}
+                >
+                  <div className="absolute top-0 -translate-x-1/2 px-1 py-0.5 rounded bg-cyan-500 text-black font-mono text-[8px] font-bold shadow whitespace-nowrap">
+                    {fmt(snapLineTime)}
+                  </div>
+                </div>
+              )}
+
               {totalDuration > 0 && (
                 <div
                   id="editor-playhead"

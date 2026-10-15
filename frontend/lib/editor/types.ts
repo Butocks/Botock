@@ -384,6 +384,10 @@ export function computeAnimationLoopMatrix(
 export type TransitionType = 
   | "none" 
   | "fade" 
+  | "crossfade"
+  | "flash-white"
+  | "flash-black"
+  | "glitch-cut"
   | "dip-black" 
   | "dip-white" 
   | "slide-left" 
@@ -521,12 +525,15 @@ export interface TimelineTrack {
   hidden: boolean;
 }
 
+export type CanvasBackgroundMode = "black" | "blur-fill" | "color";
+
 export interface EditorProject {
   id: string;
   width: number;
   height: number;
   fps: number;
   backgroundColor?: string;
+  backgroundMode?: CanvasBackgroundMode;
   tracks: TimelineTrack[];
   duration: number; // project total duration
 }
@@ -587,6 +594,7 @@ export function createProject(width = 1280, height = 720, fps = 30): EditorProje
     height,
     fps,
     backgroundColor: "#000000",
+    backgroundMode: "blur-fill",
     tracks: [
       createTrack("effect", "FX"),
       createTrack("video", "V1")

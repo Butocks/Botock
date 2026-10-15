@@ -189,6 +189,11 @@ export default function VideoEditorComponent() {
   const timeRef = useRef(currentTime);
   const [isPlaying, setIsPlaying] = useState(false);
   useEffect(() => { timeRef.current = currentTime; }, [currentTime]);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).__isEditorPlaying = isPlaying;
+    }
+  }, [isPlaying]);
 
   const [isMobile, setIsMobile] = useState(false);
   const [openTool, setOpenTool] = useState<ToolDropdown>(null);
@@ -762,10 +767,7 @@ export default function VideoEditorComponent() {
         (clipAtPlayhead.type === "video" || clipAtPlayhead.type === "image" || clipAtPlayhead.type === "text")
       ) {
         timeline.setSelectedClipId(clipAtPlayhead.id);
-        const isOverlayOrText = clipAtPlayhead.type === "text" || clipAtPlayhead.trackId !== v1Track?.id;
-        if (isOverlayOrText) {
-          setIsTransformActive(true);
-        }
+        setIsTransformActive(true);
         return;
       }
     }
@@ -1286,9 +1288,18 @@ export default function VideoEditorComponent() {
                       mediaItems={mediaBin.items}
                       currentTime={currentTime}
                       isPlaying={isPlaying}
+                      onSelectClip={(id) => {
+                        if (id) {
+                          handleSelectClip(id);
+                          setIsTransformActive(true);
+                        } else {
+                          timeline.setSelectedClipId(null);
+                          setIsTransformActive(false);
+                        }
+                      }}
                     />
                     {selectedClip &&
-                      (isTransformActive || selectedClip.type === "text" || selectedClip.trackId !== v1Track?.id) &&
+                      (isTransformActive || selectedClip.type === "text") &&
                       (selectedClip.type === "video" || selectedClip.type === "image" || selectedClip.type === "text") && (
                         <TransformOverlay
                           clip={selectedClip}
@@ -1374,6 +1385,8 @@ export default function VideoEditorComponent() {
                 {selectedClip ? (
                   <TransformInspector
                     clip={selectedClip}
+                    project={timeline.project}
+                    onUpdateProject={(patch) => timeline.updateProject(patch)}
                     onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
                     onBeginLive={timeline.beginLiveUpdate}
                     onCommitLive={timeline.commitLiveUpdate}
@@ -1389,14 +1402,86 @@ export default function VideoEditorComponent() {
                     onPreview={handlePreviewClipRange}
                   />
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-gray-500">
-                    <div className="w-12 h-12 rounded-full bg-[#161622] flex items-center justify-center mb-3">
-                      <Scissors className="w-5 h-5 text-gray-600" />
+                  <div className="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto">
+                    <div className="border-b border-[#242430] pb-3">
+                      <h4 className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-1">Canvas Settings</h4>
+                      <p className="text-[10px] text-gray-500">Configure canvas aspect ratio and background fill mode.</p>
                     </div>
-                    <p className="text-xs font-semibold text-gray-400">No clip selected</p>
-                    <p className="text-[10px] text-gray-600 mt-1 leading-relaxed">
-                      Click any clip on the timeline below to edit transform, volume, effects, or filters.
-                    </p>
+
+                    <div className="space-y-2">
+                      <span className="text-[11px] font-semibold text-gray-300">Background Fill Mode</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => timeline.updateProject({ backgroundMode: "blur-fill" })}
+                          className={`p-2 rounded-lg border text-left transition-all ${
+                            timeline.project.backgroundMode === "blur-fill" || !timeline.project.backgroundMode
+                              ? "bg-[#ff6b4a]/20 border-[#ff6b4a] text-white shadow-sm"
+                              : "bg-[#14141e] border-[#2b2b38] text-gray-400 hover:text-white"
+                          }`}
+                        >
+                          <div className="text-xs font-bold">Blur Fill</div>
+                          <div className="text-[9px] text-gray-400 mt-0.5">TikTok / Reels style blurred video</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => timeline.updateProject({ backgroundMode: "black" })}
+                          className={`p-2 rounded-lg border text-left transition-all ${
+                            timeline.project.backgroundMode === "black"
+                              ? "bg-[#ff6b4a]/20 border-[#ff6b4a] text-white shadow-sm"
+                              : "bg-[#14141e] border-[#2b2b38] text-gray-400 hover:text-white"
+                          }`}
+                        >
+                          <div className="text-xs font-bold">Black Bars</div>
+                          <div className="text-[9px] text-gray-400 mt-0.5">Classic letterbox</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <span className="text-[11px] font-semibold text-gray-300">Canvas Aspect Ratio</span>
+                      <div className="grid grid-cols-3 gap-1.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => timeline.updateProject({ width: 1280, height: 720 })}
+                          className={`py-1.5 px-2 rounded border text-xs font-bold transition-all ${
+                            timeline.project.width === 1280 && timeline.project.height === 720
+                              ? "bg-white/10 border-white text-white"
+                              : "bg-[#14141e] border-[#2b2b38] text-gray-400 hover:text-white"
+                          }`}
+                        >
+                          16:9
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => timeline.updateProject({ width: 720, height: 1280 })}
+                          className={`py-1.5 px-2 rounded border text-xs font-bold transition-all ${
+                            timeline.project.width === 720 && timeline.project.height === 1280
+                              ? "bg-white/10 border-white text-white"
+                              : "bg-[#14141e] border-[#2b2b38] text-gray-400 hover:text-white"
+                          }`}
+                        >
+                          9:16
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => timeline.updateProject({ width: 1080, height: 1080 })}
+                          className={`py-1.5 px-2 rounded border text-xs font-bold transition-all ${
+                            timeline.project.width === 1080 && timeline.project.height === 1080
+                              ? "bg-white/10 border-white text-white"
+                              : "bg-[#14141e] border-[#2b2b38] text-gray-400 hover:text-white"
+                          }`}
+                        >
+                          1:1
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-[#242430] flex flex-col items-center justify-center text-center text-gray-500">
+                      <p className="text-[10px] text-gray-500 leading-relaxed">
+                        Tip: Click any video, image, or text on the canvas to move, rotate, resize, or animate.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1463,9 +1548,18 @@ export default function VideoEditorComponent() {
                     mediaItems={mediaBin.items}
                     currentTime={currentTime}
                     isPlaying={isPlaying}
+                    onSelectClip={(id) => {
+                      if (id) {
+                        handleSelectClip(id);
+                        setIsTransformActive(true);
+                      } else {
+                        timeline.setSelectedClipId(null);
+                        setIsTransformActive(false);
+                      }
+                    }}
                   />
                   {selectedClip &&
-                    (isTransformActive || selectedClip.type === "text" || selectedClip.trackId !== v1Track?.id) &&
+                    (isTransformActive || selectedClip.type === "text") &&
                     (selectedClip.type === "video" || selectedClip.type === "image" || selectedClip.type === "text") && (
                       <TransformOverlay
                         clip={selectedClip}
@@ -2016,6 +2110,8 @@ export default function VideoEditorComponent() {
                   {selectedClip ? (
                     <TransformInspector
                       clip={selectedClip}
+                      project={timeline.project}
+                      onUpdateProject={(patch) => timeline.updateProject(patch)}
                       onUpdateLive={(patch) => timeline.updateClipLive(selectedClip.id, patch)}
                       onBeginLive={timeline.beginLiveUpdate}
                       onCommitLive={timeline.commitLiveUpdate}

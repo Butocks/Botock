@@ -791,3 +791,305 @@ async def audio_enhance(file: UploadFile = File(...)):
                 except Exception: pass
         logger.exception("Audio enhancement failed: %s", str(e))
         raise HTTPException(status_code=500, detail="Audio enhancement failed.")
+
+
+@router.post("/video-to-mp3")
+async def convert_video_to_mp3(
+    file: UploadFile = File(...),
+    bitrate: str = Form("192k"),
+    channels: int = Form(2)
+):
+    """
+    High-Speed Server-Side Video to MP3 Audio Extractor.
+    Uses native FFmpeg to extract audio in milliseconds without client WASM overhead.
+    """
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    allowed_exts = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".flv", ".wmv", ".m4v"}
+    if ext not in allowed_exts and not (file.content_type and file.content_type.startswith("video/")):
+        raise HTTPException(status_code=400, detail="Uploaded file must be a valid video format.")
+
+    allowed_bitrates = {"320k", "192k", "128k", "vbr"}
+    if bitrate not in allowed_bitrates:
+        bitrate = "192k"
+
+    quality_args = ["-q:a", "2"] if bitrate == "vbr" else ["-b:a", bitrate]
+    channel_count = 1 if channels == 1 else 2
+
+    file_bytes = await read_bounded_file(file, max_size=250 * 1024 * 1024)
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Empty video file uploaded.")
+
+    in_path = None
+    out_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=ext if ext else ".mp4", delete=False) as in_f:
+            in_f.write(file_bytes)
+            in_path = in_f.name
+
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as out_f:
+            out_path = out_f.name
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", in_path,
+            "-vn",
+            "-c:a", "libmp3lame",
+            *quality_args,
+            "-ar", "44100",
+            "-ac", str(channel_count),
+            out_path
+        ]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        _, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            err_text = stderr.decode(errors="ignore")
+            if "does not contain any stream" in err_text or "matches no streams" in err_text or "no audio" in err_text.lower():
+                raise HTTPException(status_code=400, detail="This video does not contain an audio track to extract.")
+            logger.error("FFmpeg video-to-mp3 failed: %s", err_text)
+            raise HTTPException(status_code=500, detail="Audio extraction failed.")
+
+        out_filename = (file.filename or "extracted_audio").rsplit(".", 1)[0] + ".mp3"
+        return FileResponse(
+            out_path,
+            filename=out_filename,
+            media_type="audio/mpeg",
+            background=BackgroundTask(cleanup_files, in_path, out_path)
+        )
+    except HTTPException:
+        cleanup_files(in_path, out_path)
+        raise
+    except Exception as e:
+        cleanup_files(in_path, out_path)
+        logger.exception("Error extracting MP3 from video: %s", str(e))
+        raise HTTPException(status_code=500, detail="Internal server error during audio extraction.")
+
+
+@router.post("/video-to-gif")
+async def convert_video_to_gif(
+    file: UploadFile = File(...),
+    fps: str = Form("15"),
+    width: str = Form("480"),
+    start_time: float = Form(0.0),
+    end_time: float = Form(10.0)
+):
+    """
+    High-Speed Video to GIF Converter using server-side palettegen & paletteuse.
+    """
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    allowed_exts = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".flv", ".wmv", ".m4v"}
+    if ext not in allowed_exts and not (file.content_type and file.content_type.startswith("video/")):
+        raise HTTPException(status_code=400, detail="Uploaded file must be a valid video format.")
+
+    fps_val = int(fps) if fps in {"10", "15", "20", "24"} else 15
+    width_val = width if width in {"320", "480", "640", "-1"} else "480"
+    clip_duration = max(0.5, min(30.0, end_time - start_time))
+
+    scale_filter = "" if width_val == "-1" else f"scale={width_val}:-1:flags=lanczos,"
+    palette_filter = f"[0:v]fps={fps_val},{scale_filter}split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer"
+
+    file_bytes = await read_bounded_file(file, max_size=200 * 1024 * 1024)
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Empty video file uploaded.")
+
+    in_path = None
+    out_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=ext if ext else ".mp4", delete=False) as in_f:
+            in_f.write(file_bytes)
+            in_path = in_f.name
+
+        with tempfile.NamedTemporaryFile(suffix=".gif", delete=False) as out_f:
+            out_path = out_f.name
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-ss", str(max(0.0, start_time)),
+            "-t", str(clip_duration),
+            "-i", in_path,
+            "-filter_complex", palette_filter,
+            out_path
+        ]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        _, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            err_text = stderr.decode(errors="ignore")
+            logger.error("FFmpeg video-to-gif failed: %s", err_text)
+            raise HTTPException(status_code=500, detail="GIF conversion failed.")
+
+        out_filename = (file.filename or "animation").rsplit(".", 1)[0] + ".gif"
+        return FileResponse(
+            out_path,
+            filename=out_filename,
+            media_type="image/gif",
+            background=BackgroundTask(cleanup_files, in_path, out_path)
+        )
+    except HTTPException:
+        cleanup_files(in_path, out_path)
+        raise
+    except Exception as e:
+        cleanup_files(in_path, out_path)
+        logger.exception("Error converting video to GIF: %s", str(e))
+        raise HTTPException(status_code=500, detail="Internal server error during GIF conversion.")
+
+
+@router.post("/video-compress")
+async def convert_video_compress(
+    file: UploadFile = File(...),
+    crf: int = Form(28),
+    resolution: str = Form("original")
+):
+    """
+    High-Speed Video Compressor using server-side H.264 veryfast presets.
+    """
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    allowed_exts = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".flv", ".wmv", ".m4v"}
+    if ext not in allowed_exts and not (file.content_type and file.content_type.startswith("video/")):
+        raise HTTPException(status_code=400, detail="Uploaded file must be a valid video format.")
+
+    crf_val = max(18, min(42, crf))
+    scale_map = {
+        "1080p": "scale=-2:1080",
+        "720p": "scale=-2:720",
+        "480p": "scale=-2:480",
+    }
+    vf_arg = ["-vf", scale_map[resolution]] if resolution in scale_map else []
+
+    file_bytes = await read_bounded_file(file, max_size=250 * 1024 * 1024)
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Empty video file uploaded.")
+
+    in_path = None
+    out_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=ext if ext else ".mp4", delete=False) as in_f:
+            in_f.write(file_bytes)
+            in_path = in_f.name
+
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as out_f:
+            out_path = out_f.name
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", in_path,
+            *vf_arg,
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", str(crf_val),
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-movflags", "+faststart",
+            out_path
+        ]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        _, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            err_text = stderr.decode(errors="ignore")
+            logger.error("FFmpeg video-compress failed: %s", err_text)
+            raise HTTPException(status_code=500, detail="Video compression failed.")
+
+        out_filename = (file.filename or "compressed_video").rsplit(".", 1)[0] + "_compressed.mp4"
+        return FileResponse(
+            out_path,
+            filename=out_filename,
+            media_type="video/mp4",
+            background=BackgroundTask(cleanup_files, in_path, out_path)
+        )
+    except HTTPException:
+        cleanup_files(in_path, out_path)
+        raise
+    except Exception as e:
+        cleanup_files(in_path, out_path)
+        logger.exception("Error compressing video: %s", str(e))
+        raise HTTPException(status_code=500, detail="Internal server error during video compression.")
+
+
+@router.post("/video-convert")
+async def convert_video_format(
+    file: UploadFile = File(...),
+    target_format: str = Form("mp4")
+):
+    """
+    High-Speed Video Container & Codec Converter using native server-side FFmpeg.
+    """
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    allowed_exts = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".flv", ".wmv", ".m4v"}
+    if ext not in allowed_exts and not (file.content_type and file.content_type.startswith("video/")):
+        raise HTTPException(status_code=400, detail="Uploaded file must be a valid video format.")
+
+    format_settings = {
+        "mp4": {"vcodec": "libx264", "acodec": "aac", "media_type": "video/mp4", "suffix": ".mp4"},
+        "webm": {"vcodec": "libvpx", "acodec": "libvorbis", "media_type": "video/webm", "suffix": ".webm"},
+        "mkv": {"vcodec": "libx264", "acodec": "aac", "media_type": "video/x-matroska", "suffix": ".mkv"},
+        "mov": {"vcodec": "libx264", "acodec": "aac", "media_type": "video/quicktime", "suffix": ".mov"},
+        "avi": {"vcodec": "libx264", "acodec": "mp3", "media_type": "video/x-msvideo", "suffix": ".avi"},
+    }
+    cfg = format_settings.get(target_format.lower(), format_settings["mp4"])
+
+    file_bytes = await read_bounded_file(file, max_size=250 * 1024 * 1024)
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Empty video file uploaded.")
+
+    in_path = None
+    out_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=ext if ext else ".mp4", delete=False) as in_f:
+            in_f.write(file_bytes)
+            in_path = in_f.name
+
+        with tempfile.NamedTemporaryFile(suffix=cfg["suffix"], delete=False) as out_f:
+            out_path = out_f.name
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", in_path,
+            "-c:v", cfg["vcodec"],
+            "-preset", "veryfast",
+            "-c:a", cfg["acodec"],
+            out_path
+        ]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        _, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            err_text = stderr.decode(errors="ignore")
+            logger.error("FFmpeg video-convert failed: %s", err_text)
+            raise HTTPException(status_code=500, detail="Video conversion failed.")
+
+        out_filename = (file.filename or "converted_video").rsplit(".", 1)[0] + cfg["suffix"]
+        return FileResponse(
+            out_path,
+            filename=out_filename,
+            media_type=cfg["media_type"],
+            background=BackgroundTask(cleanup_files, in_path, out_path)
+        )
+    except HTTPException:
+        cleanup_files(in_path, out_path)
+        raise
+    except Exception as e:
+        cleanup_files(in_path, out_path)
+        logger.exception("Error converting video: %s", str(e))
+        raise HTTPException(status_code=500, detail="Internal server error during video format conversion.")
+

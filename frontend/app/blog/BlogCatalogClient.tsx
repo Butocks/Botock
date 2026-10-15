@@ -36,7 +36,6 @@ export interface BlogPost {
   categoryLabel: string;
   categoryColor: string;
   tags: string[];
-  views: number;
   readTime: string;
   date: string;
   timestamp: number;
@@ -54,7 +53,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "Creator Guides",
     categoryColor: "bg-pink-500/20 text-pink-600 dark:text-pink-300 border-pink-500/30",
     tags: ["VideoEditor", "TimelineFX", "MotionAnimation", "ContinuousZoom", "WebAssembly"],
-    views: 34200,
     readTime: "15 min read",
     date: "October 11, 2026",
     timestamp: 1791676900000,
@@ -68,7 +66,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "AI & Tech",
     categoryColor: "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/30",
     tags: ["Photography", "ECommerce", "SuperResolution", "BatchProcessing", "AI"],
-    views: 18450,
     readTime: "13 min read",
     date: "October 11, 2026",
     timestamp: 1791676800000,
@@ -82,7 +79,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "Creator Guides",
     categoryColor: "bg-sky-500/20 text-sky-600 dark:text-sky-300 border-sky-500/30",
     tags: ["VideoProduction", "TikTokReels", "Shorts", "AutoReframe", "ReactionStudio"],
-    views: 29800,
     readTime: "14 min read",
     date: "October 11, 2026",
     timestamp: 1791676800000,
@@ -96,7 +92,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "AI & Tech",
     categoryColor: "bg-violet-500/20 text-violet-600 dark:text-violet-300 border-violet-500/30",
     tags: ["AudioTech", "VoiceSynthesis", "Podcasting", "Subtitles", "NoiseRemoval"],
-    views: 21300,
     readTime: "11 min read",
     date: "October 11, 2026",
     timestamp: 1791676800000,
@@ -110,7 +105,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "Productivity & Workflows",
     categoryColor: "bg-rose-500/20 text-rose-600 dark:text-rose-300 border-rose-500/30",
     tags: ["DocumentIntelligence", "PDF", "AcroForms", "3DFlipbook", "Automation"],
-    views: 16900,
     readTime: "12 min read",
     date: "October 11, 2026",
     timestamp: 1791676800000,
@@ -124,7 +118,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "Showbiz & Digital Media",
     categoryColor: "bg-pink-500/20 text-pink-600 dark:text-pink-300 border-pink-500/30",
     tags: ["Showbiz", "ViralTrends", "ReactionVideos", "PopCulture", "Streaming"],
-    views: 34200,
     readTime: "8 min read",
     date: "October 10, 2026",
     timestamp: 1791590400000,

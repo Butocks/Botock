@@ -143,21 +143,34 @@ export function useWaveforms(mediaItems: MediaBinItem[]) {
       }
     };
 
-    mediaItems.forEach((item) => {
-      const isImage =
-        item.file?.type?.startsWith("image/") ||
-        /\.(jpe?g|png|gif|webp|svg|bmp|ico|avif)$/i.test(item.name || "") ||
-        /\.(jpe?g|png|gif|webp|svg|bmp|ico|avif)$/i.test(item.url || "");
+    const processQueue = async () => {
+      for (const item of mediaItems) {
+        if (!active) break;
 
-      if (isImage) {
-        waveformsCache[item.id] = [];
-        return;
-      }
+        const isImage =
+          item.file?.type?.startsWith("image/") ||
+          /\.(jpe?g|png|gif|webp|svg|bmp|ico|avif)$/i.test(item.name || "") ||
+          /\.(jpe?g|png|gif|webp|svg|bmp|ico|avif)$/i.test(item.url || "");
 
-      if (!waveformsBySource[item.id] && waveformsCache[item.id] === undefined) {
-        generateWaveform(item);
+        if (isImage) {
+          waveformsCache[item.id] = [];
+          continue;
+        }
+
+        if (!waveformsBySource[item.id] && waveformsCache[item.id] === undefined) {
+          // Wait if editor is currently playing so canvas render gets full GPU/CPU priority
+          while (typeof window !== "undefined" && (window as any).__isEditorPlaying && active) {
+            await new Promise((r) => setTimeout(r, 120));
+          }
+          if (!active) break;
+          await generateWaveform(item);
+          // Yield to event loop between audio decodes
+          await new Promise((r) => setTimeout(r, 60));
+        }
       }
-    });
+    };
+
+    processQueue();
 
     return () => {
       active = false;

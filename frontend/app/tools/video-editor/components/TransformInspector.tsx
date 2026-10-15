@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TimelineClip, TransitionType, MotionPath, MotionDirection, AnimationPreset, AnimationOutPreset, AnimationLoopPreset } from "@/lib/editor/types";
+import { TimelineClip, EditorProject, TransitionType, MotionPath, MotionDirection, AnimationPreset, AnimationOutPreset, AnimationLoopPreset } from "@/lib/editor/types";
 import {
   Scissors, Volume2, Type, Image as ImageIcon, Sliders, Play, Settings, Sparkles,
   Layers, Move, Wand2, Trash2, Zap, ArrowRight, Info, Check, Maximize2, Repeat,
@@ -10,6 +10,8 @@ type InspectorTab = "Basic" | "Motion" | "Transitions" | "Effects" | "Audio" | "
 
 interface Props {
   clip: TimelineClip;
+  project?: EditorProject;
+  onUpdateProject?: (patch: Partial<EditorProject>) => void;
   onUpdateLive: (patch: Partial<TimelineClip>) => void;
   onBeginLive: () => void;
   onCommitLive: () => void;
@@ -23,6 +25,8 @@ interface Props {
 
 export default function TransformInspector({
   clip,
+  project,
+  onUpdateProject,
   onUpdateLive,
   onBeginLive,
   onCommitLive,
@@ -181,6 +185,41 @@ export default function TransformInspector({
           className="w-full h-1 bg-[#2b2b36] rounded-lg appearance-none cursor-pointer accent-[#ff6b4a]"
         />
       </div>
+
+      {onUpdateProject && (
+        <div className="pt-3 border-t border-[#2b2b36] space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Canvas Fill Mode</span>
+            <span className="text-[10px] text-cyan-400 font-semibold">{project?.backgroundMode === "blur-fill" || !project?.backgroundMode ? "Blur Fill" : "Black Bars"}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => onUpdateProject({ backgroundMode: "blur-fill" })}
+              className={`p-2 rounded-lg border text-left transition-all ${
+                project?.backgroundMode === "blur-fill" || !project?.backgroundMode
+                  ? "bg-[#ff6b4a]/20 border-[#ff6b4a] text-white shadow-sm"
+                  : "bg-[#0a0a0c] border-[#2b2b36] text-gray-400 hover:text-white"
+              }`}
+            >
+              <div className="text-xs font-bold">Blur Fill</div>
+              <div className="text-[9px] text-gray-400 mt-0.5">TikTok / Reels style</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onUpdateProject({ backgroundMode: "black" })}
+              className={`p-2 rounded-lg border text-left transition-all ${
+                project?.backgroundMode === "black"
+                  ? "bg-[#ff6b4a]/20 border-[#ff6b4a] text-white shadow-sm"
+                  : "bg-[#0a0a0c] border-[#2b2b36] text-gray-400 hover:text-white"
+              }`}
+            >
+              <div className="text-xs font-bold">Black Bars</div>
+              <div className="text-[9px] text-gray-400 mt-0.5">Classic letterbox</div>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 

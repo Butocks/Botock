@@ -19,6 +19,7 @@ const ALLOWED_VIDEO_ACTIONS = new Set([
   "convert",
   "trim",
   "subtitles",
+  "fast-render",
 ]);
 
 const MAX_VIDEO_PAYLOAD_BYTES = 100 * 1024 * 1024; // 100MB limit

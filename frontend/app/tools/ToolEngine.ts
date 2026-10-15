@@ -502,8 +502,8 @@ ToolRegistry.registerTool({
   category: "video",
   seoTitle: "Convert Video to MP3 Online Free - Audio Extractor - Botock",
   seoDescription: "Extract high-quality MP3 audio from any video (MP4, WebM, MOV, MKV) directly in your browser. 100% private, client-side WebAssembly audio extractor with zero server uploads.",
-  endpoint: "/tools/video-to-mp3",
-  isClientSideOnly: true,
+  endpoint: "/api/convert/video-to-mp3",
+  isClientSideOnly: false,
   parameters: [
     {
       name: "video",
@@ -547,8 +547,8 @@ ToolRegistry.registerTool({
   category: "video",
   seoTitle: "Compress Video Online Free - Reduce Video File Size - Botock",
   seoDescription: "Reduce MP4 and WebM video file sizes in your browser using client-side H.264 compression without server uploads. 100% private, adjust CRF and resolution with instant savings.",
-  endpoint: "/tools/video-compress",
-  isClientSideOnly: true,
+  endpoint: "/api/convert/video-compress",
+  isClientSideOnly: false,
   parameters: [
     {
       name: "video",
@@ -824,8 +824,8 @@ ToolRegistry.registerTool({
   category: "video",
   seoTitle: "Convert Video to GIF Online Free - Fast Animated GIF Maker - Botock",
   seoDescription: "Convert MP4, WebM, and MOV videos to smooth animated GIFs in your browser.",
-  endpoint: "/tools/video-to-gif",
-  isClientSideOnly: true,
+  endpoint: "/api/convert/video-to-gif",
+  isClientSideOnly: false,
   parameters: [
     {
       name: "file",
@@ -1479,8 +1479,8 @@ ToolRegistry.registerTool({
   category: "video",
   seoTitle: "Convert Video Format Online Free - Botock",
   seoDescription: "Convert video containers and formats directly in your browser with zero server uploads.",
-  endpoint: "/tools/video-convert",
-  isClientSideOnly: true,
+  endpoint: "/api/convert/video-convert",
+  isClientSideOnly: false,
   parameters: [
     { name: "file", type: "file", description: "Video file", required: true },
     { name: "targetExt", type: "string", description: "Target format (mp4, webm, mov, mkv, avi)", required: true }

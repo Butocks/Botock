@@ -4,6 +4,7 @@ import uuid
 import time
 import asyncio
 import logging
+from typing import Optional
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -891,3 +892,142 @@ async def rotate_video(
         if os.path.exists(in_f.name): os.remove(in_f.name)
         if os.path.exists(out_f.name): os.remove(out_f.name)
         raise HTTPException(status_code=500, detail="Failed to rotate video.")
+
+
+RENDER_SEMAPHORE = asyncio.Semaphore(4)
+
+@router.post("/fast-render")
+async def video_fast_render(
+    file: UploadFile = File(...),
+    start_time: float = Form(0.0),
+    duration: Optional[float] = Form(None),
+    speed: float = Form(1.0),
+    brightness: float = Form(0.0),
+    contrast: float = Form(1.0),
+    saturation: float = Form(1.0),
+    vignette: float = Form(0.0),
+    blur_fill: bool = Form(False),
+    target_width: int = Form(1280),
+    target_height: int = Form(720),
+):
+    """
+    High-throughput native FFmpeg fast rendering worker.
+    Uses concurrency semaphore to prevent server CPU exhaustion,
+    superfast preset, and chunked streaming for memory efficiency.
+    """
+    import tempfile
+    import os
+    import asyncio
+    from fastapi.responses import FileResponse
+    from starlette.background import BackgroundTask
+
+    async with RENDER_SEMAPHORE:
+        in_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+        out_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+        out_f.close()
+
+        try:
+            total_bytes = 0
+            while chunk := await file.read(1024 * 1024):
+                total_bytes += len(chunk)
+                if total_bytes > 300 * 1024 * 1024:
+                    raise HTTPException(status_code=413, detail="File too large for fast-render (max 300MB)")
+                in_f.write(chunk)
+            in_f.close()
+
+            vf_filters = []
+
+            # 1. Blur fill background or scaling
+            if blur_fill:
+                # Split input: background scaled to target and blurred, foreground scaled to fit inside target, overlaid
+                filter_complex = (
+                    f"[0:v]scale={target_width}:{target_height}:force_original_aspect_ratio=increase,"
+                    f"crop={target_width}:{target_height},boxblur=24:24[bg];"
+                    f"[0:v]scale={target_width}:{target_height}:force_original_aspect_ratio=decrease[fg];"
+                    f"[bg][fg]overlay=(W-w)/2:(H-h)/2[vbase]"
+                )
+            else:
+                filter_complex = None
+                if target_width > 0 and target_height > 0:
+                    vf_filters.append(f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2:black")
+
+            # 2. EQ filters (Brightness, Contrast, Saturation)
+            eq_parts = []
+            if abs(brightness) > 0.01:
+                eq_parts.append(f"brightness={brightness:.2f}")
+            if abs(contrast - 1.0) > 0.01:
+                eq_parts.append(f"contrast={contrast:.2f}")
+            if abs(saturation - 1.0) > 0.01:
+                eq_parts.append(f"saturation={saturation:.2f}")
+            if eq_parts:
+                vf_filters.append(f"eq={':'.join(eq_parts)}")
+
+            # 3. Vignette
+            if vignette > 0:
+                vf_filters.append(f"vignette=PI/{max(2.0, 10.0 - (vignette / 12.0)):.2f}")
+
+            # 4. Speed
+            if abs(speed - 1.0) > 0.02 and speed > 0.1:
+                vf_filters.append(f"setpts={1.0 / speed:.4f}*PTS")
+
+            cmd = ["ffmpeg", "-y"]
+
+            if start_time > 0:
+                cmd.extend(["-ss", f"{start_time:.3f}"])
+
+            cmd.extend(["-i", in_f.name])
+
+            if duration and duration > 0:
+                cmd.extend(["-t", f"{duration:.3f}"])
+
+            if filter_complex:
+                if vf_filters:
+                    filter_complex += f";[vbase]{','.join(vf_filters)}[vout]"
+                    cmd.extend(["-filter_complex", filter_complex, "-map", "[vout]", "-map", "0:a?"])
+                else:
+                    cmd.extend(["-filter_complex", filter_complex, "-map", "[vbase]", "-map", "0:a?"])
+            elif vf_filters:
+                cmd.extend(["-vf", ",".join(vf_filters)])
+
+            # Audio speed sync
+            if abs(speed - 1.0) > 0.02 and speed > 0.1:
+                cmd.extend(["-filter:a", f"atempo={speed:.2f}"])
+            else:
+                cmd.extend(["-c:a", "aac", "-b:a", "192k"])
+
+            cmd.extend([
+                "-c:v", "libx264",
+                "-preset", "superfast",
+                "-crf", "22",
+                "-threads", "0",
+                out_f.name
+            ])
+
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await proc.communicate()
+
+            if proc.returncode != 0:
+                logger.error("FFmpeg fast-render failed: %s", stderr.decode(errors="ignore"))
+                raise Exception("FFmpeg fast-render execution failed")
+
+            def cleanup():
+                if os.path.exists(in_f.name): os.remove(in_f.name)
+                if os.path.exists(out_f.name): os.remove(out_f.name)
+
+            return FileResponse(
+                out_f.name,
+                filename="fast_rendered_output.mp4",
+                media_type="video/mp4",
+                background=BackgroundTask(cleanup)
+            )
+        except Exception as e:
+            if os.path.exists(in_f.name): os.remove(in_f.name)
+            if os.path.exists(out_f.name): os.remove(out_f.name)
+            if isinstance(e, HTTPException):
+                raise e
+            logger.exception("Fast-render error: %s", str(e))
+            raise HTTPException(status_code=500, detail=f"Fast-render processing failed: {str(e)}")

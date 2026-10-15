@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { formatBytes, formatTime } from "@/lib/utils/formatters";
+import { getBackendUrl } from "@/utils/runtime-urls";
 import {
   Film,
   Minimize2,
@@ -38,8 +39,19 @@ export default function VideoCompressClient() {
   const [resultSize, setResultSize] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Server-side fast processing state
+  const [isServerProcessing, setIsServerProcessing] = useState<boolean>(false);
+  const [serverStatus, setServerStatus] = useState<string>("");
+  const [serverProgress, setServerProgress] = useState<number>(0);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const { run, deleteFile, cancel, isProcessing, progress, statusMessage, error } = useFFmpeg();
+  const { run, deleteFile, cancel, isProcessing: isWasmProcessing, progress: wasmProgress, statusMessage: wasmStatusMessage, error } = useFFmpeg();
+
+  const isProcessing = isServerProcessing || isWasmProcessing;
+  const statusMessage = isServerProcessing ? serverStatus : wasmStatusMessage;
+  const progress = isServerProcessing
+    ? { percent: serverProgress, ratio: serverProgress / 100 }
+    : wasmProgress;
 
   // Cleanup object URLs on unmount or file reset
   useEffect(() => {
@@ -119,6 +131,54 @@ export default function VideoCompressClient() {
 
     const clampedCrf = Math.min(51, Math.max(18, Math.round(crf)));
 
+    // ─── Fast Server Path ────────────────────────────────────────────────
+    setIsServerProcessing(true);
+    setServerStatus("Connecting to high-speed compression engine...");
+    setServerProgress(25);
+
+    try {
+      const backendUrl = await getBackendUrl();
+      const formData = new FormData();
+      formData.append("file", originalFile);
+      formData.append("crf", String(clampedCrf));
+      formData.append("resolution", resolution);
+
+      setServerStatus("Compressing video with high-speed encoder...");
+      setServerProgress(60);
+
+      const response = await fetch(`${backendUrl}/api/convert/video-compress`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        setServerProgress(95);
+        const outputBlob = await response.blob();
+        const url = URL.createObjectURL(outputBlob);
+        setResultUrl(url);
+        setResultSize(outputBlob.size);
+        setServerProgress(100);
+        setIsServerProcessing(false);
+        setServerStatus("");
+        return;
+      } else {
+        const errJson = await response.json().catch(() => null);
+        if (response.status === 400 && errJson?.detail) {
+          setErrorMsg(errJson.detail);
+          setIsServerProcessing(false);
+          setServerStatus("");
+          return;
+        }
+        console.warn("Server video compression returned error, falling back to browser WASM:", errJson);
+      }
+    } catch (err) {
+      console.warn("Backend compression unavailable, falling back to browser WASM:", err);
+    } finally {
+      setIsServerProcessing(false);
+      setServerStatus("");
+    }
+
+    // ─── In-Browser Fallback Path (WASM) ──────────────────────────────────
     let scaleFilter: string | null = null;
     if (resolution === "720p" && origHeight > 720) {
       scaleFilter = "scale=-2:720";
@@ -139,13 +199,11 @@ export default function VideoCompressClient() {
     const outputName = "output.mp4";
 
     try {
-      // ✅ FIXED: Single FFmpeg command with optional audio mapping (-map 0:a?)
-      // This handles both videos with AND without audio tracks in one pass.
       const args = [
         "-i",
         safeInputName,
         "-map", "0:v",
-        "-map", "0:a?",   // "?" = optional — silently skipped if no audio stream
+        "-map", "0:a?",
         "-c:v",
         "libx264",
         "-crf",

@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { formatBytes, formatTime } from "@/lib/utils/formatters";
+import { getBackendUrl } from "@/utils/runtime-urls";
 import {
   Film,
   Download,
@@ -35,8 +36,17 @@ export default function VideoToGifClient() {
   const [resultSize, setResultSize] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Server-side fast processing state
+  const [isServerProcessing, setIsServerProcessing] = useState<boolean>(false);
+  const [serverProgress, setServerProgress] = useState<number>(0);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const { run, deleteFile, cancel, isProcessing, progress } = useFFmpeg();
+  const { run, deleteFile, cancel, isProcessing: isWasmProcessing, progress: wasmProgress } = useFFmpeg();
+
+  const isProcessing = isServerProcessing || isWasmProcessing;
+  const progress = isServerProcessing
+    ? { percent: serverProgress, ratio: serverProgress / 100 }
+    : wasmProgress;
 
   useEffect(() => {
     return () => {
@@ -92,6 +102,51 @@ export default function VideoToGifClient() {
     setErrorMsg(null);
     setResultUrl(null);
 
+    // ─── Fast Server Path ────────────────────────────────────────────────
+    setIsServerProcessing(true);
+    setServerProgress(25);
+
+    try {
+      const backendUrl = await getBackendUrl();
+      const formData = new FormData();
+      formData.append("file", originalFile);
+      formData.append("fps", fps);
+      formData.append("width", width);
+      formData.append("start_time", String(startTime));
+      formData.append("end_time", String(endTime));
+
+      setServerProgress(55);
+
+      const response = await fetch(`${backendUrl}/api/convert/video-to-gif`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        setServerProgress(90);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        setResultUrl(url);
+        setResultSize(blob.size);
+        setServerProgress(100);
+        setIsServerProcessing(false);
+        return;
+      } else {
+        const errJson = await response.json().catch(() => null);
+        if (response.status === 400 && errJson?.detail) {
+          setErrorMsg(errJson.detail);
+          setIsServerProcessing(false);
+          return;
+        }
+        console.warn("Server GIF generation returned error, falling back to browser WASM:", errJson);
+      }
+    } catch (err) {
+      console.warn("Backend unavailable, falling back to browser WASM:", err);
+    } finally {
+      setIsServerProcessing(false);
+    }
+
+    // ─── In-Browser Fallback Path ─────────────────────────────────────────
     const scaleFilter = width === "-1" ? "" : `scale=${width}:-1:flags=lanczos,`;
     const filter = `[0:v]fps=${fps},${scaleFilter}split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer`;
 
@@ -112,7 +167,6 @@ export default function VideoToGifClient() {
       "0",
       "output.gif",
     ];
-
 
     if (!run) {
       setErrorMsg("FFmpeg engine is initializing. Please try again.");

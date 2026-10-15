@@ -73,14 +73,24 @@ export function useThumbnails() {
       const timeAt = (i: number) =>
         total === 1 ? 0 : (i / (total - 1)) * Math.max(0, duration - 0.01);
 
+      const waitIfPlaying = async () => {
+        while (typeof window !== "undefined" && (window as any).__isEditorPlaying && !generationAbortRef.current) {
+          await new Promise((r) => setTimeout(r, 120));
+        }
+      };
+
       // ── Phase 1: Generate initial batch and show them immediately ──
       const initialBatch = Math.min(INITIAL_BATCH, total);
       const initialResults: string[] = [];
 
       for (let i = 0; i < initialBatch; i++) {
         if (generationAbortRef.current) return initialResults;
+        await waitIfPlaying();
+        if (generationAbortRef.current) return initialResults;
         const frame = await captureFrame(timeAt(i));
         initialResults.push(frame);
+        // Yield to browser event loop so UI / playback never drops frames
+        await new Promise((r) => setTimeout(r, 30));
       }
 
       if (generationAbortRef.current) return initialResults;
@@ -91,6 +101,8 @@ export function useThumbnails() {
         const remaining = [...initialResults];
         for (let i = initialBatch; i < total; i++) {
           if (generationAbortRef.current) return remaining;
+          await waitIfPlaying();
+          if (generationAbortRef.current) return remaining;
           const frame = await captureFrame(timeAt(i));
           remaining.push(frame);
           if ((i - initialBatch + 1) % 4 === 0 || i === total - 1) {
@@ -98,6 +110,8 @@ export function useThumbnails() {
               setThumbnails([...remaining]);
             }
           }
+          // Yield to browser event loop
+          await new Promise((r) => setTimeout(r, 40));
         }
         return remaining;
       }

@@ -140,7 +140,6 @@ const FEATURED_GUIDE = {
   badgeColor: "bg-pink-500/10 dark:bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-500/20 dark:border-pink-500/30",
   readTime: "15 min read",
   date: "October 11, 2026",
-  views: "34.2k reads",
 };
 
 const CURATED_BLOGS = [

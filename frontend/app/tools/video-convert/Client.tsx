@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { formatBytes } from "@/lib/utils/formatters";
+import { getBackendUrl } from "@/utils/runtime-urls";
 import {
   FileVideo,
   Film,
@@ -35,7 +36,18 @@ export default function VideoConvertClient() {
   const [resultSize, setResultSize] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { run, cancel, isProcessing, progress, statusMessage, error } = useFFmpeg();
+  // Server-side fast processing state
+  const [isServerProcessing, setIsServerProcessing] = useState<boolean>(false);
+  const [serverStatus, setServerStatus] = useState<string>("");
+  const [serverProgress, setServerProgress] = useState<number>(0);
+
+  const { run, cancel, isProcessing: isWasmProcessing, progress: wasmProgress, statusMessage: wasmStatusMessage, error } = useFFmpeg();
+
+  const isProcessing = isServerProcessing || isWasmProcessing;
+  const statusMessage = isServerProcessing ? serverStatus : wasmStatusMessage;
+  const progress = isServerProcessing
+    ? { percent: serverProgress, ratio: serverProgress / 100 }
+    : wasmProgress;
 
   useEffect(() => {
     return () => {
@@ -64,6 +76,53 @@ export default function VideoConvertClient() {
       setResultUrl(null);
     }
 
+    // ─── Fast Server Path ────────────────────────────────────────────────
+    setIsServerProcessing(true);
+    setServerStatus("Connecting to high-speed transcoder...");
+    setServerProgress(25);
+
+    try {
+      const backendUrl = await getBackendUrl();
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("target_format", targetExt);
+
+      setServerStatus(`Converting video to ${targetExt.toUpperCase()}...`);
+      setServerProgress(60);
+
+      const response = await fetch(`${backendUrl}/api/convert/video-convert`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.ok) {
+        setServerProgress(95);
+        const outputBlob = await response.blob();
+        const url = URL.createObjectURL(outputBlob);
+        setResultUrl(url);
+        setResultSize(outputBlob.size);
+        setServerProgress(100);
+        setIsServerProcessing(false);
+        setServerStatus("");
+        return;
+      } else {
+        const errJson = await response.json().catch(() => null);
+        if (response.status === 400 && errJson?.detail) {
+          setErrorMsg(errJson.detail);
+          setIsServerProcessing(false);
+          setServerStatus("");
+          return;
+        }
+        console.warn("Server video converter returned error, falling back to browser WASM:", errJson);
+      }
+    } catch (err) {
+      console.warn("Backend converter unavailable, falling back to browser WASM:", err);
+    } finally {
+      setIsServerProcessing(false);
+      setServerStatus("");
+    }
+
+    // ─── In-Browser Fallback Path (WASM) ──────────────────────────────────
     try {
       const selectedOption = FORMAT_OPTIONS.find((f) => f.ext === targetExt) || FORMAT_OPTIONS[0];
       const outputName = `converted.${selectedOption.ext}`;

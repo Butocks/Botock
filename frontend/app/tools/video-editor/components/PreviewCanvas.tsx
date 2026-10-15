@@ -14,6 +14,7 @@ interface Props {
   currentTime: number;
   isPlaying: boolean;
   minWidth?: number;
+  onSelectClip?: (clipId: string | null) => void;
 }
 
 declare global {
@@ -28,12 +29,13 @@ if (typeof window !== "undefined" && !window.chromaCanvas) {
   window.chromaCtx = window.chromaCanvas.getContext("2d", { willReadFrequently: true }) || undefined;
 }
 
-export default function PreviewCanvas({ project, mediaItems, currentTime, isPlaying }: Props) {
+export default function PreviewCanvas({ project, mediaItems, currentTime, isPlaying, onSelectClip }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const poolRef = useRef<HTMLDivElement>(null);
   const mediaPool = useRef<Record<string, HTMLVideoElement | HTMLImageElement | HTMLAudioElement>>({});
   const [isBuffering, setIsBuffering] = useState(false);
   const lastBufferingRef = useRef(false);
+  const renderedBoxesRef = useRef<{ clipId: string; x: number; y: number; w: number; h: number; z: number }[]>([]);
 
   // 1. Maintain media pool per clip (Attached to DOM for hardware acceleration)
   useEffect(() => {
@@ -193,6 +195,8 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
       const activeClipIds = new Set<string>();
       let anyBuffering = false;
 
+      renderedBoxesRef.current = [];
+
       // Pass 1: Sync media pool elements and collect active clips
       project.tracks.forEach((track) => {
         if (track.hidden) return;
@@ -200,6 +204,17 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
         track.clips.forEach((clip) => {
           const isActiveClip = currT >= clip.timelineStart && currT < clip.timelineStart + clip.duration;
           const el = mediaPool.current[clip.id];
+
+          // 1.5s Cut Lookahead Pre-Warming: Pre-seek upcoming video clips in background before transition
+          if (playing && !isActiveClip && currT < clip.timelineStart && (clip.timelineStart - currT) <= 1.5) {
+            if (el && el instanceof HTMLVideoElement) {
+              if (!el.paused) el.pause();
+              const inPoint = clip.sourceStart || 0;
+              if (Math.abs(el.currentTime - inPoint) > 0.05 && !el.seeking) {
+                try { el.currentTime = inPoint; } catch (e) {}
+              }
+            }
+          }
 
           if (isActiveClip) {
             activeClipIds.add(clip.id);
@@ -254,7 +269,7 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
                   if (!el.seeking && Math.abs(el.currentTime - sourceTime) > 0.08) {
                     try { el.currentTime = sourceTime; } catch (e) {}
                   }
-                  el.playbackRate = clip.speed || 1;
+                  el.playbackRate = Math.max(0.25, Math.min(4, clip.speed || 1));
                   const playPromise = el.play();
                   if (playPromise !== undefined) {
                     playPromise.catch(() => {
@@ -265,18 +280,16 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
                   }
                 } else {
                   // Media is actively PLAYING forward!
-                  // CapCut / NLE architecture: Never seek on every frame! Seek only when drift exceeds 0.35s
+                  // Zero-Buffer Hardware Sync: Lock playbackRate strictly to clip.speed
+                  // Micro rate jitter (1.05/0.95) resets browser audio time-stretcher filter graphs causing audio pops & stutter.
+                  const targetSpeed = Math.max(0.25, Math.min(4, clip.speed || 1));
+                  if (el.playbackRate !== targetSpeed) {
+                    el.playbackRate = targetSpeed;
+                  }
                   const drift = el.currentTime - sourceTime;
-
-                  if (Math.abs(drift) > 0.35 && !el.seeking) {
+                  // Hard seek only if drift exceeds 0.45s and element is not already seeking
+                  if (Math.abs(drift) > 0.45 && !el.seeking) {
                     try { el.currentTime = sourceTime; } catch (e) {}
-                    el.playbackRate = clip.speed || 1;
-                  } else if (Math.abs(drift) > 0.04 && Math.abs(drift) <= 0.35) {
-                    // Soft sync: smoothly adjust playback speed without decoder reset
-                    const correction = drift < 0 ? 1.05 : 0.95;
-                    el.playbackRate = (clip.speed || 1) * correction;
-                  } else {
-                    el.playbackRate = clip.speed || 1;
                   }
                 }
               } else {
@@ -337,10 +350,35 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
       };
       activeVisualClips.sort((a, b) => getTrackZ(a.track.name) - getTrackZ(b.track.name));
 
+      // Render Blur Background Fill (TikTok / CapCut / Reels style) when backgroundMode === "blur-fill"
+      // Draws an ultra-fast blurred and darkened copy of the active video behind the main video
+      if (project.backgroundMode === "blur-fill" && activeVisualClips.length > 0) {
+        const baseItem = activeVisualClips[0];
+        const baseEl = baseItem?.el;
+        if (baseEl && !(baseEl instanceof HTMLAudioElement)) {
+          const bW = baseEl instanceof HTMLVideoElement ? baseEl.videoWidth : (baseEl instanceof HTMLImageElement ? (baseEl.naturalWidth || baseEl.width || 0) : 0);
+          const bH = baseEl instanceof HTMLVideoElement ? baseEl.videoHeight : (baseEl instanceof HTMLImageElement ? (baseEl.naturalHeight || baseEl.height || 0) : 0);
+          if (bW > 0 && bH > 0) {
+            ctx.save();
+            ctx.filter = "blur(24px) brightness(60%)";
+            const scaleCover = Math.max(canvas.width / bW, canvas.height / bH);
+            const coverW = bW * scaleCover;
+            const coverH = bH * scaleCover;
+            const coverX = (canvas.width - coverW) / 2;
+            const coverY = (canvas.height - coverH) / 2;
+            try {
+              ctx.drawImage(baseEl, coverX, coverY, coverW, coverH);
+            } catch (e) {}
+            ctx.filter = "none";
+            ctx.restore();
+          }
+        }
+      }
+
       let whiteFlashOpacity = 0;
       let drawSpeedLines = false;
 
-      activeVisualClips.forEach(({ clip, el }) => {
+      activeVisualClips.forEach(({ track, clip, el }) => {
         ctx.save();
         const elapsed = currT - clip.timelineStart;
         const t = clip.transform ? { ...clip.transform } : { x: 50, y: 50, width: 100, height: 100, rotation: 0, scaleX: 1, scaleY: 1, opacity: 100 };
@@ -663,21 +701,38 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           const finalW = baseW * (t.width / 100) * t.scaleX * crop.width;
           const finalH = baseH * (t.height / 100) * t.scaleY * crop.height;
 
+          // Record hit-test bounding box for direct canvas click-to-select
+          renderedBoxesRef.current.push({
+            clipId: clip.id,
+            x: pxX - finalW / 2,
+            y: pxY - finalH / 2,
+            w: finalW,
+            h: finalH,
+            z: getTrackZ(track.name),
+          });
+
           ctx.translate(pxX, pxY);
           ctx.rotate(((t.rotation + animRotation + motionRot) * Math.PI) / 180);
           ctx.scale(isMirrored ? -animScale : animScale, animScale);
           ctx.globalAlpha = Math.max(0, Math.min(1, t.opacity / 100));
 
-          // Apply Filters & Color Grading
-          const b = Math.round(100 + f.brightness * 100);
-          const c = Math.round(f.contrast * 100);
-          const s = Math.round(f.saturation * 100);
-          let filterStr = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
-          if (f.hueRotate && f.hueRotate !== 0) {
-            filterStr += ` hue-rotate(${Math.round(f.hueRotate)}deg)`;
+          // Apply Filters & Color Grading - Only when not default to avoid GPU context reset
+          const isFilterDefault = Math.abs(f.brightness) < 0.01 && 
+                                  Math.abs(f.contrast - 1) < 0.01 && 
+                                  Math.abs(f.saturation - 1) < 0.01 && 
+                                  (!f.hueRotate || Math.abs(f.hueRotate) < 0.5) && 
+                                  blurPx <= 0;
+          if (!isFilterDefault) {
+            const b = Math.round(100 + f.brightness * 100);
+            const c = Math.round(f.contrast * 100);
+            const s = Math.round(f.saturation * 100);
+            let filterStr = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+            if (f.hueRotate && f.hueRotate !== 0) {
+              filterStr += ` hue-rotate(${Math.round(f.hueRotate)}deg)`;
+            }
+            if (blurPx > 0) filterStr += ` blur(${blurPx}px)`;
+            ctx.filter = filterStr;
           }
-          if (blurPx > 0) filterStr += ` blur(${blurPx}px)`;
-          ctx.filter = filterStr;
 
           try {
             if (!(el instanceof HTMLAudioElement)) {
@@ -728,7 +783,9 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
           } catch (e) {
             // Ignore drawImage errors during rapid seek
           }
-          ctx.filter = "none";
+          if (!isFilterDefault) {
+            ctx.filter = "none";
+          }
 
           // Vignette effect overlay
           if (f.vignette && f.vignette > 0 && finalW > 0 && finalH > 0) {
@@ -906,22 +963,35 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
         const posX = ((t.x ?? 50) / 100) * canvas.width + motionX + moveAnimX;
         const posY = ((t.y ?? 80) / 100) * canvas.height + motionY + moveAnimY;
 
-        ctx.translate(posX, posY);
-        if (t.rotation || motionRot) ctx.rotate((((t.rotation || 0) + motionRot) * Math.PI) / 180);
-        ctx.scale((t.scaleX ?? 1) * animScale, (t.scaleY ?? 1) * animScale);
-        ctx.globalAlpha = Math.max(0, Math.min(1, (t.opacity ?? 100) / 100));
-
         let fontSize = clip.fontSizePercent || 48;
         if (fontSize <= 15) {
           fontSize = Math.round((fontSize / 100) * canvas.height);
         }
         fontSize = Math.max(18, fontSize);
 
+        let rawText = clip.text !== undefined && clip.text !== "" ? clip.text : "Subtitle";
+        const textLen = Math.max(4, rawText.length);
+        const estTextW = Math.max(120, textLen * fontSize * 0.65 + 40);
+        const estTextH = Math.max(48, fontSize * 1.5 + 20);
+
+        // Record hit-test bounding box for text
+        renderedBoxesRef.current.push({
+          clipId: clip.id,
+          x: posX - estTextW / 2,
+          y: posY - estTextH / 2,
+          w: estTextW,
+          h: estTextH,
+          z: 99, // Text is topmost
+        });
+
+        ctx.translate(posX, posY);
+        if (t.rotation || motionRot) ctx.rotate((((t.rotation || 0) + motionRot) * Math.PI) / 180);
+        ctx.scale((t.scaleX ?? 1) * animScale, (t.scaleY ?? 1) * animScale);
+        ctx.globalAlpha = Math.max(0, Math.min(1, (t.opacity ?? 100) / 100));
+
         ctx.font = `900 ${fontSize}px "Inter", "Segoe UI", system-ui, -apple-system, sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-
-        let rawText = clip.text !== undefined && clip.text !== "" ? clip.text : "Subtitle";
         
         // Character-by-character typewriter speed animation
         if (clip.textAnimation === "typewriter") {
@@ -974,6 +1044,34 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
     };
   }, [project]);
 
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current || !onSelectClip) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const clickX = ((e.clientX - rect.left) / rect.width) * canvasRef.current.width;
+    const clickY = ((e.clientY - rect.top) / rect.height) * canvasRef.current.height;
+
+    // Search rendered boxes in reverse z-order (topmost first)
+    const hits = renderedBoxesRef.current
+      .filter((box) => clickX >= box.x && clickX <= box.x + box.w && clickY >= box.y && clickY <= box.y + box.h)
+      .sort((a, b) => b.z - a.z);
+
+    if (hits.length > 0) {
+      onSelectClip(hits[0].clipId);
+    } else {
+      // If clicked empty area of canvas, find topmost active clip at playhead or deselect
+      const currT = currentTimeRef.current;
+      for (const track of [...project.tracks].reverse()) {
+        if (track.hidden) continue;
+        const c = track.clips.find((clip) => currT >= clip.timelineStart && currT < clip.timelineStart + clip.duration);
+        if (c && (c.type === "video" || c.type === "image" || c.type === "text")) {
+          onSelectClip(c.id);
+          return;
+        }
+      }
+      onSelectClip(null);
+    }
+  };
+
   return (
     <div className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden">
       {/* 
@@ -1000,7 +1098,8 @@ export default function PreviewCanvas({ project, mediaItems, currentTime, isPlay
         ref={canvasRef}
         width={project.width}
         height={project.height}
-        className="relative z-10 max-w-full max-h-full shadow-2xl ring-1 ring-white/10 bg-black"
+        onClick={handleCanvasClick}
+        className="relative z-10 max-w-full max-h-full shadow-2xl ring-1 ring-white/10 bg-black cursor-pointer"
         style={{
           aspectRatio: `${project.width} / ${project.height}`,
           objectFit: "contain"

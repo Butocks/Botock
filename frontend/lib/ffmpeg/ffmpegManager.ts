@@ -206,9 +206,9 @@ export class FastFFmpegManager {
         this._isLoaded = true;
         return ffmpegInstance;
       } catch (err) {
-        console.warn(`Primary WASM load failed for ${baseURL}, attempting fallback:`, err);
-        // Fallback to single-threaded if multi-threaded fails
-        const fallbackBaseURL = `https://unpkg.com/@ffmpeg/core@${this.CORE_VERSION}/dist/umd`;
+        console.warn(`Primary WASM load failed for ${baseURL}, attempting fallback to fast jsdelivr CDN:`, err);
+        // Fallback to fast jsdelivr CDN
+        const fallbackBaseURL = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${this.CORE_VERSION}/dist/umd`;
         const coreURL = await this.getCachedBlobUrl(`${fallbackBaseURL}/ffmpeg-core.js`, "text/javascript");
         const wasmURL = await this.getCachedBlobUrl(`${fallbackBaseURL}/ffmpeg-core.wasm`, "application/wasm");
         await ffmpegInstance.load({ coreURL, wasmURL });

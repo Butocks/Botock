@@ -27,33 +27,34 @@ export function ToolJsonLd({
   operatingSystem = "All",
   faqs,
   featureList,
-  aggregateRating = {
-    ratingValue: "4.9",
-    reviewCount: "1284",
-  },
+  aggregateRating,
 }: ToolJsonLdProps) {
   const fullUrl = url.startsWith("http") ? url : `https://botock.app${url}`;
 
-  const graph: any[] = [
-    {
-      "@type": "SoftwareApplication",
-      name: `${name} - Botock AI`,
-      url: fullUrl,
-      description,
-      applicationCategory,
-      operatingSystem,
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-      },
+  const softwareApp: Record<string, any> = {
+    "@type": "SoftwareApplication",
+    name: `${name} - Botock AI`,
+    url: fullUrl,
+    description,
+    applicationCategory,
+    operatingSystem,
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    ...(aggregateRating ? {
       aggregateRating: {
         "@type": "AggregateRating",
         ratingValue: aggregateRating.ratingValue,
         reviewCount: aggregateRating.reviewCount,
       },
-      ...(featureList?.length ? { featureList } : {}),
-    },
+    } : {}),
+    ...(featureList?.length ? { featureList } : {}),
+  };
+
+  const graph: any[] = [
+    softwareApp,
     {
       "@type": "BreadcrumbList",
       itemListElement: [

@@ -10,7 +10,8 @@ import {
   createTrack, 
   createClip,
   MediaBinItem,
-  Transform
+  Transform,
+  CanvasBackgroundMode
 } from "./types";
 
 const MIN_CLIP_DURATION = 0.05;
@@ -593,8 +594,29 @@ export function useEditorTimeline() {
     });
   }, [pushHistory]);
 
+  const setBackgroundMode = useCallback((mode: CanvasBackgroundMode) => {
+    setProject((prev) => {
+      pushHistory(prev);
+      const next = cloneProject(prev);
+      next.backgroundMode = mode;
+      return next;
+    });
+  }, [pushHistory]);
+
+  const updateProject = useCallback((patch: Partial<EditorProject>) => {
+    setProject((prev) => {
+      pushHistory(prev);
+      const next = cloneProject(prev);
+      Object.assign(next, patch);
+      return next;
+    });
+  }, [pushHistory]);
+
   return {
     project,
+    setProject,
+    updateProject,
+    setBackgroundMode,
     selectedClipId,
     setSelectedClipId,
     addTrack,
