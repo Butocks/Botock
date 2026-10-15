@@ -5,26 +5,50 @@ export type FFmpegProgressCallback = (event: { progress: number; time: number })
 export type FFmpegLogCallback = (event: { type: string; message: string }) => void;
 
 /**
- * Primary CDN URLs for single-threaded @ffmpeg/core v0.12.10
+ * High-performance WebAssembly FFmpeg Manager
+ * Features:
+ * - Persistent browser Cache Storage ('botock-wasm-cache-v1') caching
+ * - Idle-time pre-warming (0ms delay upon tool interaction)
+ * - Multi-thread Web Worker auto-detection (@ffmpeg/core-mt) when crossOriginIsolated
+ * - Stream-copy fast path (-c copy) for instantaneous video trimming
+ * - Complete backward compatibility with all Botock video and audio tools
  */
-const PRIMARY_CDN_BASE = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd";
-const FALLBACK_CDN_BASE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+export class FastFFmpegManager {
+  private static instance: FastFFmpegManager;
+  private ffmpeg: FFmpeg | null = null;
+  private loadPromise: Promise<FFmpeg> | null = null;
+  private _isLoaded = false;
 
-/**
- * Singleton WebAssembly manager for FFmpeg.
- * Provides thread-safe loading, execution, file system operations, and listener management.
- */
-export class FFmpegManager {
-  private static instance: FFmpeg | null = null;
-  private static loadPromise: Promise<FFmpeg> | null = null;
   private static progressCallbacks: Set<FFmpegProgressCallback> = new Set();
   private static logCallbacks: Set<FFmpegLogCallback> = new Set();
 
-  /**
-   * Internal dispatcher for progress events to all registered listeners.
-   */
+  private readonly CORE_VERSION = "0.12.6";
+  private readonly CACHE_NAME = "botock-wasm-cache-v1";
+
+  private constructor() {
+    if (typeof window !== "undefined") {
+      // Pre-warm WASM during browser idle time so tools launch with 0ms delay
+      if ("requestIdleCallback" in window) {
+        (window as Window).requestIdleCallback(() => {
+          this.prewarm().catch(() => {});
+        });
+      } else {
+        setTimeout(() => {
+          this.prewarm().catch(() => {});
+        }, 2000);
+      }
+    }
+  }
+
+  public static getInstance(): FastFFmpegManager {
+    if (!FastFFmpegManager.instance) {
+      FastFFmpegManager.instance = new FastFFmpegManager();
+    }
+    return FastFFmpegManager.instance;
+  }
+
   private static handleProgress = (event: { progress: number; time: number }) => {
-    FFmpegManager.progressCallbacks.forEach((cb) => {
+    FastFFmpegManager.progressCallbacks.forEach((cb) => {
       try {
         cb(event);
       } catch (err) {
@@ -33,11 +57,8 @@ export class FFmpegManager {
     });
   };
 
-  /**
-   * Internal dispatcher for log events to all registered listeners.
-   */
   private static handleLog = (event: { type: string; message: string }) => {
-    FFmpegManager.logCallbacks.forEach((cb) => {
+    FastFFmpegManager.logCallbacks.forEach((cb) => {
       try {
         cb(event);
       } catch (err) {
@@ -47,17 +68,45 @@ export class FFmpegManager {
   };
 
   /**
-   * Loads the single-threaded @ffmpeg/core WebAssembly binary.
-   * Concurrency-guarded: concurrent callers receive the same loading promise.
-   * ✅ OPTIMIZED: JS + WASM are fetched in parallel via Promise.all saving ~1-2s cold start.
+   * Caches WASM and JS binaries in Cache Storage to eliminate 30MB downloads on subsequent loads.
    */
-  public static async load(): Promise<FFmpeg> {
-    if (typeof window === "undefined") {
-      throw new Error("FFmpegManager can only be executed in a browser environment.");
+  private async getCachedBlobUrl(url: string, mimeType: string): Promise<string> {
+    if (typeof window === "undefined" || !("caches" in window)) {
+      return await toBlobURL(url, mimeType);
     }
+    try {
+      const cache = await caches.open(this.CACHE_NAME);
+      let response = await cache.match(url);
+      if (!response) {
+        response = await fetch(url, { mode: "cors" });
+        if (response.ok) {
+          await cache.put(url, response.clone());
+        }
+      }
+      if (response && response.ok) {
+        const blob = await response.blob();
+        return URL.createObjectURL(new Blob([blob], { type: mimeType }));
+      }
+    } catch {
+      // Fallback to standard toBlobURL if Cache API fails
+    }
+    return await toBlobURL(url, mimeType);
+  }
 
-    if (this.instance && this.instance.loaded) {
-      return this.instance;
+  /**
+   * Pre-warms the FFmpeg engine in the background
+   */
+  public async prewarm(): Promise<void> {
+    if (this._isLoaded || this.loadPromise) return;
+    await this.getFFmpeg();
+  }
+
+  /**
+   * Retrieves or initializes the singleton FFmpeg WASM instance
+   */
+  public async getFFmpeg(onProgress?: (ratio: number) => void): Promise<FFmpeg> {
+    if (this._isLoaded && this.ffmpeg) {
+      return this.ffmpeg;
     }
 
     if (this.loadPromise) {
@@ -65,67 +114,59 @@ export class FFmpegManager {
     }
 
     this.loadPromise = (async () => {
-      const ffmpeg = new FFmpeg();
+      const ffmpegInstance = new FFmpeg();
 
-      ffmpeg.on("progress", this.handleProgress);
-      ffmpeg.on("log", this.handleLog);
+      ffmpegInstance.on("progress", ({ progress, time }) => {
+        const ratio = Math.min(1, Math.max(0, progress));
+        if (onProgress) onProgress(ratio);
+        FastFFmpegManager.handleProgress({ progress: ratio, time: time ?? 0 });
+      });
 
-      // Attempt to load from primary CDN, fallback to secondary CDN on failure
-      // ✅ Each attempt fetches JS + WASM in parallel via Promise.all
-      let loaded = false;
-      const cdnBases = [PRIMARY_CDN_BASE, FALLBACK_CDN_BASE];
+      ffmpegInstance.on("log", ({ type, message }) => {
+        FastFFmpegManager.handleLog({ type, message });
+      });
 
-      // Helper function to cache WASM and JS binaries permanently using browser Cache Storage
-      const getCachedBlobURL = async (url: string, mimeType: string): Promise<string> => {
-        if (typeof window !== "undefined" && "caches" in window) {
-          try {
-            const cache = await window.caches.open("botock-wasm-v1");
-            const cachedResponse = await cache.match(url);
-            if (cachedResponse) {
-              const blob = await cachedResponse.blob();
-              return URL.createObjectURL(new Blob([blob], { type: mimeType }));
-            }
-            const response = await fetch(url);
-            if (response.ok) {
-              await cache.put(url, response.clone());
-              const blob = await response.blob();
-              return URL.createObjectURL(new Blob([blob], { type: mimeType }));
-            }
-          } catch (cacheErr) {
-            console.warn(`Browser cache fetch failed for ${url}, falling back to direct download:`, cacheErr);
-          }
-        }
-        return await toBlobURL(url, mimeType);
-      };
+      const supportsMultiThread =
+        typeof window !== "undefined" && window.crossOriginIsolated;
 
-      for (const baseURL of cdnBases) {
-        try {
-          // ✅ Parallel fetch with browser Cache Storage ('botock-wasm-v1') to avoid downloading 30MB WASM repeatedly
-          const [coreURL, wasmURL] = await Promise.all([
-            getCachedBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-            getCachedBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
-          ]);
+      const baseURL = supportsMultiThread
+        ? `https://unpkg.com/@ffmpeg/core-mt@${this.CORE_VERSION}/dist/umd`
+        : `https://unpkg.com/@ffmpeg/core@${this.CORE_VERSION}/dist/umd`;
 
-          await ffmpeg.load({
-            coreURL,
-            wasmURL,
-          });
-
-          loaded = true;
-          break;
-        } catch (loadErr) {
-          console.warn(`Failed to load FFmpeg core from ${baseURL}:`, loadErr);
-        }
-      }
-
-      if (!loaded) {
-        throw new Error(
-          "Failed to load WebAssembly FFmpeg core from both primary and fallback CDNs. Please check your internet connection."
+      try {
+        const coreURL = await this.getCachedBlobUrl(
+          `${baseURL}/ffmpeg-core.js`,
+          "text/javascript"
         );
-      }
+        const wasmURL = await this.getCachedBlobUrl(
+          `${baseURL}/ffmpeg-core.wasm`,
+          "application/wasm"
+        );
 
-      this.instance = ffmpeg;
-      return ffmpeg;
+        const loadConfig: Record<string, string> = { coreURL, wasmURL };
+
+        if (supportsMultiThread) {
+          loadConfig.workerURL = await this.getCachedBlobUrl(
+            `${baseURL}/ffmpeg-core.worker.js`,
+            "text/javascript"
+          );
+        }
+
+        await ffmpegInstance.load(loadConfig);
+        this.ffmpeg = ffmpegInstance;
+        this._isLoaded = true;
+        return ffmpegInstance;
+      } catch (err) {
+        console.warn(`Primary WASM load failed for ${baseURL}, attempting fallback:`, err);
+        // Fallback to single-threaded if multi-threaded fails
+        const fallbackBaseURL = `https://unpkg.com/@ffmpeg/core@${this.CORE_VERSION}/dist/umd`;
+        const coreURL = await this.getCachedBlobUrl(`${fallbackBaseURL}/ffmpeg-core.js`, "text/javascript");
+        const wasmURL = await this.getCachedBlobUrl(`${fallbackBaseURL}/ffmpeg-core.wasm`, "application/wasm");
+        await ffmpegInstance.load({ coreURL, wasmURL });
+        this.ffmpeg = ffmpegInstance;
+        this._isLoaded = true;
+        return ffmpegInstance;
+      }
     })();
 
     try {
@@ -136,71 +177,99 @@ export class FFmpegManager {
   }
 
   /**
-   * Returns the loaded FFmpeg instance, initializing it if not already loaded.
+   * Ultra-fast Video Trim using stream copy (-c copy) when possible
    */
+  public async fastTrimVideo(
+    inputFile: File,
+    startTime: number,
+    endTime: number,
+    accurateReencode = false,
+    onProgress?: (pct: number) => void
+  ): Promise<Blob> {
+    const ffmpeg = await this.getFFmpeg(onProgress);
+    const inputName = `in_${Date.now()}.mp4`;
+    const outputName = `out_${Date.now()}.mp4`;
+
+    const arrayBuffer = await inputFile.arrayBuffer();
+    await ffmpeg.writeFile(inputName, new Uint8Array(arrayBuffer));
+
+    const duration = Math.max(0.1, endTime - startTime).toFixed(2);
+    const startStr = startTime.toFixed(2);
+
+    const args = accurateReencode
+      ? [
+          "-ss", startStr,
+          "-i", inputName,
+          "-t", duration,
+          "-c:v", "libx264",
+          "-preset", "ultrafast",
+          "-crf", "23",
+          "-c:a", "aac",
+          "-movflags", "+faststart",
+          outputName,
+        ]
+      : [
+          "-ss", startStr,
+          "-i", inputName,
+          "-t", duration,
+          "-c", "copy",
+          "-avoid_negative_ts", "make_zero",
+          outputName,
+        ];
+
+    await ffmpeg.exec(args);
+    const data = await ffmpeg.readFile(outputName);
+
+    // Virtual FS cleanup
+    await ffmpeg.deleteFile(inputName).catch(() => {});
+    await ffmpeg.deleteFile(outputName).catch(() => {});
+
+    return new Blob([data as unknown as BlobPart], { type: "video/mp4" });
+  }
+
+  // --- Static Compatibility API for existing hooks (useFFmpeg, error boundaries, etc.) ---
+  public static async load(): Promise<FFmpeg> {
+    return await FastFFmpegManager.getInstance().getFFmpeg();
+  }
+
   public static async getFFmpegInstance(): Promise<FFmpeg> {
-    if (this.instance && this.instance.loaded) {
-      return this.instance;
-    }
-    return await this.load();
+    return await FastFFmpegManager.getInstance().getFFmpeg();
   }
 
-  /**
-   * Checks whether the FFmpeg WASM engine is currently loaded and ready.
-   */
   public static isLoaded(): boolean {
-    return !!(this.instance && this.instance.loaded);
+    const mgr = FastFFmpegManager.getInstance();
+    return mgr._isLoaded && !!mgr.ffmpeg?.loaded;
   }
 
-  /**
-   * Adds a global progress listener.
-   * Returns an unregister function.
-   */
   public static onProgress(callback: FFmpegProgressCallback): () => void {
-    this.progressCallbacks.add(callback);
+    FastFFmpegManager.progressCallbacks.add(callback);
     return () => {
-      this.progressCallbacks.delete(callback);
+      FastFFmpegManager.progressCallbacks.delete(callback);
     };
   }
 
-  /**
-   * Removes a global progress listener.
-   */
   public static offProgress(callback: FFmpegProgressCallback): void {
-    this.progressCallbacks.delete(callback);
+    FastFFmpegManager.progressCallbacks.delete(callback);
   }
 
-  /**
-   * Adds a global log listener.
-   * Returns an unregister function.
-   */
   public static onLog(callback: FFmpegLogCallback): () => void {
-    this.logCallbacks.add(callback);
+    FastFFmpegManager.logCallbacks.add(callback);
     return () => {
-      this.logCallbacks.delete(callback);
+      FastFFmpegManager.logCallbacks.delete(callback);
     };
   }
 
-  /**
-   * Removes a global log listener.
-   */
   public static offLog(callback: FFmpegLogCallback): void {
-    this.logCallbacks.delete(callback);
+    FastFFmpegManager.logCallbacks.delete(callback);
   }
 
-  /**
-   * Writes a file into FFmpeg's in-memory virtual filesystem.
-   */
   public static async writeFile(name: string, data: Uint8Array | string): Promise<void> {
-    const ffmpeg = await this.getFFmpegInstance();
+    const ffmpeg = await FastFFmpegManager.getFFmpegInstance();
     await ffmpeg.writeFile(name, data);
   }
 
-  /**
-   * Reads a file from FFmpeg's virtual filesystem and returns its raw bytes.
-   */
   public static async readFile(name: string): Promise<Uint8Array> {
-    const ffmpeg = await this.getFFmpegInstance();
+    const ffmpeg = await FastFFmpegManager.getFFmpegInstance();
     const data = await ffmpeg.readFile(name);
     if (typeof data === "string") {
       return new TextEncoder().encode(data);
@@ -208,55 +277,63 @@ export class FFmpegManager {
     return data;
   }
 
-  /**
-   * Deletes a file from FFmpeg's virtual filesystem to reclaim WASM heap memory.
-   */
   public static async deleteFile(name: string): Promise<void> {
-    if (!this.instance || !this.instance.loaded) return;
+    const mgr = FastFFmpegManager.getInstance();
+    if (!mgr.ffmpeg) return;
     try {
-      await this.instance.deleteFile(name);
+      await mgr.ffmpeg.deleteFile(name);
     } catch {
       // Ignore cleanup error if file does not exist
     }
   }
 
-  /**
-   * Executes an FFmpeg command with the provided argument array.
-   * Returns the process exit code (0 for success).
-   */
   public static async exec(args: string[]): Promise<number> {
-    const ffmpeg = await this.getFFmpegInstance();
+    const ffmpeg = await FastFFmpegManager.getFFmpegInstance();
     return await ffmpeg.exec(args);
   }
 
-  /**
-   * Terminates the active Web Worker and reclaims memory.
-   * ✅ FIX: Clears instance and loadPromise so the next load() call starts fresh
-   * without hitting an inconsistent state.
-   */
   public static async terminate(): Promise<void> {
-    if (this.instance) {
+    const mgr = FastFFmpegManager.getInstance();
+    if (mgr.ffmpeg) {
       try {
-        this.instance.off("progress", this.handleProgress);
-        this.instance.off("log", this.handleLog);
-        this.instance.terminate();
+        mgr.ffmpeg.terminate();
       } catch (err) {
         console.warn("Error terminating FFmpeg instance:", err);
       }
-      this.instance = null;
+      mgr.ffmpeg = null;
+      mgr._isLoaded = false;
     }
-    this.loadPromise = null;
+    mgr.loadPromise = null;
+  }
+
+  public static async fastTrimVideo(
+    inputFile: File,
+    startTime: number,
+    endTime: number,
+    accurateReencode = false,
+    onProgress?: (pct: number) => void
+  ): Promise<Blob> {
+    return await FastFFmpegManager.getInstance().fastTrimVideo(
+      inputFile,
+      startTime,
+      endTime,
+      accurateReencode,
+      onProgress
+    );
   }
 }
 
 // Named singleton exports for convenience and multiple usage styles
-export const getFFmpegInstance = FFmpegManager.getFFmpegInstance.bind(FFmpegManager);
-export const load = FFmpegManager.load.bind(FFmpegManager);
-export const isLoaded = FFmpegManager.isLoaded.bind(FFmpegManager);
-export const terminate = FFmpegManager.terminate.bind(FFmpegManager);
-export const writeFile = FFmpegManager.writeFile.bind(FFmpegManager);
-export const readFile = FFmpegManager.readFile.bind(FFmpegManager);
-export const deleteFile = FFmpegManager.deleteFile.bind(FFmpegManager);
-export const exec = FFmpegManager.exec.bind(FFmpegManager);
+export const ffmpegManager = FastFFmpegManager.getInstance();
+export const FFmpegManager = FastFFmpegManager;
+export const getFFmpegInstance = FastFFmpegManager.getFFmpegInstance.bind(FastFFmpegManager);
+export const load = FastFFmpegManager.load.bind(FastFFmpegManager);
+export const isLoaded = FastFFmpegManager.isLoaded.bind(FastFFmpegManager);
+export const terminate = FastFFmpegManager.terminate.bind(FastFFmpegManager);
+export const writeFile = FastFFmpegManager.writeFile.bind(FastFFmpegManager);
+export const readFile = FastFFmpegManager.readFile.bind(FastFFmpegManager);
+export const deleteFile = FastFFmpegManager.deleteFile.bind(FastFFmpegManager);
+export const exec = FastFFmpegManager.exec.bind(FastFFmpegManager);
+export const fastTrimVideo = FastFFmpegManager.fastTrimVideo.bind(FastFFmpegManager);
 
-export default FFmpegManager;
+export default FastFFmpegManager;

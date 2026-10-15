@@ -1684,3 +1684,101 @@ ToolRegistry.registerTool({
   parameters: [{ name: "keyword", type: "string", description: "Search query", required: true }],
   outputs: [{ name: "output", type: "string", description: "Target search URL" }]
 });
+
+export interface ImageProcessOptions {
+  maxWidth?: number;
+  maxHeight?: number;
+  quality?: number; // 0.1 to 1.0
+  format?: 'image/webp' | 'image/jpeg' | 'image/png';
+  rotateDegrees?: number;
+}
+
+export class FastToolEngine {
+  /**
+   * Hardware-accelerated Image Compression, Resize & Format Conversion
+   * Uses createImageBitmap + OffscreenCanvas to avoid blocking main UI thread
+   */
+  static async processImageFast(
+    file: File,
+    options: ImageProcessOptions = {}
+  ): Promise<{ blob: Blob; width: number; height: number; savingsPct: number }> {
+    const {
+      maxWidth = 4096,
+      maxHeight = 4096,
+      quality = 0.82,
+      format = 'image/webp',
+      rotateDegrees = 0,
+    } = options;
+
+    // Decode image off the main DOM thread using createImageBitmap
+    const bitmap = await createImageBitmap(file);
+    let targetW = bitmap.width;
+    let targetH = bitmap.height;
+
+    if (targetW > maxWidth || targetH > maxHeight) {
+      const ratio = Math.min(maxWidth / targetW, maxHeight / targetH);
+      targetW = Math.round(targetW * ratio);
+      targetH = Math.round(targetH * ratio);
+    }
+
+    const isRotated90or270 = Math.abs(rotateDegrees) % 180 === 90;
+    const canvasW = isRotated90or270 ? targetH : targetW;
+    const canvasH = isRotated90or270 ? targetW : targetH;
+
+    // Use OffscreenCanvas if available for maximum speed
+    if (typeof OffscreenCanvas !== 'undefined') {
+      const offscreen = new OffscreenCanvas(canvasW, canvasH);
+      const ctx = offscreen.getContext('2d', { alpha: format !== 'image/jpeg' });
+      if (!ctx) throw new Error('OffscreenCanvas context failed');
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      if (rotateDegrees !== 0) {
+        ctx.translate(canvasW / 2, canvasH / 2);
+        ctx.rotate((rotateDegrees * Math.PI) / 180);
+        ctx.drawImage(bitmap, -targetW / 2, -targetH / 2, targetW, targetH);
+      } else {
+        ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+      }
+
+      bitmap.close();
+      const outBlob = await offscreen.convertToBlob({ type: format, quality });
+      const savingsPct = Math.max(
+        0,
+        Math.round(((file.size - outBlob.size) / file.size) * 100)
+      );
+      return { blob: outBlob, width: canvasW, height: canvasH, savingsPct };
+    }
+
+    // Fallback for older browsers
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas 2D context failed');
+
+    if (rotateDegrees !== 0) {
+      ctx.translate(canvasW / 2, canvasH / 2);
+      ctx.rotate((rotateDegrees * Math.PI) / 180);
+      ctx.drawImage(bitmap, -targetW / 2, -targetH / 2, targetW, targetH);
+    } else {
+      ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+    }
+    bitmap.close();
+
+    const outBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('Blob conversion failed'))),
+        format,
+        quality
+      );
+    });
+
+    const savingsPct = Math.max(
+      0,
+      Math.round(((file.size - outBlob.size) / file.size) * 100)
+    );
+    return { blob: outBlob, width: canvasW, height: canvasH, savingsPct };
+  }
+}
