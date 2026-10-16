@@ -14,7 +14,6 @@ import pandas as pd
 import re
 import urllib.parse
 import httpx
-import edge_tts
 
 from starlette.background import BackgroundTask
 
@@ -437,6 +436,12 @@ POLLY_FALLBACK_MAP = {
 # =====================================================================
 async def _synthesize_edge_tts(text: str, voice: str, rate: str, pitch: str, out_path: str) -> bool:
     """Primary Neural TTS engine using Microsoft Edge Neural API with retry."""
+    try:
+        import edge_tts
+    except ImportError:
+        logger.warning("edge_tts package is not installed; skipping to Polly fallback.")
+        return False
+
     for attempt in range(2):
         try:
             communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
