@@ -12,7 +12,7 @@ const VoiceChangerClient = dynamic(() => import("./VoiceChangerClient"), {
 export const metadata: Metadata = {
   title: "AI Voice Changer & Text to Speech Studio | Deep Podcast & Narrator Voices Free",
   description:
-    "Generate ultra-realistic AI voiceovers (Deep Podcast Narrator, Clean Child, Urdu/Hindi) or modify existing audio pitch with Botock AI Voice Studio.",
+    "Generate ultra-realistic AI voiceovers (Deep Podcast Narrator, Clean Child, International Voices) or modify existing audio pitch with Botock AI Voice Studio.",
   alternates: {
     canonical: "/tools/voice-changer",
   },
@@ -117,7 +117,7 @@ export default function VoiceChangerPage() {
             AI Voice Changer & Text-to-Speech Studio
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Generate ultra-realistic, human-quality neural voiceovers (Deep Podcast Narrators, Clean Child Voices, Movie Villains, and Urdu/Hindi Voiceovers) using advanced AI synthesis, or transform existing recordings with pitch & tone modulation.
+            Generate ultra-realistic, human-quality neural voiceovers (Deep Podcast Narrators, British & US Studio Voices, Movie Villains, and Global Multilingual Accents) using advanced AI synthesis, or transform existing recordings with pitch & tone modulation.
           </p>
         </div>
       </section>

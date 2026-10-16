@@ -5,11 +5,12 @@ import ClientWrapper from "./ClientWrapper";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "Crop PDF Online Free | Trim PDF Margins",
+  title: "Crop PDF Online Free (No Signup) – Trim Margins Instantly | Botock",
   description:
-    "Crop PDF pages and trim margins visually online for free. Adjust margins per page or apply globally with interactive bounding boxes directly in your browser with complete client-side privacy.",
+    "Crop PDF margins and trim pages visually in your browser. 100% Free, no signup, no file limits, and complete client-side privacy with zero server uploads.",
   keywords: [
     "crop pdf",
+    "crop pdf online free",
     "trim pdf margins",
     "crop pdf pages free",
     "pdf margin trimmer",
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
     canonical: "/tools/crop-pdf",
   },
   openGraph: {
-    title: "Crop PDF Online Free | Trim PDF Margins",
+    title: "Crop PDF Online Free (No Signup) – Trim Margins Instantly",
     description: "Visually crop PDF pages and trim margins directly in your browser with zero server uploads.",
     url: "https://botock.app/tools/crop-pdf",
     siteName: "Botock AI",
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Crop PDF Online Free",
+    title: "Crop PDF Online Free (No Signup) | Botock",
     description: "Visually crop PDF pages and trim margins directly in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },

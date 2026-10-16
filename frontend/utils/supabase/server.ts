@@ -15,6 +15,11 @@ export async function createClient() {
     supabaseUrl,
     supabaseAnonKey,
     {
+      cookieOptions: {
+        maxAge: 7200, // 2 hours max session expiry
+        sameSite: 'lax',
+        path: '/',
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll()
@@ -22,7 +27,10 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, {
+                ...options,
+                maxAge: 7200,
+              })
             )
           } catch {
             // Can be ignored if called from a Server Component

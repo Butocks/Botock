@@ -5,16 +5,16 @@ import ClientWrapper from "./ClientWrapper";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "Convert PDF to JPG Online Free | High Resolution (300 DPI)",
+  title: "PDF to JPG 300 DPI Converter – Free & High Quality | Botock",
   description:
-    "Convert PDF pages into high-resolution JPG images directly in your browser. Choose between 150 DPI and 300 DPI, preview pages, and download single images or a ZIP archive.",
+    "Convert PDF pages into crystal-clear 300 DPI JPG images online for free. Extract images in your browser with zero server uploads, no signup, and instant ZIP download.",
   alternates: {
     canonical: "/tools/pdf-to-jpg",
   },
   openGraph: {
-    title: "Convert PDF to JPG Online Free",
+    title: "PDF to JPG 300 DPI Converter – Free & High Quality",
     description:
-      "Convert PDF pages to JPG images in your browser with zero server uploads.",
+      "Convert PDF pages to 300 DPI JPG images in your browser with zero server uploads and no signup.",
     url: "https://botock.app/tools/pdf-to-jpg",
     siteName: "Botock AI",
     type: "website",
@@ -22,17 +22,18 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convert PDF to JPG Online Free",
-    description: "Convert PDF pages to JPG images in your browser with zero server uploads.",
+    title: "PDF to JPG 300 DPI Converter | Botock",
+    description: "Convert PDF pages to crystal-clear 300 DPI JPG images in your browser.",
     images: ["https://botock.app/og-image.jpg"],
   },
   keywords: [
+    "pdf to jpg 300 dpi",
     "pdf to jpg",
     "pdf to jpeg",
-    "convert pdf to images",
-    "extract images from pdf",
-    "pdf to jpg 300 dpi",
-    "free pdf to jpg",
+    "convert pdf to images high resolution",
+    "extract images from pdf 300 dpi",
+    "free pdf to jpg no signup",
+    "botock tools",
   ],
 };
 

@@ -9,7 +9,6 @@ import {
   User as UserIcon,
   Mail,
   Lock,
-  Calendar,
   Globe,
   ShieldCheck,
   ShieldAlert,
@@ -46,7 +45,6 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [dob, setDob] = useState("");
   const [gender, setGender] = useState("male");
   const [country, setCountry] = useState("Pakistan");
   const [isVerified, setIsVerified] = useState(false);
@@ -95,7 +93,6 @@ export default function ProfilePage() {
       setEmail(userEmail);
       setFullName(u.user_metadata?.full_name || u.user_metadata?.name || "");
       setUsername(u.user_metadata?.username || (u.email ? u.email.split("@")[0] : ""));
-      setDob(u.user_metadata?.dob || "");
       setGender(u.user_metadata?.gender || "male");
       setCountry(u.user_metadata?.country || "Pakistan");
       setIsVerified(Boolean(u.app_metadata?.is_verified ?? (u.email_confirmed_at != null || u.app_metadata?.provider === "google")));
@@ -193,7 +190,6 @@ export default function ProfilePage() {
         data: {
           full_name: fullName.trim(),
           username: username.trim(),
-          dob: dob,
           gender: gender,
           country: country,
         },
@@ -520,17 +516,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                  Date of Birth (DOB)
-                </label>
-                <input
-                  type="date"
-                  value={dob}
-                  onChange={(e) => setDob(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-violet-500"
-                />
-              </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">

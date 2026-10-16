@@ -3,8 +3,11 @@ import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
   const host = request.headers.get("host") || "";
+  const proto = request.headers.get("x-forwarded-proto");
+  const isLocal = host.includes("localhost") || host.includes("127.0.0.1") || host.includes("192.168.");
 
-  if (host.startsWith("www.")) {
+  // Enforce HTTPS and canonical apex domain (botock.app)
+  if (!isLocal && (host.startsWith("www.") || proto === "http")) {
     const newHost = host.replace(/^www\./, "");
     const url = request.nextUrl.clone();
     url.host = newHost;

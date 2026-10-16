@@ -7,6 +7,13 @@ export function createClient() {
 
   return createBrowserClient(
     supabaseUrl,
-    supabaseAnonKey
+    supabaseAnonKey,
+    {
+      cookieOptions: {
+        maxAge: 7200, // Expire session after 2 hours (no indefinite persistent sessions)
+        sameSite: 'lax',
+        path: '/',
+      },
+    }
   )
 }

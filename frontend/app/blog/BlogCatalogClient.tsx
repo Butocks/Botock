@@ -8,12 +8,10 @@ import {
   ArrowRight,
   Search,
   BookOpen,
-  Eye,
   TrendingUp,
   Tag,
   X,
   SlidersHorizontal,
-  Flame,
   Calendar,
   Layers,
   Paperclip,
@@ -45,6 +43,21 @@ export interface BlogPost {
 }
 
 const POSTS: BlogPost[] = [
+  {
+    id: "tesla-new-roadster-the-car-that-almost-flies",
+    title: "Tesla's New Roadster: The Car That Almost Flies — Tech, Flight Physics & Reality Check",
+    excerpt: "On October 15, 2026, Tesla showed its 2nd-gen Roadster driving upside down, jumping over a Semi, and flipping mid-air. Deep engineering breakdown: 10 SpaceX cold-gas thrusters, 2G suction fans, sub-1s 0-60, and the truth about flying cars.",
+    category: "news-trends",
+    categoryLabel: "News & Trends",
+    categoryColor: "bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30",
+    tags: ["TeslaRoadster", "SpaceX", "ElectricVehicles", "FlyingCars", "TechNews"],
+    readTime: "9 min read",
+    date: "October 16, 2026",
+    timestamp: 1792108900000,
+    author: "Boto",
+    attachmentUrl: "/images/blog/tesla-roadster-unveil.jpg",
+    attachmentName: "Tesla Roadster Flight Demo",
+  },
   {
     id: "complete-guide-to-botock-video-editor",
     title: "The Complete Guide to Botock Video Editor: Timeline, Motion Animation, Visual FX & WebAssembly Export",
@@ -131,7 +144,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "News & Trends",
     categoryColor: "bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30",
     tags: ["TechNews", "VideoTrends", "FutureOfMedia", "AI", "Entertainment"],
-    views: 31500,
     readTime: "7 min read",
     date: "October 10, 2026",
     timestamp: 1791590400000,
@@ -145,7 +157,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "AI & Tech",
     categoryColor: "bg-blue-500/20 text-blue-600 dark:text-blue-300 border-blue-500/30",
     tags: ["AIAgents", "Automation", "TechInnovation", "MachineLearning"],
-    views: 22100,
     readTime: "6 min read",
     date: "October 10, 2026",
     timestamp: 1791590400000,
@@ -159,7 +170,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "Productivity & Workflows",
     categoryColor: "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/30",
     tags: ["Workflows", "Enterprise", "Productivity", "OfficeTech"],
-    views: 14200,
     readTime: "5 min read",
     date: "October 10, 2026",
     timestamp: 1791590400000,
@@ -173,7 +183,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "News & Trends",
     categoryColor: "bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/30",
     tags: ["GenerativeAI", "TechNews", "DigitalArt", "VisualComputing"],
-    views: 26800,
     readTime: "9 min read",
     date: "October 10, 2026",
     timestamp: 1791590400000,
@@ -187,7 +196,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "Creator Guides",
     categoryColor: "bg-sky-500/20 text-sky-600 dark:text-sky-300 border-sky-500/30",
     tags: ["TextToVideo", "Prompts", "Filmmaking", "Storytelling"],
-    views: 24100,
     readTime: "15 min read",
     date: "October 4, 2026",
     timestamp: 1791072000000,
@@ -201,7 +209,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "AI & Tech",
     categoryColor: "bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border-emerald-500/30",
     tags: ["PhotoGeneration", "PromptEngineering", "AIImages", "FAQ"],
-    views: 17300,
     readTime: "12 min read",
     date: "October 4, 2026",
     timestamp: 1791072000000,
@@ -215,7 +222,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "Creator Guides",
     categoryColor: "bg-purple-500/20 text-purple-600 dark:text-purple-300 border-purple-500/30",
     tags: ["ImageEditing", "BackgroundRemoval", "Thumbnails", "Design"],
-    views: 19800,
     readTime: "10 min read",
     date: "October 4, 2026",
     timestamp: 1791072000000,
@@ -229,7 +235,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "Productivity & Workflows",
     categoryColor: "bg-rose-500/20 text-rose-600 dark:text-rose-300 border-rose-500/30",
     tags: ["PDFTools", "DocumentSecurity", "Privacy", "OfficeHacks"],
-    views: 13200,
     readTime: "8 min read",
     date: "October 4, 2026",
     timestamp: 1791072000000,
@@ -243,7 +248,6 @@ const POSTS: BlogPost[] = [
     categoryLabel: "News & Trends",
     categoryColor: "bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30",
     tags: ["FounderStory", "WebDevelopment", "VibeCoding", "DocOck", "Botock"],
-    views: 10400,
     readTime: "8 min read",
     date: "October 4, 2026",
     timestamp: 1791072000000,
@@ -263,6 +267,8 @@ const CATEGORIES: { key: BlogCategoryKey; label: string }[] = [
 const POPULAR_TAGS = [
   "AI",
   "TechNews",
+  "TeslaRoadster",
+  "FlyingCars",
   "Showbiz",
   "VideoProduction",
   "Shorts",
@@ -276,7 +282,7 @@ const POPULAR_TAGS = [
 export default function BlogCatalogClient() {
   const [filter, setFilter] = useState<BlogCategoryKey>("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"newest" | "most-viewed" | "oldest">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [search, setSearch] = useState<string>("");
   const [posts, setPosts] = useState<BlogPost[]>(POSTS);
 
@@ -295,7 +301,6 @@ export default function BlogCatalogClient() {
             categoryLabel: cp.categoryLabel || "AI & Tech",
             categoryColor: "bg-violet-500/20 text-violet-300 border-violet-500/30",
             tags: Array.isArray(cp.tags) ? cp.tags : ["AI", "Tech"],
-            views: Number(cp.views) || 5000,
             readTime: cp.readTime || "5 min read",
             date: cp.date || "October 11, 2026",
             timestamp: cp.timestamp || Date.now(),
@@ -332,9 +337,6 @@ export default function BlogCatalogClient() {
     .sort((a, b) => {
       if (sortBy === "newest") {
         return b.timestamp - a.timestamp;
-      }
-      if (sortBy === "most-viewed") {
-        return b.views - a.views;
       }
       if (sortBy === "oldest") {
         return a.timestamp - b.timestamp;
@@ -404,17 +406,6 @@ export default function BlogCatalogClient() {
               >
                 <Calendar className="w-3 h-3 text-sky-500" />
                 Newest
-              </button>
-              <button
-                onClick={() => setSortBy("most-viewed")}
-                className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                  sortBy === "most-viewed"
-                    ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-bold"
-                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                }`}
-              >
-                <Flame className="w-3 h-3 text-amber-500" />
-                Most Viewed
               </button>
               <button
                 onClick={() => setSortBy("oldest")}
@@ -506,7 +497,7 @@ export default function BlogCatalogClient() {
                   {filteredPosts[0].categoryLabel}
                 </span>
                 <span className="text-xs text-slate-500 flex items-center gap-1">
-                  <Eye className="w-3 h-3" /> {(filteredPosts[0].views / 1000).toFixed(1)}k views
+                  <Clock className="w-3 h-3" /> {filteredPosts[0].readTime}
                 </span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mb-3 hover:text-violet-600 dark:hover:text-violet-300 transition-colors cursor-pointer">
@@ -530,8 +521,6 @@ export default function BlogCatalogClient() {
                 <span>By {filteredPosts[0].author}</span>
                 <span>•</span>
                 <span>{filteredPosts[0].date}</span>
-                <span>•</span>
-                <span>{filteredPosts[0].readTime}</span>
               </div>
             </div>
             <Link
@@ -573,14 +562,13 @@ export default function BlogCatalogClient() {
                 className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] hover:border-violet-500/40 p-6 flex flex-col justify-between transition-all group hover:bg-slate-50 dark:hover:bg-[#15151a] shadow-sm"
               >
                 <div>
-                  {/* Category and Views Header */}
+                  {/* Category and Date Header */}
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${post.categoryColor}`}>
                       {post.categoryLabel}
                     </span>
-                    <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                      <Eye className="w-3 h-3 text-slate-400" />
-                      {(post.views / 1000).toFixed(1)}k
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {post.date}
                     </span>
                   </div>
 

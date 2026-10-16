@@ -127,14 +127,14 @@ export default function ForgotPasswordPage() {
               <span>Account Not Found</span>
             </div>
             <p className="text-xs leading-relaxed font-medium">
-              No Botock account was found for <span className="font-bold">{email}</span>. Please verify your email address or create a free account.
+              No Botock account was found for <span className="font-bold">{email}</span>. Please sign in with your Google account.
             </p>
             <div className="pt-1 flex items-center gap-3">
               <Link
-                href="/signup"
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition-colors"
+                href="/login"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow-md transition-colors"
               >
-                <span>Create New Account</span>
+                <span>Sign In with Google</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>

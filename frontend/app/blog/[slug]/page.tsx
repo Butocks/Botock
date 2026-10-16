@@ -314,7 +314,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 Ready to explore Botock AI Tools?
               </h3>
               <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-6 max-w-lg mx-auto">
-                Join thousands of creators using our cinematic Video Generators and high-res Image AI.
+                Create stunning media with our cinematic Video Generators and high-res Image AI.
               </p>
               <Link
                 href="/tools/video-generator"

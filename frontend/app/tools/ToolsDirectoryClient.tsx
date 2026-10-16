@@ -27,6 +27,9 @@ import {
   BookOpen,
   Wrench,
   Languages,
+  Volume2,
+  VolumeX,
+  Pipette,
 } from "lucide-react";
 import AdBanner from "../components/AdBanner";
 
@@ -309,6 +312,14 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
     href: "/tools/translate-pdf",
     icon: Languages,
   },
+  {
+    id: "pdf-ocr",
+    name: "PDF OCR Online Free",
+    desc: "Extract editable text from scanned PDFs and book pages via neural OCR.",
+    category: "pdf",
+    href: "/tools/pdf-ocr",
+    icon: FileText,
+  },
 
   // 3. Image Suite
   {
@@ -375,8 +386,40 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
     href: "/tools/image-filters",
     icon: Sliders,
   },
+  {
+    id: "image-color-picker",
+    name: "Color Picker from Image",
+    desc: "Pixel eyedropper to extract exact HEX, RGB & HSL codes and create palettes.",
+    category: "image",
+    href: "/tools/image-color-picker",
+    icon: Pipette,
+  },
 
   // 4. Video Suite
+  {
+    id: "video-mute",
+    name: "Mute Video Online",
+    desc: "Remove audio tracks and mute video clips in 1 second with lossless stream copy.",
+    category: "video",
+    href: "/tools/video-mute",
+    icon: VolumeX,
+  },
+  {
+    id: "audio-volume",
+    name: "Amplify MP3 Volume",
+    desc: "Boost quiet audio and MP3 volume levels up to 500% with clear normalization.",
+    category: "video",
+    href: "/tools/audio-volume",
+    icon: Volume2,
+  },
+  {
+    id: "audio-trim",
+    name: "Trim MP3 Audio",
+    desc: "Cut songs, extract audio clips, and make phone ringtones with stream copy.",
+    category: "video",
+    href: "/tools/audio-trim",
+    icon: Scissors,
+  },
   {
     id: "video-trim",
     name: "Video Cutter & Trimmer",

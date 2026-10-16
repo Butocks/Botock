@@ -442,28 +442,74 @@ async def text_to_speech(
     try:
         communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
         await communicate.save(out_path)
+    except Exception as edge_err:
+        logger.warning("edge-tts primary failed (%s), running high-speed neural fallback", edge_err)
+        try:
+            # Fallback synthesis via Google TTS audio stream
+            lang_prefix = voice.split('-')[0] if '-' in voice else 'en'
+            import urllib.parse
+            import re
+            chunks = [c.strip() for c in re.split(r'([.?!,;\n]+)', text) if c.strip()]
+            grouped = []
+            cur = ""
+            for chunk in chunks:
+                if len(cur) + len(chunk) + 1 < 180:
+                    cur = (cur + " " + chunk).strip()
+                else:
+                    if cur: grouped.append(cur)
+                    cur = chunk
+            if cur: grouped.append(cur)
+            if not grouped: grouped = [text[:180]]
 
-        if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-            raise Exception("Generated audio file is empty.")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                with open(out_path, "wb") as f_out:
+                    for g in grouped:
+                        q_param = urllib.parse.quote(g)
+                        url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={q_param}&tl={lang_prefix}&client=tw-ob"
+                        res = await client.get(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+                        if res.status_code == 200 and len(res.content) > 0:
+                            f_out.write(res.content)
+        except Exception as fb_err:
+            logger.error("TTS fallback failed: %s", fb_err)
 
-        def cleanup():
-            if os.path.exists(out_path):
-                try: os.remove(out_path)
-                except Exception: pass
-
-        safe_v_name = voice.split('-')[-1].replace('Neural', '')
-        return FileResponse(
-            out_path,
-            filename=f"botock_voiceover_{safe_v_name}.mp3",
-            media_type="audio/mpeg",
-            background=BackgroundTask(cleanup)
-        )
-    except Exception as e:
+    if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
         if os.path.exists(out_path):
             try: os.remove(out_path)
             except Exception: pass
-        logger.exception("Text-to-speech generation failed: %s", str(e))
         raise HTTPException(status_code=500, detail="Failed to synthesize speech. Please try again.")
+
+    def cleanup():
+        if os.path.exists(out_path):
+            try: os.remove(out_path)
+            except Exception: pass
+
+    safe_v_name = voice.split('-')[-1].replace('Neural', '')
+    return FileResponse(
+        out_path,
+        filename=f"botock_voiceover_{safe_v_name}.mp3",
+        media_type="audio/mpeg",
+        background=BackgroundTask(cleanup)
+    )
+
+FFMPEG_VOICE_FILTERS = {
+    "kid": "asetrate=44100*1.3348,aresample=44100,atempo=0.749",
+    "little_girl": "asetrate=44100*1.4983,aresample=44100,atempo=0.6674,highpass=f=300",
+    "man_deep": "asetrate=44100*0.7937,aresample=44100,atempo=1.2599,acompressor=threshold=-20dB:ratio=2",
+    "deep_villain": "asetrate=44100*0.6299,aresample=44100,atempo=1.5874,acompressor=threshold=-20dB:ratio=4,aecho=0.8:0.9:500:0.2",
+    "man_old": "asetrate=44100*0.8909,aresample=44100,atempo=1.122,lowpass=f=3000",
+    "women": "asetrate=44100*1.1892,aresample=44100,atempo=0.8409",
+    "old_women": "asetrate=44100*1.0594,aresample=44100,atempo=0.9438,lowpass=f=4000",
+    "weak_man": "highpass=f=200,lowpass=f=5000,volume=0.7",
+    "strict": "asetrate=44100*0.9438,aresample=44100,atempo=1.059,acompressor=threshold=-15dB:ratio=3",
+    "robot": "chorus=0.5:0.9:50|60:0.4|0.32:0.25|0.4:2|1.2,volume=1.2",
+    "chipmunk": "asetrate=44100*2.0,aresample=44100,atempo=0.5,highpass=f=400",
+    "echo_chamber": "aecho=0.8:0.88:1000|1800:0.4|0.3",
+    "telephone": "highpass=f=400,lowpass=f=3000",
+    "privacy_disguiser": "asetrate=44100*0.749,aresample=44100,atempo=1.335,chorus=0.7:0.9:55:0.4:0.25:2",
+    "clone_elon": "asetrate=44100*0.8909,aresample=44100,atempo=1.122,lowpass=f=6000",
+    "clone_morgan": "asetrate=44100*0.707,aresample=44100,atempo=1.414,aecho=0.8:0.9:300:0.1",
+    "clone_anime_girl": "asetrate=44100*1.587,aresample=44100,atempo=0.63,highpass=f=350",
+}
 
 @router.post("/voice-changer")
 async def voice_changer(
@@ -494,78 +540,79 @@ async def voice_changer(
     if len(file_bytes) == 0:
         raise HTTPException(status_code=400, detail="Empty file uploaded.")
 
+    has_pedalboard = False
     try:
         from pedalboard import Pedalboard, PitchShift, Gain, Reverb, Compressor, HighpassFilter, LowpassFilter, Delay, Chorus, Bitcrash, Phaser, Distortion
         from pedalboard.io import AudioFile
+        has_pedalboard = True
     except ImportError:
-        logger.error("Audio libraries not installed (pedalboard).")
-        raise HTTPException(status_code=503, detail="Voice changer service is temporarily unavailable.")
+        logger.info("pedalboard not available, using high-speed native FFmpeg engine.")
 
     # High-quality natural voice modes
     VOICE_MODES = {
         # Standard
         "kid": {"pitch": 5, "vol": 1, "fx": []},
-        "little_girl": {"pitch": 7, "vol": 1, "fx": [HighpassFilter(cutoff_frequency_hz=300)]},
-        "man_deep": {"pitch": -4, "vol": 2, "fx": [Compressor(threshold_db=-20, ratio=2)]},
+        "little_girl": {"pitch": 7, "vol": 1, "fx": [HighpassFilter(cutoff_frequency_hz=300)] if has_pedalboard else []},
+        "man_deep": {"pitch": -4, "vol": 2, "fx": [Compressor(threshold_db=-20, ratio=2)] if has_pedalboard else []},
         "deep_villain": {"pitch": -8, "vol": 3, "fx": [
             Compressor(threshold_db=-20, ratio=4),
             Reverb(room_size=0.3, damping=0.5, wet_level=0.15)
-        ]},
+        ] if has_pedalboard else []},
         "man_old": {"pitch": -2, "vol": 0, "fx": [
             LowpassFilter(cutoff_frequency_hz=3000),
             Compressor(threshold_db=-15, ratio=1.5)
-        ]},
+        ] if has_pedalboard else []},
         "women": {"pitch": 3, "vol": 0, "fx": []},
-        "old_women": {"pitch": 1, "vol": 0, "fx": [LowpassFilter(cutoff_frequency_hz=4000)]},
+        "old_women": {"pitch": 1, "vol": 0, "fx": [LowpassFilter(cutoff_frequency_hz=4000)] if has_pedalboard else []},
         "weak_man": {"pitch": 1, "vol": -4, "fx": [
             HighpassFilter(cutoff_frequency_hz=200),
             LowpassFilter(cutoff_frequency_hz=5000)
-        ]},
-        "strict": {"pitch": -1, "vol": 2, "fx": [Compressor(threshold_db=-15, ratio=3)]},
+        ] if has_pedalboard else []},
+        "strict": {"pitch": -1, "vol": 2, "fx": [Compressor(threshold_db=-15, ratio=3)] if has_pedalboard else []},
         
         # AI Voice Filters (Requested)
         "robot": {"pitch": 0, "vol": 0, "fx": [
             Chorus(rate_hz=50.0, depth=0.5, centre_delay_ms=2.0, feedback=0.5, mix=1.0),
             Bitcrash(bit_depth=8)
-        ]},
-        "chipmunk": {"pitch": 12, "vol": 1, "fx": [HighpassFilter(cutoff_frequency_hz=400)]},
+        ] if has_pedalboard else []},
+        "chipmunk": {"pitch": 12, "vol": 1, "fx": [HighpassFilter(cutoff_frequency_hz=400)] if has_pedalboard else []},
         "echo_chamber": {"pitch": 0, "vol": 0, "fx": [
             Delay(delay_seconds=0.3, feedback=0.5, mix=0.5),
             Reverb(room_size=0.9, damping=0.1, wet_level=0.8)
-        ]},
+        ] if has_pedalboard else []},
         "telephone": {"pitch": 0, "vol": 0, "fx": [
             HighpassFilter(cutoff_frequency_hz=400),
             LowpassFilter(cutoff_frequency_hz=3000),
             Distortion(drive_db=10)
-        ]},
+        ] if has_pedalboard else []},
         
         # Voice Disguiser / Privacy Filter (Requested)
         "privacy_disguiser": {"pitch": -5, "vol": 1, "fx": [
             Bitcrash(bit_depth=12),
             Chorus(rate_hz=2.0, depth=0.8, mix=0.5),
             Compressor(threshold_db=-20, ratio=4)
-        ]},
+        ] if has_pedalboard else []},
         
         # AI Speech-to-Speech / Voice Cloning (Mocked as filters for this implementation)
         "clone_elon": {"pitch": -2, "vol": 1, "fx": [
             Compressor(threshold_db=-18, ratio=3),
             LowpassFilter(cutoff_frequency_hz=6000)
-        ]},
+        ] if has_pedalboard else []},
         "clone_morgan": {"pitch": -6, "vol": 2, "fx": [
             Compressor(threshold_db=-25, ratio=5),
             Reverb(room_size=0.1, damping=0.8, wet_level=0.05),
             HighpassFilter(cutoff_frequency_hz=80)
-        ]},
+        ] if has_pedalboard else []},
         "clone_anime_girl": {"pitch": 8, "vol": 1, "fx": [
             HighpassFilter(cutoff_frequency_hz=350),
             Chorus(rate_hz=1.5, depth=0.2, mix=0.2)
-        ]},
+        ] if has_pedalboard else []},
     }
 
-    if mode not in VOICE_MODES:
+    if mode not in VOICE_MODES and mode not in FFMPEG_VOICE_FILTERS:
         raise HTTPException(status_code=400, detail="Invalid voice mode selected")
 
-    params = VOICE_MODES[mode]
+    params = VOICE_MODES.get(mode, {"pitch": 0, "vol": 0, "fx": []})
     
     in_path = None
     audio_raw_path = None
@@ -596,33 +643,47 @@ async def voice_changer(
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as out_f:
             processed_wav_path = out_f.name
 
-        # Read with pedalboard io
-        try:
-            with AudioFile(audio_target_input) as f:
-                duration = f.frames / f.samplerate
-                if duration > 300: # 5 min limit
-                    raise HTTPException(status_code=413, detail="Audio duration exceeds 5 minutes limit.")
-                audio = f.read(f.frames)
-                samplerate = f.samplerate
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Failed to read audio file: {e}")
-            raise HTTPException(status_code=400, detail="Corrupt or unreadable audio stream.")
+        processed_with_pedalboard = False
+        if has_pedalboard:
+            try:
+                with AudioFile(audio_target_input) as f:
+                    duration = f.frames / f.samplerate
+                    if duration > 300: # 5 min limit
+                        raise HTTPException(status_code=413, detail="Audio duration exceeds 5 minutes limit.")
+                    audio = f.read(f.frames)
+                    samplerate = f.samplerate
 
-        # Build pedalboard
-        plugins = [PitchShift(semitones=params["pitch"])]
-        if params["vol"] != 0:
-            plugins.append(Gain(gain_db=params["vol"]))
-        plugins.extend(params["fx"])
-        board = Pedalboard(plugins)
+                plugins = [PitchShift(semitones=params["pitch"])]
+                if params["vol"] != 0:
+                    plugins.append(Gain(gain_db=params["vol"]))
+                plugins.extend(params["fx"])
+                board = Pedalboard(plugins)
+                effected = board(audio, samplerate, reset=False)
 
-        # Process audio
-        effected = board(audio, samplerate, reset=False)
+                with AudioFile(processed_wav_path, 'w', samplerate, effected.shape[0]) as f:
+                    f.write(effected)
+                processed_with_pedalboard = True
+            except HTTPException:
+                raise
+            except Exception as pb_err:
+                logger.warning("Pedalboard failed (%s), falling back to native FFmpeg filter", pb_err)
+                processed_with_pedalboard = False
 
-        # Write to wav
-        with AudioFile(processed_wav_path, 'w', samplerate, effected.shape[0]) as f:
-            f.write(effected)
+        if not processed_with_pedalboard:
+            af_filter = FFMPEG_VOICE_FILTERS.get(mode, "asetrate=44100*0.7937,aresample=44100,atempo=1.2599")
+            ffmpeg_proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y", "-i", audio_target_input,
+                "-af", af_filter,
+                "-acodec", "pcm_s16le", "-ar", "44100",
+                processed_wav_path,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            await ffmpeg_proc.communicate()
+
+        if not os.path.exists(processed_wav_path) or os.path.getsize(processed_wav_path) == 0:
+            raise HTTPException(status_code=500, detail="Audio processing failed. Please check your audio format.")
+
 
         if is_video:
             # Remux audio into original video

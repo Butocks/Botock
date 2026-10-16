@@ -26,10 +26,9 @@ export function sanitizeRedirectUrl(url: string | null | undefined, fallback: st
 }
 
 
-const HEALTH_CHECK_TIMEOUT_MS = 2_500;
-// A short cache makes an Azure outage switch to an available private tunnel
-// quickly, without probing on every UI render.
-const HEALTH_CHECK_CACHE_MS = 5_000;
+const HEALTH_CHECK_TIMEOUT_MS = 1_000;
+// Cache healthy/fallback backend selection for 60s so UI actions remain instantaneous
+const HEALTH_CHECK_CACHE_MS = 60_000;
 
 let cachedBackendUrl: string | null = null;
 let backendUrlCheckedAt = 0;
@@ -94,7 +93,7 @@ export async function getBackendUrl() {
   }
 
   const now = Date.now();
-  if (cachedBackendUrl && now - backendUrlCheckedAt < HEALTH_CHECK_CACHE_MS) {
+  if (cachedBackendUrl !== null && now - backendUrlCheckedAt < HEALTH_CHECK_CACHE_MS) {
     return cachedBackendUrl;
   }
 
@@ -106,13 +105,22 @@ export async function getBackendUrl() {
       const candidates = [primaryBackendUrl, localUrl, laptopBackendUrl, colabBackendUrl]
         .filter((url): url is string => Boolean(url))
         .map(withoutTrailingSlash);
-      for (const candidate of candidates) {
-        if (await isBackendHealthy(candidate)) {
-          cachedBackendUrl = candidate;
-          backendUrlCheckedAt = Date.now();
-          return candidate;
-        }
+
+      // Run health checks in parallel to eliminate sequential timeout delays
+      const checks = await Promise.all(
+        candidates.map(async (candidate) => ({
+          url: candidate,
+          healthy: await isBackendHealthy(candidate),
+        }))
+      );
+
+      const firstHealthy = checks.find((c) => c.healthy);
+      if (firstHealthy) {
+        cachedBackendUrl = firstHealthy.url;
+        backendUrlCheckedAt = Date.now();
+        return firstHealthy.url;
       }
+
       // If no external backend is healthy, fall back to relative path so same-origin Next.js API routes handle it
       cachedBackendUrl = '';
       backendUrlCheckedAt = Date.now();

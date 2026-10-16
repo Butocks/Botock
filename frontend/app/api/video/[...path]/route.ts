@@ -104,6 +104,8 @@ export async function POST(
               errorMsg =
                 typeof errorJson.detail === "string"
                   ? errorJson.detail
+                  : Array.isArray(errorJson.detail)
+                  ? errorJson.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ")
                   : JSON.stringify(errorJson.detail);
             } else {
               errorMsg = text.slice(0, 300);

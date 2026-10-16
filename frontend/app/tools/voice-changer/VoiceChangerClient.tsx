@@ -12,7 +12,7 @@ interface TTSVoice {
   id: string;
   name: string;
   role: string;
-  category: "Deep & Narrator" | "Kids & Youth" | "Female Hosts" | "Regional";
+  category: "Deep & Narrator" | "Female Hosts" | "International" | "Kids & Youth";
   gender: string;
   lang: string;
   defaultPitch: string;
@@ -66,17 +66,6 @@ const TTS_VOICES: TTSVoice[] = [
     desc: "Sophisticated British narrator voice with natural BBC-style depth and cadence."
   },
   {
-    id: "en-US-AnaNeural",
-    name: "Ana",
-    role: "Clean Child / Kid Voice",
-    category: "Kids & Youth",
-    gender: "Child",
-    lang: "English (US)",
-    defaultPitch: "+0Hz",
-    defaultRate: "+0%",
-    desc: "Pure, crystal-clean natural child voice for cartoons, bedtime stories, and youth dialogues."
-  },
-  {
     id: "en-US-JennyNeural",
     name: "Jenny",
     role: "Studio Host & Audiobooks",
@@ -99,48 +88,59 @@ const TTS_VOICES: TTSVoice[] = [
     desc: "Modern energetic tone perfect for social media reels, ads, and character dialogues."
   },
   {
-    id: "ur-PK-AsadNeural",
-    name: "Asad",
-    role: "Urdu Deep Male Voiceover",
-    category: "Regional",
-    gender: "Male",
-    lang: "Urdu (Pakistan)",
-    defaultPitch: "-2Hz",
-    defaultRate: "+0%",
-    desc: "Vocal depth and clear pronunciation for Urdu podcasts, poetry, and documentaries."
-  },
-  {
-    id: "ur-PK-UzmaNeural",
-    name: "Uzma",
-    role: "Urdu Female Narrator",
-    category: "Regional",
+    id: "en-GB-SoniaNeural",
+    name: "Sonia",
+    role: "British Literary & Voiceover",
+    category: "Female Hosts",
     gender: "Female",
-    lang: "Urdu (Pakistan)",
+    lang: "English (UK)",
     defaultPitch: "+0Hz",
     defaultRate: "+0%",
-    desc: "Eloquent, sweet Urdu narration voice for stories, news, and voiceovers."
+    desc: "Refined, articulate British English voice perfect for audiobooks and luxury ads."
   },
   {
-    id: "hi-IN-MadhurNeural",
-    name: "Madhur",
-    role: "Hindi Deep Narrator",
-    category: "Regional",
+    id: "en-AU-WilliamNeural",
+    name: "William",
+    role: "Australian Natural Narrator",
+    category: "International",
     gender: "Male",
-    lang: "Hindi (India)",
-    defaultPitch: "-2Hz",
-    defaultRate: "+0%",
-    desc: "Resonant, deep Hindi voice for YouTube videos, podcasts, and explainers."
-  },
-  {
-    id: "hi-IN-SwaraNeural",
-    name: "Swara",
-    role: "Hindi Studio Female",
-    category: "Regional",
-    gender: "Female",
-    lang: "Hindi (India)",
+    lang: "English (AUS)",
     defaultPitch: "+0Hz",
     defaultRate: "+0%",
-    desc: "Clear, natural Hindi narration for audiobooks, stories, and social media."
+    desc: "Clean, natural Australian accent with genuine warmth and conversational clarity."
+  },
+  {
+    id: "es-ES-AlvaroNeural",
+    name: "Alvaro",
+    role: "Spanish Global Voiceover",
+    category: "International",
+    gender: "Male",
+    lang: "Spanish (ES)",
+    defaultPitch: "+0Hz",
+    defaultRate: "+0%",
+    desc: "Professional Spanish narrator voice for international commercials and presentations."
+  },
+  {
+    id: "fr-FR-HenriNeural",
+    name: "Henri",
+    role: "European French Narrator",
+    category: "International",
+    gender: "Male",
+    lang: "French (FR)",
+    defaultPitch: "+0Hz",
+    defaultRate: "+0%",
+    desc: "Sophisticated, smooth European French narration for documentaries and audiobooks."
+  },
+  {
+    id: "en-US-AnaNeural",
+    name: "Ana",
+    role: "Clean Child / Kid Voice",
+    category: "Kids & Youth",
+    gender: "Child",
+    lang: "English (US)",
+    defaultPitch: "+0Hz",
+    defaultRate: "+0%",
+    desc: "Pure, crystal-clean natural child voice for cartoons, bedtime stories, and youth dialogues."
   }
 ];
 
@@ -150,16 +150,24 @@ const SAMPLE_PROMPTS = [
     text: "Welcome back to the midnight podcast. In tonight's episode, we explore the deep mysteries of the universe that science is only beginning to understand."
   },
   {
-    label: "👦 Kid Story",
-    text: "Once upon a time in a sunny green forest, a little bunny found a shiny golden key hidden under an old oak tree!"
-  },
-  {
     label: "🎬 Movie Trailer",
-    text: "In a world lost to chaos, one warrior will rise to challenge destiny itself. Prepare for the ultimate battle."
+    text: "In a world lost to chaos, one warrior will rise to challenge destiny itself. Prepare for the ultimate cinematic journey."
   },
   {
-    label: "🇵🇰 Urdu Voiceover",
-    text: "خوش آمدید! بوٹوک اسٹوڈیو کے جدید اے آئی وائس انجن کے ساتھ اپنی آواز کو ایک نیا روپ دیں۔"
+    label: "🌍 Global Commercial",
+    text: "Empowering visionary creators and enterprises across the globe with cutting-edge artificial intelligence, designed for tomorrow."
+  },
+  {
+    label: "🎧 Audiobook Story",
+    text: "The library smelled of ancient parchment and rain. Somewhere among the shadowed mahogany shelves, a clock gently ticked away centuries."
+  },
+  {
+    label: "🚀 Tech Explainer",
+    text: "Meet the future of automated workflows. Lightning fast, ultra-reliable, and built from the ground up for modern teams worldwide."
+  },
+  {
+    label: "👦 Kid Story",
+    text: "Once upon a time in a sunny green forest, a curious little bunny found a shiny golden key hidden under an old oak tree!"
   }
 ];
 
@@ -251,20 +259,41 @@ export default function VoiceChangerClient() {
       const pitchStr = `${pitchOffset >= 0 ? "+" : ""}${pitchOffset}Hz`;
       const rateStr = `${rateOffset >= 0 ? "+" : ""}${rateOffset}%`;
 
-      const response = await fetch(`${backendUrl}/api/convert/text-to-speech`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: ttsText,
-          voice: selectedVoice.id,
-          pitch: pitchStr,
-          rate: rateStr
-        }),
+      const payload = JSON.stringify({
+        text: ttsText,
+        voice: selectedVoice.id,
+        pitch: pitchStr,
+        rate: rateStr
       });
 
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => null);
-        throw new Error(errJson?.detail || "Failed to generate speech.");
+      // Try same-origin Next.js proxy route first (which has automatic fallback synthesis), then direct backendUrl
+      let response: Response | null = null;
+      try {
+        response = await fetch("/api/convert/text-to-speech", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+        });
+      } catch (e) {
+        response = null;
+      }
+
+      if (!response || !response.ok) {
+        if (backendUrl && backendUrl !== "" && backendUrl !== "/api/proxy") {
+          const directRes = await fetch(`${backendUrl}/api/convert/text-to-speech`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+          }).catch(() => null);
+          if (directRes && directRes.ok) {
+            response = directRes;
+          }
+        }
+      }
+
+      if (!response || !response.ok) {
+        const errJson = response ? await response.json().catch(() => null) : null;
+        throw new Error(errJson?.detail || "Voiceover synthesis failed. Please try again.");
       }
 
       const blob = await response.blob();
@@ -326,14 +355,31 @@ export default function VoiceChangerClient() {
       formData.append("file", selectedFile);
       formData.append("mode", v2vMode);
 
-      const response = await fetch(`${backendUrl}/api/convert/voice-changer`, {
-        method: "POST",
-        body: formData,
-      });
+      let response: Response | null = null;
+      try {
+        response = await fetch("/api/convert/voice-changer", {
+          method: "POST",
+          body: formData,
+        });
+      } catch (e) {
+        response = null;
+      }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.detail || "Failed to convert audio.");
+      if (!response || !response.ok) {
+        if (backendUrl && backendUrl !== "" && backendUrl !== "/api/proxy") {
+          const directRes = await fetch(`${backendUrl}/api/convert/voice-changer`, {
+            method: "POST",
+            body: formData,
+          }).catch(() => null);
+          if (directRes && directRes.ok) {
+            response = directRes;
+          }
+        }
+      }
+
+      if (!response || !response.ok) {
+        const errorData = response ? await response.json().catch(() => null) : null;
+        throw new Error(errorData?.detail || "Failed to transform audio. Please ensure the file is under 60MB.");
       }
 
       const blob = await response.blob();

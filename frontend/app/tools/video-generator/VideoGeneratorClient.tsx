@@ -43,10 +43,8 @@ export default function VideoGeneratorClient() {
   // Form State
   const [mode, setMode] = useState<"text-to-video" | "photo-to-video">("text-to-video");
   const [prompt, setPrompt] = useState("");
-  const [motionHint, setMotionHint] = useState("");
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
   const [durationSeconds, setDurationSeconds] = useState<number>(4);
-  const [resolution, setResolution] = useState<"360p" | "720p">("360p");
   const [referenceImage, setReferenceImage] = useState<File | null>(null);
   const [referencePreview, setReferencePreview] = useState<string | null>(null);
 
@@ -111,13 +109,8 @@ export default function VideoGeneratorClient() {
   useEffect(() => {
     if (!user) {
       setDurationSeconds(4);
-      setResolution("360p");
-    } else {
-      if (durationSeconds === 8) {
-        setResolution("360p");
-      }
     }
-  }, [user, durationSeconds, resolution]);
+  }, [user]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -188,10 +181,10 @@ export default function VideoGeneratorClient() {
       
       const payload = {
         prompt: prompt || "Animate this image.",
-        model: `omni-1.1-flash-${resolution}`,
+        model: "omni-1.1-flash-360p",
         duration_seconds: durationSeconds,
         aspect_ratio: aspectRatio,
-        motion_hint: motionHint || null,
+        motion_hint: null,
         image_base64: imageBase64,
       };
 
@@ -203,7 +196,16 @@ export default function VideoGeneratorClient() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || "Failed to start generation.");
+        const rawDetail = errData.detail || errData.message || errData.error;
+        let formattedMsg = "Failed to start generation.";
+        if (typeof rawDetail === "string") {
+          formattedMsg = rawDetail;
+        } else if (Array.isArray(rawDetail)) {
+          formattedMsg = rawDetail.map((e: any) => e.msg || JSON.stringify(e)).join(", ");
+        } else if (typeof rawDetail === "object" && rawDetail !== null) {
+          formattedMsg = rawDetail.message || JSON.stringify(rawDetail);
+        }
+        throw new Error(formattedMsg);
       }
 
       const data = await res.json();
@@ -211,7 +213,10 @@ export default function VideoGeneratorClient() {
       setStatus("polling");
       pollStatus(data.generation_id, token, guestId);
     } catch (err: any) {
-      setErrorMessage(err.message || "An unexpected error occurred.");
+      const msg = typeof err?.message === "object"
+        ? JSON.stringify(err.message)
+        : (err?.message || "An unexpected error occurred.");
+      setErrorMessage(msg);
       setStatus("error");
     }
   };
@@ -280,10 +285,14 @@ export default function VideoGeneratorClient() {
             }
 
             if (!user) setShowGuestCTA(true);
-          } else if (data.status === "failed") {
+          } else if (data.status === "failed" || data.status === "error") {
             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
             setStatus("error");
-            setErrorMessage(data.message || data.error || "Generation failed. Please try again.");
+            const rawErr = data.message || data.error || data.detail || "Generation failed. Please try again.";
+            const errMsg = typeof rawErr === "object"
+              ? (rawErr.message || JSON.stringify(rawErr))
+              : String(rawErr);
+            setErrorMessage(errMsg);
           }
         } catch (e) {
           // keep trying
@@ -292,7 +301,10 @@ export default function VideoGeneratorClient() {
     } catch (err: any) {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       setStatus("error");
-      setErrorMessage(err.message);
+      const msg = typeof err?.message === "object"
+        ? JSON.stringify(err.message)
+        : (err?.message || "An unexpected error occurred.");
+      setErrorMessage(msg);
     }
   };
 
@@ -421,17 +433,6 @@ export default function VideoGeneratorClient() {
           
           {/* Controls Chips Row */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
-            {/* Resolution Select */}
-            <select
-              value={resolution}
-              onChange={(e) => setResolution(e.target.value as "360p" | "720p")}
-              disabled={!user || status === "generating" || status === "polling"}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer disabled:opacity-50"
-            >
-              <option value="360p" className="bg-white dark:bg-[#09090b]">Standard (360p)</option>
-              {user && durationSeconds === 4 && <option value="720p" className="bg-white dark:bg-[#09090b]">High Def (720p)</option>}
-            </select>
-
             {/* Duration Select */}
             <select
               value={durationSeconds}
@@ -440,7 +441,7 @@ export default function VideoGeneratorClient() {
               className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer disabled:opacity-50"
             >
               <option value={4} className="bg-white dark:bg-[#09090b]">4 Seconds</option>
-              {user && resolution === "360p" && <option value={8} className="bg-white dark:bg-[#09090b]">8 Seconds</option>}
+              {user && <option value={8} className="bg-white dark:bg-[#09090b]">8 Seconds</option>}
             </select>
 
             {/* Aspect Ratio Select */}
@@ -452,22 +453,6 @@ export default function VideoGeneratorClient() {
             >
               <option value="16:9" className="bg-white dark:bg-[#09090b]">16:9 Landscape</option>
               <option value="9:16" className="bg-white dark:bg-[#09090b]">9:16 Portrait (Reel)</option>
-            </select>
-
-            {/* Motion Hint Select */}
-            <select
-              value={motionHint}
-              onChange={(e) => setMotionHint(e.target.value)}
-              disabled={status === "generating" || status === "polling"}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-violet-500 cursor-pointer disabled:opacity-50"
-            >
-              <option value="" className="bg-white dark:bg-[#09090b]">Motion: Auto</option>
-              <option value="pan right" className="bg-white dark:bg-[#09090b]">Pan Right</option>
-              <option value="pan left" className="bg-white dark:bg-[#09090b]">Pan Left</option>
-              <option value="zoom in" className="bg-white dark:bg-[#09090b]">Zoom In</option>
-              <option value="zoom out" className="bg-white dark:bg-[#09090b]">Zoom Out</option>
-              <option value="orbit" className="bg-white dark:bg-[#09090b]">Orbit</option>
-              <option value="slow motion" className="bg-white dark:bg-[#09090b]">Slow Motion</option>
             </select>
 
             {/* Reference Image chip */}
@@ -485,8 +470,8 @@ export default function VideoGeneratorClient() {
             {!user && (
               <div className="ml-auto text-[10px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1 bg-slate-100 dark:bg-white/5 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-white/10">
                 <Lock className="w-3 h-3" />
-                <span className="hidden sm:inline">Login for 720p/8s</span>
-                <span className="sm:hidden">Login for HD</span>
+                <span className="hidden sm:inline">Login for 8s</span>
+                <span className="sm:hidden">Guest</span>
               </div>
             )}
             {user && (

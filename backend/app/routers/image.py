@@ -82,8 +82,10 @@ async def generate_image(
             })
             if limit_res and not limit_res.get("allowed", True):
                 raise HTTPException(status_code=429, detail=limit_res.get("reason", "Daily image quota reached. Please try again tomorrow."))
-        except HTTPException:
-            raise
+        except HTTPException as he:
+            if he.status_code == 429:
+                raise
+            logger.warning(f"Image quota verification check non-fatal error: {he.detail}")
         except Exception as e:
             logger.warning(f"Image quota verification check non-fatal error: {e}")
     

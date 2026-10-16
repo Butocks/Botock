@@ -17,6 +17,8 @@ export interface ToolSeoSectionProps {
   toolName: string;
   headline?: string;
   tagline?: string;
+  category?: string;
+  description?: string;
   steps?: ToolStep[];
   features?: { title: string; description: string }[];
   faqs?: FaqItem[];
@@ -27,6 +29,8 @@ export function ToolSeoSection({
   toolName,
   headline,
   tagline,
+  category,
+  description,
   steps,
   features,
   faqs,
@@ -93,6 +97,7 @@ export function ToolSeoSection({
         </h2>
         <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-3xl leading-relaxed">
           {tagline ||
+            description ||
             `Experience seamless, privacy-first processing with ${toolName}. Enjoy unlimited free access with fast in-browser execution.`}
         </p>
       </div>

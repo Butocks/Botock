@@ -599,7 +599,6 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "pdf-ocr",
-  status: "coming_soon",
   name: "OCR PDF (Scanned to Text)",
   description: "Extract plain, editable text from scanned documents and images within PDF files using PDF.js and Tesseract.js client-side OCR.",
   category: "pdf",
@@ -854,8 +853,7 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "video-mute",
-  status: "coming_soon",
-  name: "Mute & Reverse Video",
+  name: "Mute Video Online",
   description: "Remove audio streams from video files or reverse video frame playback.",
   category: "video",
   seoTitle: "Mute & Reverse Video Online Free - Remove Audio - Botock",
@@ -1428,7 +1426,6 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "image-color-picker",
-  status: "coming_soon",
   name: "Image Color Picker",
   description: "Eyedropper tool to inspect exact HEX, RGB, and HSL codes and palettes directly on images.",
   category: "image",
@@ -1489,7 +1486,6 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "audio-volume",
-  status: "coming_soon",
   name: "Adjust Audio Volume",
   description: "Boost quiet audio levels up to 500% or lower volume directly in browser via WASM FFmpeg.",
   category: "video",
@@ -1505,7 +1501,6 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "audio-trim",
-  status: "coming_soon",
   name: "Audio Cutter & Trimmer",
   description: "Cut unwanted audio segments and create ringtones with stream copy via WASM FFmpeg.",
   category: "video",

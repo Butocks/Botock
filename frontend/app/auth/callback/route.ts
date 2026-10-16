@@ -30,6 +30,11 @@ export async function GET(request: Request) {
       supabaseUrl,
       supabaseAnonKey,
       {
+        cookieOptions: {
+          maxAge: 7200, // 2 hours max session expiry
+          sameSite: 'lax',
+          path: '/',
+        },
         cookies: {
           getAll() {
             return cookieStore.getAll()
@@ -37,7 +42,10 @@ export async function GET(request: Request) {
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
+                cookieStore.set(name, value, {
+                  ...options,
+                  maxAge: 7200,
+                })
               )
             } catch {
               // The `setAll` method was called from a Server Component.

@@ -41,6 +41,21 @@ const nextConfig: NextConfig = {
         destination: "/terms",
         permanent: true,
       },
+      {
+        source: "/signup",
+        destination: "/login",
+        permanent: true,
+      },
+      {
+        source: "/tools/video-filters",
+        destination: "/tools/video-editor",
+        permanent: true,
+      },
+      {
+        source: "/tools/video-volume",
+        destination: "/tools/audio-volume",
+        permanent: true,
+      },
     ];
   },
   async rewrites() {

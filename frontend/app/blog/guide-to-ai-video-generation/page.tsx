@@ -202,7 +202,7 @@ export default function GuideToVideoGeneration() {
 
         <h3>Why does generation sometimes take longer?</h3>
         <p>
-          AI video generation requires massive amounts of computational power. Because we provide these services globally, there are peak hours when thousands of creators are generating content simultaneously. 
+          AI video generation requires massive amounts of computational power. Because we provide these services globally, there are peak hours when many users are generating content simultaneously. 
         </p>
         <p>
           During these high-traffic periods, your request is placed in a secure queue. The system automatically balances the load, but you may experience slightly longer loading times. Rest assured, once your creative compute node is allocated, your video will be rendered at maximum quality.

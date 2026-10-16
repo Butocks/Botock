@@ -24,7 +24,6 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
-import FirstLoginModal from "./FirstLoginModal";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -46,12 +45,30 @@ export default function Navbar() {
   const isUserVerified = Boolean(user?.user_metadata?.is_verified ?? (user?.app_metadata?.provider === "google"));
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-    });
+    // Session expiration check: If last active was > 2 hours ago, expire session cleanly
+    const MAX_SESSION_INACTIVITY_MS = 2 * 60 * 60 * 1000; // 2 hours
+    const lastActive = typeof window !== "undefined" ? localStorage.getItem("botock_last_active") : null;
+    const now = Date.now();
+
+    if (lastActive && now - parseInt(lastActive, 10) > MAX_SESSION_INACTIVITY_MS) {
+      localStorage.removeItem("botock_last_active");
+      supabase.auth.signOut().then(() => {
+        setUser(null);
+      });
+    } else {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("botock_last_active", now.toString());
+      }
+      supabase.auth.getUser().then(({ data }) => {
+        setUser(data.user);
+      });
+    }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      if (session && typeof window !== "undefined") {
+        localStorage.setItem("botock_last_active", Date.now().toString());
+      }
     });
 
     const handleClickOutside = (e: MouseEvent) => {
@@ -659,8 +676,6 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* First Login Modal for Google OAuth users */}
-      <FirstLoginModal user={user} />
     </header>
   );
 }

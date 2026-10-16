@@ -42,6 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/tools/repair-pdf",
     "/tools/translate-pdf",
     "/tools/word-to-pdf",
+    "/tools/pdf-ocr",
 
     // Image Suite Tools
     "/tools/image-compress",
@@ -53,10 +54,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/tools/image-rotate",
     "/tools/image-upscale",
     "/tools/jpg-to-pdf",
+    "/tools/image-color-picker",
 
     // Video & Audio Utilities
     "/tools/reaction-video-maker",
     "/tools/audio-enhance",
+    "/tools/audio-volume",
+    "/tools/audio-trim",
+    "/tools/video-mute",
     "/tools/video-auto-reframe",
     "/tools/video-rotate",
     "/tools/video-remove-bg",
@@ -76,6 +81,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/features/audio-tools",
 
     // Blog Articles
+    "/blog/tesla-new-roadster-the-car-that-almost-flies",
     "/blog/complete-guide-to-botock-video-editor",
     "/blog/complete-guide-to-pdf-tools-workflows",
     "/blog/complete-guide-to-ai-video-tools-creators",

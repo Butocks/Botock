@@ -228,9 +228,19 @@ export default function ImageGeneratorClient() {
         let errMsg = "Failed to start image generation.";
         try {
           const parsed = JSON.parse(errText);
-          if (parsed.detail) errMsg = parsed.detail;
-        } catch (e) {
-          if (errText && errText.length < 200) errMsg = errText;
+          if (parsed.detail) {
+            errMsg = typeof parsed.detail === "string"
+              ? parsed.detail
+              : Array.isArray(parsed.detail)
+              ? parsed.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ")
+              : (parsed.detail.message || JSON.stringify(parsed.detail));
+          } else if (parsed.message) {
+            errMsg = parsed.message;
+          }
+        } catch {
+          if (errText && errText.length < 200 && !errText.includes("<!DOCTYPE")) {
+            errMsg = errText;
+          }
         }
         throw new Error(errMsg);
       }
@@ -239,10 +249,11 @@ export default function ImageGeneratorClient() {
       setGenerationId(data.generation_id);
       setStatus("polling");
       setProgressPercent(30);
-          } catch (err: any) {
+    } catch (err: any) {
       setStatus("error");
       setProgressPercent(0);
-      const msg = err.message || "An unexpected error occurred.";
+      const rawMsg = err?.message || "An unexpected error occurred.";
+      const msg = typeof rawMsg === "object" ? JSON.stringify(rawMsg) : String(rawMsg);
       setErrorMessage(msg);
       if (!user && (msg.includes("Guest") || msg.includes("limit") || msg.includes("log in") || msg.includes("Unauthorized"))) {
         setShowGuestCTA(true);
@@ -322,10 +333,14 @@ export default function ImageGeneratorClient() {
                 console.error("Blob load note:", err);
                 setImageBlobUrl(authenticatedUrl);
               });
-          } else if (data.status === "failed") {
+          } else if (data.status === "failed" || data.status === "error") {
             setStatus("error");
             setProgressPercent(0);
-            setErrorMessage(data.message || "Image generation failed.");
+            const rawErr = data.message || data.error || data.detail || "Image generation failed.";
+            const errMsg = typeof rawErr === "object"
+              ? (rawErr.message || JSON.stringify(rawErr))
+              : String(rawErr);
+            setErrorMessage(errMsg);
             clearInterval(pollInterval);
           }
         } catch (error) {
@@ -568,16 +583,6 @@ export default function ImageGeneratorClient() {
               ))}
             </select>
 
-            {/* Model Select */}
-            <select
-              value={selectedModel}
-              onChange={(e) => handleModelSelect(e.target.value)}
-              className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-amber-500 cursor-pointer"
-            >
-              {IMAGE_MODELS.map((m) => (
-                <option key={m.id} value={m.id} className="bg-white dark:bg-[#09090b]">{m.label}</option>
-              ))}
-            </select>
 
             {/* Style Preset */}
             <select

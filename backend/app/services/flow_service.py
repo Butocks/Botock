@@ -647,7 +647,20 @@ class FlowService:
             }""")
 
             if video_url:
-                logger.info(f"[{generation_id}] Found video media URL: {video_url[:80]}... Fetching in-browser...")
+                logger.info(f"[{generation_id}] Found video media URL: {video_url[:80]}...")
+                if video_url.startswith("http"):
+                    try:
+                        req_res = await page.request.get(video_url, timeout=30000)
+                        if req_res.ok:
+                            body = await req_res.body()
+                            if len(body) > 5000:
+                                with open(file_path, "wb") as f:
+                                    f.write(body)
+                                logger.info(f"[{generation_id}] Successfully extracted video via Playwright request context ({len(body)} bytes)!")
+                                return file_path
+                    except Exception as req_err:
+                        logger.warning(f"[{generation_id}] Playwright request context fetch note: {req_err}")
+
                 b64_data = await page.evaluate("""async (url) => {
                     const response = await fetch(url);
                     const blob = await response.blob();
@@ -671,13 +684,13 @@ class FlowService:
             logger.warning(f"[{generation_id}] Direct video DOM extraction note: {dom_err}")
 
         # Strategy 3: Click Download Button in Flow UI
-        dl_btn = page.locator('button[aria-label*="Download media" i], button[aria-label*="Download" i]').first
-        more_vert = page.locator('button:has(mat-icon:has-text("more_vert")), mat-icon:has-text("more_vert")').first
+        dl_btn = page.locator('button[aria-label*="Download media" i], button[aria-label*="Download" i], [aria-label*="Download" i]').first
+        more_vert = page.locator('button:has(mat-icon:has-text("more_vert")), mat-icon:has-text("more_vert"), button[aria-label*="More" i]').first
 
-        if not already_opened and not await dl_btn.is_visible() and not await more_vert.is_visible():
+        if not await dl_btn.is_visible() and not await more_vert.is_visible():
             new_tile = None
             if existing_video_tiles is not None:
-                for tile in await page.locator('img[alt*="video" i], video, flow-video-tile img').all():
+                for tile in await page.locator('img[alt*="video" i], video, flow-video-tile img, flow-video-tile').all():
                     try:
                         src = await tile.evaluate("el => el.currentSrc || el.src || ''")
                         if src and src not in existing_video_tiles:
@@ -685,7 +698,9 @@ class FlowService:
                             break
                     except Exception:
                         pass
-            if new_tile:
+            if not new_tile:
+                new_tile = page.locator('flow-video-tile, [role="button"]:has(video), video').last
+            if new_tile and await new_tile.is_visible():
                 try:
                     await new_tile.click()
                     await asyncio.sleep(2)

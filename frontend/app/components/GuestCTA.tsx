@@ -43,7 +43,7 @@ export default function GuestCTA({ isOpen, onClose }: GuestCTAProps) {
             Unlock AI Magic ✨
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
-            Join thousands of creators making stunning AI videos and images in seconds.
+            Create stunning AI videos, images, and edit multimedia in seconds.
           </p>
         </div>
 
