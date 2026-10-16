@@ -211,7 +211,7 @@ export default function ImageGeneratorClient() {
         reqHeaders["X-Guest-ID"] = guestId;
       }
 
-      const response = await fetch(`${backendBaseUrl}/api/image/generate`, {
+      const response = await fetch("/api/image/generate", {
         method: "POST",
         headers: reqHeaders,
         body: JSON.stringify({
@@ -242,14 +242,42 @@ export default function ImageGeneratorClient() {
             errMsg = errText;
           }
         }
-        if (errMsg.includes("<") && errMsg.includes(">")) {
-          errMsg = "AI generation server is temporarily unreachable (502 Bad Gateway). Please ensure the backend service is running.";
-        }
         throw new Error(errMsg);
       }
 
       const data = await response.json();
       setGenerationId(data.generation_id);
+
+      if (data.status === "completed" && (data.download_url || data.image_url)) {
+        const finalUrl = data.download_url || data.image_url;
+        setImageUrl(finalUrl);
+        setProgressPercent(100);
+        setStatus("completed");
+
+        fetch(finalUrl)
+          .then((res) => {
+            if (!res.ok) throw new Error("Could not fetch blob");
+            return res.blob();
+          })
+          .then((blob) => {
+            const bUrl = URL.createObjectURL(blob);
+            setImageBlobUrl(bUrl);
+            const item = {
+              id: data.generation_id,
+              title: prompt.slice(0, 35) + "...",
+              type: "image" as const,
+              url: finalUrl,
+              createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+              prompt,
+            };
+            addToLibrary(item);
+            setActiveMedia(item);
+          })
+          .catch(() => setImageBlobUrl(finalUrl));
+        return;
+      }
+
       setStatus("polling");
       setProgressPercent(30);
     } catch (err: any) {
@@ -271,23 +299,8 @@ export default function ImageGeneratorClient() {
     if (status === "polling" && generationId) {
       pollInterval = setInterval(async () => {
         try {
-          const { data: sessionData } = await supabase.auth.getSession();
-          const token = sessionData.session?.access_token;
-          const backendBaseUrl = await getBackendUrl();
-          const authHeaders: Record<string, string> = {
-            "Bypass-Tunnel-Reminder": "true",
-          };
-          if (token) {
-            authHeaders["Authorization"] = `Bearer ${token}`;
-          } else if (guestId) {
-            authHeaders["X-Guest-ID"] = guestId;
-          }
-
-          const statusUrl = token
-            ? `${backendBaseUrl}/api/image/status/${generationId}?token=${encodeURIComponent(token)}`
-            : `${backendBaseUrl}/api/image/status/${generationId}`;
-
-          const response = await fetch(statusUrl, { headers: authHeaders });
+          const statusUrl = `/api/image/status/${generationId}`;
+          const response = await fetch(statusUrl);
           if (!response.ok) return;
 
           const data = await response.json();
@@ -296,22 +309,13 @@ export default function ImageGeneratorClient() {
           }
 
           if (data.status === "completed") {
-            let finalUrl = data.download_url || `/api/image/download/${generationId}`;
-            if (finalUrl.startsWith("/")) {
-              finalUrl = `${backendBaseUrl.replace(/\/$/, "")}${finalUrl}`;
-            }
-
-            const authenticatedUrl = token
-              ? `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
-              : `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}guest_id=${encodeURIComponent(guestId)}`;
-
-            setImageUrl(authenticatedUrl);
+            const finalUrl = data.download_url || `/api/image/download/${generationId}`;
+            setImageUrl(finalUrl);
             setProgressPercent(100);
             setStatus("completed");
             clearInterval(pollInterval);
 
-            // Fetch blob for instant memory preview & library
-            fetch(finalUrl, { headers: authHeaders })
+            fetch(finalUrl)
               .then((res) => {
                 if (!res.ok) throw new Error("Could not fetch image blob");
                 return res.blob();
@@ -324,7 +328,7 @@ export default function ImageGeneratorClient() {
                   id: generationId,
                   title: prompt.slice(0, 35) + "...",
                   type: "image" as const,
-                  url: authenticatedUrl,
+                  url: finalUrl,
                   createdAt: new Date().toISOString(),
                   expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
                   prompt,
@@ -334,7 +338,7 @@ export default function ImageGeneratorClient() {
               })
               .catch((err) => {
                 console.error("Blob load note:", err);
-                setImageBlobUrl(authenticatedUrl);
+                setImageBlobUrl(finalUrl);
               });
           } else if (data.status === "failed" || data.status === "error") {
             setStatus("error");
