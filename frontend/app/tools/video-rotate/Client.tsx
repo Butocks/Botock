@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { getBackendUrl } from "../../../utils/runtime-urls";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
+import { processVideoOrAudioTool } from "@/app/tools/ToolEngine";
 
 type RotationAngle = 0 | 90 | 180 | 270 | number;
 
@@ -96,12 +97,27 @@ export default function VideoRotateClient() {
     }
 
     const targetAngle = overrideAngle !== undefined ? overrideAngle : rotation;
+
+    // 1. Try Ultra-Fast Backend Native Rotation
+    try {
+      const { result: outputBlob } = await processVideoOrAudioTool("video-rotate", selectedFile, {
+        angle: targetAngle,
+        flipH,
+      });
+      const downloadUrl = URL.createObjectURL(outputBlob);
+      setExportedUrl(downloadUrl);
+      setStatus("completed");
+      return;
+    } catch (backendErr) {
+      console.warn("Backend video-rotate failed, falling back to in-browser FFmpeg:", backendErr);
+    }
+
     const ext = selectedFile.name.split('.').pop()?.toLowerCase() || "mp4";
     const inputName = `input_${Date.now()}.${ext}`;
     const outputName = `rotated_${Date.now()}.mp4`;
 
     try {
-      // 1. In-Browser FFmpeg Rotation (Fast Stream Copy / Ultrafast Re-encode)
+      // 2. In-Browser FFmpeg Rotation Fallback (Fast Stream Copy / Ultrafast Re-encode)
       try {
         await loadFFmpeg();
         const inputBytes = new Uint8Array(await selectedFile.arrayBuffer());

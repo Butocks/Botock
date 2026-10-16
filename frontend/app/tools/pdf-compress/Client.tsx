@@ -8,6 +8,8 @@ import {
   type CompressionPreset,
   type CompressionResult,
 } from "@/lib/pdf/pdfCompressHelper";
+import { processPdfTool } from "@/app/tools/ToolEngine";
+
 import {
   FileText,
   FileUp,
@@ -155,31 +157,58 @@ export default function PdfCompressClient() {
 
     setIsProcessing(true);
     setError(null);
-    setProgressPercent(0);
-    setProgressStatus("Initializing compression...");
+    setProgressPercent(5);
+    setProgressStatus("Initializing high-speed compression...");
     cancelRef.current = { cancelled: false };
 
     try {
-      const compressionResult = await compressPdf(file, {
-        preset,
-        onProgress: (percent, status) => {
+      const { result: outBlob, executedOn } = await processPdfTool(
+        "pdf-compress",
+        file,
+        { preset },
+        (percent, mode) => {
           setProgressPercent(percent);
-          setProgressStatus(status);
-        },
-        cancelSignal: cancelRef.current,
-      });
+          if (mode === "backend") {
+            setProgressStatus(
+              percent < 65
+                ? `Uploading PDF to Fast Server (${percent}%)...`
+                : `Compressing via PyMuPDF Engine (${percent}%)...`
+            );
+          } else {
+            setProgressStatus(`Compressing in browser (${percent}%)...`);
+          }
+        }
+      );
 
       if (!cancelRef.current.cancelled) {
+        const origSize = file.size;
+        const compSize = outBlob.size;
+        const saved = Math.max(0, origSize - compSize);
+        const ratio = origSize > 0 ? Math.round((saved / origSize) * 100) : 0;
+
+        const compressionResult: CompressionResult = {
+          originalSize: origSize,
+          compressedSize: compSize,
+          savedBytes: saved,
+          ratio,
+          blob: outBlob,
+          imagesCompressed: 1,
+        };
+
         setResult(compressionResult);
 
-        // Clean up previous URL if any
         if (activeUrlRef.current) {
           URL.revokeObjectURL(activeUrlRef.current);
         }
 
-        const url = URL.createObjectURL(compressionResult.blob);
+        const url = URL.createObjectURL(outBlob);
         activeUrlRef.current = url;
         setDownloadUrl(url);
+        setProgressStatus(
+          executedOn === "backend"
+            ? "Compressed via Fast Server Engine!"
+            : "Compressed via Local Browser Engine!"
+        );
       }
     } catch (err: unknown) {
       console.error("Compression failed:", err);
@@ -193,6 +222,7 @@ export default function PdfCompressClient() {
       setIsProcessing(false);
     }
   };
+
 
   return (
     <div className="w-full bg-white dark:bg-[#121215] p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-white/[0.08] shadow-sm">

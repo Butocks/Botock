@@ -5,8 +5,11 @@ import { Upload, Smartphone, Sparkles, Download, AlertCircle } from "lucide-reac
 import { getBackendUrl } from "../../../utils/runtime-urls";
 import { getTransferMedia } from "@/app/utils/mediaTransfer";
 
+type AspectRatioOption = "9:16" | "1:1" | "4:5" | "16:9";
+
 export default function AutoReframeClient() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<AspectRatioOption>("9:16");
   const [status, setStatus] = useState<"idle" | "uploading" | "completed" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -30,6 +33,8 @@ export default function AutoReframeClient() {
       const backendUrl = await getBackendUrl();
       const formData = new FormData();
       formData.append("file", selectedFile);
+      formData.append("aspectRatio", aspectRatio);
+      formData.append("aspect_ratio", aspectRatio);
 
       try {
         const response = await fetch(`${backendUrl}/api/video/auto-reframe`, {
@@ -75,12 +80,34 @@ export default function AutoReframeClient() {
       video.onloadedmetadata = () => {
         const vH = video.videoHeight || 720;
         const vW = video.videoWidth || 1280;
-        const targetWidth = Math.floor(vH * (9 / 16));
-        const cropX = Math.max(0, Math.floor((vW - targetWidth) / 2));
+
+        const [rW, rH] = aspectRatio.split(":").map(Number);
+        const targetAspect = rW / rH;
+        const sourceAspect = vW / vH;
+
+        let cropW = vW;
+        let cropH = vH;
+
+        if (sourceAspect > targetAspect) {
+          // Video is wider than target ratio (e.g. 16:9 to 9:16, 1:1, 4:5)
+          cropW = Math.round(vH * targetAspect);
+          cropH = vH;
+        } else {
+          // Video is taller than target ratio (e.g. 9:16 to 16:9)
+          cropW = vW;
+          cropH = Math.round(vW / targetAspect);
+        }
+
+        // Ensure even dimensions for video codecs
+        cropW = cropW % 2 === 0 ? cropW : cropW - 1;
+        cropH = cropH % 2 === 0 ? cropH : cropH - 1;
+
+        const cropX = Math.max(0, Math.floor((vW - cropW) / 2));
+        const cropY = Math.max(0, Math.floor((vH - cropH) / 2));
 
         const canvas = document.createElement("canvas");
-        canvas.width = targetWidth % 2 === 0 ? targetWidth : targetWidth - 1;
-        canvas.height = vH % 2 === 0 ? vH : vH - 1;
+        canvas.width = cropW;
+        canvas.height = cropH;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
           URL.revokeObjectURL(videoSrc);
@@ -146,7 +173,7 @@ export default function AutoReframeClient() {
           }
           ctx.drawImage(
             video,
-            cropX, 0, targetWidth, vH,
+            cropX, cropY, cropW, cropH,
             0, 0, canvas.width, canvas.height
           );
           if ('requestVideoFrameCallback' in video) {
@@ -178,13 +205,42 @@ export default function AutoReframeClient() {
           <div className="w-16 h-16 bg-violet-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-violet-500">
             <Smartphone className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-bold text-foreground">AI Auto-Reframe to 9:16</h2>
+          <h2 className="text-2xl font-bold text-foreground">AI Auto-Reframe Video</h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-lg mx-auto">
-            Upload a 16:9 landscape video. AI will track the subject and crop it for Reels/Shorts perfectly.
+            Intelligently crop and re-center videos for Reels, Shorts, Instagram, or YouTube with instant AI tracking.
           </p>
         </div>
 
         <div className="space-y-6">
+          {/* Aspect Ratio Selector */}
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground block mb-2">
+              Select Target Aspect Ratio:
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {[
+                { id: "9:16", label: "9:16", desc: "TikTok / Reels" },
+                { id: "1:1", label: "1:1", desc: "Instagram Square" },
+                { id: "4:5", label: "4:5", desc: "Instagram Portrait" },
+                { id: "16:9", label: "16:9", desc: "YouTube Landscape" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setAspectRatio(item.id as AspectRatioOption)}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    aspectRatio === item.id
+                      ? "border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400 font-bold shadow-xs"
+                      : "border-border/60 bg-muted/20 hover:bg-muted/40 text-foreground"
+                  }`}
+                >
+                  <div className="text-sm font-bold">{item.label}</div>
+                  <div className="text-[11px] text-muted-foreground">{item.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {!selectedFile ? (
             <div 
               onDragOver={(e) => e.preventDefault()}
@@ -197,8 +253,8 @@ export default function AutoReframeClient() {
             >
               <input type="file" ref={fileInputRef} onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} accept="video/*" className="hidden" />
               <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold text-foreground mb-1">Upload Video (16:9)</h3>
-              <p className="text-xs text-muted-foreground">MP4, MOV (Max 50MB)</p>
+              <h3 className="font-semibold text-foreground mb-1">Upload Video</h3>
+              <p className="text-xs text-muted-foreground">MP4, MOV, WebM (Max 50MB)</p>
             </div>
           ) : (
             <div className="bg-muted/30 border border-border rounded-2xl p-4 flex items-center justify-between">
@@ -206,7 +262,7 @@ export default function AutoReframeClient() {
                 <Smartphone className="w-5 h-5 text-violet-500" />
                 <p className="text-sm font-semibold text-foreground">{selectedFile.name}</p>
               </div>
-              <button onClick={() => setSelectedFile(null)} className="text-xs text-red-500">Remove</button>
+              <button onClick={() => setSelectedFile(null)} className="text-xs text-red-500 font-semibold hover:underline">Remove</button>
             </div>
           )}
 
@@ -214,12 +270,12 @@ export default function AutoReframeClient() {
             <button
               onClick={startProcessing}
               disabled={status === "uploading"}
-              className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-base transition-all"
+              className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-base transition-all disabled:opacity-50"
             >
               {status === "uploading" ? (
-                <>Loading AI Model...</>
+                <>Processing Reframe ({aspectRatio})...</>
               ) : (
-                <><Sparkles className="w-5 h-5" /> Auto-Crop to 9:16</>
+                <><Sparkles className="w-5 h-5" /> Auto-Crop to {aspectRatio}</>
               )}
             </button>
           )}
@@ -229,8 +285,8 @@ export default function AutoReframeClient() {
           {videoUrl && status === "completed" && (
             <div className="pt-6 text-center">
               <video controls src={videoUrl} className="mx-auto rounded-2xl max-h-[500px]" />
-              <a href={videoUrl} download="botock_reframe.mp4" className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm">
-                <Download className="w-4 h-4" /> Download 9:16 Video
+              <a href={videoUrl} download={`botock_reframe_${aspectRatio.replace(":", "_")}.mp4`} className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition">
+                <Download className="w-4 h-4" /> Download {aspectRatio} Video
               </a>
             </div>
           )}

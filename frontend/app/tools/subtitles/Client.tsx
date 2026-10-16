@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { getTransferMedia } from "@/app/utils/mediaTransfer";
+import { processVideoOrAudioTool } from "@/app/tools/ToolEngine";
 
 // Formats ms to timestamp
 const formatMsToTimestamp = (ms: number, format: "srt" | "vtt"): string => {
@@ -139,9 +140,31 @@ export default function SubtitlesClient() {
           // AI Transcription
           try {
               setIsProcessing(true);
-              setLoadingMessage("Decoding audio...");
+              setLoadingMessage("Transcribing audio via Botock Fast Engine...");
+
+              // 1. Try Fast Native Server Subtitles first
+              try {
+                const { result: subBlob } = await processVideoOrAudioTool(
+                  "subtitles",
+                  f,
+                  { format: targetFormatRef.current },
+                  (p) => setLoadingMessage(`Transcribing audio on server (${p}%)...`)
+                );
+                const subText = await subBlob.text();
+                if (subText && subText.trim()) {
+                  setContent(subText.trim());
+                  setIsProcessing(false);
+                  setLoadingMessage("");
+                  return;
+                }
+              } catch (backendErr) {
+                console.warn("Backend subtitles unavailable, switching to in-browser Whisper:", backendErr);
+              }
+
+              // 2. Client-side Whisper WebWorker fallback
+              setLoadingMessage("Decoding audio locally...");
               const audioData = await decodeAudio(f);
-              setLoadingMessage("Sending to AI Model...");
+              setLoadingMessage("Sending to in-browser Whisper AI...");
               worker.current?.postMessage({
                   type: 'generate',
                   audioData

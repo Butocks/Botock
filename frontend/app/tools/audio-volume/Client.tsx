@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { fetchFile } from "@ffmpeg/util";
+import { processVideoOrAudioTool } from "@/app/tools/ToolEngine";
 
 const PRESETS = [
   { label: "Normal (100%)", value: 100 },
@@ -26,6 +27,73 @@ const PRESETS = [
   { label: "Loud (3x)", value: 300 },
   { label: "Max Boost (5x)", value: 500 },
 ];
+
+// Fast Native Web Audio API booster for audio files (Runs in < 0.5s without WASM)
+async function boostAudioWithWebAudio(file: File, multiplier: number): Promise<Blob> {
+  const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+
+    const offlineCtx = new OfflineAudioContext(
+      decoded.numberOfChannels,
+      decoded.length,
+      decoded.sampleRate
+    );
+
+    const source = offlineCtx.createBufferSource();
+    source.buffer = decoded;
+
+    const gainNode = offlineCtx.createGain();
+    gainNode.gain.value = multiplier;
+
+    source.connect(gainNode);
+    gainNode.connect(offlineCtx.destination);
+    source.start(0);
+
+    const rendered = await offlineCtx.startRendering();
+
+    // Encode to 16-bit PCM WAV
+    const numOfChan = rendered.numberOfChannels;
+    const length = rendered.length * numOfChan * 2 + 44;
+    const outBuffer = new ArrayBuffer(length);
+    const view = new DataView(outBuffer);
+    let pos = 0;
+
+    const setUint16 = (d: number) => { view.setUint16(pos, d, true); pos += 2; };
+    const setUint32 = (d: number) => { view.setUint32(pos, d, true); pos += 4; };
+
+    setUint32(0x46464952); // "RIFF"
+    setUint32(length - 8);
+    setUint32(0x45564157); // "WAVE"
+    setUint32(0x20746d66); // "fmt "
+    setUint32(16);
+    setUint16(1); // PCM
+    setUint16(numOfChan);
+    setUint32(rendered.sampleRate);
+    setUint32(rendered.sampleRate * 2 * numOfChan);
+    setUint16(numOfChan * 2);
+    setUint16(16);
+    setUint32(0x61746164); // "data"
+    setUint32(length - pos - 4);
+
+    const channels = [];
+    for (let i = 0; i < numOfChan; i++) channels.push(rendered.getChannelData(i));
+
+    for (let i = 0; i < rendered.length; i++) {
+      for (let ch = 0; ch < numOfChan; ch++) {
+        let sample = Math.max(-1, Math.min(1, channels[ch][i]));
+        sample = sample < 0 ? sample * 32768 : sample * 32767;
+        view.setInt16(pos, Math.floor(sample), true);
+        pos += 2;
+      }
+    }
+
+    return new Blob([outBuffer], { type: "audio/wav" });
+  } finally {
+    audioCtx.close().catch(() => {});
+  }
+}
 
 export default function AudioVolumeClient() {
   const { load: loadFFmpeg, writeFile, readFile, deleteFile, exec, progress } = useFFmpeg();
@@ -57,31 +125,69 @@ export default function AudioVolumeClient() {
     setStatus("processing");
     setErrorMessage("");
 
-    const ext = selectedFile.name.split(".").pop()?.toLowerCase() || "mp3";
+    const multiplier = Number((volumePercent / 100).toFixed(2));
+    const isAudioOnly = selectedFile.type.startsWith("audio/") || Boolean(selectedFile.name.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/i));
+
+    // 1. If audio file: Instant Client-Side Web Audio API (OfflineAudioContext + GainNode) in <0.5s!
+    if (isAudioOnly) {
+      try {
+        const boostedBlob = await boostAudioWithWebAudio(selectedFile, multiplier);
+        const downloadUrl = URL.createObjectURL(boostedBlob);
+        setExportedUrl(downloadUrl);
+        setStatus("completed");
+        return;
+      } catch (clientErr) {
+        console.warn("Client WebAudio boost failed, falling back to hybrid engine:", clientErr);
+      }
+    }
+
+    // 2. Fast Backend Stream Copy for Video/Audio
+    try {
+      const { result: outputBlob } = await processVideoOrAudioTool("audio-volume", selectedFile, {
+        volume: multiplier,
+      });
+      const downloadUrl = URL.createObjectURL(outputBlob);
+      setExportedUrl(downloadUrl);
+      setStatus("completed");
+      return;
+    } catch (backendErr) {
+      console.warn("Backend volume boost failed, falling back to local FFmpeg:", backendErr);
+    }
+
+    // 3. In-Browser FFmpeg Fallback with -c:v copy so video frames are NEVER re-encoded!
+    const ext = selectedFile.name.split(".").pop()?.toLowerCase() || "mp4";
+    const isVideo = !isAudioOnly;
     const inputName = `input_${Date.now()}.${ext}`;
-    const outputName = `boosted_${Date.now()}.mp3`;
+    const outputName = `boosted_${Date.now()}.${isVideo ? "mp4" : "mp3"}`;
 
     try {
       await loadFFmpeg();
-
       const fileData = await fetchFile(selectedFile);
       await writeFile(inputName, fileData);
 
-      const multiplier = (volumePercent / 100).toFixed(2);
+      const ffmpegArgs = isVideo
+        ? [
+            "-i", inputName,
+            "-c:v", "copy",
+            "-af", `volume=${multiplier}`,
+            "-c:a", "aac",
+            outputName,
+          ]
+        : [
+            "-i", inputName,
+            "-filter:a", `volume=${multiplier}`,
+            "-b:a", "192k",
+            outputName,
+          ];
 
-      const code = await exec([
-        "-i", inputName,
-        "-filter:a", `volume=${multiplier}`,
-        "-b:a", "192k",
-        outputName,
-      ]);
-
+      const code = await exec(ffmpegArgs);
       if (code !== 0) {
-        throw new Error("FFmpeg failed to boost audio. Please try another audio format.");
+        throw new Error("FFmpeg failed to boost volume. Please try another format.");
       }
 
       const outputData = await readFile(outputName);
-      const outputBlob = new Blob([outputData.buffer as ArrayBuffer], { type: "audio/mpeg" });
+      const mimeType = isVideo ? "video/mp4" : "audio/mpeg";
+      const outputBlob = new Blob([outputData.buffer as ArrayBuffer], { type: mimeType });
       const downloadUrl = URL.createObjectURL(outputBlob);
 
       setExportedUrl(downloadUrl);
@@ -94,9 +200,7 @@ export default function AudioVolumeClient() {
       try {
         await deleteFile(inputName);
         await deleteFile(outputName);
-      } catch {
-        // Virtual files might already be removed
-      }
+      } catch {}
     }
   };
 

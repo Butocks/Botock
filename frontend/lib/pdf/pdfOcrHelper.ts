@@ -279,8 +279,20 @@ export async function processPdfOcr(
   }
 }
 
+export async function ocrPdfClient(
+  file: File,
+  onProgress?: (pct: number) => void
+): Promise<string> {
+  const result = await processPdfOcr(file, "eng", (p) => {
+    onProgress?.(p.progress);
+  });
+  return result.fullText;
+}
+
 export default {
   renderPdfPageToCanvas,
   extractTextFromPage,
   processPdfOcr,
+  ocrPdfClient,
 };
+

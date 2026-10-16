@@ -17,6 +17,7 @@ import {
   Wand2,
   UserCheck,
   Flame,
+  Cpu,
 } from "lucide-react";
 import { getBackendUrl } from "../../../utils/runtime-urls";
 import { getTransferMedia } from "@/app/utils/mediaTransfer";
@@ -25,7 +26,12 @@ interface TTSVoice {
   id: string;
   name: string;
   role: string;
-  category: "Deep & Narrator" | "Female Hosts" | "International" | "Kids & Youth";
+  category:
+    | "Deep & Narrator"
+    | "Female Hosts"
+    | "Urdu & Hindi"
+    | "International"
+    | "Kids & Youth";
   gender: string;
   lang: string;
   defaultPitch: string;
@@ -93,6 +99,53 @@ const CLONE_PRESETS: ClonePreset[] = [
 ];
 
 const TTS_VOICES: TTSVoice[] = [
+  // --- URDU & HINDI NEURAL VOICES ---
+  {
+    id: "ur-PK-AsadNeural",
+    name: "Asad (اسد)",
+    role: "Pakistani Urdu Male Narrator",
+    category: "Urdu & Hindi",
+    gender: "Male",
+    lang: "Urdu (Pakistan)",
+    defaultPitch: "-2Hz",
+    defaultRate: "+0%",
+    desc: "Natural Pakistani Urdu male voice for YouTube documentaries, poetry, news, and Islamic stories.",
+  },
+  {
+    id: "ur-PK-UzmaNeural",
+    name: "Uzma (عظمیٰ)",
+    role: "Pakistani Urdu Female Host",
+    category: "Urdu & Hindi",
+    gender: "Female",
+    lang: "Urdu (Pakistan)",
+    defaultPitch: "+0Hz",
+    defaultRate: "+0%",
+    desc: "Warm, clear Pakistani Urdu female voice ideal for commercials, storytelling, and educational videos.",
+  },
+  {
+    id: "hi-IN-MadhurNeural",
+    name: "Madhur (मधुर)",
+    role: "Deep Hindi Documentary Host",
+    category: "Urdu & Hindi",
+    gender: "Male",
+    lang: "Hindi (India)",
+    defaultPitch: "-3Hz",
+    defaultRate: "-2%",
+    desc: "Rich, authoritative Hindi male voiceover for kahaniyan, reels, podcasts, and explainers.",
+  },
+  {
+    id: "hi-IN-SwaraNeural",
+    name: "Swara (स्वरा)",
+    role: "Expressive Hindi Studio Host",
+    category: "Urdu & Hindi",
+    gender: "Female",
+    lang: "Hindi (India)",
+    defaultPitch: "+0Hz",
+    defaultRate: "+0%",
+    desc: "Crystal-clear studio Hindi female voice for audiobooks, brand promos, and narration.",
+  },
+
+  // --- ENGLISH & GLOBAL NEURAL VOICES ---
   {
     id: "en-US-ChristopherNeural",
     name: "Christopher",
@@ -218,6 +271,14 @@ const TTS_VOICES: TTSVoice[] = [
 
 const SAMPLE_PROMPTS = [
   {
+    label: "🇵🇰 Urdu Documentary",
+    text: "خوش آمدید! آج کی اس دستاویزی ویڈیو میں ہم کائنات کے ان پراسرار رازوں سے پردہ اٹھائیں گے جنہیں جان کر آپ حیران رہ جائیں گے۔",
+  },
+  {
+    label: "🇮🇳 Hindi Kahani",
+    text: "नमस्ते दोस्तों! आज की इस कहानी में हम एक ऐसे रहस्यमयी जंगल के बारे में जानेंगे जहाँ समय बिल्कुल रुक जाता है।",
+  },
+  {
     label: "🎙️ Deep Podcast",
     text: "Welcome back to the midnight podcast. In tonight's episode, we explore the deep mysteries of the universe that science is only beginning to understand.",
   },
@@ -226,16 +287,8 @@ const SAMPLE_PROMPTS = [
     text: "In a world lost to chaos, one warrior will rise to challenge destiny itself. Prepare for the ultimate cinematic journey.",
   },
   {
-    label: "🌍 Global Commercial",
-    text: "Empowering visionary creators and enterprises across the globe with cutting-edge artificial intelligence, designed for tomorrow.",
-  },
-  {
     label: "🎧 Audiobook Story",
     text: "The library smelled of ancient parchment and rain. Somewhere among the shadowed mahogany shelves, a clock gently ticked away centuries.",
-  },
-  {
-    label: "🚀 Tech Explainer",
-    text: "Meet the future of automated workflows. Lightning fast, ultra-reliable, and built from the ground up for modern teams worldwide.",
   },
   {
     label: "👦 Kid Story",
@@ -262,8 +315,167 @@ const VOICE_MODES = [
   { id: "privacy_disguiser", label: "🕵️ Anonymous Hacker" },
 ];
 
+// 🎛️ WebAudio DSP Filter Configurations (Used when Python Backend is Offline)
+const WEBAUDIO_DSP_PROFILES: Record<
+  string,
+  {
+    rate: number;
+    bassGain: number;
+    midFreq?: number;
+    midGain?: number;
+    trebleGain: number;
+    echoDelay?: number;
+    echoFeedback?: number;
+    tremoloHz?: number;
+  }
+> = {
+  // Voice Changer Modes (Tab 3)
+  man_deep: { rate: 0.84, bassGain: 7, trebleGain: 1 },
+  deep_villain: { rate: 0.75, bassGain: 10, trebleGain: 2, echoDelay: 0.14, echoFeedback: 0.28 },
+  women: { rate: 1.19, bassGain: -4, trebleGain: 5 },
+  kid: { rate: 1.26, bassGain: -5, trebleGain: 4 },
+  little_girl: { rate: 1.35, bassGain: -6, trebleGain: 5 },
+  clone_morgan: { rate: 0.81, bassGain: 8, trebleGain: 3 },
+  clone_elon: { rate: 0.92, bassGain: 4, trebleGain: 2 },
+  clone_anime_girl: { rate: 1.41, bassGain: -6, trebleGain: 6 },
+  man_old: { rate: 0.89, bassGain: 3, trebleGain: -4, tremoloHz: 5.5 },
+  old_women: { rate: 1.08, bassGain: -2, trebleGain: -3, tremoloHz: 6.0 },
+  strict: { rate: 0.94, bassGain: 3, midFreq: 1800, midGain: 5, trebleGain: 3 },
+  robot: { rate: 0.98, bassGain: 2, trebleGain: 6, echoDelay: 0.03, echoFeedback: 0.55 },
+  chipmunk: { rate: 1.65, bassGain: -8, trebleGain: 6 },
+  echo_chamber: { rate: 1.0, bassGain: 2, trebleGain: 2, echoDelay: 0.28, echoFeedback: 0.45 },
+  telephone: { rate: 1.0, bassGain: -12, midFreq: 1600, midGain: 8, trebleGain: -10 },
+  privacy_disguiser: { rate: 0.78, bassGain: 6, trebleGain: -4, echoDelay: 0.04, echoFeedback: 0.35 },
+
+  // AI Voice Cloning Presets (Tab 2)
+  preset_movie_narrator: { rate: 0.86, bassGain: 8, trebleGain: 2 },
+  preset_anime_heroine: { rate: 1.24, bassGain: -4, trebleGain: 6 },
+  preset_studio_podcaster: { rate: 0.95, bassGain: 6, trebleGain: 3 },
+  preset_british_detective: { rate: 0.96, bassGain: 4, trebleGain: 3 },
+  preset_tech_visionary: { rate: 0.98, bassGain: 3, trebleGain: 2 },
+  preset_cyberpunk_ai: { rate: 0.94, bassGain: 4, trebleGain: 7, echoDelay: 0.025, echoFeedback: 0.3 },
+};
+
+// 🌊 WebAudio Synthesized Background Ambience Generator
+async function mixAmbienceIntoBlob(voiceBlob: Blob, mode: string, volume: number): Promise<Blob> {
+  if (mode === "none") return voiceBlob;
+
+  try {
+    const arrayBuffer = await voiceBlob.arrayBuffer();
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const voiceBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+    const offlineCtx = new OfflineAudioContext(
+      voiceBuffer.numberOfChannels,
+      voiceBuffer.length,
+      voiceBuffer.sampleRate
+    );
+
+    // 1. Play Voice Buffer
+    const voiceSource = offlineCtx.createBufferSource();
+    voiceSource.buffer = voiceBuffer;
+    voiceSource.connect(offlineCtx.destination);
+    voiceSource.start(0);
+
+    // 2. Synthesize Background Ambience Buffer
+    const sampleRate = voiceBuffer.sampleRate;
+    const duration = voiceBuffer.duration;
+    const ambBuffer = offlineCtx.createBuffer(2, Math.ceil(sampleRate * duration), sampleRate);
+    const left = ambBuffer.getChannelData(0);
+    const right = ambBuffer.getChannelData(1);
+
+    for (let i = 0; i < left.length; i++) {
+      const t = i / sampleRate;
+      if (mode === "rain") {
+        // Pink/White noise for soft rain
+        const noise = (Math.random() * 2 - 1) * 0.08;
+        left[i] = noise;
+        right[i] = noise;
+      } else if (mode === "lofi_beat") {
+        // Soft pulsing lofi rhythm & warm sub-bass hum
+        const beat = Math.sin(t * Math.PI * 1.8) > 0.8 ? 0.12 : 0.02;
+        const hum = Math.sin(t * 110 * Math.PI * 2) * 0.03;
+        left[i] = beat + hum;
+        right[i] = beat + hum;
+      } else if (mode === "cinematic_drone") {
+        // Deep cinematic suspense drone
+        const drone = Math.sin(t * 55 * Math.PI * 2) * 0.08 + Math.sin(t * 82.5 * Math.PI * 2) * 0.05;
+        left[i] = drone;
+        right[i] = drone;
+      }
+    }
+
+    const ambSource = offlineCtx.createBufferSource();
+    ambSource.buffer = ambBuffer;
+    ambSource.loop = true;
+
+    const ambGain = offlineCtx.createGain();
+    ambGain.gain.value = volume;
+
+    ambSource.connect(ambGain);
+    ambGain.connect(offlineCtx.destination);
+    ambSource.start(0);
+
+    const rendered = await offlineCtx.startRendering();
+    await audioCtx.close();
+
+    // Export to WAV Blob
+    const numOfChan = rendered.numberOfChannels;
+    const length = rendered.length * numOfChan * 2 + 44;
+    const buffer = new ArrayBuffer(length);
+    const view = new DataView(buffer);
+    const channels = [];
+    let pos = 0;
+
+    const setUint16 = (data: number) => {
+      view.setUint16(pos, data, true);
+      pos += 2;
+    };
+    const setUint32 = (data: number) => {
+      view.setUint32(pos, data, true);
+      pos += 4;
+    };
+
+    setUint32(0x46464952); // "RIFF"
+    setUint32(length - 8);
+    setUint32(0x45564157); // "WAVE"
+    setUint32(0x20746d66); // "fmt "
+    setUint32(16);
+    setUint16(1);
+    setUint16(numOfChan);
+    setUint32(rendered.sampleRate);
+    setUint32(rendered.sampleRate * 2 * numOfChan);
+    setUint16(numOfChan * 2);
+    setUint16(16);
+    setUint32(0x61746164); // "data"
+    setUint32(length - pos - 4);
+
+    for (let i = 0; i < numOfChan; i++) {
+      channels.push(rendered.getChannelData(i));
+    }
+    let offset = 0;
+    while (pos < length) {
+      for (let i = 0; i < numOfChan; i++) {
+        let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+        sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+        view.setInt16(pos, sample, true);
+        pos += 2;
+      }
+      offset++;
+    }
+    return new Blob([buffer], { type: "audio/wav" });
+  } catch {
+    return voiceBlob;
+  }
+}
+
 export default function VoiceChangerClient() {
   const [activeTab, setActiveTab] = useState<"tts" | "clone" | "v2v">("tts");
+  const [lastEngineUsed, setLastEngineUsed] = useState<string>("");
+
+  // --- Background Ambience State ---
+  const [selectedAmbience, setSelectedAmbience] = useState<string>("none");
+  const [ambienceVolume, setAmbienceVolume] = useState<number>(0.15);
 
   // --- TAB 1: TTS State ---
   const [ttsText, setTtsText] = useState(
@@ -326,6 +538,155 @@ export default function VoiceChangerClient() {
     };
   }, [ttsAudioUrl, v2vAudioUrl, cloneAudioUrl]);
 
+  // =========================================================================
+  // 🎛️ UNIVERSAL WEBAUDIO DSP ENGINE (Fast Client-Side Fallback)
+  // =========================================================================
+  const processAudioWithWebAudioDSP = async (
+    inputBlob: Blob,
+    profileKey: string,
+    customRateOverride?: number
+  ): Promise<Blob> => {
+    const arrayBuffer = await inputBlob.arrayBuffer();
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const decoded = await audioCtx.decodeAudioData(arrayBuffer);
+
+    const cfg = WEBAUDIO_DSP_PROFILES[profileKey] || {
+      rate: customRateOverride || 1.0,
+      bassGain: 3,
+      trebleGain: 2,
+    };
+
+    const effectiveRate = customRateOverride || cfg.rate;
+    const extraTailSeconds = cfg.echoDelay ? 1.2 : 0.1;
+    const newLength = Math.ceil(decoded.length / effectiveRate) + Math.ceil(decoded.sampleRate * extraTailSeconds);
+
+    const offlineCtx = new OfflineAudioContext(
+      decoded.numberOfChannels,
+      newLength,
+      decoded.sampleRate
+    );
+
+    const source = offlineCtx.createBufferSource();
+    source.buffer = decoded;
+    source.playbackRate.value = effectiveRate;
+
+    // 1. Bass Shelf Filter
+    const bassFilter = offlineCtx.createBiquadFilter();
+    bassFilter.type = "lowshelf";
+    bassFilter.frequency.value = 140;
+    bassFilter.gain.value = cfg.bassGain;
+
+    // 2. Mid Peaking Filter
+    const midFilter = offlineCtx.createBiquadFilter();
+    midFilter.type = "peaking";
+    midFilter.frequency.value = cfg.midFreq || 1500;
+    midFilter.Q.value = 1.0;
+    midFilter.gain.value = cfg.midGain || 0;
+
+    // 3. Treble Shelf Filter
+    const trebleFilter = offlineCtx.createBiquadFilter();
+    trebleFilter.type = "highshelf";
+    trebleFilter.frequency.value = 3200;
+    trebleFilter.gain.value = cfg.trebleGain;
+
+    // 4. Studio Compressor
+    const compressor = offlineCtx.createDynamicsCompressor();
+    compressor.threshold.value = -18;
+    compressor.knee.value = 20;
+    compressor.ratio.value = 3.5;
+    compressor.attack.value = 0.01;
+    compressor.release.value = 0.15;
+
+    source.connect(bassFilter);
+    bassFilter.connect(midFilter);
+    midFilter.connect(trebleFilter);
+
+    // Optional Tremolo (Old Man / Old Woman vibrato)
+    if (cfg.tremoloHz) {
+      const tremoloGain = offlineCtx.createGain();
+      tremoloGain.gain.value = 0.8;
+      const lfo = offlineCtx.createOscillator();
+      lfo.frequency.value = cfg.tremoloHz;
+      const lfoDepth = offlineCtx.createGain();
+      lfoDepth.gain.value = 0.2;
+      lfo.connect(lfoDepth);
+      lfoDepth.connect(tremoloGain.gain);
+      lfo.start(0);
+
+      trebleFilter.connect(tremoloGain);
+      tremoloGain.connect(compressor);
+    } else {
+      trebleFilter.connect(compressor);
+    }
+
+    // Optional Echo / Cyborg Delay
+    if (cfg.echoDelay && cfg.echoFeedback) {
+      const delay = offlineCtx.createDelay(2.0);
+      delay.delayTime.value = cfg.echoDelay;
+      const feedback = offlineCtx.createGain();
+      feedback.gain.value = cfg.echoFeedback;
+
+      compressor.connect(delay);
+      delay.connect(feedback);
+      feedback.connect(delay);
+      delay.connect(offlineCtx.destination);
+    }
+
+    compressor.connect(offlineCtx.destination);
+    source.start(0);
+
+    const rendered = await offlineCtx.startRendering();
+    await audioCtx.close();
+
+    // Encode Rendered AudioBuffer into 16-bit PCM WAV Blob
+    const numOfChan = rendered.numberOfChannels;
+    const length = rendered.length * numOfChan * 2 + 44;
+    const buffer = new ArrayBuffer(length);
+    const view = new DataView(buffer);
+    const channels = [];
+    let pos = 0;
+
+    const setUint16 = (data: number) => {
+      view.setUint16(pos, data, true);
+      pos += 2;
+    };
+    const setUint32 = (data: number) => {
+      view.setUint32(pos, data, true);
+      pos += 4;
+    };
+
+    setUint32(0x46464952); // "RIFF"
+    setUint32(length - 8);
+    setUint32(0x45564157); // "WAVE"
+    setUint32(0x20746d66); // "fmt "
+    setUint32(16);
+    setUint16(1);
+    setUint16(numOfChan);
+    setUint32(rendered.sampleRate);
+    setUint32(rendered.sampleRate * 2 * numOfChan);
+    setUint16(numOfChan * 2);
+    setUint16(16);
+    setUint32(0x61746164); // "data"
+    setUint32(length - pos - 4);
+
+    for (let i = 0; i < numOfChan; i++) {
+      channels.push(rendered.getChannelData(i));
+    }
+
+    let offset = 0;
+    while (pos < length) {
+      for (let i = 0; i < numOfChan; i++) {
+        let sample = Math.max(-1, Math.min(1, channels[i][offset]));
+        sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+        view.setInt16(pos, sample, true);
+        pos += 2;
+      }
+      offset++;
+    }
+
+    return new Blob([buffer], { type: "audio/wav" });
+  };
+
   // --- Microphone Recording Logic ---
   const startMicRecording = async (target: "v2v" | "ref") => {
     try {
@@ -384,7 +745,9 @@ export default function VoiceChangerClient() {
     setCloneText(preset.sampleScript);
   };
 
-  // --- Generate TTS ---
+  // =========================================================================
+  // 1. GENERATE TTS (Python Backend First -> Next.js Neural Fallback Second)
+  // =========================================================================
   const generateTTS = async () => {
     if (!ttsText.trim()) {
       setTtsError("Please enter some text to generate audio.");
@@ -408,27 +771,32 @@ export default function VoiceChangerClient() {
       });
 
       let response: Response | null = null;
-      try {
+
+      // Step A: Try Direct Python Backend First (if configured) for fastest native Edge-TTS
+      if (backendUrl && backendUrl !== "" && backendUrl !== "/api/proxy") {
+        try {
+          const directRes = await fetch(`${backendUrl}/api/convert/text-to-speech`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            signal: AbortSignal.timeout(8000),
+          });
+          if (directRes.ok) {
+            response = directRes;
+            setLastEngineUsed("Python Neural Backend (Online)");
+          }
+        } catch {
+          response = null;
+        }
+      }
+
+      // Step B: Try Next.js Proxy Route (which automatically talks to Python Backend OR Serverless Multi-Voice Fallback)
+      if (!response || !response.ok) {
         response = await fetch("/api/convert/text-to-speech", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: payload,
         });
-      } catch {
-        response = null;
-      }
-
-      if (!response || !response.ok) {
-        if (backendUrl && backendUrl !== "" && backendUrl !== "/api/proxy") {
-          const directRes = await fetch(`${backendUrl}/api/convert/text-to-speech`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: payload,
-          }).catch(() => null);
-          if (directRes && directRes.ok) {
-            response = directRes;
-          }
-        }
       }
 
       if (!response || !response.ok) {
@@ -436,9 +804,38 @@ export default function VoiceChangerClient() {
         throw new Error(errJson?.detail || "Voiceover synthesis failed. Please try again.");
       }
 
-      const blob = await response.blob();
+      let blob = await response.blob();
+      const engineHeader = response.headers.get("X-Voice-Engine");
+
+      // If served by Serverless Fallback and user adjusted Pitch/Speed sliders, apply instant WebAudio pitch/rate
+      if (engineHeader === "Botock-Serverless-TTS-Fallback") {
+        setLastEngineUsed("Serverless Neural Engine + WebAudio DSP");
+        // If user selected Male Urdu/Hindi voice (Asad/Madhur) on fallback, shift pitch deeper so it sounds naturally male
+        const isMaleSouthAsianFallback =
+          selectedVoice.id === "ur-PK-AsadNeural" ||
+          selectedVoice.id === "hi-IN-MadhurNeural";
+        const baseMaleShift = isMaleSouthAsianFallback ? -7 : 0;
+        const totalPitch = pitchOffset + baseMaleShift;
+
+        if (totalPitch !== 0 || rateOffset !== 0) {
+          const customRate = Math.max(
+            0.72,
+            Math.min(1.45, 1.0 + totalPitch * 0.014 + rateOffset * 0.005)
+          );
+          blob = await processAudioWithWebAudioDSP(blob, "man_deep", customRate);
+        }
+      } else if (!lastEngineUsed) {
+        setLastEngineUsed("Python Neural Backend (Online)");
+      }
+
+      // 🌊 Apply Optional Background Ambience Mix
+      let finalBlob = blob;
+      if (selectedAmbience !== "none") {
+        finalBlob = await mixAmbienceIntoBlob(finalBlob, selectedAmbience, ambienceVolume);
+      }
+
       if (ttsAudioUrl) URL.revokeObjectURL(ttsAudioUrl);
-      setTtsAudioUrl(URL.createObjectURL(blob));
+      setTtsAudioUrl(URL.createObjectURL(finalBlob));
       setTtsStatus("completed");
     } catch (err: any) {
       setTtsError(err.message || "Failed to generate voiceover. Please try again.");
@@ -446,10 +843,14 @@ export default function VoiceChangerClient() {
     }
   };
 
-  // --- Start Zero-Shot AI Voice Cloning ---
+  // =========================================================================
+  // 2. AI VOICE CLONING (Python F5-TTS/Seed-VC First -> Serverless + WebAudio Second)
+  // =========================================================================
   const startVoiceCloning = async () => {
     if (refSourceType === "custom" && !refVoiceFile) {
-      setCloneError("Please upload or record a 5-15 second reference voice sample, or switch to Built-in Presets.");
+      setCloneError(
+        "Please upload or record a 5-15 second reference voice sample, or switch to Built-in Presets."
+      );
       return;
     }
     if (cloneMode === "text" && !cloneText.trim()) {
@@ -483,38 +884,75 @@ export default function VoiceChangerClient() {
       }
 
       let response: Response | null = null;
-      try {
-        response = await fetch("/api/convert/voice-clone", {
-          method: "POST",
-          body: formData,
-        });
-      } catch {
-        response = null;
-      }
 
-      if (!response || !response.ok) {
-        if (backendUrl && backendUrl !== "" && backendUrl !== "/api/proxy") {
+      // Step A: Try Direct Python Backend First
+      if (backendUrl && backendUrl !== "" && backendUrl !== "/api/proxy") {
+        try {
           const directRes = await fetch(`${backendUrl}/api/convert/voice-clone`, {
             method: "POST",
             body: formData,
-          }).catch(() => null);
-          if (directRes && directRes.ok) {
+          });
+          if (directRes.ok) {
             response = directRes;
+            setLastEngineUsed("Python Zero-Shot GPU Cloner (Online)");
           }
+        } catch {
+          response = null;
         }
+      }
+
+      // Step B: Try Next.js Proxy Route (with automatic Serverless Fallback)
+      if (!response || !response.ok) {
+        try {
+          response = await fetch("/api/convert/voice-clone", {
+            method: "POST",
+            body: formData,
+          });
+        } catch {
+          response = null;
+        }
+      }
+
+      // Step C: If Python Backend is Offline AND user chose "Convert Another Audio (Audio Mode)", run Instant Browser DSP!
+      if ((!response || !response.ok) && cloneMode === "audio" && cloneSourceFile) {
+        const profileId =
+          refSourceType === "preset" ? selectedClonePreset.id : "preset_studio_podcaster";
+        let dspBlob = await processAudioWithWebAudioDSP(cloneSourceFile, profileId);
+        if (selectedAmbience !== "none") {
+          dspBlob = await mixAmbienceIntoBlob(dspBlob, selectedAmbience, ambienceVolume);
+        }
+        if (cloneAudioUrl) URL.revokeObjectURL(cloneAudioUrl);
+        setCloneAudioUrl(URL.createObjectURL(dspBlob));
+        setLastEngineUsed("Instant Browser WebAudio DSP (Backend Offline Mode)");
+        setCloneStatus("completed");
+        return;
       }
 
       if (!response || !response.ok) {
         const errJson = response ? await response.json().catch(() => null) : null;
-        throw new Error(
-          errJson?.detail ||
-            "Voice cloning failed. Ensure the Python backend is running with gradio_client installed."
-        );
+        throw new Error(errJson?.detail || "Voice cloning failed. Please try again.");
       }
 
-      const blob = await response.blob();
+      let blob = await response.blob();
+      const engineHeader = response.headers.get("X-Voice-Engine");
+
+      if (engineHeader === "Botock-Serverless-Clone-Fallback") {
+        const profileId =
+          refSourceType === "preset" ? selectedClonePreset.id : "preset_studio_podcaster";
+        blob = await processAudioWithWebAudioDSP(blob, profileId);
+        setLastEngineUsed("Serverless Neural + WebAudio Mastering");
+      } else {
+        setLastEngineUsed("Python Zero-Shot AI Cloner (Online)");
+      }
+
+      // 🌊 Apply Optional Background Ambience Mix
+      let finalBlob = blob;
+      if (selectedAmbience !== "none") {
+        finalBlob = await mixAmbienceIntoBlob(finalBlob, selectedAmbience, ambienceVolume);
+      }
+
       if (cloneAudioUrl) URL.revokeObjectURL(cloneAudioUrl);
-      setCloneAudioUrl(URL.createObjectURL(blob));
+      setCloneAudioUrl(URL.createObjectURL(finalBlob));
       setCloneStatus("completed");
     } catch (err: any) {
       setCloneError(err.message || "An error occurred during AI voice cloning.");
@@ -522,7 +960,9 @@ export default function VoiceChangerClient() {
     }
   };
 
-  // --- Start V2V Conversion ---
+  // =========================================================================
+  // 3. VOICE CHANGER & FILTERS (Python FFmpeg First -> Instant WebAudio Second)
+  // =========================================================================
   const startV2VConversion = async () => {
     if (!selectedFile) return;
 
@@ -531,47 +971,120 @@ export default function VoiceChangerClient() {
     setV2vAudioUrl(null);
 
     try {
+      // 1. Instant Browser WebAudio DSP Engine (Zero Server Latency, 100% Reliable, Instant <1s execution)
+      try {
+        let dspBlob = await processAudioWithWebAudioDSP(selectedFile, v2vMode);
+        if (selectedAmbience !== "none") {
+          dspBlob = await mixAmbienceIntoBlob(dspBlob, selectedAmbience, ambienceVolume);
+        }
+        if (v2vAudioUrl) URL.revokeObjectURL(v2vAudioUrl);
+        setV2vAudioUrl(URL.createObjectURL(dspBlob));
+        setLastEngineUsed("Instant Browser WebAudio DSP (100% Client-Side)");
+        setV2vStatus("completed");
+        return;
+      } catch (clientDspErr) {
+        console.warn("Client DSP failed, falling back to backend FFmpeg:", clientDspErr);
+      }
+
+      // 2. Python Backend Studio Fallback (using valid /api/video/voice-changer route)
       const backendUrl = await getBackendUrl();
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("mode", v2vMode);
 
       let response: Response | null = null;
-      try {
-        response = await fetch("/api/convert/voice-changer", {
-          method: "POST",
-          body: formData,
-        });
-      } catch {
-        response = null;
-      }
-
-      if (!response || !response.ok) {
-        if (backendUrl && backendUrl !== "" && backendUrl !== "/api/proxy") {
-          const directRes = await fetch(`${backendUrl}/api/convert/voice-changer`, {
+      if (backendUrl && backendUrl !== "" && backendUrl !== "/api/proxy") {
+        try {
+          const directRes = await fetch(`${backendUrl}/api/video/voice-changer`, {
             method: "POST",
             body: formData,
-          }).catch(() => null);
-          if (directRes && directRes.ok) {
+            signal: AbortSignal.timeout(6000),
+          });
+          if (directRes.ok) {
             response = directRes;
           }
+        } catch {
+          response = null;
         }
       }
 
-      if (!response || !response.ok) {
-        const errorData = response ? await response.json().catch(() => null) : null;
-        throw new Error(errorData?.detail || "Failed to transform audio.");
+      if (response && response.ok) {
+        let blob = await response.blob();
+        if (selectedAmbience !== "none") {
+          blob = await mixAmbienceIntoBlob(blob, selectedAmbience, ambienceVolume);
+        }
+        if (v2vAudioUrl) URL.revokeObjectURL(v2vAudioUrl);
+        setV2vAudioUrl(URL.createObjectURL(blob));
+        setLastEngineUsed("Python FFmpeg Studio Backend (Online)");
+        setV2vStatus("completed");
+        return;
       }
 
-      const blob = await response.blob();
-      if (v2vAudioUrl) URL.revokeObjectURL(v2vAudioUrl);
-      setV2vAudioUrl(URL.createObjectURL(blob));
-      setV2vStatus("completed");
+      throw new Error("Could not process this file format. Please try an MP3 or WAV file.");
     } catch (err: any) {
-      setV2vError(err.message || "An error occurred during conversion.");
+      setV2vError(
+        err.message || "Could not process this file format. Please try an MP3 or WAV file."
+      );
       setV2vStatus("error");
     }
   };
+
+  // --- Background Ambience Mixer Component ---
+  const renderAmbienceMixer = () => (
+    <div className="p-4 rounded-2xl bg-muted/20 border border-border/60 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-bold text-foreground flex items-center gap-1.5 uppercase tracking-wider">
+          <Sparkles className="w-3.5 h-3.5 text-violet-500" />
+          Background Studio Ambience Mixer
+        </span>
+        {selectedAmbience !== "none" && (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-500/20 text-violet-400">
+            Active: {selectedAmbience.toUpperCase()}
+          </span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { id: "none", label: "🔇 Clean Voice" },
+          { id: "lofi_beat", label: "🎧 Lofi Podcast Beat" },
+          { id: "rain", label: "🌧️ Soft Cinema Rain" },
+          { id: "cinematic_drone", label: "🛸 Sci-Fi Space Drone" },
+        ].map((amb) => (
+          <button
+            key={amb.id}
+            type="button"
+            onClick={() => setSelectedAmbience(amb.id)}
+            className={`p-2.5 rounded-xl border text-xs font-medium transition-all ${
+              selectedAmbience === amb.id
+                ? "border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400 font-bold"
+                : "border-border bg-card hover:bg-muted/50 text-foreground"
+            }`}
+          >
+            {amb.label}
+          </button>
+        ))}
+      </div>
+
+      {selectedAmbience !== "none" && (
+        <div className="pt-2 flex items-center gap-3">
+          <span className="text-xs text-muted-foreground">Ambience Volume:</span>
+          <input
+            type="range"
+            min="0.05"
+            max="0.4"
+            step="0.05"
+            value={ambienceVolume}
+            onChange={(e) => setAmbienceVolume(parseFloat(e.target.value))}
+            className="w-full accent-violet-600 cursor-pointer"
+          />
+          <span className="text-xs font-mono text-muted-foreground">
+            {Math.round(ambienceVolume * 100)}%
+          </span>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
@@ -585,8 +1098,15 @@ export default function VoiceChangerClient() {
             AI Voice Studio, Cloning & Changer
           </h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-2xl mx-auto">
-            Generate distinct neural voiceovers, clone built-in character voices or any custom 10-second sample (Zero-Shot F5-TTS & Seed-VC), or modulate audio pitch & formants for free.
+            Generate distinct neural voiceovers (English, Urdu & Hindi), clone built-in character voices or custom samples, or modulate audio pitch & formants with automatic hybrid cloud + browser acceleration.
           </p>
+
+          {lastEngineUsed && (
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+              <Cpu className="w-3.5 h-3.5" />
+              Active Engine: {lastEngineUsed}
+            </div>
+          )}
 
           {/* 3 Mode Tabs */}
           <div className="flex items-center justify-center mt-6">
@@ -671,7 +1191,7 @@ export default function VoiceChangerClient() {
                 rows={4}
                 value={ttsText}
                 onChange={(e) => setTtsText(e.target.value)}
-                placeholder="Type or paste the script you want the AI voice to speak..."
+                placeholder="Type or paste the script you want the AI voice to speak (Urdu, Hindi, English supported)..."
                 className="w-full rounded-2xl border border-border bg-background p-4 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/40 resize-none shadow-sm"
               />
             </div>
@@ -804,6 +1324,9 @@ export default function VoiceChangerClient() {
               </div>
             </div>
 
+            {/* 🎛️ Background Ambience Mixer */}
+            {renderAmbienceMixer()}
+
             {ttsError && (
               <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-600 dark:text-red-400">
                 <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -840,11 +1363,11 @@ export default function VoiceChangerClient() {
                   <div>
                     <a
                       href={ttsAudioUrl}
-                      download={`botock_${selectedVoice.name.toLowerCase()}_voiceover.mp3`}
+                      download={`botock_${selectedVoice.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}_voiceover.wav`}
                       className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md shadow-emerald-600/20 transition-all"
                     >
                       <Download className="w-4 h-4" />
-                      Download High-Quality MP3
+                      Download Studio Audio
                     </a>
                   </div>
                 </div>
@@ -858,7 +1381,6 @@ export default function VoiceChangerClient() {
         ========================================================= */}
         {activeTab === "clone" && (
           <div className="space-y-6">
-            {/* Step 1: Choose Preset vs Custom Voice Sample */}
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <label className="text-sm font-bold text-foreground flex items-center gap-2">
@@ -1102,6 +1624,9 @@ export default function VoiceChangerClient() {
               </div>
             )}
 
+            {/* 🎛️ Background Ambience Mixer */}
+            {renderAmbienceMixer()}
+
             {cloneError && (
               <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3 text-red-600 dark:text-red-400">
                 <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -1142,11 +1667,11 @@ export default function VoiceChangerClient() {
                       href={cloneAudioUrl}
                       download={`botock_cloned_${
                         refSourceType === "preset" ? selectedClonePreset.id : "custom"
-                      }.mp3`}
+                      }.wav`}
                       className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm"
                     >
                       <Download className="w-4 h-4" />
-                      Download Cloned MP3
+                      Download Cloned Audio
                     </a>
                   </div>
                 </div>
@@ -1262,6 +1787,9 @@ export default function VoiceChangerClient() {
                   ))}
                 </div>
 
+                {/* 🎛️ Background Ambience Mixer */}
+                {renderAmbienceMixer()}
+
                 <button
                   onClick={startV2VConversion}
                   disabled={v2vStatus === "uploading"}
@@ -1295,7 +1823,7 @@ export default function VoiceChangerClient() {
                   <audio controls src={v2vAudioUrl} className="w-full max-w-md mx-auto" autoPlay />
                   <a
                     href={v2vAudioUrl}
-                    download={`botock_voice_${v2vMode}.mp3`}
+                    download={`botock_voice_${v2vMode}.wav`}
                     className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all"
                   >
                     <Download className="w-4 h-4" />

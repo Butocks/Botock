@@ -3,7 +3,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
+import { processVideoOrAudioTool } from "@/app/tools/ToolEngine";
 import { formatBytes, formatTime } from "@/lib/utils/formatters";
+
 import { getBackendUrl } from "@/utils/runtime-urls";
 import {
   Film,
@@ -131,52 +133,46 @@ export default function VideoCompressClient() {
 
     const clampedCrf = Math.min(51, Math.max(18, Math.round(crf)));
 
-    // ─── Fast Server Path ────────────────────────────────────────────────
     setIsServerProcessing(true);
-    setServerStatus("Connecting to high-speed compression engine...");
-    setServerProgress(25);
+    setServerStatus("Connecting to high-speed hybrid engine...");
+    setServerProgress(5);
 
     try {
-      const backendUrl = await getBackendUrl();
-      const formData = new FormData();
-      formData.append("file", originalFile);
-      formData.append("crf", String(clampedCrf));
-      formData.append("resolution", resolution);
-
-      setServerStatus("Compressing video with high-speed encoder...");
-      setServerProgress(60);
-
-      const response = await fetch(`${backendUrl}/api/convert/video-compress`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        setServerProgress(95);
-        const outputBlob = await response.blob();
-        const url = URL.createObjectURL(outputBlob);
-        setResultUrl(url);
-        setResultSize(outputBlob.size);
-        setServerProgress(100);
-        setIsServerProcessing(false);
-        setServerStatus("");
-        return;
-      } else {
-        const errJson = await response.json().catch(() => null);
-        if (response.status === 400 && errJson?.detail) {
-          setErrorMsg(errJson.detail);
-          setIsServerProcessing(false);
-          setServerStatus("");
-          return;
+      const { result, executedOn } = await processVideoOrAudioTool(
+        "video-compress",
+        originalFile,
+        { crf: clampedCrf, resolution },
+        (percent, mode) => {
+          setServerProgress(percent);
+          if (mode === "backend") {
+            setServerStatus(
+              percent < 65
+                ? `Uploading to Fast Server (${percent}%)...`
+                : `Compressing on Fast Server (${percent}%)...`
+            );
+          } else {
+            setServerStatus(`Processing in browser WebAssembly (${percent}%)...`);
+          }
         }
-        console.warn("Server video compression returned error, falling back to browser WASM:", errJson);
-      }
-    } catch (err) {
-      console.warn("Backend compression unavailable, falling back to browser WASM:", err);
+      );
+
+      const url = URL.createObjectURL(result);
+      setResultUrl(url);
+      setResultSize(result.size);
+      setServerProgress(100);
+      setServerStatus(
+        executedOn === "backend"
+          ? "Compressed via Turbo Server Engine!"
+          : "Compressed via Local Browser Engine!"
+      );
+      setIsServerProcessing(false);
+      return;
+    } catch (err: unknown) {
+      console.warn("Hybrid tool failed, falling back to browser direct WASM:", err);
     } finally {
       setIsServerProcessing(false);
-      setServerStatus("");
     }
+
 
     // ─── In-Browser Fallback Path (WASM) ──────────────────────────────────
     let scaleFilter: string | null = null;

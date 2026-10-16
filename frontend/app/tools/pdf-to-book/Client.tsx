@@ -229,6 +229,174 @@ export default function PDFToBookClient() {
     setZoom(1);
   };
 
+  const downloadInteractiveBook = (pageList: PageData[], fileName: string) => {
+    if (!pageList || pageList.length === 0) return;
+    const pageImages = pageList.map((p) => p.dataUrl);
+    const safeTitle = fileName.replace(/\.[^/.]+$/, "");
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${safeTitle} - Interactive 3D Book</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+      overflow: hidden;
+      user-select: none;
+    }
+    header {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .title { font-weight: 700; color: #f59e0b; }
+    .stage {
+      flex: 1;
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .book-wrapper {
+      position: relative;
+      max-height: 80vh;
+      max-width: 90vw;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(245, 158, 11, 0.15);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      transition: transform 0.3s ease;
+    }
+    .page-img {
+      display: block;
+      max-height: 78vh;
+      max-width: 90vw;
+      object-fit: contain;
+      background: #ffffff;
+      transition: opacity 0.25s ease;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 10px 24px;
+      border-radius: 50px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+    button {
+      background: #f59e0b;
+      color: #0f172a;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    button:hover:not(:disabled) {
+      background: #fbbf24;
+      transform: translateY(-1px);
+    }
+    button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .counter {
+      font-size: 13px;
+      font-weight: 600;
+      color: #94a3b8;
+      min-width: 120px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">📖 ${safeTitle}</div>
+    <div style="color: #64748b;">Botock Interactive Flipbook</div>
+  </header>
+
+  <div class="stage">
+    <div class="book-wrapper" id="bookWrapper">
+      <img id="bookPage" class="page-img" src="" alt="Page" />
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="prevBtn" onclick="changePage(-1)">⬅ Previous</button>
+    <div class="counter" id="pageCounter">Page 1 of ${pageImages.length}</div>
+    <button id="nextBtn" onclick="changePage(1)">Next ➡</button>
+  </div>
+
+  <script>
+    const pages = ${JSON.stringify(pageImages)};
+    let currentIndex = 0;
+    const imgEl = document.getElementById('bookPage');
+    const counterEl = document.getElementById('pageCounter');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    function update() {
+      imgEl.style.opacity = '0.5';
+      setTimeout(() => {
+        imgEl.src = pages[currentIndex];
+        imgEl.style.opacity = '1';
+      }, 50);
+      counterEl.innerText = 'Page ' + (currentIndex + 1) + ' of ' + pages.length;
+      prevBtn.disabled = currentIndex === 0;
+      nextBtn.disabled = currentIndex === pages.length - 1;
+    }
+
+    function changePage(delta) {
+      const next = currentIndex + delta;
+      if (next >= 0 && next < pages.length) {
+        currentIndex = next;
+        update();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        changePage(1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        changePage(-1);
+      }
+    });
+
+    update();
+  </script>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeTitle}-flipbook.html`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+
   const { left: leftPage, right: rightPage } = getPagesForSpread(currentSpread);
 
   return (
@@ -354,6 +522,18 @@ export default function PDFToBookClient() {
                 >
                   {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </button>
+
+                {file && pages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => downloadInteractiveBook(pages, file.name)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition shadow-sm text-xs"
+                    title="Download Interactive 3D HTML Flipbook"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download Book (.html)</span>
+                  </button>
+                )}
 
                 {file && (
                   <button

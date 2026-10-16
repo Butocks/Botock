@@ -20,8 +20,8 @@ def _get_rembg_session():
     global _rembg_session
     if _rembg_session is None:
         from rembg import new_session
-        _rembg_session = new_session(model_name="isnet-general-use")
-        logger.info("rembg model loaded: isnet-general-use")
+        _rembg_session = new_session(model_name="u2netp")
+        logger.info("rembg lightweight model loaded: u2netp")
     return _rembg_session
 
 
@@ -31,7 +31,9 @@ ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 @router.post("/remove-bg")
+@router.post("/image-remove-bg")
 async def remove_background(file: UploadFile = File(...)):
+
     # Validate content type
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(status_code=400, detail="Unsupported image format. Use JPG, PNG, or WEBP.")

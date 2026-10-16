@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
 import { fetchFile } from "@ffmpeg/util";
+import { processVideoOrAudioTool } from "@/app/tools/ToolEngine";
 
 export default function VideoMuteClient() {
   const { load: loadFFmpeg, writeFile, readFile, deleteFile, exec, progress } = useFFmpeg();
@@ -50,6 +51,19 @@ export default function VideoMuteClient() {
     setStatus("processing");
     setErrorMessage("");
 
+    // 1. Ultra-fast backend stream copy (strips audio instantly in ~100ms)
+    try {
+      const { result: outputBlob } = await processVideoOrAudioTool("video-mute", selectedFile);
+      const downloadUrl = URL.createObjectURL(outputBlob);
+      setExportedUrl(downloadUrl);
+      setOutputSize(outputBlob.size);
+      setStatus("completed");
+      return;
+    } catch (backendErr) {
+      console.warn("Backend video-mute failed, falling back to in-browser FFmpeg:", backendErr);
+    }
+
+    // 2. Client-side browser fallback
     const inputName = "input_" + Date.now() + ".mp4";
     const outputName = "muted_" + Date.now() + ".mp4";
 

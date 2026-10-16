@@ -151,6 +151,112 @@ export default function ReactionVideoClient() {
     if (videoBottomRef.current) videoBottomRef.current.currentTime = t;
   };
 
+  // Real-Time Canvas Compositor Fallback (Zero Server Wait)
+  const compositeInBrowser = async (): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const vidTop = videoTopRef.current;
+      const vidBot = videoBottomRef.current;
+      if (!vidTop || !vidBot) return reject(new Error("Preview video elements not loaded."));
+
+      const canvas = document.createElement("canvas");
+      let cw = 720;
+      let ch = 1280;
+      if (aspectRatio === "16:9") { cw = 1280; ch = 720; }
+      else if (aspectRatio === "1:1") { cw = 720; ch = 720; }
+      else if (aspectRatio === "4:5") { cw = 720; ch = 900; }
+
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas context initialization failed."));
+
+      const stream = canvas.captureStream(30);
+
+      // Mix Audio tracks
+      let audioCtx: AudioContext | null = null;
+      try {
+        const AudioClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioClass) {
+          audioCtx = new AudioClass();
+          const dest = audioCtx.createMediaStreamDestination();
+          if (audioMode !== "bottom_only" && audioMode !== "mute") {
+            const sTop = audioCtx.createMediaElementSource(vidTop);
+            const gTop = audioCtx.createGain();
+            gTop.gain.value = volumeTop;
+            sTop.connect(gTop).connect(dest);
+          }
+          if (audioMode !== "top_only" && audioMode !== "mute") {
+            const sBot = audioCtx.createMediaElementSource(vidBot);
+            const gBot = audioCtx.createGain();
+            gBot.gain.value = volumeBottom;
+            sBot.connect(gBot).connect(dest);
+          }
+          dest.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+        }
+      } catch {
+        // Continue without mixed audio if browser restricts cross-origin media
+      }
+
+      const chunks: Blob[] = [];
+      const mime = MediaRecorder.isTypeSupported("video/mp4") ? "video/mp4" : "video/webm";
+      const recorder = new MediaRecorder(stream, { mimeType: mime });
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const outBlob = new Blob(chunks, { type: mime });
+        audioCtx?.close().catch(() => {});
+        resolve(outBlob);
+      };
+
+      vidTop.currentTime = 0;
+      vidBot.currentTime = 0;
+      vidTop.play().catch(() => {});
+      vidBot.play().catch(() => {});
+      recorder.start();
+
+      const drawFrame = () => {
+        if (vidTop.paused && vidBot.paused) {
+          recorder.stop();
+          return;
+        }
+
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, cw, ch);
+
+        if (layout === "stacked") {
+          const split =
+            splitRatio === "60/40" ? 0.6 :
+            splitRatio === "70/30" ? 0.7 :
+            splitRatio === "40/60" ? 0.4 :
+            splitRatio === "30/70" ? 0.3 : 0.5;
+          const topH = Math.round(ch * split);
+          const botH = ch - topH;
+          ctx.drawImage(vidTop, 0, 0, cw, topH);
+          ctx.drawImage(vidBot, 0, topH, cw, botH);
+        } else if (layout === "side_by_side") {
+          const halfW = Math.round(cw / 2);
+          ctx.drawImage(vidTop, 0, 0, halfW, ch);
+          ctx.drawImage(vidBot, halfW, 0, halfW, ch);
+        } else {
+          // PiP mode
+          ctx.drawImage(vidTop, 0, 0, cw, ch);
+          const pipW = Math.round(cw * 0.35);
+          const pipH = Math.round(ch * 0.3);
+          const pipX = cw - pipW - 20;
+          const pipY = 20;
+          ctx.drawImage(vidBot, pipX, pipY, pipW, pipH);
+        }
+
+        requestAnimationFrame(drawFrame);
+      };
+
+      drawFrame();
+    });
+  };
+
   // Process / Combine Videos
   const handleCombineVideos = async () => {
     if (!fileTop || !fileBottom) {
@@ -175,43 +281,31 @@ export default function ReactionVideoClient() {
       formData.append("volume_bottom", volumeBottom.toString());
       formData.append("duration_mode", durationMode);
 
-      setProcessStep("Rendering reaction video with high-definition FFmpeg...");
+      setProcessStep("Rendering reaction video...");
 
       const primaryUrl = backendUrl
         ? `${backendUrl}/api/video/reaction-combine`
         : "/api/video/reaction-combine";
 
-      let res: Response;
+      let blob: Blob | null = null;
       try {
-        res = await fetch(primaryUrl, {
+        const res = await fetch(primaryUrl, {
           method: "POST",
           body: formData,
         });
-      } catch (networkErr) {
-        // Fallback to same-origin Next.js proxy route if direct backend fetch fails
-        if (primaryUrl !== "/api/video/reaction-combine") {
-          res = await fetch("/api/video/reaction-combine", {
-            method: "POST",
-            body: formData,
-          });
-        } else {
-          throw networkErr;
+        if (res.ok) {
+          blob = await res.blob();
         }
+      } catch (err) {
+        console.warn("Backend reaction combine unavailable, running browser compositor:", err);
       }
 
-      if (!res.ok) {
-        let errorText = "";
-        try {
-          const json = await res.json();
-          errorText = json.detail || JSON.stringify(json);
-        } catch {
-          errorText = await res.text();
-        }
-        throw new Error(errorText || "Failed to combine reaction videos. Please check file sizes.");
+      // If backend was not reached or returned non-ok, use real-time browser canvas compositor
+      if (!blob) {
+        setProcessStep("Rendering with real-time in-browser canvas compositor...");
+        blob = await compositeInBrowser();
       }
 
-      setProcessStep("Finalizing video export...");
-      const blob = await res.blob();
       if (exportedUrl) URL.revokeObjectURL(exportedUrl);
       const url = URL.createObjectURL(blob);
 

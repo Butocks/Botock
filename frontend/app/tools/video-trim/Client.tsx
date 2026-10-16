@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
+import { processVideoOrAudioTool } from "@/app/tools/ToolEngine";
 import { formatBytes, formatTime } from "@/lib/utils/formatters";
 import { getTransferMedia } from "@/app/utils/mediaTransfer";
 import {
@@ -153,11 +154,23 @@ export default function VideoTrimClient() {
     deleteFile,
     exec,
     cancel,
-    isProcessing,
-    progress,
-    statusMessage,
+    isProcessing: isFfmpegProcessing,
+    progress: ffmpegProgress,
+    statusMessage: ffmpegStatusMessage,
     error,
   } = useFFmpeg();
+
+  const [backendProgress, setBackendProgress] = useState(0);
+  const [isBackendProcessing, setIsBackendProcessing] = useState(false);
+  const [backendStatus, setBackendStatus] = useState("");
+
+  const isProcessing = isFfmpegProcessing || isBackendProcessing;
+  const progress = isBackendProcessing
+    ? { percent: backendProgress, ratio: backendProgress / 100 }
+    : ffmpegProgress;
+  const statusMessage = isBackendProcessing
+    ? (backendStatus || "Exporting video on Botock Fast Engine...")
+    : ffmpegStatusMessage;
 
   const selectedSegment = useMemo(
     () => segments.find((segment) => segment.id === selectedSegmentId) || null,
@@ -860,6 +873,36 @@ const exportVideo = useCallback(async () => {
     setResultUrl(null);
     setResultSize(null);
 
+    // 1. Try Ultra-Fast Backend Stream Copy Trim (100ms processing)
+    if (finalSegments.length === 1 && !frameAccurateMode) {
+      try {
+        setIsBackendProcessing(true);
+        setBackendProgress(10);
+        setBackendStatus("Connecting to Botock Fast Engine...");
+        const seg = finalSegments[0];
+        const { result: blob } = await processVideoOrAudioTool(
+          "video-trim",
+          originalFile,
+          { start: seg.start.toFixed(3), end: seg.end.toFixed(3) },
+          (p) => {
+            setBackendProgress(p);
+            setBackendStatus(p < 100 ? `Fast Trimming video (${p}%)...` : "Finalizing video...");
+          }
+        );
+        const url = URL.createObjectURL(blob);
+        resultUrlRef.current = url;
+        setResultUrl(url);
+        setResultSize(blob.size);
+        setPreviewMode(false);
+        setIsBackendProcessing(false);
+        return;
+      } catch (backendErr) {
+        console.warn("Backend fast trim failed, falling back to in-browser FFmpeg:", backendErr);
+        setIsBackendProcessing(false);
+      }
+    }
+
+    // 2. Client-side fallback via in-browser FFmpeg
     const inputName = "botock_input.mp4";
     const outputName = "botock_trimmed_output.mp4";
     const audioProbeName = "botock_audio_probe.m4a";

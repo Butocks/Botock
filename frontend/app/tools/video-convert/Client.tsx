@@ -144,6 +144,7 @@ export default function VideoConvertClient() {
         args.push("-c:a", "copy");
       }
 
+      args.push("-threads", "4");
       args.push(outputName);
 
       const outputBlob = await run({

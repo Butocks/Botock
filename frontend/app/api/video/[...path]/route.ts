@@ -194,14 +194,20 @@ export async function GET(
       headers,
     });
 
-    const data = await backendRes.arrayBuffer();
     const contentType = backendRes.headers.get("content-type") || "application/json";
+    const resHeaders: Record<string, string> = {
+      "Content-Type": contentType,
+    };
+    const contentDisposition = backendRes.headers.get("content-disposition");
+    if (contentDisposition) resHeaders["Content-Disposition"] = contentDisposition;
+    const contentLength = backendRes.headers.get("content-length");
+    if (contentLength) resHeaders["Content-Length"] = contentLength;
+    const acceptRanges = backendRes.headers.get("accept-ranges");
+    if (acceptRanges) resHeaders["Accept-Ranges"] = acceptRanges;
 
-    return new NextResponse(data, {
+    return new NextResponse(backendRes.body, {
       status: backendRes.status,
-      headers: {
-        "Content-Type": contentType,
-      },
+      headers: resHeaders,
     });
   } catch (err: any) {
     return NextResponse.json({ detail: err.message }, { status: 502 });

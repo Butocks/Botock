@@ -3,8 +3,9 @@ import logging
 import asyncio
 import secrets
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import JSONResponse
+
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import video, image, convert, auth_otp, rewards, workers, remove_bg, admin, contact, blog_cms, library
 from app.middleware.anti_bot import AntiBotMiddleware
@@ -182,4 +183,11 @@ async def root():
 @app.get("/health")
 async def health():
     """Unauthenticated readiness check used by the frontend failover probe."""
-    return {"status": "online"}
+    return {"status": "ok", "mode": "fast-backend"}
+
+
+@app.post("/api/remove-bg", tags=["remove-bg"])
+async def direct_remove_bg(file: UploadFile = File(...)):
+    from app.routers.remove_bg import remove_background
+    return await remove_background(file)
+

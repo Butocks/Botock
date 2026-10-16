@@ -96,6 +96,13 @@ export class FastFFmpegManager {
     return FastFFmpegManager.instance;
   }
 
+  /**
+   * Compatibility alias allowing `ffmpegManager.getInstance(onProgress)` to obtain the active FFmpeg instance.
+   */
+  public async getInstance(onProgress?: (ratio: number) => void): Promise<FFmpeg> {
+    return await this.getFFmpeg(onProgress);
+  }
+
   private static handleProgress = (event: { progress: number; time: number }) => {
     FastFFmpegManager.progressCallbacks.forEach((cb) => {
       try {

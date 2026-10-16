@@ -106,7 +106,7 @@ const ROW_1: GlideTool[] = [
     name: "JPG / PNG to WebP",
     suite: "Image",
     suiteColor: "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/30",
-    href: "/tools/image-to-webp",
+    href: "/tools/image-convert",
     icon: ImageIcon,
     iconBg: "bg-emerald-500/20",
     iconColor: "text-emerald-600 dark:text-emerald-400",
@@ -129,7 +129,7 @@ const ROW_2: GlideTool[] = [
     name: "Precision Video Cutter",
     suite: "Video",
     suiteColor: "text-sky-700 dark:text-sky-300 bg-sky-500/10 dark:bg-sky-500/20 border-sky-500/30",
-    href: "/tools/video?action=trim",
+    href: "/tools/video-trim",
     icon: FileVideo,
     iconBg: "bg-sky-500/20",
     iconColor: "text-sky-600 dark:text-sky-400",
@@ -139,7 +139,7 @@ const ROW_2: GlideTool[] = [
     name: "AES-256 PDF Protect",
     suite: "Security",
     suiteColor: "text-rose-700 dark:text-rose-300 bg-rose-500/10 dark:bg-rose-500/20 border-rose-500/30",
-    href: "/tools/pdf?action=protect",
+    href: "/tools/pdf-protect",
     icon: Lock,
     iconBg: "bg-rose-500/20",
     iconColor: "text-rose-600 dark:text-rose-400",
@@ -202,7 +202,7 @@ export default function ToolGlideTicker() {
   const doubledRow2 = [...ROW_2, ...ROW_2];
 
   return (
-    <div className="relative w-full overflow-hidden py-4 select-none">
+    <div className="relative w-full overflow-hidden py-4 select-none [&:hover_.animate-marquee]:[animation-play-state:paused] [&:hover_.animate-marquee-reverse]:[animation-play-state:paused]">
       {/* Left and Right Fade Gradients — theme-aware */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-16 sm:w-28 bg-gradient-to-r from-white dark:from-[#09090b] to-transparent z-10" />
       <div className="pointer-events-none absolute inset-y-0 right-0 w-16 sm:w-28 bg-gradient-to-l from-white dark:from-[#09090b] to-transparent z-10" />

@@ -255,6 +255,20 @@ export async function compressPdf(
   };
 }
 
+export async function compressPdfClient(
+  file: File,
+  quality: number = 0.65,
+  onProgress?: (pct: number) => void
+): Promise<Blob> {
+  const result = await compressPdf(file, {
+    quality,
+    onProgress: (p) => onProgress?.(p),
+  });
+  return result.blob;
+}
+
 export default {
   compressPdf,
+  compressPdfClient,
 };
+

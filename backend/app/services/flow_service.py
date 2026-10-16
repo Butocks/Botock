@@ -377,7 +377,25 @@ class FlowService:
 
         p, browser, context, page = await self._launch_browser()
         captured_downloads = []
+        captured_video_bytes = []
+
         page.on("download", lambda dl: captured_downloads.append(dl))
+
+        # 1. NETWORK INTERCEPTOR: Jaise hi Flow AI video stream bheje, usko pakad lo!
+        async def handle_response(response):
+            try:
+                ct = response.headers.get("content-type", "").lower()
+                url = response.url
+                if ("video/mp4" in ct or "video/webm" in ct or ".mp4" in url) and response.status in (200, 206):
+                    body = await response.body()
+                    # Ignore tiny placeholder videos (< 100KB)
+                    if body and len(body) > 100_000:
+                        logger.info(f"[{generation_id}] Intercepted video stream from network ({len(body)} bytes)")
+                        captured_video_bytes.append(body)
+            except Exception:
+                pass
+
+        page.on("response", lambda res: asyncio.create_task(handle_response(res)))
 
         try:
             prompt_input = await self._ensure_studio_page(page, generation_id, status_dict)
@@ -464,9 +482,9 @@ class FlowService:
             # Prompt Construction
             formatted_prompt = prompt.strip()
             if not is_pro:
-                formatted_prompt = re.sub(r'(?i)(use\s+)?(veo|quality|1080p|4k)', '', formatted_prompt).strip()
+                formatted_prompt = re.sub(r'(?i) (use\s+)?(veo|quality|1080p|4k) ', '', formatted_prompt).strip()
 
-            if not formatted_prompt.lower().startswith("generate a video") and not formatted_prompt.lower().startswith("create a video"):
+            if not formatted_prompt.lower().startswith(("generate a video", "create a video")):
                 formatted_prompt = f"Generate a video: {formatted_prompt}"
 
             if motion_hint:
@@ -476,26 +494,26 @@ class FlowService:
             await prompt_input.click()
             await asyncio.sleep(0.3)
             
-            # Use execCommand for faster, reliable insertion into ProseMirror
-            escaped_prompt = formatted_prompt.replace('"', '\\"')
-            await page.evaluate(f"""(p) => {{
+            # Insertion into ProseMirror
+            await page.evaluate("""(p) => {
                 const promptBox = document.querySelector('.ProseMirror[contenteditable="true"]');
-                if (promptBox) {{
+                if (promptBox) {
                     promptBox.focus();
                     document.execCommand('selectAll', false, null);
                     document.execCommand('insertText', false, p);
-                }}
-            }}""", formatted_prompt)
-            await asyncio.sleep(1)
+                }
+            }""", formatted_prompt)
+            await asyncio.sleep(0.8)
 
             # Baseline: record existing video tiles before submitting this prompt
             existing_video_tiles = await page.evaluate("""() => {
-                return Array.from(document.querySelectorAll('img[alt*="video" i], video'))
+                return Array.from(document.querySelectorAll('video, img[alt*="video" i], flow-video-tile img'))
                     .map(el => el.currentSrc || el.src || '')
                     .filter(Boolean);
             }""")
+            captured_video_bytes.clear()
 
-            # Submit: Native Enter key on ProseMirror triggers the generation POST request
+            # Submit prompt
             status_dict[generation_id]["message"] = "Submitting prompt to Flow AI..."
             await prompt_input.press("Enter")
             await asyncio.sleep(1.5)
@@ -505,14 +523,12 @@ class FlowService:
             status_dict[generation_id]["message"] = "Rendering video on Flow AI..."
             start_time = asyncio.get_event_loop().time()
             video_ready = False
-            already_opened = False
-            clicked_tile_once = False
 
             while not video_ready:
                 elapsed = asyncio.get_event_loop().time() - start_time
                 if elapsed > settings.VIDEO_GEN_TIMEOUT:
                     await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_timeout.png"))
-                    raise Exception(f"Video generation timed out after {settings.VIDEO_GEN_TIMEOUT}s.")
+                    raise Exception(f"Video generation timed out after {settings.VIDEO_GEN_TIMEOUT}s on Flow AI.")
 
                 mins = int(elapsed // 60)
                 secs = int(elapsed % 60)
@@ -522,14 +538,15 @@ class FlowService:
                 except Exception:
                     body_text = ""
 
-                # Immediate check for AI safety / policy flags
+                # Safety filter check
                 if "violate our policies" in body_text.lower() or "policy violation" in body_text.lower():
                     logger.warning(f"[{generation_id}] Video generation rejected by safety filter")
                     raise Exception("Generation was flagged by AI content safety guidelines. Please try rephrasing your prompt.")
 
                 pct_matches = re.findall(r'(\d{1,3})%', body_text)
-                if pct_matches:
-                    latest_pct = pct_matches[-1]
+                latest_pct = int(pct_matches[-1]) if pct_matches else None
+
+                if latest_pct is not None and latest_pct < 100:
                     status_dict[generation_id]["message"] = (
                         f"Rendering video on Flow AI... ({latest_pct}% completed, {mins}m {secs:02d}s elapsed)"
                     )
@@ -538,233 +555,190 @@ class FlowService:
                         f"Rendering video on Flow AI... ({mins}m {secs:02d}s elapsed)"
                     )
 
-                pct_100 = pct_matches and int(pct_matches[-1]) >= 100
+                # Wait at least 15s for generation to start
+                if elapsed < 15:
+                    await asyncio.sleep(3)
+                    continue
 
-                # Check if a video element is rendered with active duration
-                video_rendered = await page.evaluate("""() => {
-                    const videos = Array.from(document.querySelectorAll('video'));
-                    for (const v of videos) {
-                        if (v.duration > 0 || (v.currentSrc && !v.currentSrc.includes('placeholder'))) return true;
-                    }
-                    return false;
-                }""")
-
-                # Download button visible check
-                dl_btn = page.locator('button[aria-label*="Download media" i], button[aria-label*="Download" i]').first
-                dl_btn_visible = await dl_btn.is_visible()
-
-                if pct_100 or video_rendered or dl_btn_visible or captured_downloads:
-                    logger.info(f"[{generation_id}] Video completion detected (pct_100={pct_100}, video_rendered={video_rendered}, dl_btn={dl_btn_visible})!")
-                    status_dict[generation_id]["message"] = "Video generated on Flow AI! Preparing and sending to your screen..."
+                # Check if network interceptor already caught the new MP4!
+                if captured_video_bytes or captured_downloads:
+                    logger.info(f"[{generation_id}] Video detected via network/download listener!")
                     video_ready = True
-                    already_opened = dl_btn_visible or video_rendered
                     break
 
-                # If elapsed >= 35s and no active % rendering (or stuck on tile view), click new tile ONCE to open detail viewer
-                if elapsed >= 35 and not clicked_tile_once and not pct_matches:
-                    new_tile = None
-                    for tile in await page.locator('img[alt*="video" i], video, flow-video-tile').all():
-                        try:
-                            src = await tile.evaluate("el => el.currentSrc || el.src || ''")
-                            if src and src not in existing_video_tiles:
-                                new_tile = tile
-                                break
-                        except Exception:
-                            pass
-                    if new_tile:
-                        logger.info(f"[{generation_id}] Clicking new video tile once to open detail viewer...")
-                        try:
-                            await new_tile.click()
-                            clicked_tile_once = True
-                            await asyncio.sleep(2)
-                            if await dl_btn.is_visible():
-                                video_ready = True
-                                already_opened = True
-                                status_dict[generation_id]["message"] = "Video generated on Flow AI! Preparing and sending to your screen..."
-                                break
-                        except Exception as e:
-                            logger.debug(f"Tile click note: {e}")
+                # Check DOM for newly added <video> element with valid src
+                new_video_found = await page.evaluate("""(existingUrls) => {
+                    const videos = Array.from(document.querySelectorAll('video'));
+                    for (const v of videos) {
+                        const s = v.currentSrc || v.src || (v.querySelector('source') ? v.querySelector('source').src : '');
+                        if (s && !existingUrls.includes(s) && !s.includes('placeholder')) {
+                            if (v.readyState >= 1 || v.duration > 0 || s.startsWith('http') || s.startsWith('blob:')) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                }""", existing_video_tiles)
+
+                if new_video_found or (latest_pct is not None and latest_pct >= 100):
+                    await asyncio.sleep(3)  # Give stream time to settle
+                    video_ready = True
+                    break
 
                 await asyncio.sleep(3)
 
-            # Download MP4
-            status_dict[generation_id]["message"] = "Video generated on Flow AI! Preparing and sending to your screen..."
-            file_path = await self._download_video(page, generation_id, already_opened=already_opened, existing_video_tiles=existing_video_tiles, captured_downloads=captured_downloads)
+            status_dict[generation_id]["message"] = "Video generated! Saving to server..."
+
+            # Download and save the video
+            file_path = await self._download_video(
+                page=page,
+                context=context,
+                generation_id=generation_id,
+                existing_video_tiles=existing_video_tiles,
+                captured_downloads=captured_downloads,
+                captured_video_bytes=captured_video_bytes,
+            )
+
+            # Verify file exists and is non-empty before marking completed
+            if not os.path.exists(file_path) or os.path.getsize(file_path) < 10_000:
+                raise Exception("Downloaded video file is missing or corrupted.")
 
             status_dict[generation_id].update({
                 "status": "completed",
                 "download_url": f"/api/video/download/{generation_id}",
+                "video_url": f"/api/video/download/{generation_id}",
                 "message": "Video generated successfully!"
             })
-            state = await context.storage_state(); from app.services.session_crypto import save_encrypted_session; save_encrypted_session(state, self.session_path)
+            state = await context.storage_state()
+            from app.services.session_crypto import save_encrypted_session
+            save_encrypted_session(state, self.session_path)
 
         except Exception as e:
             logger.exception("[%s] Video generation failed", generation_id)
-            await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_video_error.png"))
+            try:
+                await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_video_error.png"))
+            except Exception:
+                pass
+            
+            err_str = str(e)
+            if "flagged by AI content safety" in err_str:
+                client_msg = "Generation was flagged by AI content safety guidelines. Please try rephrasing your prompt."
+            elif "timed out" in err_str.lower():
+                client_msg = "Video generation timed out on Flow AI. Please try again with a shorter prompt."
+            else:
+                client_msg = "Could not retrieve generated video. Please try again."
+
             status_dict[generation_id].update({
                 "status": "failed",
-                "message": "The video service is temporarily unavailable. Please try again shortly."
+                "message": client_msg
             })
         finally:
             await browser.close()
             await p.stop()
 
-    async def _download_video(self, page, generation_id: str, already_opened: bool = False, existing_video_tiles: list = None, captured_downloads: list = None) -> str:
+    async def _download_video(
+        self,
+        page,
+        context,
+        generation_id: str,
+        existing_video_tiles: list = None,
+        captured_downloads: list = None,
+        captured_video_bytes: list = None,
+    ) -> str:
         file_path = os.path.join(self.videos_dir, f"{generation_id}.mp4")
-        logger.info(f"[{generation_id}] Beginning video download / media extraction...")
+        existing_video_tiles = existing_video_tiles or []
 
-        # Strategy 1: Check if download already completed in background
+        # METHOD 1: Agar network interceptor ne MP4 bytes pakad liye hain (Fastest & 100% Reliable)
+        if captured_video_bytes:
+            largest_video = max(captured_video_bytes, key=len)
+            if len(largest_video) > 50_000:
+                with open(file_path, "wb") as f:
+                    f.write(largest_video)
+                logger.info(f"[{generation_id}] Saved video via Method 1 (Network Stream): {len(largest_video)} bytes")
+                return file_path
+
+        # METHOD 2: Agar Playwright download event trigger hua hai
         if captured_downloads:
             try:
                 dl = captured_downloads[-1]
                 await dl.save_as(file_path)
-                if os.path.exists(file_path) and os.path.getsize(file_path) > 5000:
-                    logger.info(f"[{generation_id}] Saved video from captured download ({os.path.getsize(file_path)} bytes)!")
+                if os.path.exists(file_path) and os.path.getsize(file_path) > 50_000:
+                    logger.info(f"[{generation_id}] Saved video via Method 2 (Captured Download)")
                     return file_path
-            except Exception as cap_err:
-                logger.warning(f"Captured download save note: {cap_err}")
+            except Exception as e:
+                logger.warning(f"[{generation_id}] Method 2 failed: {e}")
 
-        # Strategy 2: Direct DOM extraction from <video> element (Fastest & most robust against UI changes)
-        try:
-            logger.info(f"[{generation_id}] Attempting direct video extraction via DOM...")
-            video_url = await page.evaluate("""() => {
-                const videos = Array.from(document.querySelectorAll('video'));
-                for (const v of videos) {
-                    const s = v.currentSrc || v.src;
-                    if (s && (s.startsWith('http') || s.startsWith('blob:'))) return s;
-                }
-                let shadowUrl = null;
-                function walk(n) {
-                    if (n.shadowRoot) walk(n.shadowRoot);
-                    if (n.tagName === 'VIDEO') {
-                        const s = n.currentSrc || n.src;
-                        if (s && (s.startsWith('http') || s.startsWith('blob:'))) shadowUrl = s;
-                    }
-                    n.childNodes.forEach(c => walk(c));
-                }
-                walk(document);
-                return shadowUrl;
-            }""")
-
-            if video_url:
-                logger.info(f"[{generation_id}] Found video media URL: {video_url[:80]}...")
-                if video_url.startswith("http"):
-                    try:
-                        req_res = await page.request.get(video_url, timeout=30000)
-                        if req_res.ok:
-                            body = await req_res.body()
-                            if len(body) > 5000:
-                                with open(file_path, "wb") as f:
-                                    f.write(body)
-                                logger.info(f"[{generation_id}] Successfully extracted video via Playwright request context ({len(body)} bytes)!")
-                                return file_path
-                    except Exception as req_err:
-                        logger.warning(f"[{generation_id}] Playwright request context fetch note: {req_err}")
-
-                b64_data = await page.evaluate("""async (url) => {
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(blob);
-                    });
-                }""", video_url)
-                if b64_data and "," in b64_data:
-                    import base64
-                    _, encoded = b64_data.split(",", 1)
-                    raw_bytes = base64.b64decode(encoded)
-                    if len(raw_bytes) > 5000:
-                        with open(file_path, "wb") as f:
-                            f.write(raw_bytes)
-                        logger.info(f"[{generation_id}] Successfully extracted video via DOM fetch ({len(raw_bytes)} bytes)!")
-                        return file_path
-        except Exception as dom_err:
-            logger.warning(f"[{generation_id}] Direct video DOM extraction note: {dom_err}")
-
-        # Strategy 3: Click Download Button in Flow UI
-        dl_btn = page.locator('button[aria-label*="Download media" i], button[aria-label*="Download" i], [aria-label*="Download" i]').first
-        more_vert = page.locator('button:has(mat-icon:has-text("more_vert")), mat-icon:has-text("more_vert"), button[aria-label*="More" i]').first
-
-        if not await dl_btn.is_visible() and not await more_vert.is_visible():
-            new_tile = None
-            if existing_video_tiles is not None:
-                for tile in await page.locator('img[alt*="video" i], video, flow-video-tile img, flow-video-tile').all():
-                    try:
-                        src = await tile.evaluate("el => el.currentSrc || el.src || ''")
-                        if src and src not in existing_video_tiles:
-                            new_tile = tile
-                            break
-                    except Exception:
-                        pass
-            if not new_tile:
-                new_tile = page.locator('flow-video-tile, [role="button"]:has(video), video').last
-            if new_tile and await new_tile.is_visible():
-                try:
-                    await new_tile.click()
-                    await asyncio.sleep(2)
-                except Exception:
-                    pass
-
-        # Try clicking dl_btn directly with expect_download wrapper
-        if await dl_btn.is_visible(timeout=3000):
+        # METHOD 3: Hover over video tile & click Flow's Download button
+        for attempt in range(4):
             try:
-                logger.info(f"[{generation_id}] Clicking download button with expect_download...")
-                async with page.expect_download(timeout=8000) as dl_info:
-                    await dl_btn.click(force=True)
-                download = await dl_info.value
-                await download.save_as(file_path)
-                logger.info(f"[{generation_id}] Direct download button succeeded!")
-                return file_path
-            except PlaywrightTimeoutError:
-                logger.info(f"[{generation_id}] Download button opened menu. Checking resolution option...")
-                opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button, .cdk-overlay-pane button').filter(has_text=re.compile("720p|360p|Original|Download", re.IGNORECASE)).first
-                if not await opt.is_visible(timeout=3000):
-                    opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button').first
+                video_el = page.locator("video").last
+                if await video_el.is_visible(timeout=2000):
+                    await video_el.hover()
+                    await asyncio.sleep(1)
 
-                if await opt.is_visible(timeout=2000):
-                    async with page.expect_download(timeout=60000) as dl_info:
-                        await opt.click(force=True)
-                    download = await dl_info.value
-                    await download.save_as(file_path)
-                    logger.info(f"[{generation_id}] Menu download option succeeded!")
-                    return file_path
+                dl_btn = page.locator(
+                    'button[aria-label*="Download" i], [role="button"][aria-label*="Download" i], '
+                    'button:has(mat-icon:has-text("download")), button:has-text("Download")'
+                ).last
 
-        elif await more_vert.is_visible(timeout=2000):
-            await more_vert.click()
-            await asyncio.sleep(1)
-            dl_opt = page.locator('.mat-mdc-menu-content button, [role="menuitem"]').filter(has_text=re.compile("Download", re.IGNORECASE)).first
-            if await dl_opt.is_visible(timeout=2000):
-                try:
-                    async with page.expect_download(timeout=8000) as dl_info:
-                        await dl_opt.click(force=True)
-                    download = await dl_info.value
-                    await download.save_as(file_path)
-                    return file_path
-                except PlaywrightTimeoutError:
-                    opt = page.locator('[role="menuitem"], .mat-mdc-menu-content button, .cdk-overlay-pane button').filter(has_text=re.compile("720p|360p|Original|Download", re.IGNORECASE)).first
-                    if await opt.is_visible(timeout=3000):
-                        async with page.expect_download(timeout=60000) as dl_info:
-                            await opt.click(force=True)
+                if await dl_btn.is_visible(timeout=2500):
+                    try:
+                        async with page.expect_download(timeout=15000) as dl_info:
+                            await dl_btn.click(force=True)
                         download = await dl_info.value
                         await download.save_as(file_path)
-                        return file_path
+                        if os.path.exists(file_path) and os.path.getsize(file_path) > 50_000:
+                            logger.info(f"[{generation_id}] Saved video via Method 3 (UI Download Button)")
+                            return file_path
+                    except PlaywrightTimeoutError:
+                        menu_opt = page.locator('[role="menuitem"], .cdk-overlay-pane button').filter(
+                            has_text=re.compile(r"720p|1080p|360p|Original|MP4|Download", re.I)
+                        ).first
+                        if await menu_opt.is_visible(timeout=2500):
+                            async with page.expect_download(timeout=25000) as dl_info:
+                                await menu_opt.click(force=True)
+                            download = await dl_info.value
+                            await download.save_as(file_path)
+                            if os.path.exists(file_path) and os.path.getsize(file_path) > 50_000:
+                                return file_path
+            except Exception as e:
+                logger.warning(f"[{generation_id}] Method 3 attempt {attempt + 1} note: {e}")
 
-        # Check if captured_downloads received any file during the clicks
-        if captured_downloads:
+            # METHOD 4: Extract <video> src or <source> src with authenticated browser cookies
             try:
-                dl = captured_downloads[-1]
-                await dl.save_as(file_path)
-                if os.path.exists(file_path) and os.path.getsize(file_path) > 5000:
+                video_url = await page.evaluate("""(existingUrls) => {
+                    const videos = Array.from(document.querySelectorAll('video'));
+                    for (const v of videos.reverse()) {
+                        const src = v.currentSrc || v.src || (v.querySelector('source') ? v.querySelector('source').src : '');
+                        if (src && !existingUrls.includes(src) && !src.includes('placeholder')) {
+                            return src;
+                        }
+                    }
+                    return null;
+                }""", existing_video_tiles)
+
+                if video_url and video_url.startswith("http"):
+                    resp = await context.request.get(video_url, timeout=30000)
+                    if resp.ok:
+                        body = await resp.body()
+                        if len(body) > 50_000:
+                            with open(file_path, "wb") as f:
+                                f.write(body)
+                            logger.info(f"[{generation_id}] Saved video via Method 4 (Authenticated Context GET)")
+                            return file_path
+            except Exception as e:
+                logger.warning(f"[{generation_id}] Method 4 attempt {attempt + 1} note: {e}")
+
+            # Check again if network interceptor caught it while hovering/playing
+            if captured_video_bytes:
+                largest_video = max(captured_video_bytes, key=len)
+                if len(largest_video) > 50_000:
+                    with open(file_path, "wb") as f:
+                        f.write(largest_video)
                     return file_path
-            except Exception:
-                pass
 
-        if os.path.exists(file_path) and os.path.getsize(file_path) > 5000:
-            return file_path
+            await asyncio.sleep(2)
 
-        await page.screenshot(path=os.path.join(self.debug_dir, f"{generation_id}_download_failed.png"))
         raise Exception("Could not download generated video from Flow Studio.")
 
     # =========================================================================

@@ -32,6 +32,8 @@ import {
   extractVideoFrame,
   UpscaleResult,
 } from "./upscaler";
+import { processImageTool } from "@/app/tools/ToolEngine";
+
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -186,6 +188,62 @@ export default function Client() {
     setProcessStatus("Initializing AI upscaling pipeline...");
 
     try {
+      const targetFmt = overrideFormat || exportFormat;
+      const fmtShort = targetFmt.replace("image/", "");
+
+      // ─── Fast Hybrid Path (Instant C-compiled Server Scaling) ───────────
+      if (file && fileType === "image") {
+        setProcessStatus("Connecting to high-speed upscaling engine...");
+        try {
+          const { result: outBlob, executedOn } = await processImageTool(
+            "image-upscale",
+            file,
+            { scale: scaleFactor, format: fmtShort },
+            (p, mode) => {
+              setProcessStatus(
+                mode === "backend"
+                  ? `Upscaling on Fast Server (${p}%)...`
+                  : `Processing via browser engine (${p}%)...`
+              );
+            }
+          );
+
+          const outUrl = URL.createObjectURL(outBlob);
+          const outImg = new Image();
+          outImg.src = outUrl;
+          await new Promise<void>((res) => {
+            outImg.onload = () => res();
+            outImg.onerror = () => res();
+          });
+
+          const upscaleRes: UpscaleResult = {
+            blob: outBlob,
+            objectUrl: outUrl,
+            width:
+              outImg.naturalWidth ||
+              (originalDimensions?.width ? originalDimensions.width * scaleFactor : 1920),
+            height:
+              outImg.naturalHeight ||
+              (originalDimensions?.height ? originalDimensions.height * scaleFactor : 1080),
+            size: outBlob.size,
+            mimeType: targetFmt,
+          };
+
+          setResult(upscaleRes);
+          setResultUrl(outUrl);
+          setActivePreviewTab("compare");
+          setProcessStatus(
+            executedOn === "backend"
+              ? "Upscaled via Fast Server Engine!"
+              : "Upscaled via Browser Engine!"
+          );
+          return;
+        } catch (serverErr) {
+          console.warn("Server upscaling failed, falling back to local canvas:", serverErr);
+        }
+      }
+
+      // ─── Browser Fallback (Canvas / Video-frame upscale) ──────────────────
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.src = imageSrc;
@@ -198,7 +256,6 @@ export default function Client() {
       setProcessStatus(`Executing ${scaleFactor}x multi-pass step scaling...`);
       await new Promise((r) => setTimeout(r, 60));
 
-      const targetFmt = overrideFormat || exportFormat;
       const upscaled = await upscaleImage(img, {
         scale: scaleFactor,
         sharpness: sharpnessEnabled,
@@ -219,6 +276,7 @@ export default function Client() {
       setProcessStatus("");
     }
   };
+
 
   // Drag comparison slider handler
   const handleSliderMove = useCallback((clientX: number) => {

@@ -119,23 +119,6 @@ export default function ReactionVideoMakerPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Breadcrumb Navigation */}
-      <section className="bg-white/80 dark:bg-[#121215]/80 backdrop-blur-sm border-b border-slate-200 dark:border-white/[0.08] py-2.5 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between text-xs">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <Link href="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-              Home
-            </Link>
-            <span>/</span>
-            <Link href="/tools" className="hover:text-slate-900 dark:hover:text-white transition-colors">
-              Tools
-            </Link>
-            <span>/</span>
-            <span className="text-slate-900 dark:text-white font-semibold">Reaction Video Maker</span>
-          </nav>
-        </div>
-      </section>
-
       {/* Main Tool Client wrapped in Crash Boundary */}
       <div className="flex-1 bg-background">
         <ToolErrorBoundary toolName="Reaction Video Maker">

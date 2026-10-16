@@ -16,6 +16,8 @@ import {
   Globe,
 } from "lucide-react";
 import { processPdfOcr, OCRPageResult, OCRProgress } from "@/lib/pdf/pdfOcrHelper";
+import { processPdfTool } from "@/app/tools/ToolEngine";
+
 
 const LANGUAGES = [
   { code: "eng", name: "English" },
@@ -59,8 +61,51 @@ export default function PdfOcrClient() {
 
     setStatus("processing");
     setErrorMessage("");
+    setProgressInfo({
+      currentPage: 0,
+      totalPages: 1,
+      status: "Connecting to high-speed OCR engine...",
+      progress: 5,
+    });
 
     try {
+      // 1. Attempt High-Speed Hybrid Backend
+      try {
+        const { result: outBlob } = await processPdfTool(
+          "pdf-ocr",
+          selectedFile,
+          { language },
+          (percent, mode) => {
+            setProgressInfo({
+              currentPage: 1,
+              totalPages: 1,
+              status:
+                mode === "backend"
+                  ? `Recognizing text via Fast Server (${percent}%)...`
+                  : `Processing OCR locally (${percent}%)...`,
+              progress: percent,
+            });
+          }
+        );
+
+        const extracted = await outBlob.text();
+        if (extracted && extracted.trim().length > 10) {
+          setFullText(extracted);
+          setPagesResult([
+            {
+              pageNumber: 1,
+              text: extracted,
+              confidence: 98,
+            },
+          ]);
+          setStatus("completed");
+          return;
+        }
+      } catch (backendErr) {
+        console.warn("Backend OCR unavailable, falling back to local Tesseract:", backendErr);
+      }
+
+      // 2. Client-Side Fallback (Tesseract.js worker)
       const result = await processPdfOcr(selectedFile, language, (progress) => {
         setProgressInfo(progress);
       });
@@ -74,6 +119,7 @@ export default function PdfOcrClient() {
       setStatus("error");
     }
   };
+
 
   const handleCopyText = async () => {
     if (!fullText) return;

@@ -119,25 +119,6 @@ export default function ImageColorPickerPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Semantic Top Navigation Breadcrumb */}
-      <section className="bg-slate-900/50 border-b border-border/40 py-3 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-            <span>/</span>
-            <Link href="/tools" className="hover:text-foreground transition-colors">Tools</Link>
-            <span>/</span>
-            <span className="text-foreground font-semibold">Image Color Picker</span>
-          </nav>
-          <div className="flex items-center gap-4 text-muted-foreground">
-            <span className="flex items-center gap-1.5 text-fuchsia-400">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Pixel-Level Precision</span>
-            </span>
-          </div>
-        </div>
-      </section>
-
       {/* Hero Header */}
       <div className="max-w-5xl mx-auto px-4 pt-10 pb-6 text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-fuchsia-500/10 text-fuchsia-500 text-xs font-bold mb-4">

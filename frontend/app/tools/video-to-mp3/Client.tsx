@@ -3,7 +3,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import useFFmpeg from "@/lib/ffmpeg/useFFmpeg";
+import { processVideoOrAudioTool } from "@/app/tools/ToolEngine";
 import { formatBytes, formatTime } from "@/lib/utils/formatters";
+
 import { getTransferMedia } from "@/app/utils/mediaTransfer";
 import { getBackendUrl } from "@/utils/runtime-urls";
 import {
@@ -113,52 +115,46 @@ export default function VideoToMp3Client() {
     if (!originalFile) return;
     setErrorMsg(null);
 
-    // ─── Fast Server Path (Instant C-compiled FFmpeg) ──────────────────────
     setIsServerProcessing(true);
-    setServerStatus("Connecting to high-speed audio extractor...");
-    setServerProgress(25);
+    setServerStatus("Connecting to high-speed hybrid engine...");
+    setServerProgress(5);
 
     try {
-      const backendUrl = await getBackendUrl();
-      const formData = new FormData();
-      formData.append("file", originalFile);
-      formData.append("bitrate", bitrate);
-      formData.append("channels", String(channels));
-
-      setServerStatus("Extracting crystal-clear MP3 stream...");
-      setServerProgress(60);
-
-      const response = await fetch(`${backendUrl}/api/convert/video-to-mp3`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        setServerProgress(95);
-        const outputBlob = await response.blob();
-        const url = URL.createObjectURL(outputBlob);
-        setResultUrl(url);
-        setResultSize(outputBlob.size);
-        setServerProgress(100);
-        setIsServerProcessing(false);
-        setServerStatus("");
-        return;
-      } else {
-        const errJson = await response.json().catch(() => null);
-        if (response.status === 400 && errJson?.detail) {
-          setErrorMsg(errJson.detail);
-          setIsServerProcessing(false);
-          setServerStatus("");
-          return;
+      const { result, executedOn } = await processVideoOrAudioTool(
+        "video-to-mp3",
+        originalFile,
+        { bitrate, channels, format: "mp3" },
+        (percent, mode) => {
+          setServerProgress(percent);
+          if (mode === "backend") {
+            setServerStatus(
+              percent < 65
+                ? `Uploading to Fast Server (${percent}%)...`
+                : `Extracting MP3 on Server (${percent}%)...`
+            );
+          } else {
+            setServerStatus(`Extracting audio in browser WebAssembly (${percent}%)...`);
+          }
         }
-        console.warn("Server-side extraction returned error, trying browser engine:", errJson);
-      }
-    } catch (err) {
-      console.warn("Backend audio extractor unavailable, falling back to browser WASM:", err);
+      );
+
+      const url = URL.createObjectURL(result);
+      setResultUrl(url);
+      setResultSize(result.size);
+      setServerProgress(100);
+      setServerStatus(
+        executedOn === "backend"
+          ? "Extracted via Fast Native Server!"
+          : "Extracted via Local Browser Engine!"
+      );
+      setIsServerProcessing(false);
+      return;
+    } catch (err: unknown) {
+      console.warn("Hybrid audio extraction failed, falling back to browser WASM:", err);
     } finally {
       setIsServerProcessing(false);
-      setServerStatus("");
     }
+
 
     // ─── In-Browser Fallback Path (WebAssembly FFmpeg) ─────────────────────
     const qualityArgs =

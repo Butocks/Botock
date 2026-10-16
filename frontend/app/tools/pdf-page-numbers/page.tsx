@@ -86,23 +86,6 @@ export default function PdfPageNumbersPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Semantic Top Navigation Breadcrumb */}
-      <section className="bg-slate-100/60 dark:bg-white/[0.03] border-b border-slate-200 dark:border-white/[0.08] py-2.5 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-            <Link href="/" className="hover:text-slate-900 dark:hover:text-white transition-colors">Home</Link>
-            <span>/</span>
-            <Link href="/tools" className="hover:text-slate-900 dark:hover:text-white transition-colors">Tools</Link>
-            <span>/</span>
-            <span className="text-slate-900 dark:text-white font-semibold">Add Page Numbers to PDF</span>
-          </nav>
-          <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Private Client-Side Processing</span>
-          </span>
-        </div>
-      </section>
-
       {/* Interactive Tool Component */}
       <div className="flex-1">
         <ToolErrorBoundary toolName="Add Page Numbers to PDF">

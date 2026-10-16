@@ -106,32 +106,6 @@ export default function ImageGeneratorPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Semantic Top Navigation Breadcrumb & SEO Header */}
-      <section className="bg-slate-900/50 border-b border-border/40 py-3 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
-            <span>/</span>
-            <Link href="/tools" className="hover:text-foreground transition-colors">Tools</Link>
-            <span>/</span>
-            <span className="text-foreground font-semibold">AI Image Generator</span>
-          </nav>
-          <div className="flex items-center gap-4 text-muted-foreground">
-            <span className="flex items-center gap-1.5 text-emerald-400">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>5 Free Daily Photos</span>
-            </span>
-            <Link
-              href="/blog/guide-to-photo-generation-and-faq"
-              className="hover:text-primary transition-colors flex items-center gap-1"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-primary" />
-              <span>Photo Guide &amp; FAQ</span>
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Interactive Generator App */}
       <div className="flex-1">
         <ToolErrorBoundary toolName="AI Image Generator">

@@ -80,4 +80,57 @@ export function useProcessingJob<TResult>(): UseProcessingJobReturn<TResult> {
   };
 }
 
+import {
+  processVideoOrAudioTool,
+  processPdfTool,
+  processImageTool,
+} from "@/app/tools/ToolEngine";
+
+export function useHybridToolJob() {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [executionMode, setExecutionMode] = useState<"backend" | "local" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const execute = useCallback(
+    async (
+      category: "video" | "pdf" | "image",
+      toolSlug: string,
+      file: File,
+      options: Record<string, any> = {}
+    ): Promise<Blob | null> => {
+      setIsProcessing(true);
+      setProgress(0);
+      setError(null);
+
+      try {
+        const onProgress = (p: number, mode: "backend" | "local") => {
+          setProgress(p);
+          setExecutionMode(mode);
+        };
+
+        let res;
+        if (category === "video") {
+          res = await processVideoOrAudioTool(toolSlug as any, file, options, onProgress);
+        } else if (category === "pdf") {
+          res = await processPdfTool(toolSlug as any, file, options, onProgress);
+        } else {
+          res = await processImageTool(toolSlug as any, file, options, onProgress);
+        }
+
+        return res.result;
+      } catch (err: any) {
+        setError(err?.message || "Processing failed");
+        return null;
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    []
+  );
+
+  return { execute, isProcessing, progress, executionMode, error };
+}
+
 export default useProcessingJob;
+

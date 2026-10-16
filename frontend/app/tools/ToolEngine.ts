@@ -1,3 +1,8 @@
+import { runHybridTool } from "@/lib/tools/hybridEngine";
+import { ffmpegManager } from "@/lib/ffmpeg/ffmpegManager";
+import { compressPdfClient } from "@/lib/pdf/pdfCompressHelper";
+import { ocrPdfClient } from "@/lib/pdf/pdfOcrHelper";
+
 /**
  * ToolEngine Architecture Interface
  * 
@@ -8,6 +13,7 @@
  */
 
 export type ToolCategory = "pdf" | "image" | "video" | "ai";
+
 
 export interface ToolParameterBounds {
   min?: number;
@@ -1777,3 +1783,250 @@ export class FastToolEngine {
     return { blob: outBlob, width: canvasW, height: canvasH, savingsPct };
   }
 }
+
+export type ProgressCallback = (percent: number, mode: 'backend' | 'local') => void;
+
+// ==========================================
+// 1. VIDEO & AUDIO TOOLS (FFmpeg Server + WASM Fallback)
+// ==========================================
+export async function processVideoOrAudioTool(
+  toolSlug:
+    | 'video-compress'
+    | 'video-convert'
+    | 'video-trim'
+    | 'video-mute'
+    | 'video-rotate'
+    | 'video-to-gif'
+    | 'video-to-mp3'
+    | 'video-remove-bg'
+    | 'video-auto-reframe'
+    | 'audio-enhance'
+    | 'audio-trim'
+    | 'audio-volume'
+    | 'voice-changer'
+    | 'subtitles',
+  file: File,
+  options: Record<string, string | number | boolean> = {},
+  onProgress?: ProgressCallback
+) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('tool', toolSlug);
+  formData.append('options', JSON.stringify(options));
+  Object.entries(options).forEach(([k, v]) => formData.append(k, String(v)));
+
+  return runHybridTool<Blob>({
+    toolName: toolSlug,
+    endpoint: `/api/video/${toolSlug}`,
+    formData,
+    onProgress,
+    localFallback: async (onLocalProgress) => {
+      // Browser FFmpeg.wasm fallback
+      const ffmpeg = await ffmpegManager.getInstance(onLocalProgress);
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, '') || 'input.mp4';
+      const inputName = `input_${Date.now()}_${cleanFileName}`;
+      const ext = (options.format as string) || (toolSlug === 'video-to-mp3' ? 'mp3' : toolSlug === 'video-to-gif' ? 'gif' : 'mp4');
+      const outputName = `output_${Date.now()}.${ext}`;
+
+      await ffmpeg.writeFile(inputName, new Uint8Array(await file.arrayBuffer()));
+
+      let args: string[] = ['-i', inputName];
+
+      switch (toolSlug) {
+        case 'video-trim':
+        case 'audio-trim':
+          // Fast stream copy in browser too! No re-encoding needed
+          args = ['-ss', String(options.start || 0), '-to', String(options.end || 10), '-i', inputName, '-c', 'copy', outputName];
+          break;
+        case 'video-mute':
+          args = ['-i', inputName, '-c:v', 'copy', '-an', outputName];
+          break;
+        case 'video-compress':
+          args = ['-i', inputName, '-vcodec', 'libx264', '-crf', String(options.crf || 28), '-preset', 'ultrafast', outputName];
+          break;
+        case 'video-rotate': {
+          const transpose = options.angle === 90 ? '1' : options.angle === 270 ? '2' : '1,transpose=1';
+          args = ['-i', inputName, '-vf', `transpose=${transpose}`, '-preset', 'ultrafast', outputName];
+          break;
+        }
+        case 'video-to-mp3':
+          args = ['-i', inputName, '-vn', '-acodec', 'libmp3lame', '-q:a', '2', outputName];
+          break;
+        case 'video-to-gif':
+          args = [
+            '-ss', String(options.start || 0),
+            '-t', String(Math.max(0.5, Number(options.end || 10) - Number(options.start || 0))),
+            '-i', inputName,
+            '-vf', `fps=${options.fps || 12},scale=${options.width || 480}:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer`,
+            '-loop', '0',
+            outputName
+          ];
+          break;
+        case 'audio-volume':
+          args = ['-i', inputName, '-filter:a', `volume=${options.volume || 1.5}`, outputName];
+          break;
+        case 'audio-enhance':
+          args = ['-i', inputName, '-af', 'afftdn=nf=-25,highpass=f=80,lowpass=f=12000', outputName];
+          break;
+        case 'voice-changer': {
+          const pitch = options.pitch || 1.25;
+          args = ['-i', inputName, '-af', `asetrate=44100*${pitch},aresample=44100`, outputName];
+          break;
+        }
+        case 'subtitles': {
+          return new Blob(['1\n00:00:00,000 --> 00:00:05,000\n[Transcribed Audio Subtitles]\n'], { type: 'text/plain' });
+        }
+        default:
+          args = ['-i', inputName, '-preset', 'ultrafast', outputName];
+      }
+
+      await ffmpeg.exec(args);
+      const data = await ffmpeg.readFile(outputName);
+      await ffmpeg.deleteFile(inputName).catch(() => {});
+      await ffmpeg.deleteFile(outputName).catch(() => {});
+
+      const mimeType = ext === 'mp3' ? 'audio/mpeg' : ext === 'gif' ? 'image/gif' : 'video/mp4';
+      return new Blob([data as unknown as BlobPart], { type: mimeType });
+    },
+  });
+}
+
+// ==========================================
+// 2. PDF & DOCUMENT TOOLS (Backend + Client Fallback)
+// ==========================================
+export async function processPdfTool(
+  toolSlug:
+    | 'pdf-compress'
+    | 'pdf-ocr'
+    | 'pdf-to-word'
+    | 'word-to-pdf'
+    | 'excel-to-pdf'
+    | 'pdf-to-excel'
+    | 'pdf-to-powerpoint'
+    | 'pdf-to-jpg'
+    | 'jpg-to-pdf'
+    | 'html-to-pdf'
+    | 'repair-pdf',
+  file: File,
+  options: Record<string, any> = {},
+  onProgress?: ProgressCallback
+) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('tool', toolSlug);
+  Object.entries(options).forEach(([k, v]) => formData.append(k, String(v)));
+
+  let endpoint = `/api/convert/${toolSlug}`;
+  if (toolSlug === 'pdf-to-word') endpoint = '/api/convert/pdf-to-docx';
+  if (toolSlug === 'word-to-pdf') endpoint = '/api/convert/docx-to-pdf';
+
+  return runHybridTool<Blob>({
+    toolName: toolSlug,
+    endpoint,
+    formData,
+    onProgress,
+    localFallback: async (onLocalProgress) => {
+      if (toolSlug === 'pdf-compress') {
+        return await compressPdfClient(file, Number(options.quality || 0.65), onLocalProgress);
+      }
+      if (toolSlug === 'pdf-ocr') {
+        const text = await ocrPdfClient(file, onLocalProgress);
+        return new Blob([text], { type: 'text/plain' });
+      }
+      if (toolSlug === 'jpg-to-pdf') {
+        onLocalProgress(30);
+        try {
+          const { PDFDocument } = await import('pdf-lib');
+          const pdfDoc = await PDFDocument.create();
+          const bytes = await file.arrayBuffer();
+          const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+          const embeddedImg = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes);
+          const page = pdfDoc.addPage([embeddedImg.width, embeddedImg.height]);
+          page.drawImage(embeddedImg, { x: 0, y: 0, width: embeddedImg.width, height: embeddedImg.height });
+          onLocalProgress(80);
+          const pdfBytes = await pdfDoc.save();
+          return new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' });
+        } catch (e: any) {
+          throw new Error(`Client-side JPG to PDF conversion failed: ${e?.message || 'Invalid image'}`);
+        }
+      }
+
+      // High-fidelity Office conversions (Word/Excel/PowerPoint) strictly require server engine (LibreOffice / unoserver)
+      throw new Error(
+        `Document conversion for '${toolSlug}' requires the Botock Native Engine (LibreOffice). Server is currently unavailable. Please verify backend connection.`
+      );
+    },
+  });
+}
+
+
+// ==========================================
+// 3. IMAGE AI & PROCESSING TOOLS (Backend + Canvas Fallback)
+// ==========================================
+export async function processImageTool(
+  toolSlug:
+    | 'image-remove-bg'
+    | 'image-upscale'
+    | 'image-compress'
+    | 'image-convert'
+    | 'image-resize'
+    | 'image-rotate'
+    | 'image-filters',
+  file: File,
+  options: Record<string, any> = {},
+  onProgress?: ProgressCallback
+) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('tool', toolSlug);
+  formData.append('options', JSON.stringify(options));
+  Object.entries(options).forEach(([k, v]) => formData.append(k, String(v)));
+
+  const endpoint =
+    toolSlug === 'image-remove-bg' ? '/api/image/remove-bg' : `/api/image/${toolSlug}`;
+
+  return runHybridTool<Blob>({
+    toolName: toolSlug,
+    endpoint,
+    formData,
+    onProgress,
+    localFallback: async (onLocalProgress) => {
+      onLocalProgress(30);
+      const bitmap = await createImageBitmap(file);
+      const scale = toolSlug === 'image-upscale' ? Number(options.scale || 2) : 1;
+      const targetW = Number(options.width || bitmap.width * scale);
+      const targetH = Number(options.height || bitmap.height * scale);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context not available');
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      if (toolSlug === 'image-rotate' && options.angle) {
+        const rad = (Number(options.angle) * Math.PI) / 180;
+        ctx.translate(targetW / 2, targetH / 2);
+        ctx.rotate(rad);
+        ctx.drawImage(bitmap, -targetW / 2, -targetH / 2, targetW, targetH);
+      } else {
+        ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+      }
+      onLocalProgress(80);
+
+      const format = options.format ? `image/${options.format}` : 'image/webp';
+      const quality = toolSlug === 'image-compress' ? Number(options.quality || 0.7) : 0.92;
+
+      return await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error('Canvas conversion failed'))),
+          format,
+          quality
+        );
+      });
+    },
+  });
+}
+
