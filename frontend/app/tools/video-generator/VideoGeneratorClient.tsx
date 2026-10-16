@@ -205,6 +205,9 @@ export default function VideoGeneratorClient() {
         } else if (typeof rawDetail === "object" && rawDetail !== null) {
           formattedMsg = rawDetail.message || JSON.stringify(rawDetail);
         }
+        if (formattedMsg.includes("<") && formattedMsg.includes(">")) {
+          formattedMsg = "AI video server is temporarily unreachable (502 Bad Gateway). Please ensure the backend service is running.";
+        }
         throw new Error(formattedMsg);
       }
 

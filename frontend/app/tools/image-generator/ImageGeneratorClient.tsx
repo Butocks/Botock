@@ -242,6 +242,9 @@ export default function ImageGeneratorClient() {
             errMsg = errText;
           }
         }
+        if (errMsg.includes("<") && errMsg.includes(">")) {
+          errMsg = "AI generation server is temporarily unreachable (502 Bad Gateway). Please ensure the backend service is running.";
+        }
         throw new Error(errMsg);
       }
 

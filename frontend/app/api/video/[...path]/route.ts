@@ -107,11 +107,17 @@ export async function POST(
                   : Array.isArray(errorJson.detail)
                   ? errorJson.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ")
                   : JSON.stringify(errorJson.detail);
+            } else if (text.trim().startsWith("<")) {
+              errorMsg = `AI video server is temporarily unavailable (${backendRes.status} ${backendRes.statusText}). Please verify backend is running.`;
             } else {
               errorMsg = text.slice(0, 300);
             }
           } catch {
-            errorMsg = text.slice(0, 300);
+            if (text.trim().startsWith("<")) {
+              errorMsg = `AI video server is temporarily unavailable (${backendRes.status} ${backendRes.statusText}). Please verify backend is running.`;
+            } else {
+              errorMsg = text.slice(0, 300);
+            }
           }
         }
       } catch {
