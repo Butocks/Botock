@@ -61,32 +61,14 @@ export default function GoogleOneTap({ user, onSuccess }: GoogleOneTapProps) {
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: handleCredentialResponse,
-        auto_select: true,
-        cancel_on_tap_outside: false,
+        auto_select: false,
+        cancel_on_tap_outside: true,
         itp_support: true,
-        use_fedcm_for_prompt: true,
+        use_fedcm_for_prompt: false,
       });
 
       initializedRef.current = true;
-
-      window.google.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed()) {
-          console.debug(
-            "[GoogleOneTap] Prompt not displayed:",
-            notification.getNotDisplayedReason?.()
-          );
-        } else if (notification.isSkippedMoment()) {
-          console.debug(
-            "[GoogleOneTap] Prompt skipped:",
-            notification.getSkippedReason?.()
-          );
-        } else if (notification.isDismissedMoment()) {
-          console.debug(
-            "[GoogleOneTap] Prompt dismissed:",
-            notification.getDismissedReason?.()
-          );
-        }
-      });
+      // Don't auto-prompt on page load — only initialize so handleSignIn button can call prompt()
     } catch (e) {
       console.warn("[GoogleOneTap] Initialization failed:", e);
     }

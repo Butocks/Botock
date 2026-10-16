@@ -124,32 +124,7 @@ export default function Navbar() {
   const handleSignIn = async () => {
     if (authLoading) return;
     setAuthLoading(true);
-
-    try {
-      if (typeof window !== "undefined" && window.google?.accounts?.id) {
-        let prompted = false;
-        window.google.accounts.id.prompt((notification: any) => {
-          prompted = true;
-          if (
-            notification.isNotDisplayed() ||
-            notification.isSkippedMoment() ||
-            notification.isDismissedMoment()
-          ) {
-            triggerGoogleOAuth();
-          }
-        });
-
-        setTimeout(() => {
-          if (!prompted) {
-            triggerGoogleOAuth();
-          }
-        }, 600);
-      } else {
-        await triggerGoogleOAuth();
-      }
-    } catch {
-      await triggerGoogleOAuth();
-    }
+    await triggerGoogleOAuth();
   };
 
   const handleMouseEnter = (menu: string) => {
