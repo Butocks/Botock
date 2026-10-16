@@ -28,7 +28,7 @@ export default function AdBanner({
   };
 
   return (
-    <div
+    <aside
       className={`mx-auto flex flex-col items-center justify-center overflow-hidden transition-all ${formatClasses[format]}`}
       aria-label="Advertisement"
     >
@@ -44,6 +44,6 @@ export default function AdBanner({
         data-ad-format="auto"
         data-full-width-responsive="true"
       ></ins>
-    </div>
+    </aside>
   );
 }

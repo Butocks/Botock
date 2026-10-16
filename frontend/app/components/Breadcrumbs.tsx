@@ -85,7 +85,7 @@ export default function Breadcrumbs() {
       aria-label="Breadcrumb Navigation"
       className="w-full border-b border-slate-200/70 dark:border-white/[0.06] bg-slate-100/50 dark:bg-white/[0.015] py-2.5 px-4 sm:px-6 lg:px-8 transition-colors select-none"
     >
-      <div className="max-w-[1560px] mx-auto flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 overflow-x-auto no-scrollbar">
+      <div className="max-w-[1560px] mx-auto flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 overflow-x-auto no-scrollbar">
         {/* Home Root */}
         <Link
           href="/"

@@ -83,7 +83,7 @@ export default function ProfilePage() {
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data?.user) {
-        router.push("/login");
+        router.push("/");
         return;
       }
       const u = data.user;

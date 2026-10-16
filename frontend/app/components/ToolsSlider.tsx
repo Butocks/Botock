@@ -55,7 +55,7 @@ const FEATURED_TOOLS: SliderTool[] = [
     desc: "Generate hyper-detailed visuals with Nano Banana Lite, 2 & Pro in 5 aspect ratios.",
     category: "ai",
     badge: "Nano Banana",
-    badgeColor: "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/20 dark:border-amber-500/30",
+    badgeColor: "bg-amber-500/10 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/20 dark:border-amber-500/30",
     href: "/tools/image-generator",
     icon: Wand2,
     iconBg: "bg-amber-500/15",

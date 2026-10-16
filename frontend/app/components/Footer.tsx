@@ -42,7 +42,7 @@ export default function Footer() {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
             </span>
             <span className="text-slate-500 dark:text-slate-400">System Health:</span>
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="font-semibold text-emerald-700 dark:text-emerald-400">
               All AI & Creative Pipelines Operational
             </span>
           </div>
@@ -332,7 +332,7 @@ export default function Footer() {
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-400">Theme:</span>
+              <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">Theme:</span>
               <ThemeToggle />
             </div>
 

@@ -449,10 +449,10 @@ function ResetPasswordForm() {
               </button>
 
               <Link
-                href="/login"
+                href="/"
                 className="inline-block text-xs font-semibold text-violet-600 dark:text-violet-400 hover:underline pt-2 cursor-pointer"
               >
-                ← Return to Sign In
+                ← Return to Home
               </Link>
             </div>
           </div>
@@ -596,10 +596,10 @@ function ResetPasswordForm() {
 
             <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
               <Link
-                href="/login"
+                href="/"
                 className="font-bold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
               >
-                ← Back to Sign In
+                ← Back to Home
               </Link>
             </div>
           </div>

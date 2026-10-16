@@ -24,6 +24,8 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
+import GoogleOneTap from "../../components/GoogleOneTap";
+import { getSiteUrl } from "../../utils/runtime-urls";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -88,9 +90,66 @@ export default function Navbar() {
 
   if (pathname === "/tools/video-editor") return null;
 
+  const [authLoading, setAuthLoading] = useState(false);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
+  };
+
+  const triggerGoogleOAuth = async () => {
+    try {
+      const origin = getSiteUrl();
+      const currentNext = pathname || "/";
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(currentNext)}`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+      if (error) {
+        console.error("Google OAuth Error:", error);
+        setAuthLoading(false);
+      }
+    } catch (err) {
+      console.error("OAuth trigger error:", err);
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignIn = async () => {
+    if (authLoading) return;
+    setAuthLoading(true);
+
+    try {
+      if (typeof window !== "undefined" && window.google?.accounts?.id) {
+        let prompted = false;
+        window.google.accounts.id.prompt((notification: any) => {
+          prompted = true;
+          if (
+            notification.isNotDisplayed() ||
+            notification.isSkippedMoment() ||
+            notification.isDismissedMoment()
+          ) {
+            triggerGoogleOAuth();
+          }
+        });
+
+        setTimeout(() => {
+          if (!prompted) {
+            triggerGoogleOAuth();
+          }
+        }, 600);
+      } else {
+        await triggerGoogleOAuth();
+      }
+    } catch {
+      await triggerGoogleOAuth();
+    }
   };
 
   const handleMouseEnter = (menu: string) => {
@@ -116,6 +175,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-xl border-b border-slate-200 dark:border-white/[0.08] transition-colors select-none">
+      <GoogleOneTap user={user} />
       <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 sm:h-22">
           {/* Brand Logo */}
@@ -412,6 +472,7 @@ export default function Navbar() {
                 <div className="relative" ref={profileDropdownRef}>
                   <button
                     type="button"
+                    aria-label="User profile menu"
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                     className="flex items-center gap-2.5 p-1 pr-3 rounded-full hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors cursor-pointer border border-slate-200 dark:border-white/10 shadow-sm"
                   >
@@ -512,13 +573,19 @@ export default function Navbar() {
             ) : (
               <>
                 <ThemeToggle />
-                <Link
-                  href="/login"
-                  className="text-sm font-bold bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-full transition-all shadow-lg shadow-violet-600/30 active:scale-95 cursor-pointer flex items-center gap-2"
+                <button
+                  type="button"
+                  onClick={handleSignIn}
+                  disabled={authLoading}
+                  className="text-sm font-bold bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-full transition-all shadow-lg shadow-violet-600/30 active:scale-95 cursor-pointer flex items-center gap-2 disabled:opacity-75"
                 >
-                  <UserIcon className="w-4 h-4" />
-                  <span>Sign In</span>
-                </Link>
+                  {authLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <UserIcon className="w-4 h-4" />
+                  )}
+                  <span>{authLoading ? "Signing In..." : "Sign In"}</span>
+                </button>
               </>
             )}
           </div>
@@ -527,15 +594,18 @@ export default function Navbar() {
           <div className="md:hidden flex items-center gap-2">
             <ThemeToggle />
             {!user && (
-              <Link
-                href="/login"
-                className="text-xs font-bold bg-violet-600 text-white px-3.5 py-1.5 rounded-full shadow-sm cursor-pointer"
+              <button
+                type="button"
+                onClick={handleSignIn}
+                disabled={authLoading}
+                className="text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white px-3.5 py-1.5 rounded-full shadow-sm cursor-pointer disabled:opacity-75"
               >
-                Sign In
-              </Link>
+                {authLoading ? "..." : "Sign In"}
+              </button>
             )}
             <button
               type="button"
+              aria-label={isOpen ? "Close main navigation menu" : "Open main navigation menu"}
               onClick={() => setIsOpen(!isOpen)}
               className="p-2 rounded-lg text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] focus:outline-none transition-colors cursor-pointer"
             >

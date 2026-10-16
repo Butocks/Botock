@@ -39,7 +39,7 @@ const TOP_USED_TOOLS = [
     desc: "Combine multiple PDF files into one clean document with custom page reordering.",
     category: "PDF Suite",
     badge: "Most Used",
-    badgeColor: "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/20",
+    badgeColor: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/20",
     href: "/tools/pdf-merge",
     icon: FileText,
     iconBg: "bg-rose-500/15",
@@ -51,7 +51,7 @@ const TOP_USED_TOOLS = [
     desc: "Generate 4–10s realistic scenes from text prompts and photos via Cinematic AI AI.",
     category: "AI Studio",
     badge: "Free AI Video",
-    badgeColor: "bg-violet-500/15 text-violet-600 dark:text-violet-300 border-violet-500/20",
+    badgeColor: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/20",
     href: "/tools/video-generator",
     icon: Film,
     iconBg: "bg-violet-500/15",
@@ -63,7 +63,7 @@ const TOP_USED_TOOLS = [
     desc: "Cut out backgrounds instantly from portraits and product photos with AI edge precision.",
     category: "Image Suite",
     badge: "Instant AI",
-    badgeColor: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/20",
+    badgeColor: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/20",
     href: "/tools/image-remove-bg",
     icon: Sparkles,
     iconBg: "bg-emerald-500/15",
@@ -75,7 +75,7 @@ const TOP_USED_TOOLS = [
     desc: "Cut unwanted footage with frame-level accuracy in your browser with zero latency.",
     category: "Video Suite",
     badge: "0ms Lag",
-    badgeColor: "bg-sky-500/15 text-sky-600 dark:text-sky-300 border-sky-500/20",
+    badgeColor: "bg-sky-500/15 text-sky-800 dark:text-sky-300 border-sky-500/20",
     href: "/tools/video-trim",
     icon: Scissors,
     iconBg: "bg-sky-500/15",
@@ -87,7 +87,7 @@ const TOP_USED_TOOLS = [
     desc: "Convert static PDF documents and contracts into fully editable Microsoft Word files.",
     category: "PDF Suite",
     badge: "OCR Enabled",
-    badgeColor: "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/20",
+    badgeColor: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/20",
     href: "/tools/pdf-to-word",
     icon: FileCheck,
     iconBg: "bg-rose-500/15",
@@ -99,7 +99,7 @@ const TOP_USED_TOOLS = [
     desc: "Generate hyper-detailed visuals with Nano Banana Lite, 2 & Pro in 5 aspect ratios.",
     category: "AI Studio",
     badge: "Nano Banana",
-    badgeColor: "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/20",
+    badgeColor: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/20",
     href: "/tools/image-generator",
     icon: Wand2,
     iconBg: "bg-amber-500/15",
@@ -111,7 +111,7 @@ const TOP_USED_TOOLS = [
     desc: "Reduce PDF document size for email sharing without compromising font readability.",
     category: "PDF Suite",
     badge: "Up to 80%",
-    badgeColor: "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/20",
+    badgeColor: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/20",
     href: "/tools/pdf-compress",
     icon: Minimize2,
     iconBg: "bg-rose-500/15",
@@ -123,7 +123,7 @@ const TOP_USED_TOOLS = [
     desc: "Rip crystal clear high-bitrate MP3 audio from any MP4, MOV, or MKV video file.",
     category: "Audio Suite",
     badge: "Lossless Audio",
-    badgeColor: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/20",
+    badgeColor: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/20",
     href: "/tools/video-to-mp3",
     icon: Music,
     iconBg: "bg-indigo-500/15",
@@ -184,7 +184,7 @@ const CURATED_BLOGS = [
     title: "Why Reaction Videos Dominate Social Media in 2026: Trends, Data & Complete Guide",
     excerpt: "Discover why top-and-bottom stacked reaction videos dominate TikTok, Shorts, and Reels with 82% retention rates. Full trends data and creation tutorial.",
     category: "Showbiz & Media",
-    badgeColor: "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/20 dark:border-amber-500/30",
+    badgeColor: "bg-amber-500/10 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/20 dark:border-amber-500/30",
     readTime: "8 min read",
     date: "October 10, 2026",
   },
@@ -292,19 +292,19 @@ export default function HomeClient() {
           <div className="mt-12 grid grid-cols-2 sm:grid-cols-4 max-w-4xl mx-auto gap-4 pt-8 border-t border-slate-200 dark:border-white/[0.06] text-center">
             <div className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04]">
               <div className="text-2xl font-black text-slate-900 dark:text-white">Complete Suite</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">PDF Suite (Merge, OCR, Encrypt)</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-0.5">PDF Suite (Merge, OCR, Encrypt)</div>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04]">
               <div className="text-2xl font-black text-slate-900 dark:text-white">Essential Suite</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Image Suite (Remove BG, WebP)</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-0.5">Image Suite (Remove BG, WebP)</div>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04]">
               <div className="text-2xl font-black text-slate-900 dark:text-white">Studio Suite</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Video Suite (Editor, Cutter, MP3)</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-0.5">Video Suite (Editor, Cutter, MP3)</div>
             </div>
             <Link href="/blog" className="p-3.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.04] hover:border-violet-500/40 hover:bg-slate-100 dark:hover:bg-white/[0.04] transition-all group block">
               <div className="text-2xl font-black text-violet-600 dark:text-violet-400 group-hover:text-violet-700 dark:group-hover:text-violet-300 transition-colors">Latest Guides</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">Tutorials &amp; Creator Tips →</div>
+              <div className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-0.5">Tutorials &amp; Creator Tips →</div>
             </Link>
           </div>
         </div>
@@ -312,12 +312,12 @@ export default function HomeClient() {
 
       {/* 2. Continuous Gliding Multi-Tool Ticker (Infinite Marquee) */}
       <section className="bg-slate-100/50 dark:bg-[#0b0b0f] border-b border-slate-200 dark:border-white/[0.06] py-3 transition-colors">
-        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12 mb-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-8 lg:px-12 mb-2 flex items-center justify-between text-xs text-slate-600 dark:text-slate-400">
           <span className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
             <Sparkles className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
             <span>Our Tools</span>
           </span>
-          <Link href="/tools" className="hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1">
+          <Link href="/tools" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1">
             <span>View All Tools →</span>
           </Link>
         </div>

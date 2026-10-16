@@ -378,7 +378,7 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
     } catch {
       // ignore
     }
-    router.push("/login");
+    router.push("/");
   };
 
   const handleToggleVip = async (userEmail: string) => {

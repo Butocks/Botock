@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
   if (error || errorDescription) {
     console.error('OAuth Callback Error:', error, errorDescription)
-    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorDescription || error || 'OAuth error occurred')}`)
+    return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(errorDescription || error || 'OAuth error occurred')}`)
   }
 
   if (code) {
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}${next}`)
     } else {
       console.error('Session exchange error:', exchangeError.message)
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(exchangeError.message)}`)
+      return NextResponse.redirect(`${origin}/?error=${encodeURIComponent(exchangeError.message)}`)
     }
   }
 

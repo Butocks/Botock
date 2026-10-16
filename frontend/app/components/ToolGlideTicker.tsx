@@ -75,7 +75,7 @@ const ROW_1: GlideTool[] = [
     id: "ai-image",
     name: "Nano Banana AI Image",
     suite: "AI Art",
-    suiteColor: "text-amber-700 dark:text-amber-300 bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/30",
+    suiteColor: "text-amber-800 dark:text-amber-300 bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/30",
     href: "/tools/image-generator",
     icon: Wand2,
     iconBg: "bg-amber-500/20",
