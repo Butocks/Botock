@@ -927,8 +927,8 @@ class FlowService:
                 if elapsed >= 6:
                     logger.info(f"[{generation_id}] Checking if image is rendered on canvas via JS deep search...")
                     
-                    # 🚀 ULTIMATE JS FALLBACK: Walk all shadow DOMs and find the largest new image!
-                    largest_new_url = await page.evaluate("""(existingUrls) => {
+                    # 🚀 JS IMAGE SEARCH: Only extract fully rendered high-res images (ignore blurry placeholders)
+                    largest_new_url = await page.evaluate(r"""(existingUrls) => {
                         let largestSize = 0;
                         let bestUrl = null;
                         
@@ -937,9 +937,16 @@ class FlowService:
                             
                             if (node.tagName === 'IMG' && node.src) {
                                 if (!existingUrls.includes(node.src)) {
-                                    let rect = node.getBoundingClientRect();
-                                    let size = rect.width * rect.height;
-                                    if (size > largestSize) { largestSize = size; bestUrl = node.src; }
+                                    // Ignore tiny blurred thumbnails, skeletons, and svg placeholders
+                                    const nw = node.naturalWidth || 0;
+                                    const nh = node.naturalHeight || 0;
+                                    const isBlur = (node.className && typeof node.className === 'string' && (node.className.includes('skeleton') || node.className.includes('blur') || node.className.includes('placeholder'))) || (node.style && node.style.filter && node.style.filter.includes('blur'));
+                                    
+                                    if (nw >= 400 && nh >= 400 && !isBlur && !node.src.startsWith('data:image/svg')) {
+                                        let rect = node.getBoundingClientRect();
+                                        let size = rect.width * rect.height;
+                                        if (size > largestSize) { largestSize = size; bestUrl = node.src; }
+                                    }
                                 }
                             }
                             
@@ -949,10 +956,13 @@ class FlowService:
                                     let urlMatch = style.backgroundImage.match(/url\(['"]?(.*?)['"]?\)/);
                                     if (urlMatch) {
                                         let bUrl = urlMatch[1];
-                                        if (!existingUrls.includes(bUrl)) {
+                                        if (!existingUrls.includes(bUrl) && !bUrl.startsWith('data:image/svg')) {
                                             let rect = node.getBoundingClientRect();
                                             let size = rect.width * rect.height;
-                                            if (size > largestSize) { largestSize = size; bestUrl = bUrl; }
+                                            if (size > largestSize && rect.width >= 300 && rect.height >= 300) { 
+                                                largestSize = size; 
+                                                bestUrl = bUrl; 
+                                            }
                                         }
                                     }
                                 }
