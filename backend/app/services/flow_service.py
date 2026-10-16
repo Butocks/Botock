@@ -950,24 +950,6 @@ class FlowService:
                                 }
                             }
                             
-                            if (node.nodeType === 1) { 
-                                let style = window.getComputedStyle(node);
-                                if (style.backgroundImage && style.backgroundImage !== 'none') {
-                                    let urlMatch = style.backgroundImage.match(/url\(['"]?(.*?)['"]?\)/);
-                                    if (urlMatch) {
-                                        let bUrl = urlMatch[1];
-                                        if (!existingUrls.includes(bUrl) && !bUrl.startsWith('data:image/svg')) {
-                                            let rect = node.getBoundingClientRect();
-                                            let size = rect.width * rect.height;
-                                            if (size > largestSize && rect.width >= 300 && rect.height >= 300) { 
-                                                largestSize = size; 
-                                                bestUrl = bUrl; 
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            
                             node.childNodes.forEach(child => walk(child));
                         }
                         walk(document);

@@ -14,6 +14,10 @@ import pandas as pd
 import re
 import urllib.parse
 import httpx
+try:
+    import edge_tts
+except ImportError:
+    edge_tts = None
 
 from starlette.background import BackgroundTask
 
@@ -413,10 +417,15 @@ FFMPEG_STUDIO_FILTERS = {
     "clone_anime_girl": "asetrate=44100*1.32,aresample=44100,atempo=0.7575,highpass=f=220,equalizer=f=3600:width_type=o:width=1.8:g=4"
 }
 
+# Mapping Edge-TTS voice IDs to distinct StreamElements Neural Polly Voices
 POLLY_FALLBACK_MAP = {
+    "ur-PK-AsadNeural": "Aditi",
+    "ur-PK-UzmaNeural": "Aditi",
+    "hi-IN-MadhurNeural": "Aditi",
+    "hi-IN-SwaraNeural": "Aditi",
     "en-US-ChristopherNeural": "Matthew",
     "en-US-GuyNeural": "Joey",
-    "en-US-EricNeural": "Justin",
+    "en-US-EricNeural": "Stephen",
     "en-GB-BrianNeural": "Brian",
     "en-US-JennyNeural": "Joanna",
     "en-US-AriaNeural": "Salli",
@@ -424,12 +433,38 @@ POLLY_FALLBACK_MAP = {
     "en-AU-WilliamNeural": "Russell",
     "es-ES-AlvaroNeural": "Enrique",
     "fr-FR-HenriNeural": "Mathieu",
-    "en-US-AnaNeural": "Ivy",
-    "ur-PK-AsadNeural": "Matthew",
-    "ur-PK-UzmaNeural": "Joanna",
-    "hi-IN-MadhurNeural": "Aditi",
-    "hi-IN-SwaraNeural": "Aditi",
+    "en-US-AnaNeural": "Justin",
 }
+
+async def apply_ffmpeg_pitch_rate(in_path: str, out_path: str, pitch_val: int, rate_val: int) -> bool:
+    """Applies pitch and rate shifting via FFmpeg asetrate and atempo."""
+    try:
+        pitch_ratio = max(0.5, min(2.0, 1.0 + (pitch_val * 0.02)))
+        rate_ratio = max(0.5, min(2.0, 1.0 + (rate_val * 0.01)))
+        tempo = (1.0 / pitch_ratio) * rate_ratio
+        tempo_filters = []
+        while tempo > 2.0:
+            tempo_filters.append("atempo=2.0")
+            tempo /= 2.0
+        while tempo < 0.5:
+            tempo_filters.append("atempo=0.5")
+            tempo /= 0.5
+        tempo_filters.append(f"atempo={tempo:.4f}")
+        filter_str = f"asetrate=44100*{pitch_ratio:.4f},aresample=44100,{','.join(tempo_filters)}"
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-y", "-i", in_path,
+            "-af", filter_str,
+            "-c:a", "libmp3lame", "-b:a", "192k",
+            out_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        await proc.communicate()
+        return os.path.exists(out_path) and os.path.getsize(out_path) > 500
+    except Exception as e:
+        logger.warning("apply_ffmpeg_pitch_rate error: %s", e)
+        return False
+
 
 # =====================================================================
 # 2. AUDIO SYNTHESIS & DSP HELPERS
@@ -689,10 +724,53 @@ async def text_to_speech(request: Request):
     # Try Primary: Microsoft Edge Neural TTS
     success = await _synthesize_edge_tts(text, voice, rate, pitch, out_path)
 
-    # Fallback: Multi-Voice AWS Polly via StreamElements (distinct voice ID mapping)
+    # --- ATTEMPT 2: Distinct Neural Polly / Regional Voices + FFmpeg Pitch/Rate DSP ---
     if not success:
-        logger.warning("Edge-TTS unavailable for voice %s, executing neural Polly fallback", voice)
-        success = await _synthesize_polly_fallback(text, voice, out_path)
+        polly_voice = POLLY_FALLBACK_MAP.get(voice, "Matthew")
+        is_urdu = voice.startswith("ur-")
+        is_male_south_asian = voice in ("ur-PK-AsadNeural", "hi-IN-MadhurNeural")
+        raw_tmp = out_path + "_raw.mp3"
+
+        try:
+            pitch_val = int(pitch.replace("Hz", "").replace("+", "") or "0")
+            rate_val = int(rate.replace("%", "").replace("+", "") or "0")
+        except Exception:
+            pitch_val = 0
+            rate_val = 0
+
+        try:
+            sentences = re.findall(r"[^.!?\n।؟]+[.!?\n।؟]*", text) or [text]
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                with open(raw_tmp, "wb") as f_raw:
+                    for s in sentences:
+                        clean_s = s.strip()
+                        if not clean_s:
+                            continue
+                        q_param = urllib.parse.quote(clean_s[:200])
+                        if is_urdu:
+                            # Use native Urdu synthesis for Arabic-Persian Urdu script
+                            fb_url = f"https://translate.google.com/translate_tts?ie=UTF-8&q={q_param}&tl=ur&client=tw-ob"
+                        else:
+                            fb_url = f"https://api.streamelements.com/kappa/v2/speech?voice={polly_voice}&text={q_param}"
+
+                        res = await client.get(fb_url, headers={"User-Agent": "Mozilla/5.0"})
+                        if res.status_code == 200 and len(res.content) > 500:
+                            f_raw.write(res.content)
+
+            if os.path.exists(raw_tmp) and os.path.getsize(raw_tmp) > 500:
+                # If Asad or Madhur is selected during fallback, shift pitch deeper (-8Hz) for a rich male voice
+                effective_pitch = pitch_val - 8 if is_male_south_asian else pitch_val
+                if effective_pitch != 0 or rate_val != 0:
+                    ok = await apply_ffmpeg_pitch_rate(raw_tmp, out_path, effective_pitch, rate_val)
+                    if not ok:
+                        shutil.move(raw_tmp, out_path)
+                else:
+                    shutil.move(raw_tmp, out_path)
+                success = True
+        except Exception as polly_err:
+            logger.error("Fallback synthesis failed: %s", polly_err)
+        finally:
+            cleanup_files(raw_tmp)
 
     if not success or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
         cleanup_files(out_path)
@@ -706,114 +784,316 @@ async def text_to_speech(request: Request):
         background=BackgroundTask(cleanup_files, out_path)
     )
 
+# =====================================================================
+# 3. OPEN-SOURCE AI ZERO-SHOT VOICE CLONING (/api/convert/voice-clone)
+#    Supports Built-in Character Presets + Custom Uploaded/Recorded Audio
+# =====================================================================
+
+CLONE_PRESET_CONFIGS = {
+    "preset_movie_narrator": {
+        "voice": "en-US-EricNeural",
+        "polly": "Stephen",
+        "pitch": "-8Hz",
+        "rate": "-6%",
+        "sample_text": "In a world beyond imagination, shadows rise across the ancient empire, waiting for a single spark of courage.",
+        "ffmpeg_Master": "asetrate=44100*0.85,aresample=44100,atempo=1.176,equalizer=f=95:width_type=h:width=60:g=6,acompressor=threshold=-18dB:ratio=3.5",
+    },
+    "preset_anime_heroine": {
+        "voice": "en-US-AnaNeural",
+        "polly": "Ivy",
+        "pitch": "+10Hz",
+        "rate": "+4%",
+        "sample_text": "Hey everyone! Look at the sparkling stars in the night sky, our magical adventure is finally starting today!",
+        "ffmpeg_Master": "asetrate=44100*1.28,aresample=44100,atempo=0.781,highpass=f=220,equalizer=f=3200:width_type=h:width=1000:g=4",
+    },
+    "preset_studio_podcaster": {
+        "voice": "en-US-ChristopherNeural",
+        "polly": "Matthew",
+        "pitch": "-4Hz",
+        "rate": "-2%",
+        "sample_text": "Welcome back to the late night studio podcast, where we break down the biggest mysteries in technology and human history.",
+        "ffmpeg_Master": "asetrate=44100*0.93,aresample=44100,atempo=1.075,equalizer=f=120:width_type=h:width=80:g=5,acompressor=threshold=-16dB:ratio=3",
+    },
+    "preset_british_detective": {
+        "voice": "en-GB-BrianNeural",
+        "polly": "Brian",
+        "pitch": "-3Hz",
+        "rate": "-3%",
+        "sample_text": "Observe the clues carefully, my dear friend. Every footstep in the London fog tells a precise and undeniable story.",
+        "ffmpeg_Master": "asetrate=44100*0.94,aresample=44100,atempo=1.063,equalizer=f=140:width_type=h:width=90:g=4,acompressor=threshold=-16dB:ratio=2.5",
+    },
+    "preset_tech_visionary": {
+        "voice": "en-US-GuyNeural",
+        "polly": "Joey",
+        "pitch": "-2Hz",
+        "rate": "+2%",
+        "sample_text": "When you look at the physics of multi-planetary rockets and artificial general intelligence, the future accelerates rapidly.",
+        "ffmpeg_Master": "asetrate=44100*0.92,aresample=44100,atempo=1.087,equalizer=f=150:width_type=h:width=100:g=3,acompressor=threshold=-16dB:ratio=2.5",
+    },
+    "preset_cyberpunk_ai": {
+        "voice": "en-GB-SoniaNeural",
+        "polly": "Amy",
+        "pitch": "-2Hz",
+        "rate": "+0%",
+        "sample_text": "Neural link established. All cybernetic defense protocols are online and ready for your command, operator.",
+        "ffmpeg_Master": "asetrate=44100*0.96,aresample=44100,atempo=1.041,chorus=0.5:0.9:50:0.4:0.25:2,acompressor=threshold=-15dB:ratio=3",
+    },
+}
+
+
+async def _generate_preset_reference_wav(preset_id: str, out_ref_path: str) -> bool:
+    """
+    Dynamically synthesizes and caches a 10-second studio reference audio file
+    for built-in presets so users don't have to upload their own reference file.
+    """
+    cfg = CLONE_PRESET_CONFIGS.get(preset_id, CLONE_PRESET_CONFIGS["preset_studio_podcaster"])
+    cache_dir = os.path.join(tempfile.gettempdir(), "botock_voice_presets")
+    os.makedirs(cache_dir, exist_ok=True)
+    cached_file = os.path.join(cache_dir, f"{preset_id}.mp3")
+
+    if os.path.exists(cached_file) and os.path.getsize(cached_file) > 1000:
+        shutil.copy(cached_file, out_ref_path)
+        return True
+
+    raw_tmp = out_ref_path + "_raw.mp3"
+    synthesized = False
+
+    # 1. Try Edge-TTS to generate base reference audio
+    try:
+        comm = edge_tts.Communicate(
+            cfg["sample_text"], cfg["voice"], rate=cfg["rate"], pitch=cfg["pitch"]
+        )
+        await asyncio.wait_for(comm.save(raw_tmp), timeout=15.0)
+        if os.path.exists(raw_tmp) and os.path.getsize(raw_tmp) > 500:
+            synthesized = True
+    except Exception:
+        synthesized = False
+
+    # 2. Fallback to StreamElements Polly if Edge-TTS is blocked
+    if not synthesized:
+        try:
+            q_param = urllib.parse.quote(cfg["sample_text"])
+            se_url = f"https://api.streamelements.com/kappa/v2/speech?voice={cfg['polly']}&text={q_param}"
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.get(se_url, headers={"User-Agent": "Mozilla/5.0"})
+                if res.status_code == 200 and len(res.content) > 500:
+                    with open(raw_tmp, "wb") as f:
+                        f.write(res.content)
+                    synthesized = True
+        except Exception:
+            synthesized = False
+
+    if not synthesized:
+        cleanup_files(raw_tmp)
+        return False
+
+    # Apply preset's signature studio vocal chain
+    cmd = [
+        "ffmpeg", "-y", "-i", raw_tmp,
+        "-af", cfg["ffmpeg_Master"],
+        "-c:a", "libmp3lame", "-b:a", "192k",
+        out_ref_path,
+    ]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    await proc.communicate()
+    cleanup_files(raw_tmp)
+
+    if os.path.exists(out_ref_path) and os.path.getsize(out_ref_path) > 500:
+        shutil.copy(out_ref_path, cached_file)
+        return True
+    return False
+
+
+def _run_f5_tts_clone_sync(ref_audio_path: str, target_text: str, out_path: str) -> bool:
+    """
+    Calls Open-Source F5-TTS Zero-Shot Voice Cloning via Gradio Client.
+    """
+    from gradio_client import Client, handle_file
+
+    spaces = [
+        "mrfakename/E2-F5-TTS",
+        "SWivid/F5-TTS",
+    ]
+    for space in spaces:
+        try:
+            client = Client(space, verbose=False)
+            result = client.predict(
+                ref_audio_input=handle_file(ref_audio_path),
+                ref_text_input="",
+                gen_text_input=target_text,
+                remove_silence=False,
+                cross_fade_duration_slider=0.15,
+                speed_slider=1.0,
+                api_name="/basic_tts",
+            )
+            audio_res = result[0] if isinstance(result, (list, tuple)) else result
+            if isinstance(audio_res, str) and os.path.exists(audio_res):
+                shutil.copy(audio_res, out_path)
+                return True
+        except Exception as e:
+            logger.warning("F5-TTS space %s error: %s", space, e)
+    return False
+
+
+def _run_seed_vc_clone_sync(source_audio_path: str, target_voice_path: str, out_path: str) -> bool:
+    """
+    Calls Open-Source Seed-VC (Zero-Shot Voice Conversion) on HuggingFace Spaces.
+    """
+    from gradio_client import Client, handle_file
+
+    spaces = [
+        "Plachta/Seed-VC",
+    ]
+    for space in spaces:
+        try:
+            client = Client(space, verbose=False)
+            result = client.predict(
+                source=handle_file(source_audio_path),
+                target=handle_file(target_voice_path),
+                diffusion_steps=25,
+                length_adjust=1.0,
+                inference_cfg_rate=0.7,
+                f0_condition=False,
+                auto_f0_adjust=True,
+                pitch_shift=0,
+                api_name="/predict",
+            )
+            audio_res = result[-1] if isinstance(result, (list, tuple)) else result
+            if isinstance(audio_res, str) and os.path.exists(audio_res):
+                shutil.copy(audio_res, out_path)
+                return True
+        except Exception as e:
+            logger.warning("Seed-VC space %s error: %s", space, e)
+    return False
+
+
+async def _dsp_spectral_voice_match(
+    source_or_tts_path: str, out_path: str, preset_id: str = ""
+) -> bool:
+    """
+    Local fallback if cloud GPU spaces are busy:
+    Applies the target preset's exact Formant/EQ vocal chain via FFmpeg.
+    """
+    cfg = CLONE_PRESET_CONFIGS.get(preset_id)
+    af_chain = (
+        cfg["ffmpeg_Master"]
+        if cfg
+        else "highpass=f=90,equalizer=f=160:width_type=h:width=100:g=3,acompressor=threshold=-16dB:ratio=3"
+    )
+    cmd = [
+        "ffmpeg", "-y", "-i", source_or_tts_path,
+        "-af", af_chain,
+        "-c:a", "libmp3lame", "-b:a", "192k",
+        out_path,
+    ]
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    await proc.communicate()
+    return os.path.exists(out_path) and os.path.getsize(out_path) > 500
+
+
 @router.post("/voice-clone")
 async def voice_clone(
-    ref_audio: UploadFile = File(...),
-    clone_mode: str = Form("tts"),
-    target_text: str = Form(None),
-    ref_text: str = Form(""),
-    input_audio: UploadFile = File(None),
+    reference_voice: UploadFile = File(None),
+    preset_id: str = Form(""),
+    clone_type: str = Form("text"),  # "text" (F5-TTS) or "audio" (Seed-VC)
+    text: str = Form(""),
+    source_audio: UploadFile = File(None),
 ):
     """
-    Zero-Shot AI Voice Cloning.
-    Takes a 5-15 second reference audio sample of any voice and clones it:
-    - In 'tts' mode: Synthesizes input target_text in the exact cloned voice (F5-TTS / Neural Acoustic Match).
-    - In 'v2v' mode: Converts input_audio into the timbre and resonance of the reference voice (Seed-VC / Timbre Match).
+    True Zero-Shot AI Voice Cloning:
+    Accepts either an uploaded `reference_voice` OR a built-in `preset_id`.
     """
-    ref_bytes = await read_bounded_file(ref_audio, max_size=30 * 1024 * 1024)
-    if len(ref_bytes) == 0:
-        raise HTTPException(status_code=400, detail="Reference audio is empty.")
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as ref_f:
+        ref_path = ref_f.name
 
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as r_wav:
-        ref_wav_path = r_wav.name
-
-    # Convert reference audio to 16kHz standard mono wav
-    with tempfile.NamedTemporaryFile(suffix=os.path.splitext(ref_audio.filename or "ref.wav")[1], delete=False) as r_orig:
-        r_orig.write(ref_bytes)
-        ref_orig_path = r_orig.name
-
-    extract_proc = await asyncio.create_subprocess_exec(
-        "ffmpeg", "-y", "-i", ref_orig_path,
-        "-vn", "-acodec", "pcm_s16le", "-ar", "24000", "-ac", "1",
-        ref_wav_path,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    await extract_proc.communicate()
-    cleanup_files(ref_orig_path)
-
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as out_f:
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as out_f:
         out_path = out_f.name
 
-    temp_input_path = None
+    src_path = ""
     try:
-        if clone_mode == "v2v":
-            if not input_audio:
-                raise HTTPException(status_code=400, detail="Input audio is required for Voice-to-Voice cloning.")
-            in_bytes = await read_bounded_file(input_audio, max_size=30 * 1024 * 1024)
-            if len(in_bytes) == 0:
-                raise HTTPException(status_code=400, detail="Input audio file is empty.")
-
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as in_f:
-                temp_input_path = in_f.name
-
-            conv_proc = await asyncio.create_subprocess_exec(
-                "ffmpeg", "-y", "-i", "-",
-                "-vn", "-acodec", "pcm_s16le", "-ar", "24000", "-ac", "1",
-                temp_input_path,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            await conv_proc.communicate(input=in_bytes)
-
-            # Try online SOTA Seed-VC in executor with 25s timeout
-            cloned = False
-            try:
-                cloned = await asyncio.wait_for(
-                    asyncio.to_thread(_sync_gradio_v2v_clone, ref_wav_path, temp_input_path, out_path),
-                    timeout=25.0
-                )
-            except Exception:
-                cloned = False
-
-            if not cloned or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-                await _dsp_acoustic_voice_clone_v2v(ref_wav_path, temp_input_path, out_path)
-
+        # 1. Obtain Reference Voice (either from Uploaded File or Built-in Preset)
+        if reference_voice is not None and reference_voice.filename:
+            ref_bytes = await reference_voice.read()
+            if len(ref_bytes) == 0 or len(ref_bytes) > 30 * 1024 * 1024:
+                raise HTTPException(status_code=400, detail="Reference voice file must be under 30MB.")
+            with open(ref_path, "wb") as f:
+                f.write(ref_bytes)
+        elif preset_id and preset_id in CLONE_PRESET_CONFIGS:
+            ok = await _generate_preset_reference_wav(preset_id, ref_path)
+            if not ok:
+                raise HTTPException(status_code=500, detail="Failed to initialize preset voice model.")
         else:
-            # TTS mode
-            if not target_text or not target_text.strip():
-                raise HTTPException(status_code=400, detail="Target text cannot be empty for Voice Cloning.")
+            raise HTTPException(
+                status_code=400,
+                detail="Please select a built-in voice preset or upload a reference voice clip.",
+            )
 
-            # Try online SOTA F5-TTS in executor with 25s timeout
-            cloned = False
-            try:
-                cloned = await asyncio.wait_for(
-                    asyncio.to_thread(_sync_gradio_tts_clone, ref_wav_path, target_text.strip(), ref_text.strip(), out_path),
-                    timeout=25.0
-                )
-            except Exception:
-                cloned = False
+        # 2. Perform Cloning (Audio-to-Audio via Seed-VC OR Text-to-Speech via F5-TTS)
+        if clone_type == "audio" and source_audio is not None:
+            src_ext = os.path.splitext(source_audio.filename or "")[1].lower() or ".mp3"
+            src_bytes = await source_audio.read()
+            with tempfile.NamedTemporaryFile(suffix=src_ext, delete=False) as src_f:
+                src_path = src_f.name
+                src_f.write(src_bytes)
 
-            if not cloned or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-                await _dsp_acoustic_voice_clone_tts(ref_wav_path, target_text.strip(), out_path)
+            cloned_ok = await asyncio.to_thread(_run_seed_vc_clone_sync, src_path, ref_path, out_path)
+            if not cloned_ok:
+                await _dsp_spectral_voice_match(src_path, out_path, preset_id)
+        else:
+            clean_text = text.strip()
+            if not clean_text:
+                raise HTTPException(status_code=400, detail="Please enter text for the cloned voice to speak.")
 
-        if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-            raise HTTPException(status_code=500, detail="Voice cloning failed. Please check your reference audio.")
+            cloned_ok = await asyncio.to_thread(_run_f5_tts_clone_sync, ref_path, clean_text, out_path)
+            if not cloned_ok:
+                # Local Neural + Preset DSP Fallback
+                tmp_tts = out_path + "_base.mp3"
+                cfg = CLONE_PRESET_CONFIGS.get(preset_id, CLONE_PRESET_CONFIGS["preset_studio_podcaster"])
+                try:
+                    try:
+                        comm = edge_tts.Communicate(
+                            clean_text, cfg["voice"], rate=cfg["rate"], pitch=cfg["pitch"]
+                        )
+                        await asyncio.wait_for(comm.save(tmp_tts), timeout=15.0)
+                    except Exception:
+                        q_param = urllib.parse.quote(clean_text[:240])
+                        se_url = f"https://api.streamelements.com/kappa/v2/speech?voice={cfg['polly']}&text={q_param}"
+                        async with httpx.AsyncClient(timeout=10.0) as client:
+                            res = await client.get(se_url, headers={"User-Agent": "Mozilla/5.0"})
+                            if res.status_code == 200:
+                                with open(tmp_tts, "wb") as f:
+                                    f.write(res.content)
 
-        return FileResponse(
-            out_path,
-            filename="botock_cloned_voice.wav",
-            media_type="audio/wav",
-            background=BackgroundTask(cleanup_files, ref_wav_path, temp_input_path, out_path)
+                    await _dsp_spectral_voice_match(tmp_tts, out_path, preset_id)
+                finally:
+                    cleanup_files(tmp_tts)
+
+        # 3. Standardize final output to 192kbps MP3
+        final_mp3 = out_path + "_final.mp3"
+        cmd = ["ffmpeg", "-y", "-i", out_path, "-c:a", "libmp3lame", "-b:a", "192k", final_mp3]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
-    except HTTPException:
-        cleanup_files(ref_wav_path, temp_input_path, out_path)
-        raise
-    except Exception as e:
-        cleanup_files(ref_wav_path, temp_input_path, out_path)
-        logger.exception("Voice cloning failed: %s", e)
-        raise HTTPException(status_code=500, detail="Voice cloning processing failed.")
+        await proc.communicate()
+        if os.path.exists(final_mp3) and os.path.getsize(final_mp3) > 500:
+            shutil.move(final_mp3, out_path)
+    finally:
+        cleanup_files(ref_path, src_path)
+
+    if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+        cleanup_files(out_path)
+        raise HTTPException(status_code=500, detail="AI Voice Cloning failed. Please try again.")
+
+    return FileResponse(
+        out_path,
+        filename=f"botock_cloned_{preset_id or 'custom'}.mp3",
+        media_type="audio/mpeg",
+        background=BackgroundTask(cleanup_files, out_path),
+    )
 
 @router.post("/voice-changer")
 async def voice_changer(

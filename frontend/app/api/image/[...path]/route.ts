@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const maxDuration = 60;
+export const maxDuration = 120; // 2 minutes max for image generation proxy
 export const dynamic = "force-dynamic";
 
 const ALLOWED_IMAGE_ACTIONS = new Set([
@@ -11,32 +11,7 @@ const ALLOWED_IMAGE_ACTIONS = new Set([
   "list",
 ]);
 
-const ASPECT_RATIO_MAP: Record<string, { width: number; height: number }> = {
-  "16:9": { width: 1280, height: 720 },
-  "9:16": { width: 720, height: 1280 },
-  "4:3": { width: 1024, height: 768 },
-  "3:4": { width: 768, height: 1024 },
-  "1:1": { width: 1024, height: 1024 },
-};
-
-interface CachedImage {
-  buffer: Buffer;
-  contentType: string;
-  prompt: string;
-  aspectRatio: string;
-  createdAt: number;
-}
-
-const imageStore = new Map<string, CachedImage>();
-
-function cleanOldImages() {
-  const oneHourAgo = Date.now() - 3600 * 1000;
-  for (const [id, item] of imageStore.entries()) {
-    if (item.createdAt < oneHourAgo) {
-      imageStore.delete(id);
-    }
-  }
-}
+const MAX_IMAGE_PAYLOAD_BYTES = 50 * 1024 * 1024; // 50MB limit
 
 function isAllowedImageSubpath(pathSegments: string[] | string): boolean {
   const segments = Array.isArray(pathSegments) ? pathSegments : [pathSegments];
@@ -66,101 +41,14 @@ export async function POST(
       );
     }
 
-    // High-Definition Neural Diffusion generation (FLUX.1 + SDXL Turbo)
-    if (subpath === "generate") {
-      let body: any = {};
-      try {
-        body = await request.json();
-      } catch {
-        return NextResponse.json({ detail: "Invalid JSON body." }, { status: 400 });
-      }
-
-      const prompt = (body.prompt || "").trim();
-      if (!prompt) {
-        return NextResponse.json({ detail: "Please provide an image prompt." }, { status: 400 });
-      }
-
-      const aspectRatio = body.aspect_ratio || "1:1";
-      const style = (body.style || "").trim();
-      const dimensions = ASPECT_RATIO_MAP[aspectRatio] || { width: 1024, height: 1024 };
-
-      let fullPrompt = prompt;
-      if (style) {
-        fullPrompt = `${prompt}, ${style}`;
-      }
-
-      const genId = crypto.randomUUID();
-      const seed = Math.floor(Math.random() * 10000000);
-      const encodedPrompt = encodeURIComponent(fullPrompt);
-
-      const fluxUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${dimensions.width}&height=${dimensions.height}&model=flux&seed=${seed}&nologo=true&enhance=true`;
-      const turboUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${dimensions.width}&height=${dimensions.height}&model=turbo&seed=${seed}&nologo=true`;
-
-      let imgBuffer: Buffer | null = null;
-      let contentType = "image/jpeg";
-
-      try {
-        const res = await fetch(fluxUrl, {
-          headers: { "User-Agent": "Botock-AI-Studio/2.0" },
-          signal: AbortSignal.timeout(35000),
-        });
-        if (res.ok) {
-          const ab = await res.arrayBuffer();
-          if (ab.byteLength > 15000) {
-            imgBuffer = Buffer.from(ab);
-            contentType = res.headers.get("content-type") || "image/jpeg";
-          }
-        }
-      } catch (err) {
-        console.warn("FLUX generation attempt note:", err);
-      }
-
-      if (!imgBuffer) {
-        try {
-          const res = await fetch(turboUrl, {
-            headers: { "User-Agent": "Botock-AI-Studio/2.0" },
-            signal: AbortSignal.timeout(20000),
-          });
-          if (res.ok) {
-            const ab = await res.arrayBuffer();
-            if (ab.byteLength > 15000) {
-              imgBuffer = Buffer.from(ab);
-              contentType = res.headers.get("content-type") || "image/jpeg";
-            }
-          }
-        } catch (err) {
-          console.error("Turbo fallback error:", err);
-        }
-      }
-
-      if (!imgBuffer) {
-        return NextResponse.json(
-          { detail: "AI creative engine is momentarily busy. Please try clicking Generate again." },
-          { status: 503 }
-        );
-      }
-
-      cleanOldImages();
-      imageStore.set(genId, {
-        buffer: imgBuffer,
-        contentType,
-        prompt: fullPrompt,
-        aspectRatio,
-        createdAt: Date.now(),
-      });
-
-      const downloadUrl = `/api/image/download/${genId}?prompt=${encodeURIComponent(fullPrompt)}&w=${dimensions.width}&h=${dimensions.height}`;
-
-      return NextResponse.json({
-        generation_id: genId,
-        status: "completed",
-        message: "Your photo has been generated successfully!",
-        download_url: downloadUrl,
-        image_url: downloadUrl,
-      });
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > MAX_IMAGE_PAYLOAD_BYTES) {
+      return NextResponse.json(
+        { detail: "Payload Too Large: Maximum allowed image payload is 50MB." },
+        { status: 413 }
+      );
     }
 
-    // Forward any other endpoints to backend if needed
     const backendUrl = (
       process.env.BACKEND_INTERNAL_URL ||
       process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -168,6 +56,7 @@ export async function POST(
     ).replace(/\/$/, "");
 
     const targetUrl = `${backendUrl}/api/image/${subpath}${request.nextUrl.search}`;
+
     const contentType = request.headers.get("content-type");
     const authHeader = request.headers.get("authorization");
     const guestIdHeader = request.headers.get("x-guest-id");
@@ -175,9 +64,13 @@ export async function POST(
     const headers: Record<string, string> = {
       "Bypass-Tunnel-Reminder": "true",
       "ngrok-skip-browser-warning": "true",
-      "User-Agent": "Botock-Web-Client/1.0",
+      "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+      "Origin": "https://botock.app",
+      "Referer": "https://botock.app/tools/image-generator",
     };
+
     if (contentType) headers["content-type"] = contentType;
+    if (contentLength) headers["content-length"] = contentLength;
     if (authHeader) headers["authorization"] = authHeader;
     if (guestIdHeader) headers["x-guest-id"] = guestIdHeader;
 
@@ -189,14 +82,54 @@ export async function POST(
       headers,
     });
 
+    if (!backendRes.ok) {
+      let errorMsg = `Server error (${backendRes.status}: ${backendRes.statusText})`;
+      try {
+        const text = await backendRes.text();
+        if (text) {
+          try {
+            const errorJson = JSON.parse(text);
+            if (errorJson?.detail) {
+              errorMsg =
+                typeof errorJson.detail === "string"
+                  ? errorJson.detail
+                  : Array.isArray(errorJson.detail)
+                  ? errorJson.detail.map((e: any) => e.msg || JSON.stringify(e)).join(", ")
+                  : JSON.stringify(errorJson.detail);
+            } else {
+              errorMsg = text.slice(0, 300);
+            }
+          } catch {
+            errorMsg = text.slice(0, 300);
+          }
+        }
+      } catch {
+        // Fallback to default errorMsg
+      }
+      return NextResponse.json({ detail: errorMsg }, { status: backendRes.status });
+    }
+
     const resContentType = backendRes.headers.get("content-type") || "application/octet-stream";
+    const contentDisposition = backendRes.headers.get("content-disposition");
+
+    const resHeaders: Record<string, string> = {
+      "Content-Type": resContentType,
+    };
+    if (contentDisposition) {
+      resHeaders["Content-Disposition"] = contentDisposition;
+    }
+
     return new NextResponse(backendRes.body, {
       status: backendRes.status,
-      headers: { "Content-Type": resContentType },
+      headers: resHeaders,
     });
   } catch (err: any) {
     return NextResponse.json(
-      { detail: err.message || "Image generation service error." },
+      {
+        detail:
+          err.message ||
+          "Could not connect to image backend server. Please verify backend is running.",
+      },
       { status: 502 }
     );
   }
@@ -217,59 +150,6 @@ export async function GET(
       );
     }
 
-    // Status endpoint check
-    if (subpath.startsWith("status/")) {
-      const genId = subpath.replace("status/", "").trim();
-      const cached = imageStore.get(genId);
-      if (cached) {
-        const downloadUrl = `/api/image/download/${genId}`;
-        return NextResponse.json({
-          generation_id: genId,
-          status: "completed",
-          message: "Your photo has been generated successfully!",
-          download_url: downloadUrl,
-          image_url: downloadUrl,
-        });
-      }
-    }
-
-    // Download/Serve image endpoint
-    if (subpath.startsWith("download/")) {
-      const genId = subpath.replace("download/", "").trim();
-      const cached = imageStore.get(genId);
-      if (cached) {
-        return new NextResponse(new Uint8Array(cached.buffer), {
-          status: 200,
-          headers: {
-            "Content-Type": cached.contentType,
-            "Content-Disposition": `inline; filename="botock_${genId}.jpg"`,
-            "Cache-Control": "public, max-age=86400, immutable",
-          },
-        });
-      }
-
-      // If serverless memory was refreshed, regenerate seamlessly using stored prompt
-      const promptQuery = request.nextUrl.searchParams.get("prompt");
-      if (promptQuery) {
-        const w = request.nextUrl.searchParams.get("w") || "1024";
-        const h = request.nextUrl.searchParams.get("h") || "1024";
-        const regenUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptQuery)}?width=${w}&height=${h}&model=flux&nologo=true`;
-        const regenRes = await fetch(regenUrl, { signal: AbortSignal.timeout(30000) });
-        if (regenRes.ok) {
-          const ab = await regenRes.arrayBuffer();
-          return new NextResponse(new Uint8Array(ab), {
-            status: 200,
-            headers: {
-              "Content-Type": regenRes.headers.get("content-type") || "image/jpeg",
-              "Content-Disposition": `inline; filename="botock_${genId}.jpg"`,
-              "Cache-Control": "public, max-age=86400, immutable",
-            },
-          });
-        }
-      }
-    }
-
-    // Fallback: proxy to backend for other GET endpoints
     const backendUrl = (
       process.env.BACKEND_INTERNAL_URL ||
       process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -277,10 +157,13 @@ export async function GET(
     ).replace(/\/$/, "");
 
     const targetUrl = `${backendUrl}/api/image/${subpath}${request.nextUrl.search}`;
+
     const headers: Record<string, string> = {
       "Bypass-Tunnel-Reminder": "true",
       "ngrok-skip-browser-warning": "true",
-      "User-Agent": "Botock-Web-Client/1.0",
+      "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+      "Origin": "https://botock.app",
+      "Referer": "https://botock.app/tools/image-generator",
     };
 
     const authHeader = request.headers.get("authorization");
@@ -299,7 +182,9 @@ export async function GET(
 
     return new NextResponse(data, {
       status: backendRes.status,
-      headers: { "Content-Type": contentType },
+      headers: {
+        "Content-Type": contentType,
+      },
     });
   } catch (err: any) {
     return NextResponse.json({ detail: err.message }, { status: 502 });
