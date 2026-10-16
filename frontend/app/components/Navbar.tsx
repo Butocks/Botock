@@ -24,7 +24,6 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
-import GoogleOneTap from "../../components/GoogleOneTap";
 import { getSiteUrl } from "../../utils/runtime-urls";
 
 export default function Navbar() {
@@ -150,7 +149,6 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#09090b]/90 backdrop-blur-xl border-b border-slate-200 dark:border-white/[0.08] transition-colors select-none">
-      <GoogleOneTap user={user} />
       <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 sm:h-22">
           {/* Brand Logo */}
