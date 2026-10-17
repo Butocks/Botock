@@ -9,8 +9,9 @@ import string
 import secrets
 import hashlib
 import logging
+import re
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, Header, Depends, Request
+from fastapi import APIRouter, HTTPException, Header, Depends, Request, Query
 from pydantic import BaseModel
 from app.config import settings
 from app.services.email_service import send_otp_email, send_update_email, test_smtp_connection
@@ -32,6 +33,7 @@ OTP_STORE_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session
 OTP_RATE_LIMITS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "otp_rate_limits.json")
 USER_STATUS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "user_status.json")
 SUBSCRIPTION_REQUESTS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "subscription_requests.json")
+USERNAMES_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "usernames.json")
 
 # ----------------------------------------------------
 # Persistence Helpers
@@ -1008,6 +1010,145 @@ async def verify_profile_otp(req: UserOtpVerifyRequest, request: Request):
     statuses[email] = "verified"
     _write_json(USER_STATUS_FILE, statuses)
     return {"success": True, "message": "Email verified successfully."}
+
+
+class UpdateUserProfileRequest(BaseModel):
+    full_name: str
+    username: Optional[str] = None
+    gender: Optional[str] = "male"
+    country: Optional[str] = "Pakistan"
+
+
+@router.get("/api/auth/check-username")
+async def check_username_availability(username: str = Query(...), current_user_id: Optional[str] = Query(None)):
+    raw = username.strip()
+    if len(raw) < 3 or len(raw) > 30:
+        return {"available": False, "message": "Username must be between 3 and 30 characters."}
+    if not re.match(r"^[a-zA-Z0-9_.-]+$", raw):
+        return {"available": False, "message": "Username can only contain letters, numbers, '.', '_', and '-'."}
+    
+    clean_username = raw.lower()
+    usernames = _read_json(USERNAMES_FILE, {})
+    existing_owner = usernames.get(clean_username)
+    if existing_owner and str(existing_owner) != str(current_user_id or ""):
+        return {"available": False, "message": "This username is already taken. Please choose another one."}
+    
+    return {"available": True, "message": "Username is available!"}
+
+
+@router.post("/api/auth/update-profile")
+async def update_user_profile(req: UpdateUserProfileRequest, current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    
+    clean_username = req.username.strip().lower() if req.username else None
+    if clean_username:
+        if len(clean_username) < 3 or len(clean_username) > 30:
+            raise HTTPException(status_code=400, detail="Username must be between 3 and 30 characters.")
+        if not re.match(r"^[a-zA-Z0-9_.-]+$", clean_username):
+            raise HTTPException(status_code=400, detail="Username can only contain letters, numbers, '.', '_', and '-'.")
+            
+        usernames = _read_json(USERNAMES_FILE, {})
+        existing_owner = usernames.get(clean_username)
+        if existing_owner and str(existing_owner) != str(user_id):
+            raise HTTPException(status_code=400, detail="This username is already taken. Please choose another username.")
+            
+        # Re-assign username mapping for this user
+        for u, uid in list(usernames.items()):
+            if str(uid) == str(user_id):
+                del usernames[u]
+        usernames[clean_username] = user_id
+        _write_json(USERNAMES_FILE, usernames)
+    
+    # Update Supabase user metadata via GoTrue Admin API if available
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+        import httpx
+        try:
+            user_meta = {
+                "full_name": req.full_name.strip(),
+                "name": req.full_name.strip(),
+                "gender": req.gender,
+                "country": req.country,
+            }
+            if clean_username:
+                user_meta["username"] = req.username.strip()
+
+            async with httpx.AsyncClient(timeout=8.0) as client:
+                await client.put(
+                    f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/admin/users/{user_id}",
+                    headers={
+                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json={"user_metadata": user_meta}
+                )
+                
+                # Also sync with public.user_profiles table if it exists
+                try:
+                    await client.patch(
+                        f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/user_profiles?user_id=eq.{user_id}",
+                        headers={
+                            "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                            "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "full_name": req.full_name.strip(),
+                            "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        }
+                    )
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"Error syncing profile update to Supabase: {e}")
+            
+    return {"success": True, "message": "Profile updated successfully."}
+
+
+@router.post("/api/auth/delete-account")
+@router.delete("/api/auth/delete-account")
+async def delete_user_account(current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("user_id")
+    email = current_user.get("email", "").strip().lower()
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+        
+    # 1. Clean local username mappings
+    usernames = _read_json(USERNAMES_FILE, {})
+    keys_to_del = [k for k, v in usernames.items() if str(v) == str(user_id)]
+    for k in keys_to_del:
+        del usernames[k]
+    if keys_to_del:
+        _write_json(USERNAMES_FILE, usernames)
+        
+    # 2. Clean verification status
+    if email:
+        statuses = _read_json(USER_STATUS_FILE, {})
+        if email in statuses:
+            del statuses[email]
+            _write_json(USER_STATUS_FILE, statuses)
+            
+    # 3. Clean up user from Supabase auth.users (cascades to all user tables)
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+        import httpx
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.delete(
+                    f"{settings.SUPABASE_URL.rstrip('/')}/auth/v1/admin/users/{user_id}",
+                    headers={
+                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                    }
+                )
+                if res.status_code not in (200, 204, 404):
+                    logger.warning(f"Supabase Admin API delete user status: {res.status_code} - {res.text}")
+        except Exception as e:
+            logger.error(f"Failed to delete user in Supabase: {e}")
+            raise HTTPException(status_code=500, detail="Could not delete user account from database.")
+            
+    return {"success": True, "message": "Account and all associated records have been permanently deleted."}
 
 
 async def check_account_provider(email: str) -> dict:

@@ -78,6 +78,27 @@ def record_video_generation(is_guest: bool = False, duration: int = 4, user_key:
         
     _write_stats(stats)
 
+def rollback_video_generation(is_guest: bool = False, duration: int = 4, user_key: str = None):
+    """Roll back recorded video generation counters when a job fails."""
+    try:
+        now = datetime.utcnow()
+        today_key = now.strftime("%Y-%m-%d")
+        month_key = now.strftime("%Y-%m")
+        credits_cost = 4 if is_guest else (6 if duration >= 8 else 4)
+
+        stats = _read_stats()
+        if stats.get("daily", {}).get(today_key, 0) > 0:
+            stats["daily"][today_key] -= 1
+        if stats.get("daily_flow_credits", {}).get(today_key, 0) >= credits_cost:
+            stats["daily_flow_credits"][today_key] -= credits_cost
+
+        if user_key and stats.get("user_daily_videos", {}).get(today_key, {}).get(user_key, 0) > 0:
+            stats["user_daily_videos"][today_key][user_key] -= 1
+
+        _write_stats(stats)
+    except Exception as e:
+        logger.error(f"Failed to rollback video stats: {e}")
+
 def get_video_stats() -> dict:
     """Get video and Flow credit statistics."""
     now = datetime.utcnow()

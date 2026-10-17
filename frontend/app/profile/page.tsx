@@ -8,7 +8,6 @@ import { getBackendUrl } from "../../utils/runtime-urls";
 import {
   User as UserIcon,
   Mail,
-  Lock,
   Globe,
   ShieldCheck,
   ShieldAlert,
@@ -16,15 +15,15 @@ import {
   CheckCircle2,
   AlertCircle,
   RefreshCw,
-  Eye,
-  EyeOff,
   Sparkles,
   ArrowLeft,
   Activity,
   Users,
   Image as ImageIcon,
   KeyRound,
-  MessageSquare
+  MessageSquare,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 
 const COUNTRIES = [
@@ -43,22 +42,21 @@ export default function ProfilePage() {
 
   // Form Fields
   const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [gender, setGender] = useState("male");
   const [country, setCountry] = useState("Pakistan");
   const [isVerified, setIsVerified] = useState(false);
 
-  // Password Update Fields
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-
-  // In-line Verification Modal
+  // In-line Email Verification Modal
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [verifyOtp, setVerifyOtp] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+
+  // Delete Account Modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   // Notifications
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -91,8 +89,16 @@ export default function ProfilePage() {
       
       const userEmail = u.email?.toLowerCase() || "";
       setEmail(userEmail);
-      setFullName(u.user_metadata?.full_name || u.user_metadata?.name || "");
-      setUsername(u.user_metadata?.username || (u.email ? u.email.split("@")[0] : ""));
+      
+      // Auto-assign full name from metadata or derive friendly formatted name from email prefix
+      const meta = u.user_metadata || {};
+      let resolvedName = meta.full_name || meta.name || "";
+      if (!resolvedName && userEmail) {
+        const prefix = userEmail.split("@")[0].replace(/[._-]+/g, " ").trim();
+        resolvedName = prefix.replace(/\b\w/g, (c: string) => c.toUpperCase());
+      }
+      setFullName(resolvedName);
+
       setGender(u.user_metadata?.gender || "male");
       setCountry(u.user_metadata?.country || "Pakistan");
       setIsVerified(Boolean(u.app_metadata?.is_verified ?? (u.email_confirmed_at != null || u.app_metadata?.provider === "google")));
@@ -126,96 +132,91 @@ export default function ProfilePage() {
     });
   }, [router]);
 
-  const handleAdminRequestOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!adminUnlockPasskey.trim()) {
-      showToast("Please enter your admin passkey.", "error");
-      return;
-    }
-    setAdminSubmitting(true);
-    try {
-      const backendUrl = await getBackendUrl();
-      const res = await fetch(`${backendUrl}/api/admin/auth/verify-secret`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), secret: adminUnlockPasskey.trim() }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.detail || "Invalid admin authorization passkey.");
-      }
-      setAdminUnlockStep("otp");
-      showToast(data.message || "Admin verification OTP dispatched to your email!", "success");
-    } catch (err: any) {
-      showToast(err.message || "Failed to authorize admin passkey.", "error");
-    } finally {
-      setAdminSubmitting(false);
-    }
-  };
-
-  const handleAdminVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (adminOtpCode.trim().length !== 6) {
-      showToast("Please enter the 6-digit OTP code.", "error");
-      return;
-    }
-    setAdminSubmitting(true);
-    try {
-      const backendUrl = await getBackendUrl();
-      const res = await fetch(`${backendUrl}/api/admin/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), otp: adminOtpCode.trim() }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.detail || "Invalid or expired admin verification code.");
-      }
-      setAdminVerifiedToken(data.admin_token);
-      setAdminUnlocked(true);
-      showToast("Admin Console unlocked successfully!", "success");
-    } catch (err: any) {
-      showToast(err.message || "Admin OTP verification failed.", "error");
-    } finally {
-      setAdminSubmitting(false);
-    }
-  };
-
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!fullName.trim()) {
+      showToast("Please enter your name.", "error");
+      return;
+    }
+
     setSaving(true);
-
     try {
-      const updateData: any = {
-        data: {
-          full_name: fullName.trim(),
-          username: username.trim(),
-          gender: gender,
-          country: country,
-        },
-      };
+      const backendUrl = await getBackendUrl();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-      if (newPassword.trim()) {
-        if (newPassword.length < 6) {
-          throw new Error("Password must be at least 6 characters.");
-        }
-        if (newPassword !== confirmPassword) {
-          throw new Error("New passwords do not match.");
-        }
-        updateData.password = newPassword.trim();
+      // 1. Update profile in backend
+      const res = await fetch(`${backendUrl}/api/auth/update-profile`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          full_name: fullName.trim(),
+          gender,
+          country,
+        }),
+      });
+
+      const backendData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(backendData.detail || "Failed to update profile details.");
       }
 
-      const { data, error } = await supabase.auth.updateUser(updateData);
+      // 2. Sync to Supabase client auth user metadata
+      const { data, error } = await supabase.auth.updateUser({
+        data: {
+          full_name: fullName.trim(),
+          name: fullName.trim(),
+          gender,
+          country,
+        },
+      });
       if (error) throw error;
 
       setUser(data.user);
-      setNewPassword("");
-      setConfirmPassword("");
       showToast("Profile details updated successfully!");
     } catch (err: any) {
       showToast(err.message || "Failed to update profile.", "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmationInput.trim() !== "DELETE") {
+      showToast("Please type DELETE to confirm account deletion.", "error");
+      return;
+    }
+
+    setDeletingAccount(true);
+    try {
+      const backendUrl = await getBackendUrl();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      const res = await fetch(`${backendUrl}/api/auth/delete-account`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.detail || "Failed to delete account.");
+      }
+
+      await supabase.auth.signOut();
+      showToast("Your account has been permanently deleted.");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1200);
+    } catch (err: any) {
+      showToast(err.message || "Failed to delete account.", "error");
+      setDeletingAccount(false);
     }
   };
 
@@ -380,6 +381,63 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-white dark:bg-[#121217] rounded-3xl border border-red-500/30 shadow-2xl p-6 sm:p-8 space-y-5">
+            <div className="text-center space-y-2">
+              <div className="inline-flex p-3 rounded-2xl bg-red-600/10 text-red-600 dark:text-red-400">
+                <AlertTriangle className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">Delete Account Permanently</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                This will permanently delete your account, saved preferences, generated media, and all allocated credits. This action is immediate and <strong>irreversible</strong>.
+              </p>
+            </div>
+
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1.5 text-center">
+                  To confirm, type <span className="text-red-600 font-mono font-black">DELETE</span> below:
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={deleteConfirmationInput}
+                  onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                  placeholder="DELETE"
+                  className="w-full text-center tracking-[4px] font-mono font-bold text-base py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-red-500/40 text-red-600 dark:text-red-400 focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setDeleteConfirmationInput("");
+                  }}
+                  disabled={deletingAccount}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmationInput.trim() !== "DELETE" || deletingAccount}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs shadow-lg shadow-red-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {deletingAccount ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  <span>{deletingAccount ? "Deleting..." : "Permanently Delete"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Back navigation */}
         <Link
@@ -415,7 +473,7 @@ export default function ProfilePage() {
                 )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                @{username || email.split("@")[0]} • {email}
+                {email}
               </p>
             </div>
           </div>
@@ -433,8 +491,6 @@ export default function ProfilePage() {
               <span>Verify Email Now</span>
             </button>
           )}
-
-
         </div>
 
         {/* Unverified Warning Banner if applicable */}
@@ -443,7 +499,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2.5">
               <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0" />
               <span>
-                Your account is currently <strong>Unverified</strong>. Automated password recovery is disabled until you verify your email.
+                Your account is currently <strong>Unverified</strong>. Verify your email address to establish verified trust and protect your account.
               </span>
             </div>
             <button
@@ -468,33 +524,21 @@ export default function ProfilePage() {
                 <span>Account Information</span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Update your personal info and public identity on Botock
+                Update your personal name and details on Botock
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                  Full Name
+                  Full Name <span className="text-[10px] text-slate-400 font-normal">(Editable)</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-violet-500"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Your Full Name"
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-violet-500"
                 />
               </div>
@@ -515,7 +559,6 @@ export default function ProfilePage() {
                   </span>
                 </div>
               </div>
-
 
               <div>
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
@@ -549,81 +592,52 @@ export default function ProfilePage() {
                 </select>
               </div>
             </div>
-          </div>
 
-          {/* Password & Security Card */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-white/[0.08] shadow-sm space-y-6">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Lock className="w-4 h-4 text-violet-500" />
-                <span>Change / Set Website Password</span>
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Leave blank if you do not wish to change your existing password.
-              </p>
+            {/* Action buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-white/[0.05]">
+              <Link
+                href="/"
+                className="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              >
+                Cancel
+              </Link>
+
+              <button
+                type="submit"
+                disabled={saving || !fullName.trim()}
+                className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-xs shadow-lg shadow-violet-600/30 transition-all flex items-center gap-2 cursor-pointer"
+              >
+                {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                <span>{saving ? "Saving Changes..." : "Save Profile Details"}</span>
+              </button>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                  New Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    minLength={6}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-violet-500 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                  Confirm New Password
-                </label>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  minLength={6}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter new password"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-violet-500"
-                />
-              </div>
-            </div>
-          </div>
-
-
-
-          {/* Action buttons */}
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <Link
-              href="/"
-              className="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-            >
-              Cancel
-            </Link>
-
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-bold text-xs shadow-lg shadow-violet-600/30 transition-all flex items-center gap-2 cursor-pointer"
-            >
-              {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              <span>{saving ? "Saving Changes..." : "Save Profile Details"}</span>
-            </button>
           </div>
         </form>
+
+        {/* Danger Zone Card */}
+        <div className="p-6 sm:p-8 rounded-3xl bg-red-500/[0.02] dark:bg-red-500/[0.03] border border-red-500/20 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h2 className="text-sm font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              <span>Danger Zone</span>
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
+              Permanently delete your Botock account, creative generation history, and credit balance. Once deleted, your account cannot be recovered.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteConfirmationInput("");
+              setShowDeleteModal(true);
+            }}
+            className="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 self-start sm:self-auto"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Delete Account</span>
+          </button>
+        </div>
       </div>
 
     </div>

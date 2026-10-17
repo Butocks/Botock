@@ -97,11 +97,17 @@ async def safe_generate_task(
                 image_base64=image_base64,
             )
             # Note: User generations remain strictly private to the user; do not auto-publish to public library.
-            if not is_pro and user_id and video_statuses.get(generation_id, {}).get("status") == "failed":
-                from app.middleware.auth import refund_video_credit
-                await refund_video_credit(user_id, generation_id)
+            if user_id and video_statuses.get(generation_id, {}).get("status") == "failed":
+                if not is_pro:
+                    from app.middleware.auth import refund_video_credit
+                    await refund_video_credit(user_id, generation_id)
+                from app.services.stats_service import rollback_video_generation
+                rollback_video_generation(is_guest=False, duration=duration_seconds, user_key=user_id)
     except Exception as e:
         logger.exception("Video generation task failed: %s", generation_id)
+        if user_id:
+            from app.services.stats_service import rollback_video_generation
+            rollback_video_generation(is_guest=False, duration=duration_seconds, user_key=user_id)
         existing = video_statuses.get(generation_id, {})
         msg = existing.get("message")
         if not msg or "temporarily unavailable" in msg:
@@ -193,7 +199,10 @@ async def generate_video(
     
     user_email = (user.get("email") or "").lower().strip() if user else ""
     user_id_str = str(user.get("user_id") or "") if user else ""
-    special_users = [u.lower().strip() for u in quotas.get("special_unlimited_users", [])]
+    admin_emails = [e.lower().strip() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
+    special_users = [u.lower().strip() for u in quotas.get("special_unlimited_users", [])] + admin_emails
+    if settings.GOOGLE_EMAIL:
+        special_users.append(settings.GOOGLE_EMAIL.lower().strip())
     restricted_users = [u.lower().strip() for u in quotas.get("restricted_users", [])]
     
     # Check if user is Special/VIP (Exempt from all daily and monthly limits)

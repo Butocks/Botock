@@ -123,6 +123,20 @@ export default function Navbar() {
   const handleSignIn = async () => {
     if (authLoading) return;
     setAuthLoading(true);
+
+    // Try native Google Sign-in on botock.app without redirect
+    if (typeof window !== "undefined" && window.__botockTriggerGoogleSignIn) {
+      try {
+        const handled = await window.__botockTriggerGoogleSignIn();
+        if (handled) {
+          setAuthLoading(false);
+          return;
+        }
+      } catch {
+        // Fallback to standard flow
+      }
+    }
+
     await triggerGoogleOAuth();
   };
 
