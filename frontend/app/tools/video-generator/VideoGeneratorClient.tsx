@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "../../../utils/supabase/client";
 import { getBackendUrl } from "../../../utils/runtime-urls";
 import { useMediaStore } from "../../store/useMediaStore";
+import { getTransferMedia, clearTransferMedia } from "@/app/utils/mediaTransfer";
 import {
   Sparkles,
   Download,
@@ -57,6 +58,8 @@ export default function VideoGeneratorClient() {
   const [showGuestCTA, setShowGuestCTA] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBlobUrl, setVideoBlobUrl] = useState<string | null>(null);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [hasLoadedTransfer, setHasLoadedTransfer] = useState(false);
   const [guestId, setGuestId] = useState<string>("");
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -112,6 +115,26 @@ export default function VideoGeneratorClient() {
     }
   }, [user]);
 
+  // Auto-load transferred photo if navigated from Image Generator
+  useEffect(() => {
+    if (hasLoadedTransfer) return;
+    getTransferMedia().then((media) => {
+      if (media && media.file) {
+        if (
+          media.file.type.startsWith("image/") ||
+          /\.(png|jpe?g|webp|gif|avif)$/i.test(media.file.name)
+        ) {
+          setHasLoadedTransfer(true);
+          setReferenceImage(media.file);
+          const previewUrl = media.url || URL.createObjectURL(media.file);
+          setReferencePreview(previewUrl);
+          setMode("photo-to-video");
+          clearTransferMedia();
+        }
+      }
+    });
+  }, [hasLoadedTransfer]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -156,6 +179,7 @@ export default function VideoGeneratorClient() {
     setErrorMessage("");
     setVideoUrl(null);
     setVideoBlobUrl(null);
+    setVideoBlob(null);
 
     try {
       const backendBaseUrl = await getBackendUrl();
@@ -278,6 +302,7 @@ export default function VideoGeneratorClient() {
               if (videoReq.ok) {
                 const blob = await videoReq.blob();
                 const blobUrl = URL.createObjectURL(blob);
+                setVideoBlob(blob);
                 setVideoBlobUrl(blobUrl);
                 setVideoUrl(blobUrl);
               } else {
@@ -401,7 +426,8 @@ export default function VideoGeneratorClient() {
             <div className="w-full max-w-xl mt-4">
               <ToolSuggestions
                 type="video"
-                mediaUrl={videoUrl}
+                mediaBlob={videoBlob}
+                mediaUrl={videoBlobUrl || videoUrl}
                 fileName={`botock_${generationId || "video"}`}
                 onEditInStudio={() => {
                   window.location.href = `/tools/video-editor`;

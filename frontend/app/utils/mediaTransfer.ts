@@ -24,26 +24,46 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 /**
- * Stores media in both Zustand useMediaStore and IndexedDB for cross-tool workflows.
+ * Stores media (images, videos, or audio) in both Zustand useMediaStore and IndexedDB for cross-tool workflows.
  */
 export async function saveTransferMedia(
   mediaBlob: Blob,
-  fileName: string = "video_export.mp4"
+  fileName?: string
 ): Promise<string> {
+  const isImage =
+    (mediaBlob.type && mediaBlob.type.startsWith("image/")) ||
+    (fileName ? /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(fileName) : false);
+
+  const isAudio =
+    (mediaBlob.type && mediaBlob.type.startsWith("audio/")) ||
+    (fileName ? /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(fileName) : false);
+
+  const defaultExt = isImage ? "png" : isAudio ? "mp3" : "mp4";
+  const defaultMime = isImage ? "image/png" : isAudio ? "audio/mpeg" : "video/mp4";
+
+  const resolvedName =
+    fileName ||
+    (isImage
+      ? `image_${Date.now()}.${defaultExt}`
+      : isAudio
+      ? `audio_${Date.now()}.${defaultExt}`
+      : `video_${Date.now()}.${defaultExt}`);
+
+  const resolvedType = mediaBlob.type || defaultMime;
   const url = URL.createObjectURL(mediaBlob);
 
   // 1. Save in Zustand store for instant in-memory access
   try {
     useMediaStore.getState().setActiveMedia({
       id: `transfer-${Date.now()}`,
-      title: fileName,
-      type: "video",
+      title: resolvedName,
+      type: isImage ? "image" : "video",
       url,
       blob: mediaBlob,
       blobUrl: url,
       createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 86400000).toISOString(),
-      prompt: "Botock Exported Reaction Video",
+      prompt: "Botock Transferred Media",
     });
   } catch (e) {
     console.warn("Failed to set Zustand active media", e);
@@ -58,8 +78,8 @@ export async function saveTransferMedia(
     store.put(
       {
         buffer: arrayBuffer,
-        type: mediaBlob.type || "video/mp4",
-        name: fileName,
+        type: resolvedType,
+        name: resolvedName,
         savedAt: Date.now(),
       },
       KEY
@@ -72,29 +92,39 @@ export async function saveTransferMedia(
 }
 
 /**
- * Retrieves transfer media when landing on an editing tool (e.g. Subtitles, Audio Enhancer, Voice Changer, Video Studio).
+ * Retrieves transfer media when landing on any tool (e.g. Image Crop, BG Remover, Video Studio, Subtitles, etc.).
  */
-export async function getTransferMedia(): Promise<{ file: File; url: string; name: string } | null> {
+export async function getTransferMedia(): Promise<{
+  file: File;
+  url: string;
+  name: string;
+  type: string;
+} | null> {
   if (typeof window === "undefined") return null;
 
   // 1. Try from Zustand active media first
   try {
     const active = useMediaStore.getState().activeMedia;
     if (active) {
+      const isImg = active.type === "image";
+      const fallbackName = isImg ? "image.png" : "video.mp4";
+      const fallbackMime = isImg ? "image/png" : "video/mp4";
+      const resolvedName = active.title || fallbackName;
+
       if (active.blob) {
-        const file = new File([active.blob], active.title || "video.mp4", {
-          type: active.blob.type || "video/mp4",
+        const file = new File([active.blob], resolvedName, {
+          type: active.blob.type || fallbackMime,
         });
         const url = active.blobUrl || active.url || URL.createObjectURL(active.blob);
-        return { file, url, name: active.title || "video.mp4" };
+        return { file, url, name: resolvedName, type: file.type };
       }
       if (active.blobUrl || active.url) {
         const res = await fetch(active.blobUrl || active.url);
         const blob = await res.blob();
-        const file = new File([blob], active.title || "video.mp4", {
-          type: blob.type || "video/mp4",
+        const file = new File([blob], resolvedName, {
+          type: blob.type || fallbackMime,
         });
-        return { file, url: active.blobUrl || active.url, name: active.title || "video.mp4" };
+        return { file, url: active.blobUrl || active.url, name: resolvedName, type: file.type };
       }
     }
   } catch (e) {
@@ -120,7 +150,7 @@ export async function getTransferMedia(): Promise<{ file: File; url: string; nam
       const blob = new Blob([result.buffer], { type: result.type });
       const file = new File([blob], result.name, { type: result.type });
       const url = URL.createObjectURL(blob);
-      return { file, url, name: result.name };
+      return { file, url, name: result.name, type: result.type };
     }
   } catch (e) {
     console.warn("Could not read from IndexedDB", e);

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import Cropper, { ReactCropperElement } from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import { Image as ImageIcon, Download, RotateCw, Trash2, RefreshCcw } from "lucide-react";
+import { getTransferMedia, clearTransferMedia } from "@/app/utils/mediaTransfer";
 
 export default function ImageCropClient() {
   const [originalFile, setOriginalFile] = useState<File | null>(null);
@@ -13,6 +14,7 @@ export default function ImageCropClient() {
   const [exportFormat, setExportFormat] = useState<"png" | "jpeg" | "webp">("jpeg");
   const [quality, setQuality] = useState<number>(92);
   const cropperRef = useRef<ReactCropperElement>(null);
+  const [hasLoadedTransfer, setHasLoadedTransfer] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
@@ -30,6 +32,22 @@ export default function ImageCropClient() {
       reader.readAsDataURL(f);
     }
   }, []);
+
+  useEffect(() => {
+    if (hasLoadedTransfer) return;
+    getTransferMedia().then((media) => {
+      if (media && media.file) {
+        if (
+          media.file.type.startsWith("image/") ||
+          /\.(png|jpe?g|webp|gif|avif)$/i.test(media.file.name)
+        ) {
+          setHasLoadedTransfer(true);
+          onDrop([media.file]);
+          clearTransferMedia();
+        }
+      }
+    });
+  }, [onDrop, hasLoadedTransfer]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

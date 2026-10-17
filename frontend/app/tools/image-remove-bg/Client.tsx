@@ -7,6 +7,7 @@ import { getBackendUrl } from "@/utils/runtime-urls";
 import ManualEditor from "./ManualEditor";
 
 import { removeBackground } from "@imgly/background-removal";
+import { getTransferMedia, clearTransferMedia } from "@/app/utils/mediaTransfer";
 
 interface BatchFile {
   id: string;
@@ -151,6 +152,24 @@ export default function Client() {
     
     setBatchFiles((prev) => [...prev, ...newFiles]);
   }, []);
+
+  const [hasLoadedTransfer, setHasLoadedTransfer] = useState(false);
+
+  useEffect(() => {
+    if (hasLoadedTransfer) return;
+    getTransferMedia().then((media) => {
+      if (media && media.file) {
+        if (
+          media.file.type.startsWith("image/") ||
+          /\.(png|jpe?g|webp|gif|avif)$/i.test(media.file.name)
+        ) {
+          setHasLoadedTransfer(true);
+          onDrop([media.file]);
+          clearTransferMedia();
+        }
+      }
+    });
+  }, [onDrop, hasLoadedTransfer]);
 
   const removeFile = (id: string) => {
     setBatchFiles((prev) => {

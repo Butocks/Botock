@@ -98,7 +98,7 @@ export default function ToolSuggestions({
       desc: "Turn this still photo into a cinematic moving video",
       icon: Sparkles,
       href: "/tools/video-generator?mode=photo-to-video",
-      supportsTransfer: false,
+      supportsTransfer: true,
     },
     {
       id: "bg-remove",
@@ -122,6 +122,14 @@ export default function ToolSuggestions({
       desc: "Reduce image file size with zero visible loss",
       icon: FileVideo,
       href: "/tools/image-compress",
+      supportsTransfer: true,
+    },
+    {
+      id: "upscale",
+      title: "AI Image Upscaler (4K/8K)",
+      desc: "Enhance resolution and clarity with neural upscale",
+      icon: Sparkles,
+      href: "/tools/image-upscale",
       supportsTransfer: true,
     },
   ];
@@ -207,7 +215,14 @@ export default function ToolSuggestions({
         }
 
         if (blobToTransfer) {
-          await saveTransferMedia(blobToTransfer, `${fileName}.${type === "video" ? "mp4" : "png"}`);
+          const ext =
+            blobToTransfer.type.startsWith("image/") || type === "image"
+              ? "png"
+              : blobToTransfer.type.startsWith("audio/") || type === "audio"
+              ? "mp3"
+              : "mp4";
+          const transferFileName = fileName.includes(".") ? fileName : `${fileName}.${ext}`;
+          await saveTransferMedia(blobToTransfer, transferFileName);
         }
       } catch (err) {
         console.warn("Could not transfer media to next tool:", err);

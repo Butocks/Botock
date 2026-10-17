@@ -33,6 +33,7 @@ import {
   UpscaleResult,
 } from "./upscaler";
 import { processImageTool } from "@/app/tools/ToolEngine";
+import { getTransferMedia, clearTransferMedia } from "@/app/utils/mediaTransfer";
 
 
 function formatBytes(bytes: number): string {
@@ -144,6 +145,24 @@ export default function Client() {
     },
     []
   );
+
+  const [hasLoadedTransfer, setHasLoadedTransfer] = useState(false);
+
+  useEffect(() => {
+    if (hasLoadedTransfer) return;
+    getTransferMedia().then((media) => {
+      if (media && media.file) {
+        if (
+          media.file.type.startsWith("image/") ||
+          /\.(png|jpe?g|webp|gif|avif)$/i.test(media.file.name)
+        ) {
+          setHasLoadedTransfer(true);
+          onDrop([media.file]);
+          clearTransferMedia();
+        }
+      }
+    });
+  }, [onDrop, hasLoadedTransfer]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

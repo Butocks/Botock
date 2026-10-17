@@ -7,6 +7,7 @@ import { processVideoOrAudioTool } from "@/app/tools/ToolEngine";
 import { formatBytes, formatTime } from "@/lib/utils/formatters";
 
 import { getBackendUrl } from "@/utils/runtime-urls";
+import { getTransferMedia, clearTransferMedia } from "@/app/utils/mediaTransfer";
 import {
   Film,
   Minimize2,
@@ -78,6 +79,24 @@ export default function VideoCompressClient() {
       setErrorMsg(null);
     }
   }, []);
+
+  const [hasLoadedTransfer, setHasLoadedTransfer] = useState(false);
+
+  useEffect(() => {
+    if (hasLoadedTransfer) return;
+    getTransferMedia().then((media) => {
+      if (media && media.file) {
+        if (
+          media.file.type.startsWith("video/") ||
+          /\.(mp4|webm|mov|mkv|m4v)$/i.test(media.file.name)
+        ) {
+          setHasLoadedTransfer(true);
+          onDrop([media.file]);
+          clearTransferMedia();
+        }
+      }
+    });
+  }, [onDrop, hasLoadedTransfer]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

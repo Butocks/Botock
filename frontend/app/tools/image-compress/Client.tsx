@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useId } from "react";
+import { useState, useCallback, useId, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import imageCompression from "browser-image-compression";
 import {
@@ -19,6 +19,7 @@ import {
 import { formatBytes } from "@/lib/utils/formatters";
 import { useImageDocument } from "@/lib/image/useImageDocument";
 import { useObjectUrlDownload } from "@/lib/download/useObjectUrlDownload";
+import { getTransferMedia, clearTransferMedia } from "@/app/utils/mediaTransfer";
 
 // ─── Size target presets ──────────────────────────────────────────────────────
 const SIZE_PRESETS = [
@@ -120,6 +121,24 @@ export default function ImageCompressClient() {
     },
     [loadImage, resetDownload]
   );
+
+  const [hasLoadedTransfer, setHasLoadedTransfer] = useState(false);
+
+  useEffect(() => {
+    if (hasLoadedTransfer) return;
+    getTransferMedia().then((media) => {
+      if (media && media.file) {
+        if (
+          media.file.type.startsWith("image/") ||
+          /\.(png|jpe?g|webp|gif|avif)$/i.test(media.file.name)
+        ) {
+          setHasLoadedTransfer(true);
+          onDrop([media.file]);
+          clearTransferMedia();
+        }
+      }
+    });
+  }, [onDrop, hasLoadedTransfer]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

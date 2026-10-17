@@ -79,7 +79,8 @@ export default function ImageGeneratorClient() {
   const [showGuestCTA, setShowGuestCTA] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageBlobUrl, setImageBlobUrl] = useState<string | null>(null);
-    const [guestId, setGuestId] = useState<string>("");
+  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
+  const [guestId, setGuestId] = useState<string>("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -185,6 +186,7 @@ export default function ImageGeneratorClient() {
     setProgressText("Synthesizing artwork latents...");
     setImageUrl(null);
     setImageBlobUrl(null);
+    setImageBlob(null);
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -314,6 +316,7 @@ export default function ImageGeneratorClient() {
               })
               .then((blob) => {
                 const bUrl = URL.createObjectURL(blob);
+                setImageBlob(blob);
                 setImageBlobUrl(bUrl);
 
                 const item = {
@@ -321,6 +324,8 @@ export default function ImageGeneratorClient() {
                   title: prompt.slice(0, 35) + "...",
                   type: "image" as const,
                   url: authenticatedUrl,
+                  blob,
+                  blobUrl: bUrl,
                   createdAt: new Date().toISOString(),
                   expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
                   prompt,
@@ -523,7 +528,8 @@ export default function ImageGeneratorClient() {
             <div className="w-full max-w-xl mt-3">
               <ToolSuggestions
                 type="image"
-                mediaUrl={imageUrl}
+                mediaBlob={imageBlob}
+                mediaUrl={imageBlobUrl || imageUrl}
                 fileName={`botock_${generationId || "image"}`}
               />
             </div>
