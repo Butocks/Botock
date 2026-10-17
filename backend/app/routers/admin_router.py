@@ -2,6 +2,7 @@ import os
 import json
 import time
 import logging
+import hashlib
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, Header, Request, Depends
@@ -99,19 +100,37 @@ def save_state(state: Dict[str, Any]):
 def verify_admin_token(
     x_admin_secret: Optional[str] = Header(None, alias="X-Admin-Secret"),
     admin_api_key: Optional[str] = Header(None, alias="admin-api-key"),
+    x_admin_token: Optional[str] = Header(None, alias="x-admin-token"),
 ):
-    key = x_admin_secret or admin_api_key
+    key = x_admin_secret or admin_api_key or x_admin_token
+    if not key:
+        raise HTTPException(status_code=401, detail="Unauthorized: Admin authentication token missing.")
+
+    clean_key = key.strip()
+
+    # 1. Check if it is a verified 2FA Session Token from auth_otp
+    try:
+        from app.routers.auth_otp import SESSION_TOKENS_FILE, _read_json
+        tokens = _read_json(SESSION_TOKENS_FILE, {})
+        hashed = hashlib.sha256(clean_key.encode()).hexdigest()
+        exp = tokens.get(hashed)
+        if exp and time.time() <= exp:
+            return True
+    except Exception as e:
+        logger.warning(f"Error checking 2FA session token: {e}")
+
+    # 2. Check direct Master Secret Key match
     valid_keys = {
         ADMIN_SECRET_KEY.strip(),
         (settings.ADMIN_LOGIN_SECRET or "").strip(),
         "botock_master_admin_2026",
     }
     valid_keys.discard("")
+    if clean_key in valid_keys:
+        return True
 
-    if not key or key.strip() not in valid_keys:
-        logger.warning("Unauthorized admin access attempt.")
-        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Admin Secret Key.")
-    return True
+    logger.warning("Unauthorized admin access attempt.")
+    raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired Admin authorization.")
 
 
 # =====================================================================
