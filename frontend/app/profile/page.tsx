@@ -26,12 +26,6 @@ import {
   AlertTriangle
 } from "lucide-react";
 
-const COUNTRIES = [
-  "Pakistan", "United States", "United Kingdom", "Canada", "Australia",
-  "Germany", "United Arab Emirates", "Saudi Arabia", "India", "Turkey",
-  "France", "Singapore", "Malaysia", "Netherlands", "Brazil", "Spain", "Other"
-];
-
 export default function ProfilePage() {
   const router = useRouter();
   const supabase = createClient();
@@ -43,8 +37,6 @@ export default function ProfilePage() {
   // Form Fields
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [gender, setGender] = useState("male");
-  const [country, setCountry] = useState("Pakistan");
   const [isVerified, setIsVerified] = useState(false);
 
   // In-line Email Verification Modal
@@ -99,8 +91,6 @@ export default function ProfilePage() {
       }
       setFullName(resolvedName);
 
-      setGender(u.user_metadata?.gender || "male");
-      setCountry(u.user_metadata?.country || "Pakistan");
       setIsVerified(Boolean(u.app_metadata?.is_verified ?? (u.email_confirmed_at != null || u.app_metadata?.provider === "google")));
       
       // Professional Admin Role Check (Rely strictly on server-set app_metadata)
@@ -154,8 +144,6 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({
           full_name: fullName.trim(),
-          gender,
-          country,
         }),
       });
 
@@ -169,8 +157,6 @@ export default function ProfilePage() {
         data: {
           full_name: fullName.trim(),
           name: fullName.trim(),
-          gender,
-          country,
         },
       });
       if (error) throw error;
@@ -558,38 +544,6 @@ export default function ProfilePage() {
                     {isVerified ? "Verified" : "Unverified"}
                   </span>
                 </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                  Gender
-                </label>
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-violet-500"
-                >
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
-                  Country
-                </label>
-                <select
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-black/50 border border-slate-300 dark:border-white/10 text-xs text-slate-900 dark:text-white outline-none focus:border-violet-500"
-                >
-                  {COUNTRIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
 
