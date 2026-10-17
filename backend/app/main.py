@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import video, image, convert, auth_otp, rewards, workers, remove_bg, admin, contact, blog_cms, library
+from app.routers import video, image, convert, auth_otp, rewards, workers, remove_bg, admin, admin_router, contact, blog_cms, library
 from app.middleware.anti_bot import AntiBotMiddleware
 from app.config import settings
 from app.services.google_auth import ensure_valid_session
@@ -163,6 +163,7 @@ app.include_router(rewards.router)
 app.include_router(workers.router)
 app.include_router(remove_bg.router)
 app.include_router(admin.router)
+app.include_router(admin_router.router)
 app.include_router(contact.router)
 app.include_router(blog_cms.cms_router)
 app.include_router(blog_cms.pub_router)
