@@ -56,6 +56,7 @@ export default function GoogleOneTap() {
           auto_select: false,
           cancel_on_tap_outside: true,
           context: "signin",
+          prompt_parent_id: "google-one-tap-container",
         });
 
         // Prompt Google One Tap natively on botock.app
@@ -107,5 +108,16 @@ export default function GoogleOneTap() {
     };
   }, [supabase]);
 
-  return null;
+  return (
+    <div
+      id="google-one-tap-container"
+      className="fixed z-[99999] pointer-events-auto"
+      style={{
+        position: "fixed",
+        top: "96px",
+        right: "24px",
+        zIndex: 99999,
+      }}
+    />
+  );
 }
