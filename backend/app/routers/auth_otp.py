@@ -463,13 +463,23 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
     _write_json(OTP_STORE_FILE, otps)
 
     # 5. Dispatch email
-    send_otp_email(to_email=email_clean, otp_code=otp_code, purpose="Admin Command Center Login")
+    email_delivered = send_otp_email(to_email=email_clean, otp_code=otp_code, purpose="Admin Command Center Login")
 
-    return {
+    response_payload = {
         "success": True,
         "message": f"Verification code dispatched to {email_clean}. Valid for 10 minutes (3 attempts max).",
         "expires_in_seconds": settings.ADMIN_OTP_EXPIRY_MINUTES * 60,
     }
+
+    # If running on local machine or SMTP failed, provide code in payload & terminal so owner is never blocked
+    is_local = client_ip in ("127.0.0.1", "localhost", "::1", "unknown") or not email_delivered
+    if is_local:
+        logger.warning(f"🔑 [LOCAL DEV 2FA CODE FOR {email_clean}]: {otp_code}")
+        response_payload["dev_otp"] = otp_code
+        if not email_delivered:
+            response_payload["message"] = f"SMTP delivery failed. Your 6-digit code is: {otp_code}"
+
+    return response_payload
 
 
 @router.post("/api/admin/auth/verify-otp")
