@@ -14,28 +14,27 @@ import hashlib
 import time
 
 def verify_admin(
-    admin_api_key: Optional[str] = Header(None, alias="admin-api-key"),
     x_admin_token: Optional[str] = Header(None, alias="x-admin-token"),
+    admin_api_key: Optional[str] = Header(None, alias="admin-api-key"),
 ):
-    """Validates either the master ADMIN_LOGIN_SECRET or a verified 2FA OTP admin token."""
-    key = admin_api_key or x_admin_token
-    if not key:
-        raise HTTPException(status_code=401, detail="Admin authorization required.")
+    """Enforces strict 2FA OTP Session Token verification. Direct static keys are permanently blocked."""
+    if not x_admin_token and admin_api_key:
+        raise HTTPException(
+            status_code=403,
+            detail="Access Denied: Direct static key access is permanently disabled. 2FA Email OTP verification is strictly required.",
+        )
+    if not x_admin_token:
+        raise HTTPException(status_code=401, detail="Admin 2FA authorization token missing. Please login via Email OTP.")
         
-    # 1. Direct Master Secret Match
-    if settings.ADMIN_LOGIN_SECRET and hmac.compare_digest(key.strip(), settings.ADMIN_LOGIN_SECRET.strip()):
-        return True
-        
-    # 2. OTP Session Token Match
     from app.routers.auth_otp import SESSION_TOKENS_FILE, _read_json
     tokens = _read_json(SESSION_TOKENS_FILE, {})
-    hashed = hashlib.sha256(key.strip().encode()).hexdigest()
+    hashed = hashlib.sha256(x_admin_token.strip().encode()).hexdigest()
     exp = tokens.get(hashed)
     if exp and time.time() <= exp:
         return True
         
-    logger.warning("Failed admin access attempt with invalid or expired key/token.")
-    raise HTTPException(status_code=403, detail="Invalid or expired admin authorization.")
+    logger.warning("Failed admin access attempt with invalid or expired 2FA session token.")
+    raise HTTPException(status_code=403, detail="Invalid or expired admin 2FA session token.")
 
 class BlogUpdate(BaseModel):
     tool_id: str

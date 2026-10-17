@@ -98,39 +98,45 @@ def save_state(state: Dict[str, Any]):
 
 
 def verify_admin_token(
+    x_admin_token: Optional[str] = Header(None, alias="x-admin-token"),
     x_admin_secret: Optional[str] = Header(None, alias="X-Admin-Secret"),
     admin_api_key: Optional[str] = Header(None, alias="admin-api-key"),
-    x_admin_token: Optional[str] = Header(None, alias="x-admin-token"),
 ):
-    key = x_admin_secret or admin_api_key or x_admin_token
-    if not key:
-        raise HTTPException(status_code=401, detail="Unauthorized: Admin authentication token missing.")
+    token = x_admin_token
+    # If someone tries to pass a raw static key directly, reject immediately!
+    if not token and (x_admin_secret or admin_api_key):
+        logger.warning("Rejected direct static key attempt on admin endpoint.")
+        raise HTTPException(
+            status_code=403,
+            detail="Access Denied: Direct static key access is permanently disabled for data endpoints. You must verify via 2FA Email OTP to receive an active session token.",
+        )
 
-    clean_key = key.strip()
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: 2FA Admin session token missing. Please authenticate via Email OTP.",
+        )
 
-    # 1. Check if it is a verified 2FA Session Token from auth_otp
+    clean_token = token.strip()
+
+    # 1. Strictly verify 2FA Session Token from auth_otp
     try:
         from app.routers.auth_otp import SESSION_TOKENS_FILE, _read_json
         tokens = _read_json(SESSION_TOKENS_FILE, {})
-        hashed = hashlib.sha256(clean_key.encode()).hexdigest()
+        hashed = hashlib.sha256(clean_token.encode()).hexdigest()
         exp = tokens.get(hashed)
-        if exp and time.time() <= exp:
-            return True
+        if exp:
+            if time.time() <= exp:
+                return True
+            else:
+                raise HTTPException(status_code=401, detail="Admin 2FA session has expired. Please re-login.")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.warning(f"Error checking 2FA session token: {e}")
 
-    # 2. Check direct Master Secret Key match
-    valid_keys = {
-        ADMIN_SECRET_KEY.strip(),
-        (settings.ADMIN_LOGIN_SECRET or "").strip(),
-        "botock_master_admin_2026",
-    }
-    valid_keys.discard("")
-    if clean_key in valid_keys:
-        return True
-
-    logger.warning("Unauthorized admin access attempt.")
-    raise HTTPException(status_code=401, detail="Unauthorized: Invalid or expired Admin authorization.")
+    logger.warning("Unauthorized admin access attempt with invalid session token.")
+    raise HTTPException(status_code=403, detail="Unauthorized: Invalid or expired 2FA Admin session token.")
 
 
 # =====================================================================

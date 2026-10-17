@@ -27,8 +27,6 @@ def require_owner(
             return {"user_id": "admin", "email": "admin", "role": "owner"}
         except HTTPException:
             pass
-        if settings.ADMIN_API_KEY and x_admin_token == settings.ADMIN_API_KEY:
-            return {"user_id": "admin", "email": "admin", "role": "owner"}
 
     if user:
         email = user.get("email", "").strip().lower()
