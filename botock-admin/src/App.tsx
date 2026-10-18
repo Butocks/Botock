@@ -115,12 +115,17 @@ interface QuotasConfig {
 }
 
 const PRESET_URLS = [
-  { label: "💻 Local Machine (http://localhost:8000)", url: "http://localhost:8000" },
+  { label: "🚀 Azure Backend (Auto Proxy)", url: "auto" },
+  { label: "💻 Direct Localhost (http://localhost:8000)", url: "http://localhost:8000" },
   { label: "🌐 Production Server (https://botock.app)", url: "https://botock.app" },
 ];
 
 const resolveHost = (host: string) => {
   const clean = host.replace(/\/+$/, "");
+  if (!clean || clean === "auto" || clean === "http://localhost:8000" || clean === "http://127.0.0.1:8000") {
+    // Relative path routes through Vite dev server proxy to 127.0.0.1:8000 automatically
+    return "";
+  }
   if (clean === "https://botock.app" || clean === "http://botock.app" || clean === "/prod-proxy") {
     return "/prod-proxy";
   }
@@ -139,7 +144,7 @@ const getOrCreateDeviceId = (): string => {
 export default function App() {
   // Target Backend & Auth
   const [targetHost, setTargetHost] = useState<string>(() => {
-    return localStorage.getItem("botock_admin_host") || "http://localhost:8000";
+    return localStorage.getItem("botock_admin_host") || "auto";
   });
   const [adminSecret, setAdminSecret] = useState<string>("");
   const [showSecret, setShowSecret] = useState(false);
