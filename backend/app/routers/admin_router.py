@@ -58,10 +58,21 @@ def load_state() -> Dict[str, Any]:
         try:
             with open(STATE_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # Ensure all default keys exist
-                for k, v in DEFAULT_STATE.items():
-                    if k not in data:
-                        data[k] = v
+                # Purge mock tools and mock numbers from tool_flags
+                if "tool_flags" in data and isinstance(data["tool_flags"], dict):
+                    mock_tools = ["image-compress", "ai-video"]
+                    for mt in mock_tools:
+                        data["tool_flags"].pop(mt, None)
+
+                    mock_uses = {4300, 3780, 2844, 2150, 1962, 1890, 1663, 1421, 1420, 980, 830, 710, 610, 540, 430, 220}
+                    mock_errs = {1, 2, 3, 4, 9}
+                    tool_events = data.get("tool_events", [])
+                    for tid, tcfg in data["tool_flags"].items():
+                        if isinstance(tcfg, dict):
+                            if tcfg.get("uses") in mock_uses or not tool_events:
+                                tcfg["uses"] = sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "success")
+                            if tcfg.get("errors") in mock_errs or not tool_events:
+                                tcfg["errors"] = sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "error")
 
                 # Purge any legacy mock blog entries
                 if "blogs" in data and isinstance(data["blogs"], list):
@@ -69,6 +80,11 @@ def load_state() -> Dict[str, Any]:
                         b for b in data["blogs"]
                         if b.get("id") != "blog_1" and "Zero-Shot" not in b.get("title", "")
                     ]
+
+                # Ensure all default keys exist
+                for k, v in DEFAULT_STATE.items():
+                    if k not in data:
+                        data[k] = v
 
                 return data
         except Exception as e:
@@ -294,8 +310,8 @@ async def get_admin_overview():
         # Count tool visits from telemetry page views
         t_views = sum(1 for e in telemetry if e.get("current_path", "").startswith(f"/tools/{tid}"))
         t_started = sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "input_started")
-        t_success = tcfg.get("uses", 0) + sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "success")
-        t_errors = tcfg.get("errors", 0) + sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "error")
+        t_success = max(tcfg.get("uses", 0), sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "success"))
+        t_errors = max(tcfg.get("errors", 0), sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "error"))
         total_runs = t_success + t_errors
         t_abandoned = max(0, t_views - total_runs)
         s_rate = round((t_success / total_runs * 100), 1) if total_runs > 0 else 100.0

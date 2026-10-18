@@ -22,11 +22,8 @@ import {
   Laptop,
   Sparkles,
   ArrowRight,
-  Bold,
-  Italic,
   Heading2,
   Heading3,
-  Link2,
   List,
   ShieldCheck,
   ShieldAlert,
@@ -44,6 +41,9 @@ import {
   AlertTriangle,
   Power,
   Image as ImageIcon,
+  Share2,
+  ExternalLink,
+  Layers,
 } from "lucide-react";
 
 export type AccessLevel = "all" | "login_only" | "off";
@@ -123,12 +123,10 @@ interface BlogPost {
 }
 
 interface QuotasConfig {
-  // Video Generation Specific Controls
+  // Video Generation Specific Controls (Only Video Gen has daily generation quotas)
   video_gen_access: AccessLevel; // "all" (Guest + Login) | "login_only" | "off"
   video_daily_quota: number; // Single unified daily video quota for Guest or Logged-in user
   // Global Platform Controls
-  guest_daily_limit: number;
-  free_user_daily_limit: number;
   max_file_size_mb: number;
   forced_model: string;
   global_maintenance: boolean;
@@ -312,14 +310,19 @@ export default function App() {
   const [quotas, setQuotas] = useState<QuotasConfig>({
     video_gen_access: "all",
     video_daily_quota: 5,
-    guest_daily_limit: 10,
-    free_user_daily_limit: 30,
     max_file_size_mb: 60,
     forced_model: "auto",
     global_maintenance: false,
     announcement_banner: "",
   });
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
+
+  // Trackable Campaign Link Generator States
+  const [linkTool, setLinkTool] = useState("video-generator");
+  const [linkSource, setLinkSource] = useState("facebook");
+  const [linkMedium, setLinkMedium] = useState("social_post");
+  const [linkCampaign, setLinkCampaign] = useState("promo_2026");
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Search, Filter & Modal States
   const [journeyFilter, setJourneyFilter] = useState("all");
@@ -329,6 +332,7 @@ export default function App() {
   const [newToolSlug, setNewToolSlug] = useState("");
   const [newToolName, setNewToolName] = useState("");
   const [newToolCategory, setNewToolCategory] = useState("AI Tools");
+  const [toolTestResults, setToolTestResults] = useState<Record<string, string>>({});
 
   // SEO Blog CMS Form State
   const [editingBlog, setEditingBlog] = useState<BlogPost>({
@@ -352,6 +356,16 @@ export default function App() {
   const [blogPreviewMode, setBlogPreviewMode] = useState<"edit" | "preview">("edit");
   const [serpDevice, setSerpDevice] = useState<"desktop" | "mobile">("desktop");
   const [blogSearch, setBlogSearch] = useState("");
+
+  // Trackable Link Computation
+  const generatedTrackingUrl = useMemo(() => {
+    const base = "https://botock.app";
+    const toolSlug = linkTool === "home" ? "" : `/tools/${linkTool}`;
+    const cleanSource = linkSource.trim().toLowerCase();
+    const cleanMedium = linkMedium.trim().toLowerCase();
+    const cleanCampaign = linkCampaign.trim().toLowerCase().replace(/\s+/g, "_");
+    return `${base}${toolSlug}?utm_source=${cleanSource}&utm_medium=${cleanMedium}&utm_campaign=${cleanCampaign}`;
+  }, [linkTool, linkSource, linkMedium, linkCampaign]);
 
   // Axios Client Generator
   const getClient = useCallback(() => {
@@ -413,8 +427,9 @@ export default function App() {
         const mergedTools: Record<string, ToolConfig> = { ...DEFAULT_WEBSITE_TOOLS };
         if (res.data.tool_flags) {
           Object.entries(res.data.tool_flags).forEach(([k, v]: [string, any]) => {
-            // Unify video-generator and ai-video / ai-video-generator
-            const normalizedKey = k === "ai-video" || k === "ai-video-generator" ? "video-generator" : k;
+            // Filter out old legacy mock tools
+            if (k === "image-compress" || k === "ai-video") return;
+            const normalizedKey = k === "ai-video-generator" ? "video-generator" : k;
             mergedTools[normalizedKey] = {
               ...(mergedTools[normalizedKey] || {}),
               ...v,
@@ -495,14 +510,15 @@ export default function App() {
     };
   }, [sourceBreakdown]);
 
-  // Top Most Used Tools & Highest Error Tools Ranking
+  // Top Most Used Tools & Highest Error Tools Ranking (Strictly Real Numbers, No Doubling)
   const toolRankings = useMemo(() => {
     const list = Object.entries(tools).map(([id, cfg]) => {
       const funnelMatch = toolFunnel.find(
         (f) => f.tool_id === id || (id === "video-generator" && (f.tool_id === "ai-video" || f.tool_id === "ai-video-generator"))
       );
-      const uses = funnelMatch ? funnelMatch.success + funnelMatch.started : cfg.uses || 0;
-      const errors = funnelMatch ? funnelMatch.errors : cfg.errors || 0;
+      // Strictly real executions, zero artificial addition
+      const uses = funnelMatch ? funnelMatch.success : (cfg.uses || 0);
+      const errors = funnelMatch ? funnelMatch.errors : (cfg.errors || 0);
       return {
         id,
         name: cfg.name || id,
@@ -738,7 +754,7 @@ export default function App() {
     };
   }, [sessionToken]);
 
-  // Update Any Tool Configuration (Access Level, Enabled, Maintenance, Quota)
+  // Update Any Tool Configuration (Access Level, Enabled, Maintenance)
   const handleUpdateToolConfig = async (toolId: string, updates: Partial<ToolConfig>) => {
     const currentTool = tools[toolId] || {
       name: toolId,
@@ -771,7 +787,6 @@ export default function App() {
         tool_id: toolId,
         updates: { ...currentTool, ...syncedUpdates },
       });
-      // Also update alias if video-generator
       if (toolId === "video-generator") {
         client.post("/api/admin/tool-flags", {
           tool_id: "ai-video-generator",
@@ -779,13 +794,59 @@ export default function App() {
         }).catch(() => {});
       }
       if (res.data?.ok) {
-        setStatusMessage({ type: "success", text: `Updated ${currentTool.name} settings.` });
+        setStatusMessage({ type: "success", text: `Updated ${currentTool.name} configuration on server.` });
       }
     } catch (err: any) {
       setStatusMessage({
         type: "error",
         text: err.response?.data?.detail || "Failed to update tool on server.",
       });
+    }
+  };
+
+  // Live Test Tool Access / Block on Backend
+  const handleTestToolAccess = async (toolId: string) => {
+    const cleanHost = resolveHost(targetHost);
+    setToolTestResults((prev) => ({ ...prev, [toolId]: "Testing block..." }));
+
+    let testEndpoint = `${cleanHost}/api/convert/text-to-speech`;
+    if (toolId === "video-generator") testEndpoint = `${cleanHost}/api/video/generate`;
+    else if (toolId === "bg-remover") testEndpoint = `${cleanHost}/api/remove-bg`;
+    else if (toolId === "image-upscaler") testEndpoint = `${cleanHost}/api/image/generate`;
+    else if (toolId.startsWith("pdf-")) testEndpoint = `${cleanHost}/api/convert/${toolId}`;
+
+    try {
+      const res = await axios.post(testEndpoint, {}, { timeout: 4000 });
+      if (res.status === 200) {
+        setToolTestResults((prev) => ({
+          ...prev,
+          [toolId]: "🟢 Tool is LIVE & Accessible.",
+        }));
+      }
+    } catch (err: any) {
+      const status = err.response?.status;
+      const detail = err.response?.data?.detail || err.message;
+      if (status === 403) {
+        setToolTestResults((prev) => ({
+          ...prev,
+          [toolId]: `🔴 Verified BLOCKED (403): ${detail}`,
+        }));
+      } else if (status === 503) {
+        setToolTestResults((prev) => ({
+          ...prev,
+          [toolId]: `🚧 Verified MAINTENANCE (503): ${detail}`,
+        }));
+      } else if (status === 401) {
+        setToolTestResults((prev) => ({
+          ...prev,
+          [toolId]: `🔐 Verified LOGIN REQUIRED (401): ${detail}`,
+        }));
+      } else {
+        setToolTestResults((prev) => ({
+          ...prev,
+          [toolId]: `⚡ Server Response (${status}): ${detail}`,
+        }));
+      }
     }
   };
 
@@ -833,13 +894,12 @@ export default function App() {
     setNewToolName("");
   };
 
-  // Save Quotas Configuration (Including Video Gen Access & Single Video Quota)
+  // Save Quotas Configuration (Video Gen Access & Single Video Quota)
   const handleSaveQuotas = async (overrideQuotas?: QuotasConfig) => {
     const payload = overrideQuotas || quotas;
     const client = getClient();
     try {
       const res = await client.post("/api/admin/quotas", payload);
-      // Also sync video generator tool flags with video_gen_access
       await handleUpdateToolConfig("video-generator", {
         access_mode: payload.video_gen_access,
         enabled: payload.video_gen_access !== "off",
@@ -849,7 +909,7 @@ export default function App() {
       if (res.data?.ok) {
         setStatusMessage({
           type: "success",
-          text: "Video Generation Access, Single Quota & Global Limits saved!",
+          text: "Video Generation Access, Single Daily Video Quota & Limits saved!",
         });
       }
     } catch (err: any) {
@@ -866,7 +926,7 @@ export default function App() {
     try {
       await client.post("/api/admin/errors/clear", {});
       setRecentErrors([]);
-      setStatusMessage({ type: "success", text: "Cleared error inspector logs." });
+      setStatusMessage({ type: "success", text: "Cleared error inspector logs permanently." });
     } catch {
       setRecentErrors([]);
       setStatusMessage({ type: "info", text: "Error logs cleared locally." });
@@ -949,7 +1009,7 @@ export default function App() {
   };
 
   const handleDeleteBlog = async (blogId: string) => {
-    if (!confirm("Are you sure you want to permanently delete this article?")) return;
+    if (!confirm("Are you sure you want to permanently delete this article from your website?")) return;
     const client = getClient();
     try {
       const res = await client.post("/api/admin/blogs/delete", { id: blogId });
@@ -1072,7 +1132,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setShowSecret(!showSecret)}
-                    className="text-slate-400 hover:text-slate-200 ml-2"
+                    className="text-slate-400 hover:text-slate-200 ml-2 cursor-pointer"
                   >
                     {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -1145,14 +1205,14 @@ export default function App() {
                     setLoginStep("credentials");
                     setStatusMessage(null);
                   }}
-                  className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition"
+                  className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition cursor-pointer"
                 >
                   Back
                 </button>
                 <button
                   type="submit"
                   disabled={authLoading || otpCode.length !== 6}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/25 disabled:opacity-50"
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/25 disabled:opacity-50 cursor-pointer"
                 >
                   <ShieldCheck className="w-4 h-4" />
                   <span>{authLoading ? "Verifying..." : "Verify & Unlock"}</span>
@@ -1183,11 +1243,11 @@ export default function App() {
                   Botock Command Center
                 </h1>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  V4.0 MASTER
+                  V4.2 LIVE
                 </span>
               </div>
               <p className="text-[11px] text-slate-400">
-                Traffic Attribution • Video Quota & Tool Access • Error Inspector • SEO CMS
+                Trackable Links • Video Quota & Tool Enforcement • Error Inspector • Flexible Blog CMS
               </p>
             </div>
           </div>
@@ -1218,7 +1278,7 @@ export default function App() {
             <button
               onClick={() => fetchOverview()}
               disabled={loading}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow cursor-pointer ${
                 connected
                   ? "bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30"
                   : "bg-indigo-600 hover:bg-indigo-500 text-white"
@@ -1230,7 +1290,7 @@ export default function App() {
 
             <button
               onClick={() => handleLogout()}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition shadow"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition shadow cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Logout</span>
@@ -1259,12 +1319,12 @@ export default function App() {
             )}
 
             <span className="hidden sm:inline text-indigo-400 font-semibold">
-              🎬 Video Gen:{" "}
+              🎬 Video Quota:{" "}
               {quotas.video_gen_access === "all"
                 ? `Guests + Login (${quotas.video_daily_quota}/day)`
                 : quotas.video_gen_access === "login_only"
                 ? `Login Users Only (${quotas.video_daily_quota}/day)`
-                : "🔴 OFF"}
+                : "🔴 Video Tool OFF"}
             </span>
           </div>
 
@@ -1286,11 +1346,11 @@ export default function App() {
         {/* 📑 TAB NAVIGATION BAR */}
         <div className="max-w-7xl mx-auto px-4 flex overflow-x-auto no-scrollbar border-t border-slate-800 text-xs">
           {[
-            { id: "journeys", label: "Live Traffic & Top Sources", icon: Compass, count: telemetry.length },
+            { id: "journeys", label: "Live Traffic & Link Generator", icon: Compass, count: telemetry.length },
             { id: "funnel", label: "Most Used Tools & Error Inspector", icon: Activity, count: recentErrors.length },
-            { id: "tools", label: "Website Tools ON/OFF & Video Access", icon: Sliders, count: Object.keys(tools).length },
+            { id: "tools", label: "Website Tools ON/OFF Switches", icon: Sliders, count: Object.keys(tools).length },
             { id: "quotas", label: "Video Quota & Global Limits", icon: Gauge },
-            { id: "cms", label: "Professional SEO Blog CMS", icon: FileText, count: blogs.length },
+            { id: "cms", label: "SEO Blog CMS & Builder", icon: FileText, count: blogs.length },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -1298,7 +1358,7 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center space-x-2 py-3 px-4 border-b-2 font-medium transition-all whitespace-nowrap ${
+                className={`flex items-center space-x-2 py-3 px-4 border-b-2 font-medium transition-all whitespace-nowrap cursor-pointer ${
                   active
                     ? "border-indigo-500 text-indigo-400 bg-indigo-500/5"
                     : "border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700"
@@ -1324,10 +1384,119 @@ export default function App() {
       {/* 💻 MAIN CONTENT VIEWS */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
         {/* ==================================================================== */}
-        {/* TAB 1: LIVE TRAFFIC SOURCES, LEADERBOARD & USER JOURNEYS              */}
+        {/* TAB 1: LIVE TRAFFIC SOURCES, LINK GENERATOR & USER JOURNEYS           */}
         {/* ==================================================================== */}
         {activeTab === "journeys" && (
           <div className="space-y-6">
+            {/* 🔗 FEATURED: TRACKABLE CAMPAIGN LINK GENERATOR */}
+            <div className="bg-gradient-to-r from-indigo-950/50 via-slate-900 to-sky-950/40 border border-indigo-500/30 rounded-2xl p-5 shadow-xl space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
+                  <Share2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+                    <span>Trackable Campaign Link Generator</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-500/20 text-indigo-300">
+                      Real-time Attribution
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-300">
+                    Generate custom tracking links for Facebook Ads, Instagram Bio/Reels, TikTok, or WhatsApp. When users click this link, their visits and tool runs will automatically show under that platform in the live cards below!
+                  </p>
+                </div>
+              </div>
+
+              {/* Link Builder Form Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Target Page / Tool</label>
+                  <select
+                    value={linkTool}
+                    onChange={(e) => setLinkTool(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none cursor-pointer"
+                  >
+                    <option value="video-generator">🎬 AI Video Generator</option>
+                    <option value="voice-changer">🎙️ AI Voice Studio & Cloner</option>
+                    <option value="audio-enhance">🎧 AI Audio Enhancer</option>
+                    <option value="bg-remover">🪄 AI Background Remover</option>
+                    <option value="image-upscaler">🖼️ 4K AI Image Upscaler</option>
+                    <option value="pdf-to-docx">📄 PDF to Word Converter</option>
+                    <option value="pdf-to-excel">📊 PDF to Excel Converter</option>
+                    <option value="docx-to-pdf">📝 Word to PDF Converter</option>
+                    <option value="pdf-protect">🔒 PDF Password Protector</option>
+                    <option value="home">🏠 Botock Home Page</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Source Platform</label>
+                  <select
+                    value={linkSource}
+                    onChange={(e) => setLinkSource(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none cursor-pointer"
+                  >
+                    <option value="facebook">Facebook (Ads / Post / Groups)</option>
+                    <option value="instagram">Instagram (Reels / Bio Link / Stories)</option>
+                    <option value="tiktok">TikTok (Bio / Comments / Ads)</option>
+                    <option value="whatsapp">WhatsApp (Direct / Groups / Channel)</option>
+                    <option value="youtube">YouTube (Video Description / Short)</option>
+                    <option value="google_ads">Google Ads (Search / Display)</option>
+                    <option value="twitter_x">Twitter / X</option>
+                    <option value="linkedin">LinkedIn</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Placement / Medium</label>
+                  <select
+                    value={linkMedium}
+                    onChange={(e) => setLinkMedium(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none cursor-pointer"
+                  >
+                    <option value="social_post">Social Post / Reel</option>
+                    <option value="bio_link">Bio Profile Link</option>
+                    <option value="paid_ad">Paid Sponsored Ad</option>
+                    <option value="dm_share">Direct Message / WhatsApp</option>
+                    <option value="comment_reply">Comment Reply</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Campaign Identifier</label>
+                  <input
+                    type="text"
+                    value={linkCampaign}
+                    onChange={(e) => setLinkCampaign(e.target.value)}
+                    placeholder="e.g. promo_march, reel_1"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Generated URL Display & Copy */}
+              <div className="flex flex-wrap items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-indigo-500/30">
+                <input
+                  type="text"
+                  readOnly
+                  value={generatedTrackingUrl}
+                  className="flex-1 bg-transparent border-none text-indigo-300 font-mono text-xs outline-none select-all px-2"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(generatedTrackingUrl);
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 2000);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center space-x-1.5 transition cursor-pointer"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{linkCopied ? "Copied!" : "Copy Trackable Link"}</span>
+                </button>
+              </div>
+            </div>
+
             {/* Top 6 Channel Cards */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -1434,11 +1603,11 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Most Used Tools vs Most Error Tools Snapshot */}
+              {/* Most Used Tools & Hotspots */}
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
                   <Activity className="w-4 h-4 text-emerald-400" />
-                  Most Used Tools & Error Hotspots
+                  Live Tool Execution Ranking
                 </h3>
                 <div className="space-y-2.5">
                   {toolRankings.mostUsed.slice(0, 6).map((t) => {
@@ -1489,7 +1658,7 @@ export default function App() {
                     <button
                       key={f}
                       onClick={() => setJourneyFilter(f)}
-                      className={`px-2.5 py-1 rounded-lg font-semibold capitalize transition ${
+                      className={`px-2.5 py-1 rounded-lg font-semibold capitalize transition cursor-pointer ${
                         journeyFilter === f
                           ? "bg-indigo-600 text-white"
                           : "bg-slate-800 text-slate-400 hover:text-slate-200"
@@ -1507,7 +1676,7 @@ export default function App() {
                     <tr>
                       <th className="py-3 px-4">Visitor / Device</th>
                       <th className="py-3 px-4">Acquisition Source</th>
-                      <th className="py-3 px-4">HTTP Referrer</th>
+                      <th className="py-3 px-4">Campaign Tag</th>
                       <th className="py-3 px-4">Navigation Flow Path</th>
                       <th className="py-3 px-4 text-right">Time</th>
                     </tr>
@@ -1516,7 +1685,7 @@ export default function App() {
                     {filteredJourneys.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-slate-500 font-sans">
-                          No clickstream visits recorded for this filter yet.
+                          No clickstream visits recorded yet. Share your trackable links to see live visitors!
                         </td>
                       </tr>
                     ) : (
@@ -1548,11 +1717,8 @@ export default function App() {
                               {j.utm_source}
                             </span>
                           </td>
-                          <td
-                            className="py-3 px-4 text-slate-400 truncate max-w-xs text-[11px]"
-                            title={j.referrer}
-                          >
-                            {j.referrer || "Direct Entry"}
+                          <td className="py-3 px-4 text-indigo-300 text-[11px]">
+                            {j.utm_campaign && j.utm_campaign !== "none" ? j.utm_campaign : "—"}
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center space-x-1.5 flex-wrap">
@@ -2088,8 +2254,24 @@ export default function App() {
                       </div>
                     </div>
 
+                    {/* Live Test Block Button & Result */}
+                    <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleTestToolAccess(id)}
+                        className="px-2.5 py-1 rounded bg-slate-950 hover:bg-slate-800 text-[10px] font-semibold text-slate-300 border border-slate-800 transition cursor-pointer flex items-center gap-1"
+                      >
+                        <span>⚡ Test Block on Server</span>
+                      </button>
+                      {toolTestResults[id] && (
+                        <span className="text-[10px] font-mono truncate max-w-[170px]" title={toolTestResults[id]}>
+                          {toolTestResults[id]}
+                        </span>
+                      )}
+                    </div>
+
                     {/* Footer Stats & Maintenance Toggle */}
-                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
                       <div className="font-mono text-[11px] text-slate-400">
                         <span className="text-emerald-400 font-bold">{t.uses || 0}</span> uses •{" "}
                         <span className="text-rose-400 font-bold">{t.errors || 0}</span> err
@@ -2118,7 +2300,7 @@ export default function App() {
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 4: VIDEO QUOTA, PLATFORM QUOTAS & GLOBAL MAINTENANCE              */}
+        {/* TAB 4: VIDEO QUOTA & GLOBAL PLATFORM SETTINGS                         */}
         {/* ==================================================================== */}
         {activeTab === "quotas" && (
           <div className="max-w-3xl mx-auto space-y-6">
@@ -2126,10 +2308,10 @@ export default function App() {
               <div>
                 <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2 mb-1">
                   <Gauge className="w-5 h-5 text-indigo-400" />
-                  <span>Video Generation Single Quota & Global Platform Limits</span>
+                  <span>AI Video Generation Quota & Platform Settings</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Manage AI Video Generation permissions, unified daily video quota, and global tool limits
+                  Manage AI Video Generation permissions and unified daily video quota (Other tools are controlled via ON/OFF switchboard)
                 </p>
               </div>
 
@@ -2141,7 +2323,7 @@ export default function App() {
                       🎬 AI Video Generation Allowed To
                     </div>
                     <div className="text-slate-400 text-[11px]">
-                      Control whether Guests, Logged-in users, or No One can use AI Video Gen
+                      Control whether Guests, Logged-in users, or No One can generate AI videos
                     </div>
                   </div>
                   <select
@@ -2184,49 +2366,6 @@ export default function App() {
                   />
                 </div>
 
-                {/* Other Tools: Guest Daily Limit */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
-                  <div>
-                    <div className="font-semibold text-slate-200">
-                      Other Tools: Guest Daily Limit
-                    </div>
-                    <div className="text-slate-500 text-[11px]">
-                      Daily operations for audio/PDF/image tools without login
-                    </div>
-                  </div>
-                  <input
-                    type="number"
-                    value={quotas.guest_daily_limit}
-                    onChange={(e) =>
-                      setQuotas({ ...quotas, guest_daily_limit: parseInt(e.target.value) || 0 })
-                    }
-                    className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-right"
-                  />
-                </div>
-
-                {/* Other Tools: Registered User Daily Limit */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
-                  <div>
-                    <div className="font-semibold text-slate-200">
-                      Other Tools: Logged-in User Daily Limit
-                    </div>
-                    <div className="text-slate-500 text-[11px]">
-                      Daily operations for logged-in users on standard tools
-                    </div>
-                  </div>
-                  <input
-                    type="number"
-                    value={quotas.free_user_daily_limit}
-                    onChange={(e) =>
-                      setQuotas({
-                        ...quotas,
-                        free_user_daily_limit: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-right"
-                  />
-                </div>
-
                 {/* Max File Size */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
                   <div>
@@ -2262,9 +2401,9 @@ export default function App() {
                 {/* Global Maintenance Switch */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
                   <div>
-                    <div className="font-semibold text-slate-200">Emergency Maintenance Mode</div>
+                    <div className="font-semibold text-slate-200">Emergency Global Maintenance Mode</div>
                     <div className="text-slate-500 text-[11px]">
-                      Lock entire platform and display maintenance screen
+                      Lock entire website and display maintenance notice on all tools
                     </div>
                   </div>
                   <button
@@ -2288,7 +2427,7 @@ export default function App() {
                   className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition flex items-center space-x-2 text-xs shadow-lg shadow-indigo-600/25 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
-                  <span>Save All Quotas & Video Rules</span>
+                  <span>Save Video Rules & Limits</span>
                 </button>
               </div>
             </div>
@@ -2296,7 +2435,7 @@ export default function App() {
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 5: PROFESSIONAL SEO BLOG CMS & PUBLISHER                          */}
+        {/* TAB 5: FLEXIBLE SEO BLOG STUDIO & PUBLISHER                          */}
         {/* ==================================================================== */}
         {activeTab === "cms" && (
           <div className="space-y-6">
@@ -2308,7 +2447,7 @@ export default function App() {
                   <span>Enterprise SEO Blog Studio & Live Publisher</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Write, upload cover images, audit Google SERP rankings, and publish directly to botock.app/blog
+                  Create, design sections, upload pictures, audit Google SERP rankings, and publish directly to botock.app/blog
                 </p>
               </div>
 
@@ -2318,20 +2457,49 @@ export default function App() {
                   className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center space-x-1.5 shadow cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>New Article</span>
+                  <span>+ Write New Article</span>
                 </button>
               </div>
             </div>
 
             {/* Main CMS Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left 7 Columns: Professional Blog Editor */}
+              {/* Left 7 Columns: Dynamic Blog Section Builder */}
               <div className="lg:col-span-7 space-y-4">
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-4">
+                  {/* Active Edit Mode Banner */}
+                  {!isBlogNew && (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-xs">
+                      <div className="flex items-center space-x-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-indigo-300 font-bold">
+                          Editing Article: &ldquo;{editingBlog.title}&rdquo;
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleNewBlog()}
+                          className="text-slate-400 hover:text-slate-200 text-[11px] underline cursor-pointer"
+                        >
+                          Cancel / New
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBlog(editingBlog.id)}
+                          className="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-[11px] font-bold flex items-center space-x-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Delete Article</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Title */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Article H1 Headline *
+                      Article Main Headline (H1) *
                     </label>
                     <input
                       type="text"
@@ -2352,7 +2520,7 @@ export default function App() {
                             : editingBlog.meta_title,
                         });
                       }}
-                      placeholder="e.g. How to Clone Any Voice for Free with Zero-Shot AI in 2026"
+                      placeholder="e.g. Complete Guide to Creating AI Voiceovers & Video in 2026"
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -2407,16 +2575,16 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Cover Image URL + Direct Image File Upload */}
+                  {/* Featured Cover Image File Upload or URL */}
                   <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                         <ImageIcon className="w-4 h-4 text-indigo-400" />
-                        Featured Cover Image (Upload File or Paste URL)
+                        Featured Main Cover Image (File Upload or URL)
                       </label>
                       <label className="cursor-pointer px-3 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-[11px] font-bold flex items-center gap-1.5 transition">
                         <Upload className="w-3.5 h-3.5" />
-                        Upload Image File
+                        Upload Cover Image
                         <input
                           type="file"
                           accept="image/*"
@@ -2449,7 +2617,7 @@ export default function App() {
                   {/* Short Card Excerpt */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Article Card Excerpt (Summary shown on /blog)
+                      Article Summary / Excerpt (Shown on /blog listing)
                     </label>
                     <textarea
                       rows={2}
@@ -2462,86 +2630,18 @@ export default function App() {
                             editingBlog.meta_description || e.target.value,
                         })
                       }
-                      placeholder="Brief 2-sentence summary that hooks readers..."
+                      placeholder="Engaging 2-sentence summary that hooks Google and website visitors..."
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 outline-none"
                     />
                   </div>
 
-                  {/* Rich Markdown Toolbar & Content Editor */}
-                  <div className="pt-2 border-t border-slate-800">
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                      <div className="flex flex-wrap items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => insertMarkdown("**", "**")}
-                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
-                          title="Bold"
-                        >
-                          <Bold className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertMarkdown("*", "*")}
-                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
-                          title="Italic"
-                        >
-                          <Italic className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertMarkdown("\n## ")}
-                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
-                          title="Heading 2"
-                        >
-                          <Heading2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertMarkdown("\n### ")}
-                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
-                          title="Heading 3"
-                        >
-                          <Heading3 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertMarkdown("[Anchor Text](https://botock.app/tools/voice-changer)")}
-                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
-                          title="Insert Link"
-                        >
-                          <Link2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => insertMarkdown("\n- ")}
-                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
-                          title="Bullet List"
-                        >
-                          <List className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            insertMarkdown(
-                              "\n\n### 🚀 Try It Free on Botock AI\n[Launch AI Voice Changer & Cloner Studio →](/tools/voice-changer)\n"
-                            )
-                          }
-                          className="px-2 py-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-bold cursor-pointer"
-                        >
-                          + Voice CTA
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            insertMarkdown(
-                              "\n\n### 🎬 Generate AI Videos Free\n[Launch Botock AI Video Studio →](/tools/video-generator)\n"
-                            )
-                          }
-                          className="px-2 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold cursor-pointer"
-                        >
-                          + Video CTA
-                        </button>
-                      </div>
+                  {/* Dynamic Visual Section & Block Builder Toolbar */}
+                  <div className="pt-2 border-t border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                        Flexible Content Builder (Click to Insert Sections)
+                      </span>
 
                       <div className="flex items-center space-x-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px]">
                         <button
@@ -2553,7 +2653,7 @@ export default function App() {
                               : "text-slate-400"
                           }`}
                         >
-                          Markdown Editor
+                          Editor
                         </button>
                         <button
                           type="button"
@@ -2564,43 +2664,118 @@ export default function App() {
                               : "text-slate-400"
                           }`}
                         >
-                          Live Article Preview
+                          Live Preview
                         </button>
                       </div>
                     </div>
 
+                    {/* Section Builder Quick Insert Palette */}
+                    <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => insertMarkdown("\n\n## Section Title Here\n\nWrite your section explanation...")}
+                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold border border-slate-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Heading2 className="w-3.5 h-3.5 text-indigo-400" /> + H2 Header
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => insertMarkdown("\n\n### Sub-heading Here\n\n")}
+                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold border border-slate-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Heading3 className="w-3.5 h-3.5 text-sky-400" /> + H3 Subhead
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = prompt("Enter Image URL (or paste image link):", "https://botock.app/og-image.jpg");
+                          if (url) {
+                            const caption = prompt("Enter Image Caption / Description:", "Step illustration") || "Image";
+                            insertMarkdown(`\n\n![${caption}](${url})\n*Caption: ${caption}*\n\n`);
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 font-semibold border border-emerald-500/30 flex items-center gap-1 cursor-pointer"
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" /> + Insert Picture
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => insertMarkdown("\n\n> 💡 **Key Pro-Tip:** Write an important tip or highlight for your readers here.\n\n")}
+                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 font-semibold border border-amber-500/30 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" /> + Callout Tip
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => insertMarkdown("\n\n1. **Step 1:** Upload your reference file\n2. **Step 2:** Select your preferred AI settings\n3. **Step 3:** Click generate to download your result\n\n")}
+                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 font-semibold border border-slate-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <List className="w-3.5 h-3.5 text-indigo-400" /> + Step Guide
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          insertMarkdown(
+                            "\n\n### 🎙️ Try Botock AI Voice Studio Free\n[Launch AI Voice Changer & Cloner →](/tools/voice-changer)\n\n"
+                          )
+                        }
+                        className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/30 cursor-pointer"
+                      >
+                        + Voice CTA Box
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          insertMarkdown(
+                            "\n\n### 🎬 Create Cinematic AI Videos Free\n[Launch Botock AI Video Studio →](/tools/video-generator)\n\n"
+                          )
+                        }
+                        className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold border border-emerald-500/30 cursor-pointer"
+                      >
+                        + Video CTA Box
+                      </button>
+                    </div>
+
+                    {/* Editor / Live Preview Display */}
                     {blogPreviewMode === "edit" ? (
                       <textarea
                         id="blog-content-editor"
-                        rows={15}
+                        rows={16}
                         value={editingBlog.content}
                         onChange={(e) =>
                           setEditingBlog({ ...editingBlog, content: e.target.value })
                         }
-                        placeholder="Write your SEO tutorial in Markdown..."
+                        placeholder="Design your article using the buttons above or write in Markdown..."
                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3.5 text-xs font-mono text-slate-200 outline-none leading-relaxed focus:border-indigo-500"
                       />
                     ) : (
-                      <div className="w-full bg-slate-950 border border-slate-800 rounded-lg p-5 min-h-[360px] space-y-3">
+                      <div className="w-full bg-slate-950 border border-slate-800 rounded-lg p-5 min-h-[380px] space-y-4">
                         {editingBlog.cover_image && (
                           <img
                             src={editingBlog.cover_image}
                             alt=""
-                            className="w-full h-44 object-cover rounded-xl border border-slate-800"
+                            className="w-full h-48 object-cover rounded-xl border border-slate-800 shadow-md"
                           />
                         )}
-                        <div className="text-xl font-bold text-white">{editingBlog.title}</div>
-                        <div className="text-xs text-slate-400 pb-3 border-b border-slate-800">
-                          By {editingBlog.author} • {editingBlog.category}
+                        <h1 className="text-xl font-extrabold text-white">{editingBlog.title || "Your Headline Will Appear Here"}</h1>
+                        <div className="text-xs text-slate-400 pb-3 border-b border-slate-800 flex items-center justify-between">
+                          <span>By {editingBlog.author} • {editingBlog.category}</span>
+                          <span className="text-indigo-400 font-mono">{editingBlog.reading_time || "4 min read"}</span>
                         </div>
-                        <div className="whitespace-pre-wrap font-sans text-xs text-slate-300 leading-relaxed">
-                          {editingBlog.content}
+                        <div className="whitespace-pre-wrap font-sans text-xs text-slate-300 leading-relaxed space-y-2">
+                          {editingBlog.content || "Write some content or click the section buttons above to preview."}
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Publish Status, Featured Pin & Save Button */}
+                  {/* Publish Status & Actions */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800 text-xs">
                     <div className="flex items-center gap-3">
                       <select
@@ -2613,7 +2788,7 @@ export default function App() {
                         }
                         className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-white cursor-pointer"
                       >
-                        <option value="published">🟢 Status: Published (Live)</option>
+                        <option value="published">🟢 Status: Published (Live on Site)</option>
                         <option value="draft">📝 Status: Draft (Hidden)</option>
                       </select>
 
@@ -2626,21 +2801,11 @@ export default function App() {
                           }
                           className="accent-indigo-500 w-4 h-4 rounded"
                         />
-                        Pin as Featured Hero Post
+                        Pin as Featured Post
                       </label>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {!isBlogNew && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteBlog(editingBlog.id)}
-                          className="px-3 py-2 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition flex items-center space-x-1 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
-                        </button>
-                      )}
                       <button
                         type="button"
                         onClick={handleSaveBlog}
@@ -2656,14 +2821,14 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Right 5 Columns: SEO Audit, Google SERP & Published Posts List */}
+              {/* Right 5 Columns: SEO Readiness, SERP Preview & Articles Manager */}
               <div className="lg:col-span-5 space-y-4">
-                {/* SEO Score Card */}
+                {/* Real-time SEO Readiness Score */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-xs text-slate-200 flex items-center space-x-1.5">
                       <Sparkles className="w-4 h-4 text-amber-400" />
-                      <span>Real-Time SEO Readiness Score</span>
+                      <span>SEO Audit Score</span>
                     </h3>
                     <span
                       className={`px-2 py-0.5 rounded font-mono font-bold text-xs ${
@@ -2699,7 +2864,7 @@ export default function App() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-xs text-slate-200 flex items-center space-x-1.5">
                       <Globe className="w-4 h-4 text-sky-400" />
-                      <span>Google Search Result Preview</span>
+                      <span>Google SERP Preview</span>
                     </h3>
                     <div className="flex items-center space-x-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px]">
                       <button
@@ -2743,10 +2908,10 @@ export default function App() {
                     </p>
                   </div>
 
-                  <div className="space-y-2.5 pt-1">
+                  <div className="space-y-2 pt-1">
                     <div>
                       <div className="flex justify-between text-[11px] font-semibold text-slate-400 mb-1">
-                        <span>SEO Meta Title</span>
+                        <span>Meta Title</span>
                         <span>{editingBlog.meta_title.length}/60</span>
                       </div>
                       <input
@@ -2761,7 +2926,7 @@ export default function App() {
 
                     <div>
                       <div className="flex justify-between text-[11px] font-semibold text-slate-400 mb-1">
-                        <span>SEO Meta Description</span>
+                        <span>Meta Description</span>
                         <span>{editingBlog.meta_description.length}/160</span>
                       </div>
                       <textarea
@@ -2780,72 +2945,91 @@ export default function App() {
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-xs text-slate-200">
-                      All Articles ({blogs.length})
+                      Published Articles ({blogs.length})
                     </h3>
                     <input
                       type="text"
                       value={blogSearch}
                       onChange={(e) => setBlogSearch(e.target.value)}
-                      placeholder="Filter articles..."
+                      placeholder="Search articles..."
                       className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-200 outline-none"
                     />
                   </div>
 
                   <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                    {blogs
-                      .filter((b) =>
-                        b.title.toLowerCase().includes(blogSearch.toLowerCase())
-                      )
-                      .map((b) => (
-                        <div
-                          key={b.id}
-                          onClick={() => handleSelectBlog(b)}
-                          className={`p-3 rounded-xl border cursor-pointer transition flex items-center justify-between gap-2 ${
-                            editingBlog.id === b.id
-                              ? "bg-indigo-500/10 border-indigo-500/40"
-                              : "bg-slate-950 border-slate-800 hover:border-slate-700"
-                          }`}
-                        >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span
-                                className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
-                                  b.status === "published"
-                                    ? "bg-emerald-500/20 text-emerald-300"
-                                    : "bg-amber-500/20 text-amber-300"
-                                }`}
-                              >
-                                {b.status}
-                              </span>
-                              {b.featured && (
-                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300">
-                                  ★ Featured
+                    {blogs.length === 0 ? (
+                      <div className="py-6 text-center text-slate-500 text-xs">
+                        No articles published yet. Click &ldquo;+ Write New Article&rdquo; above to create your first post!
+                      </div>
+                    ) : (
+                      blogs
+                        .filter((b) =>
+                          b.title.toLowerCase().includes(blogSearch.toLowerCase())
+                        )
+                        .map((b) => (
+                          <div
+                            key={b.id}
+                            onClick={() => handleSelectBlog(b)}
+                            className={`p-3 rounded-xl border cursor-pointer transition flex items-center justify-between gap-2 ${
+                              editingBlog.id === b.id
+                                ? "bg-indigo-500/10 border-indigo-500/40"
+                                : "bg-slate-950 border-slate-800 hover:border-slate-700"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                                <span
+                                  className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                                    b.status === "published"
+                                      ? "bg-emerald-500/20 text-emerald-300"
+                                      : "bg-amber-500/20 text-amber-300"
+                                  }`}
+                                >
+                                  {b.status}
                                 </span>
-                              )}
-                              <span className="text-[10px] text-slate-500 font-mono">
-                                👁️ {b.views || 0}
-                              </span>
+                                {b.featured && (
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300">
+                                    ★ Featured
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                  👁️ {b.views || 0}
+                                </span>
+                              </div>
+                              <div className="text-xs font-bold text-slate-200 truncate">
+                                {b.title}
+                              </div>
+                              <div className="text-[10px] text-slate-500 font-mono truncate">
+                                /blog/{b.slug}
+                              </div>
                             </div>
-                            <div className="text-xs font-bold text-slate-200 truncate">
-                              {b.title}
-                            </div>
-                            <div className="text-[10px] text-slate-500 font-mono truncate">
-                              /blog/{b.slug}
+
+                            <div className="flex items-center space-x-1 shrink-0">
+                              <a
+                                href={`https://botock.app/blog/${b.slug}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-indigo-400"
+                                title="View Live on Website"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteBlog(b.id);
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400"
+                                title="Delete Article"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteBlog(b.id);
-                            }}
-                            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 shrink-0 cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                        ))
+                    )}
                   </div>
                 </div>
               </div>

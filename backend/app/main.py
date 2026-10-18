@@ -155,6 +155,96 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from app.routers.admin_router import load_state
+
+class ToolAccessControlMiddleware(BaseHTTPMiddleware):
+    """
+    Enforces real-time Tool Access Modes (All / Login Only / OFF)
+    and Tool Maintenance / Global Maintenance switches from Botock Command Center.
+    """
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path.lower()
+
+        # Skip non-tool routes
+        if (
+            path.startswith("/api/admin")
+            or path.startswith("/api/auth")
+            or path in ("/health", "/", "/docs", "/openapi.json")
+            or path.startswith("/api/public")
+            or path.startswith("/api/telemetry")
+        ):
+            return await call_next(request)
+
+        # Match path to tool_id
+        tool_id = None
+        if path.startswith("/api/video/generate"):
+            tool_id = "video-generator"
+        elif "/voice" in path or "/text-to-speech" in path or "/voice-clone" in path:
+            tool_id = "voice-changer"
+        elif "/audio-enhance" in path or "/enhance" in path:
+            tool_id = "audio-enhance"
+        elif "remove-bg" in path:
+            tool_id = "bg-remover"
+        elif path.startswith("/api/image"):
+            tool_id = "image-upscaler"
+        elif "pdf-to-docx" in path:
+            tool_id = "pdf-to-docx"
+        elif "pdf-to-excel" in path:
+            tool_id = "pdf-to-excel"
+        elif "docx-to-pdf" in path:
+            tool_id = "docx-to-pdf"
+        elif "pdf-protect" in path:
+            tool_id = "pdf-protect"
+
+        if tool_id:
+            try:
+                state = load_state()
+                quotas = state.get("quotas", {})
+                tool_flags = state.get("tool_flags", {})
+
+                # 1. Global Platform Maintenance
+                if quotas.get("global_maintenance", False):
+                    return JSONResponse(
+                        status_code=503,
+                        content={"detail": "Botock Creative Suite is currently undergoing maintenance. Please check back shortly."}
+                    )
+
+                # Check tool configuration
+                tcfg = tool_flags.get(tool_id) or tool_flags.get(f"ai-{tool_id}")
+                if tcfg:
+                    # 2. Tool Specific Maintenance
+                    if tcfg.get("maintenance", False):
+                        return JSONResponse(
+                            status_code=503,
+                            content={"detail": f"{tcfg.get('name', 'This tool')} is currently under maintenance. Please try again soon."}
+                        )
+
+                    # 3. Tool Turned OFF
+                    access_mode = tcfg.get("access_mode", "all")
+                    if access_mode == "off" or not tcfg.get("enabled", True):
+                        return JSONResponse(
+                            status_code=403,
+                            content={"detail": f"{tcfg.get('name', 'This tool')} is currently disabled by administrator."}
+                        )
+
+                    # 4. Login Only Access
+                    if access_mode == "login_only":
+                        auth_header = request.headers.get("authorization", "")
+                        cookie_token = request.cookies.get("sb-access-token", "")
+                        if not auth_header and not cookie_token:
+                            return JSONResponse(
+                                status_code=401,
+                                content={"detail": f"{tcfg.get('name', 'This tool')} requires a registered account. Please sign in to use this tool."}
+                            )
+            except Exception as e:
+                logger.warning(f"Tool access check error: {e}")
+
+        return await call_next(request)
+
+app.add_middleware(ToolAccessControlMiddleware)
+
 app.include_router(video.router)
 app.include_router(image.router)
 app.include_router(convert.router)
