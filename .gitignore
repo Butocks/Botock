@@ -76,7 +76,5 @@ CLAUDE.md
 **/CLAUDE.md
 
 *.part
-/botock-admin
-botock-admin/
 ADMIN_PANEL_EXPORT/
 .agents/
