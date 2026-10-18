@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { getBackendUrl } from "../../../utils/runtime-urls";
 import { getTransferMedia } from "@/app/utils/mediaTransfer";
+import { getToolStatus, isToolBlocked } from "@/lib/toolAccess";
 
 interface TTSVoice {
   id: string;
@@ -749,6 +750,16 @@ export default function VoiceChangerClient() {
   // 1. GENERATE TTS (Python Backend First -> Next.js Neural Fallback Second)
   // =========================================================================
   const generateTTS = async () => {
+    try {
+      const toolStatus = await getToolStatus("voice-changer");
+      const { blocked, reason } = isToolBlocked(toolStatus);
+      if (blocked) {
+        setTtsError(reason);
+        setTtsStatus("idle");
+        return;
+      }
+    } catch {}
+
     if (!ttsText.trim()) {
       setTtsError("Please enter some text to generate audio.");
       return;
@@ -847,6 +858,16 @@ export default function VoiceChangerClient() {
   // 2. AI VOICE CLONING (Python F5-TTS/Seed-VC First -> Serverless + WebAudio Second)
   // =========================================================================
   const startVoiceCloning = async () => {
+    try {
+      const toolStatus = await getToolStatus("voice-changer");
+      const { blocked, reason } = isToolBlocked(toolStatus);
+      if (blocked) {
+        setCloneError(reason);
+        setCloneStatus("idle");
+        return;
+      }
+    } catch {}
+
     if (refSourceType === "custom" && !refVoiceFile) {
       setCloneError(
         "Please upload or record a 5-15 second reference voice sample, or switch to Built-in Presets."
@@ -964,6 +985,16 @@ export default function VoiceChangerClient() {
   // 3. VOICE CHANGER & FILTERS (Python FFmpeg First -> Instant WebAudio Second)
   // =========================================================================
   const startV2VConversion = async () => {
+    try {
+      const toolStatus = await getToolStatus("voice-changer");
+      const { blocked, reason } = isToolBlocked(toolStatus);
+      if (blocked) {
+        setV2vError(reason);
+        setV2vStatus("idle");
+        return;
+      }
+    } catch {}
+
     if (!selectedFile) return;
 
     setV2vStatus("uploading");

@@ -349,6 +349,12 @@ export async function POST(
     }
 
     if (!backendRes || !backendRes.ok) {
+      // If the backend explicitly blocked the tool (403 Disabled, 503 Maintenance, 401 Login Only), return immediately!
+      if (backendRes && (backendRes.status === 403 || backendRes.status === 503 || backendRes.status === 401)) {
+        const errorData = await backendRes.json().catch(() => ({ detail: "Access Restricted by Administrator" }));
+        return NextResponse.json(errorData, { status: backendRes.status });
+      }
+
       // =========================================================================
       // ✅ FALLBACK 1: MULTI-VOICE NEURAL TTS WHEN PYTHON BACKEND IS OFFLINE
       // =========================================================================

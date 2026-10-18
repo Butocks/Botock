@@ -179,7 +179,7 @@ class ToolAccessControlMiddleware(BaseHTTPMiddleware):
 
         # Match path to tool_id
         tool_id = None
-        if path.startswith("/api/video/generate"):
+        if path.startswith("/api/video"):
             tool_id = "video-generator"
         elif "/voice" in path or "/text-to-speech" in path or "/voice-clone" in path:
             tool_id = "voice-changer"
@@ -212,7 +212,11 @@ class ToolAccessControlMiddleware(BaseHTTPMiddleware):
                     )
 
                 # Check tool configuration
-                tcfg = tool_flags.get(tool_id) or tool_flags.get(f"ai-{tool_id}")
+                tcfg = (
+                    tool_flags.get(tool_id)
+                    or tool_flags.get(f"ai-{tool_id}")
+                    or tool_flags.get(tool_id.replace("ai-", ""))
+                )
                 if tcfg:
                     # 2. Tool Specific Maintenance
                     if tcfg.get("maintenance", False):

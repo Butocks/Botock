@@ -111,6 +111,8 @@ export interface HybridJobOptions<T> {
  * Direct XHR upload bypasses Next.js API proxy to eliminate double upload latency,
  * includes simulated processing progression after upload, and passes proper security headers.
  */
+import { getToolStatus, isToolBlocked } from "../toolAccess";
+
 export async function runHybridTool<T = Blob>({
   toolName,
   endpoint,
@@ -120,6 +122,20 @@ export async function runHybridTool<T = Blob>({
   parseBackendResponse,
   timeoutMs = 120000,
 }: HybridJobOptions<T>): Promise<{ result: T; executedOn: 'backend' | 'local' }> {
+  // 1. Strict Administrator Block Check
+  const toolId = endpoint.split("/").filter(Boolean).pop() || toolName.toLowerCase().replace(/\s+/g, "-");
+  try {
+    const status = await getToolStatus(toolId);
+    const { blocked, reason } = isToolBlocked(status);
+    if (blocked) {
+      throw new Error(reason);
+    }
+  } catch (accessErr: any) {
+    if (accessErr?.message && (accessErr.message.includes("disabled") || accessErr.message.includes("maintenance"))) {
+      throw accessErr;
+    }
+  }
+
   const backendUp = await isBackendAvailable();
 
   if (backendUp) {
@@ -157,8 +173,6 @@ export async function runHybridTool<T = Blob>({
           }
         };
 
-        // When upload completes, server is actively computing/rendering.
-        // Increment smoothly from 65% up to 94% so user never sees a stalled progress bar.
         xhr.upload.onload = () => {
           safeProgress(68);
           clearInterval(progressTimer);
@@ -182,6 +196,16 @@ export async function runHybridTool<T = Blob>({
             } else {
               resolve(xhr.response as T);
             }
+          } else if (xhr.status === 403 || xhr.status === 503 || xhr.status === 401) {
+            // Direct Administrator Block: Do NOT fall back to local engine!
+            let errorMsg = `Access Restricted (${xhr.status})`;
+            try {
+              const resData = typeof xhr.response === "string" ? JSON.parse(xhr.response) : xhr.response;
+              if (resData?.detail) errorMsg = resData.detail;
+            } catch {}
+            const adminErr = new Error(errorMsg);
+            (adminErr as any).isAdminBlock = true;
+            reject(adminErr);
           } else {
             reject(new Error(`Backend returned status ${xhr.status}`));
           }
@@ -201,8 +225,11 @@ export async function runHybridTool<T = Blob>({
       });
 
       return { result, executedOn: 'backend' };
-    } catch (err) {
+    } catch (err: any) {
       clearInterval(progressTimer);
+      if (err?.isAdminBlock) {
+        throw err; // Stop immediately, do not run client-side engine!
+      }
       console.warn(`[HybridEngine] ${toolName} backend attempt failed, falling back to client-side engine:`, err);
       cachedBackendStatus = false;
       lastCheckTime = Date.now();

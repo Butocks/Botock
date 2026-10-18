@@ -8,6 +8,7 @@ import ManualEditor from "./ManualEditor";
 
 import { removeBackground } from "@imgly/background-removal";
 import { getTransferMedia, clearTransferMedia } from "@/app/utils/mediaTransfer";
+import { getToolStatus, isToolBlocked } from "@/lib/toolAccess";
 
 interface BatchFile {
   id: string;
@@ -182,6 +183,13 @@ export default function Client() {
 
   const processSingleFile = async (bf: BatchFile) => {
     try {
+      // Check admin tool access permissions
+      const status = await getToolStatus("bg-remover");
+      const { blocked, reason } = isToolBlocked(status);
+      if (blocked) {
+        throw new Error(reason);
+      }
+
       setBatchFiles((prev) => 
         prev.map((f) => f.id === bf.id ? { ...f, status: "processing" } : f)
       );

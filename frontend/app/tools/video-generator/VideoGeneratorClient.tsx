@@ -9,6 +9,7 @@ import { createClient } from "../../../utils/supabase/client";
 import { getBackendUrl } from "../../../utils/runtime-urls";
 import { useMediaStore } from "../../store/useMediaStore";
 import { getTransferMedia, clearTransferMedia } from "@/app/utils/mediaTransfer";
+import { getToolStatus, isToolBlocked } from "@/lib/toolAccess";
 import {
   Sparkles,
   Download,
@@ -168,6 +169,17 @@ export default function VideoGeneratorClient() {
   };
 
   const startGeneration = async () => {
+    // Check admin tool access permissions
+    try {
+      const toolStatus = await getToolStatus("video-generator");
+      const { blocked, reason } = isToolBlocked(toolStatus);
+      if (blocked) {
+        setErrorMessage(reason);
+        setStatus("error");
+        return;
+      }
+    } catch {}
+
     if (!prompt && !referenceImage) {
       setErrorMessage("Please enter a prompt or upload an image.");
       return;

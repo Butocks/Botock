@@ -71,22 +71,15 @@ function TelemetryTracker({ userEmail }: { userEmail?: string }) {
 
     prevPathRef.current = pathname;
 
-    // 3. Fire-and-forget to Azure FastAPI Backend
-    getBackendUrl().then((backendUrl) => {
-      const endpoint =
-        backendUrl && backendUrl !== "/api/proxy"
-          ? `${backendUrl.replace(/\/$/, "")}/api/admin/telemetry/track`
-          : "/api/admin/telemetry/track";
-
-      fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        keepalive: true,
-      }).catch(() => {
-        // Silently catch to avoid disrupting user experience
-      });
-    }).catch(() => {});
+    // 3. Fire-and-forget to Next.js Admin Proxy & FastAPI Backend
+    fetch("/api/admin/telemetry/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {
+      // Silently catch to avoid disrupting user experience
+    });
   }, [pathname, searchParams, userEmail]);
 
   return null;
