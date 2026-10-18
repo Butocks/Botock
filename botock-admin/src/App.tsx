@@ -4,9 +4,7 @@ import {
   Compass,
   TrendingUp,
   Sliders,
-  Users,
   Gauge,
-  Ticket,
   FileText,
   RefreshCw,
   Server,
@@ -24,7 +22,6 @@ import {
   Laptop,
   Sparkles,
   ArrowRight,
-  Copy,
   Check,
   Bold,
   Italic,
@@ -36,24 +33,29 @@ import {
   Code,
   ShieldCheck,
   ShieldAlert,
-  Flame,
   Mail,
   LogOut,
+  Bot,
+  Activity,
+  XCircle,
 } from "lucide-react";
 
 interface TelemetryEvent {
   session_id: string;
   user_email: string;
-  event_type: string;
-  current_path: string;
-  previous_path: string;
-  referrer: string;
+  event_type?: string;
+  current_path?: string;
+  previous_path?: string;
+  referrer?: string;
   utm_source: string;
-  utm_medium: string;
-  utm_campaign: string;
-  device_type: string;
-  country: string;
-  timestamp: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  device_type?: string;
+  country?: string;
+  ip?: string;
+  steps?: string[];
+  last_seen?: string;
+  timestamp?: string;
 }
 
 interface ToolConfig {
@@ -65,24 +67,27 @@ interface ToolConfig {
   errors: number;
 }
 
-interface UserProfile {
-  id: string;
-  email: string;
+interface ToolFunnelMetric {
+  tool_id: string;
   name: string;
-  vip: boolean;
-  banned: boolean;
-  generations: number;
-  source: string;
-  joined: string;
+  views: number;
+  started: number;
+  success: number;
+  errors: number;
+  abandoned: number;
+  success_rate: number;
+  enabled?: boolean;
+  maintenance?: boolean;
 }
 
-interface Coupon {
-  code: string;
-  discount_percent: number;
-  bonus_credits: number;
-  max_uses: number;
-  used_count: number;
-  active: boolean;
+interface ToolErrorLog {
+  id: string;
+  tool_id: string;
+  tool_name: string;
+  error_message: string;
+  timestamp: string;
+  user_email?: string;
+  ip?: string;
 }
 
 interface BlogPost {
@@ -123,7 +128,6 @@ const PRESET_URLS = [
 const resolveHost = (host: string) => {
   const clean = host.replace(/\/+$/, "");
   if (!clean || clean === "auto" || clean === "http://localhost:8000" || clean === "http://127.0.0.1:8000") {
-    // Relative path routes through Vite dev server proxy to 127.0.0.1:8000 automatically
     return "";
   }
   if (clean === "https://botock.app" || clean === "http://botock.app" || clean === "/prod-proxy") {
@@ -149,10 +153,10 @@ export default function App() {
   const [adminSecret, setAdminSecret] = useState<string>("");
   const [showSecret, setShowSecret] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "journeys" | "campaigns" | "tools" | "users" | "quotas" | "coupons" | "cms"
+    "journeys" | "funnel" | "tools" | "quotas" | "cms"
   >("journeys");
 
-  // Enterprise Security & Device Recognition States (Never pre-fill or cache credentials)
+  // Enterprise Security & Device Recognition States
   const [adminEmail, setAdminEmail] = useState<string>("");
   const [sessionToken, setSessionToken] = useState<string>(() => {
     return sessionStorage.getItem("botock_admin_session_token") || "";
@@ -190,9 +194,9 @@ export default function App() {
   // Tab Data States
   const [telemetry, setTelemetry] = useState<TelemetryEvent[]>([]);
   const [sourceBreakdown, setSourceBreakdown] = useState<Record<string, number>>({});
-  const [campaignBreakdown, setCampaignBreakdown] = useState<Record<string, number>>({});
   const [tools, setTools] = useState<Record<string, ToolConfig>>({});
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [toolFunnel, setToolFunnel] = useState<ToolFunnelMetric[]>([]);
+  const [recentErrors, setRecentErrors] = useState<ToolErrorLog[]>([]);
   const [quotas, setQuotas] = useState<QuotasConfig>({
     guest_daily_limit: 10,
     free_user_daily_limit: 30,
@@ -201,19 +205,11 @@ export default function App() {
     global_maintenance: false,
     announcement_banner: "",
   });
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
 
   // Search & Filter States
-  const [userSearch, setUserSearch] = useState("");
   const [journeyFilter, setJourneyFilter] = useState("all");
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
-
-  // New Coupon Form
-  const [newCouponCode, setNewCouponCode] = useState("");
-  const [newCouponDiscount, setNewCouponDiscount] = useState(20);
-  const [newCouponCredits, setNewCouponCredits] = useState(100);
-  const [newCouponMax, setNewCouponMax] = useState(100);
+  const [errorSearch, setErrorSearch] = useState("");
 
   // SEO Blog CMS Form State
   const [editingBlog, setEditingBlog] = useState<BlogPost>({
@@ -295,11 +291,10 @@ export default function App() {
         setServerStats(res.data.server || {});
         setTelemetry(res.data.user_journeys || []);
         setSourceBreakdown(res.data.source_breakdown || {});
-        setCampaignBreakdown(res.data.campaign_breakdown || {});
         setTools(res.data.tool_flags || {});
-        setUsers(res.data.users || []);
+        setToolFunnel(res.data.tool_funnel || []);
+        setRecentErrors(res.data.recent_errors || []);
         setQuotas(res.data.quotas || {});
-        setCoupons(res.data.coupons || []);
         setBlogs(res.data.blogs || []);
 
         localStorage.setItem("botock_admin_host", targetHost);
@@ -308,7 +303,7 @@ export default function App() {
       }
     } catch (err: any) {
       const detail = err.response?.data?.detail || err.message || "Failed to fetch overview.";
-      setStatusMessage({ type: "error", text: `Auth Error: ${detail}` });
+      setStatusMessage({ type: "error", text: detail });
       if (err.response?.status === 401 || err.response?.status === 403) {
         sessionStorage.removeItem("botock_admin_session_token");
         setSessionToken("");
@@ -316,93 +311,89 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [getClient, targetHost, adminSecret, sessionToken]);
+  }, [targetHost, sessionToken, getClient]);
 
-  // Initial Load
+  // Initial load on mount or host change
   useEffect(() => {
-    fetchOverview();
-  }, [fetchOverview]);
+    if (sessionToken) {
+      fetchOverview();
+    }
+  }, [fetchOverview, sessionToken]);
 
-  // Helper for Auto-Slug
-  const generateSlug = (text: string) => {
-    return text
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/[\s_-]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-  };
+  // Real-time Traffic Attribution Totals
+  const trafficTotals = useMemo(() => {
+    const fb = sourceBreakdown["facebook"] || 0;
+    const insta = sourceBreakdown["instagram"] || 0;
+    const ai =
+      (sourceBreakdown["ai_chatgpt"] || 0) +
+      (sourceBreakdown["ai_perplexity"] || 0) +
+      (sourceBreakdown["ai_claude"] || 0) +
+      (sourceBreakdown["ai_gemini"] || 0) +
+      (sourceBreakdown["ai_copilot"] || 0);
+    const google = (sourceBreakdown["google_search"] || 0) + (sourceBreakdown["google_ads"] || 0);
+    const twitter = sourceBreakdown["twitter_x"] || 0;
+    const tiktok = sourceBreakdown["tiktok"] || 0;
+    const direct = (sourceBreakdown["direct"] || 0) + (sourceBreakdown["organic"] || 0);
+    const referral = sourceBreakdown["referral"] || 0;
+    const total = fb + insta + ai + google + twitter + tiktok + direct + referral;
+    return { fb, insta, ai, google, twitter, tiktok, direct, referral, total: Math.max(total, 1) };
+  }, [sourceBreakdown]);
 
-  // Live Real-Time SEO Score Calculation (0 - 100)
-  const seoAudit = useMemo(() => {
-    const checks: { label: string; passed: boolean; score: number }[] = [];
-    const kw = editingBlog.target_keyword.toLowerCase().trim();
-    const title = editingBlog.title.toLowerCase();
-    const metaTitle = (editingBlog.meta_title || editingBlog.title).toLowerCase();
-    const metaDesc = (editingBlog.meta_description || editingBlog.excerpt).toLowerCase();
-    const content = editingBlog.content.toLowerCase();
-    const wordCount = editingBlog.content.trim() ? editingBlog.content.trim().split(/\s+/).length : 0;
+  // Tool Funnel Summary Calculations
+  const funnelSummary = useMemo(() => {
+    const totalViews = toolFunnel.reduce((acc, t) => acc + t.views, 0);
+    const totalStarted = toolFunnel.reduce((acc, t) => acc + t.started, 0);
+    const totalSuccess = toolFunnel.reduce((acc, t) => acc + t.success, 0);
+    const totalErrors = toolFunnel.reduce((acc, t) => acc + t.errors, 0);
+    const totalAbandoned = toolFunnel.reduce((acc, t) => acc + t.abandoned, 0);
+    const overallSuccessRate =
+      totalSuccess + totalErrors > 0
+        ? Math.round((totalSuccess / (totalSuccess + totalErrors)) * 100)
+        : 100;
+    return { totalViews, totalStarted, totalSuccess, totalErrors, totalAbandoned, overallSuccessRate };
+  }, [toolFunnel]);
 
-    // 1. Keyword defined
-    checks.push({
-      label: "Target Keyword specified",
-      passed: kw.length > 2,
-      score: 10,
+  // Filtered Journeys
+  const filteredJourneys = useMemo(() => {
+    if (journeyFilter === "all") return telemetry;
+    return telemetry.filter((j) => {
+      if (journeyFilter === "facebook") return j.utm_source === "facebook";
+      if (journeyFilter === "instagram") return j.utm_source === "instagram";
+      if (journeyFilter === "ai") return j.utm_source.startsWith("ai_");
+      if (journeyFilter === "google") return j.utm_source.includes("google");
+      if (journeyFilter === "direct") return j.utm_source === "direct" || j.utm_source === "organic";
+      return true;
     });
+  }, [telemetry, journeyFilter]);
 
-    // 2. Keyword in Title
-    checks.push({
-      label: "Keyword appears in Main Title",
-      passed: kw.length > 2 && title.includes(kw),
-      score: 15,
-    });
+  // Filtered Error Logs
+  const filteredErrors = useMemo(() => {
+    if (!errorSearch.trim()) return recentErrors;
+    const q = errorSearch.toLowerCase();
+    return recentErrors.filter(
+      (e) =>
+        e.tool_name.toLowerCase().includes(q) ||
+        e.error_message.toLowerCase().includes(q) ||
+        (e.ip && e.ip.includes(q))
+    );
+  }, [recentErrors, errorSearch]);
 
-    // 3. Keyword in Meta Title / Slug
-    checks.push({
-      label: "Keyword in Meta Title or URL Slug",
-      passed: kw.length > 2 && (metaTitle.includes(kw) || editingBlog.slug.includes(generateSlug(kw))),
-      score: 15,
-    });
-
-    // 4. Keyword in Meta Description
-    checks.push({
-      label: "Keyword appears in Meta Description",
-      passed: kw.length > 2 && metaDesc.includes(kw),
-      score: 15,
-    });
-
-    // 5. Keyword in Body Content
-    checks.push({
-      label: "Keyword appears in Article Body",
-      passed: kw.length > 2 && content.includes(kw),
-      score: 15,
-    });
-
-    // 6. Meta description optimal length (100-165 chars)
-    const descLen = editingBlog.meta_description.length;
-    checks.push({
-      label: `Meta Description optimal length (${descLen}/160 chars)`,
-      passed: descLen >= 100 && descLen <= 165,
-      score: 10,
-    });
-
-    // 7. Subheading structure (H2 or H3 present)
-    const hasHeadings = /#{2,3}\s+.+/i.test(editingBlog.content);
-    checks.push({
-      label: "Includes H2/H3 subheadings",
-      passed: hasHeadings,
-      score: 10,
-    });
-
-    // 8. Comprehensive Word Count (>= 250 words)
-    checks.push({
-      label: `Article word count depth (${wordCount} words)`,
-      passed: wordCount >= 250,
-      score: 10,
-    });
-
-    const totalScore = checks.reduce((acc, c) => (c.passed ? acc + c.score : acc), 0);
-    return { score: totalScore, checks, wordCount };
+  // SEO Score Auditor
+  const seoScore = useMemo(() => {
+    let score = 0;
+    const kw = editingBlog.target_keyword.trim().toLowerCase();
+    if (!kw) return 0;
+    score += 10;
+    if (editingBlog.title.toLowerCase().includes(kw)) score += 15;
+    if (editingBlog.meta_title.toLowerCase().includes(kw)) score += 15;
+    if (editingBlog.meta_description.toLowerCase().includes(kw)) score += 15;
+    if (editingBlog.content.toLowerCase().includes(kw)) score += 15;
+    const words = editingBlog.content.trim().split(/\s+/).filter(Boolean).length;
+    if (words > 300) score += 10;
+    if (words > 800) score += 10;
+    if (editingBlog.content.includes("## ")) score += 5;
+    if (editingBlog.content.includes("### ")) score += 5;
+    return Math.min(score, 100);
   }, [editingBlog]);
 
   // Enterprise Authentication Handlers
@@ -433,19 +424,19 @@ export default function App() {
       localStorage.setItem("botock_admin_host", targetHost);
 
       if (res.data?.trusted_device && (res.data?.token || res.data?.admin_token)) {
-        // 🚀 Trusted Device Recognized -> Direct 1-Click Entry!
+        // Trusted Device Recognized -> Direct 1-Click Entry!
         const token = res.data.token || res.data.admin_token;
         sessionStorage.setItem("botock_admin_session_token", token);
-        localStorage.setItem("botock_device_trusted", "true");
         setSessionToken(token);
         setIsTrustedDevice(true);
+        localStorage.setItem("botock_device_trusted", "true");
         setStatusMessage({
           type: "success",
-          text: res.data?.message || "Trusted device recognized! Welcome back.",
+          text: `🛡️ Recognized Trusted Device! Direct session granted for ${adminEmail.trim()}.`,
         });
         setTimeout(() => fetchOverview(), 150);
       } else if (res.data?.otp_required) {
-        // 🔒 New Device -> Proceed to 6-digit Zoho OTP verification
+        // New Device -> Proceed to 6-digit Zoho OTP verification
         setLoginStep("otp");
         setOtpCode("");
         setStatusMessage({
@@ -463,13 +454,13 @@ export default function App() {
 
   const handleOtpSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!otpCode.trim()) {
-      setStatusMessage({ type: "error", text: "Please enter the 6-digit OTP code." });
+    if (otpCode.length !== 6) {
+      setStatusMessage({ type: "error", text: "Please enter the complete 6-digit OTP code." });
       return;
     }
 
     setAuthLoading(true);
-    setStatusMessage({ type: "info", text: "Verifying 6-digit OTP code..." });
+    setStatusMessage({ type: "info", text: "Verifying 2FA One-Time Passcode..." });
     const cleanHost = resolveHost(targetHost);
     const deviceId = getOrCreateDeviceId();
 
@@ -485,16 +476,16 @@ export default function App() {
       const token = res.data?.token || res.data?.admin_token;
       if (token) {
         sessionStorage.setItem("botock_admin_session_token", token);
-        if (rememberDevice) {
-          localStorage.setItem("botock_device_trusted", "true");
-          setIsTrustedDevice(true);
-        }
         setSessionToken(token);
-        setLoginStep("credentials");
-        setOtpCode("");
+
+        if (rememberDevice && res.data?.trusted_device) {
+          setIsTrustedDevice(true);
+          localStorage.setItem("botock_device_trusted", "true");
+        }
+
         setStatusMessage({
           type: "success",
-          text: res.data?.message || "Verification successful! Device recognized as trusted.",
+          text: `2FA Verified! Device registered. Session initialized for ${adminEmail.trim()}.`,
         });
         setTimeout(() => fetchOverview(), 150);
       }
@@ -553,245 +544,169 @@ export default function App() {
     };
   }, [sessionToken]);
 
-  // Tab Action Handlers
-  const handleSaveQuotas = async () => {
-    setLoading(true);
-    const client = getClient();
-    try {
-      await client.post("/api/admin/quotas", quotas);
-      setStatusMessage({ type: "success", text: "Global Quotas & Maintenance saved successfully!" });
-    } catch (e: any) {
-      setStatusMessage({ type: "error", text: "Failed to update quotas: " + (e.message || "") });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Toggle Tool Feature Flag
   const handleToggleTool = async (
     toolId: string,
     field: "enabled" | "pro_only" | "maintenance",
     currentVal: boolean
   ) => {
-    const updated = { ...tools[toolId], [field]: !currentVal };
-    setTools((prev) => ({ ...prev, [toolId]: updated }));
     const client = getClient();
     try {
-      await client.post("/api/admin/tool-flags", {
+      const res = await client.post("/api/admin/tool-flags", {
         tool_id: toolId,
         updates: { [field]: !currentVal },
       });
-      setStatusMessage({ type: "success", text: `Updated ${tools[toolId]?.name || toolId} flag.` });
-    } catch (e: any) {
-      setStatusMessage({ type: "error", text: `Failed to update tool: ${e.message}` });
-    }
-  };
-
-  const handleUserAction = async (userId: string, action: "toggle_vip" | "toggle_ban") => {
-    const target = users.find((u) => u.id === userId);
-    if (!target) return;
-    const newVip = action === "toggle_vip" ? !target.vip : target.vip;
-    const newBanned = action === "toggle_ban" ? !target.banned : target.banned;
-
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, vip: newVip, banned: newBanned } : u))
-    );
-
-    const client = getClient();
-    try {
-      await client.post("/api/admin/users/update", {
-        id: userId,
-        vip: newVip,
-        banned: newBanned,
-      });
-      setStatusMessage({ type: "success", text: `User ${target.email} updated.` });
-    } catch (e: any) {
-      setStatusMessage({ type: "error", text: `Failed to update user: ${e.message}` });
-    }
-  };
-
-  const handleCreateCoupon = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCouponCode.trim()) return;
-    setLoading(true);
-    const client = getClient();
-    try {
-      const res = await client.post("/api/admin/coupons/create", {
-        code: newCouponCode,
-        discount_percent: newCouponDiscount,
-        bonus_credits: newCouponCredits,
-        max_uses: newCouponMax,
-      });
-      if (res.data?.coupons) {
-        setCoupons(res.data.coupons);
-        setNewCouponCode("");
-        setStatusMessage({ type: "success", text: `Coupon ${newCouponCode.toUpperCase()} created!` });
-      }
-    } catch (e: any) {
-      setStatusMessage({ type: "error", text: "Failed to create coupon: " + (e.message || "") });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSaveBlog = async (status: "published" | "draft") => {
-    if (!editingBlog.title.trim()) {
-      setStatusMessage({ type: "error", text: "Post title is required." });
-      return;
-    }
-    const slug = editingBlog.slug.trim() || generateSlug(editingBlog.title);
-    const payload = {
-      ...editingBlog,
-      slug,
-      status,
-      meta_title: editingBlog.meta_title.trim() || editingBlog.title.trim(),
-      meta_description: editingBlog.meta_description.trim() || editingBlog.excerpt.trim(),
-    };
-
-    setLoading(true);
-    const client = getClient();
-    try {
-      const res = await client.post("/api/admin/blogs/save", payload);
       if (res.data?.ok) {
-        setBlogs(res.data.blogs || []);
-        setEditingBlog(res.data.saved || payload);
-        setIsBlogNew(false);
-        setStatusMessage({
-          type: "success",
-          text: `Blog post ${status === "published" ? "Published to SERP" : "Saved as Draft"} successfully!`,
-        });
+        setTools(res.data.tool_flags);
+        setStatusMessage({ type: "success", text: `Updated ${toolId} successfully.` });
       }
-    } catch (e: any) {
-      setStatusMessage({ type: "error", text: "Failed to save blog: " + (e.message || "") });
-    } finally {
-      setLoading(false);
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: err.response?.data?.detail || "Update failed." });
     }
   };
 
-  const handleDeleteBlog = async (id: string) => {
-    if (!confirm("Are you sure you want to permanently delete this blog post?")) return;
-    setLoading(true);
+  // Save Quotas Configuration
+  const handleSaveQuotas = async () => {
     const client = getClient();
     try {
-      const res = await client.post("/api/admin/blogs/delete", { id });
+      const res = await client.post("/api/admin/quotas", quotas);
       if (res.data?.ok) {
-        setBlogs(res.data.blogs || []);
-        if (editingBlog.id === id) {
-          handleNewBlog();
-        }
-        setStatusMessage({ type: "success", text: "Blog post deleted." });
+        setStatusMessage({ type: "success", text: "Global quotas & limits saved." });
       }
-    } catch (e: any) {
-      setStatusMessage({ type: "error", text: "Failed to delete blog: " + (e.message || "") });
-    } finally {
-      setLoading(false);
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: err.response?.data?.detail || "Failed to save quotas." });
     }
+  };
+
+  // SEO Blog CMS Handlers
+  const handleSelectBlog = (blog: BlogPost) => {
+    setEditingBlog({ ...blog });
+    setIsBlogNew(false);
   };
 
   const handleNewBlog = () => {
     setEditingBlog({
-      id: `blog_${Date.now()}`,
+      id: "",
       title: "",
       slug: "",
       excerpt: "",
-      content: "## Overview\n\nExplain the tool or topic clearly here.\n\n### Key Features\n- Point 1\n- Point 2\n\n### How to Use\n1. Step one\n2. Step two",
-      category: "AI Tutorials",
+      content: "",
+      category: "AI Audio Tutorials",
       target_keyword: "",
       meta_title: "",
       meta_description: "",
       cover_image: "https://botock.app/og-image.jpg",
       author: "Botock Editorial Team",
-      reading_time: "3 min read",
+      reading_time: "4 min read",
       status: "published",
       featured: false,
       views: 0,
     });
     setIsBlogNew(true);
-    setBlogPreviewMode("edit");
   };
 
-  const insertMarkdown = (syntax: string, placeholder = "text") => {
-    const cur = editingBlog.content;
-    let snippet = "";
-    if (syntax === "b") snippet = `**${placeholder}**`;
-    else if (syntax === "i") snippet = `*${placeholder}*`;
-    else if (syntax === "h2") snippet = `\n## Section Heading\n`;
-    else if (syntax === "h3") snippet = `\n### Sub-Section Heading\n`;
-    else if (syntax === "link") snippet = `[link text](https://botock.app)`;
-    else if (syntax === "list") snippet = `\n- Item 1\n- Item 2\n- Item 3\n`;
-    else if (syntax === "quote") snippet = `\n> Key takeaway or important quote\n`;
-    else if (syntax === "code") snippet = `\n\`\`\`javascript\nconsole.log("code");\n\`\`\`\n`;
+  const handleSaveBlog = async () => {
+    if (!editingBlog.title.trim() || !editingBlog.slug.trim()) {
+      setStatusMessage({ type: "error", text: "Blog title and URL slug are required." });
+      return;
+    }
 
-    setEditingBlog((prev) => ({ ...prev, content: cur + snippet }));
+    const client = getClient();
+    try {
+      const res = await client.post("/api/admin/blogs/save", editingBlog);
+      if (res.data?.ok) {
+        setBlogs(res.data.blogs || []);
+        setIsBlogNew(false);
+        setStatusMessage({
+          type: "success",
+          text: `Article "${editingBlog.title}" successfully published directly to botock.app/blog/${editingBlog.slug}!`,
+        });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: err.response?.data?.detail || "Failed to save blog post." });
+    }
   };
 
-  // Filtered Telemetry
-  const filteredTelemetry = useMemo(() => {
-    if (journeyFilter === "all") return telemetry;
-    return telemetry.filter((t) => t.utm_source === journeyFilter || t.device_type === journeyFilter);
-  }, [telemetry, journeyFilter]);
+  const handleDeleteBlog = async (blogId: string) => {
+    if (!confirm("Are you sure you want to permanently delete this article?")) return;
+    const client = getClient();
+    try {
+      const res = await client.post("/api/admin/blogs/delete", { id: blogId });
+      if (res.data?.ok) {
+        setBlogs(res.data.blogs || []);
+        if (editingBlog.id === blogId) handleNewBlog();
+        setStatusMessage({ type: "success", text: "Article deleted from publication." });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: "error", text: err.response?.data?.detail || "Failed to delete article." });
+    }
+  };
 
-  // Filtered Users
-  const filteredUsers = useMemo(() => {
-    if (!userSearch.trim()) return users;
-    const q = userSearch.toLowerCase();
-    return users.filter(
-      (u) => u.email.toLowerCase().includes(q) || u.name.toLowerCase().includes(q) || u.source.toLowerCase().includes(q)
-    );
-  }, [users, userSearch]);
+  // Helper Markdown Inserter
+  const insertMarkdown = (prefix: string, suffix: string = "") => {
+    const textarea = document.getElementById("blog-content-editor") as HTMLTextAreaElement;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const selected = text.substring(start, end);
+    const after = text.substring(end);
+    const newText = before + prefix + (selected || "text") + suffix + after;
+    setEditingBlog({ ...editingBlog, content: newText });
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selected || "text").length);
+    }, 50);
+  };
 
-  // 🔐 DEDICATED FULL-PAGE AUTHENTICATION PORTAL (When not signed in)
+  // If Not Authenticated, Render Command Gate Screen
   if (!sessionToken) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
-        {/* Glow ambient background */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-emerald-600/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-md w-full bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6 relative z-10">
-          {/* Brand Header */}
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 selection:bg-indigo-500 selection:text-white">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-emerald-500 p-0.5 shadow-xl shadow-indigo-500/20">
-              <div className="w-full h-full bg-slate-950 rounded-2xl flex items-center justify-center">
-                <ShieldCheck className="w-7 h-7 text-indigo-400" />
-              </div>
+            <div className="inline-flex p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 mb-1">
+              <ShieldCheck className="w-8 h-8" />
             </div>
-            <h1 className="text-xl font-extrabold text-white tracking-tight">Botock Command Center</h1>
-            <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase tracking-wider">
-              <span>Restricted Gate • Zero-Backdoor</span>
-            </div>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+              Botock Command Center
+            </h1>
+            <p className="text-xs text-slate-400">
+              RESTRICTED GATE • ZERO-BACKDOOR ACCESS
+            </p>
           </div>
 
-          {/* Environment Switcher */}
+          {/* Backend Selector */}
           <div>
-            <label className="text-[11px] font-semibold text-slate-400 block mb-1">Target Backend Environment</label>
-            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs">
-              <Server className="w-4 h-4 text-indigo-400 mr-2 shrink-0" />
+            <label className="text-[11px] font-semibold text-slate-400 block mb-1">
+              Target Backend Environment
+            </label>
+            <div className="relative">
               <select
                 value={targetHost}
-                onChange={(e) => {
-                  setTargetHost(e.target.value);
-                  localStorage.setItem("botock_admin_host", e.target.value);
-                }}
-                className="bg-transparent border-none outline-none text-slate-200 text-xs w-full cursor-pointer"
+                onChange={(e) => setTargetHost(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 outline-none focus:border-indigo-500 transition cursor-pointer appearance-none pr-8"
               >
                 {PRESET_URLS.map((p) => (
-                  <option key={p.url} value={p.url} className="bg-slate-900 text-slate-200">
+                  <option key={p.url} value={p.url}>
                     {p.label}
                   </option>
                 ))}
               </select>
+              <Server className="w-4 h-4 text-slate-500 absolute right-3 top-3 pointer-events-none" />
             </div>
           </div>
 
-          {/* Alert Message */}
+          {/* Status / Alert Message */}
           {statusMessage && (
             <div
-              className={`text-xs px-3.5 py-2.5 rounded-xl font-medium flex items-center space-x-2.5 ${
+              className={`p-3 rounded-xl text-xs flex items-center space-x-2.5 border ${
                 statusMessage.type === "success"
-                  ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
+                  ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
                   : statusMessage.type === "error"
-                  ? "text-rose-400 bg-rose-500/10 border border-rose-500/20"
-                  : "text-sky-400 bg-sky-500/10 border border-sky-500/20"
+                  ? "text-rose-400 bg-rose-500/10 border-rose-500/20"
+                  : "text-sky-400 bg-sky-500/10 border-sky-500/20"
               }`}
             >
               {statusMessage.type === "success" ? (
@@ -877,7 +792,7 @@ export default function App() {
             </form>
           ) : (
             /* STEP 2: 2FA OTP VERIFICATION (NEW DEVICE) */
-            <form onSubmit={handleOtpSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleOtpSubmit} autoComplete="off" className="space-y-4 text-xs">
               <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-slate-300 leading-relaxed text-[11px]">
                 <strong className="text-indigo-400 block mb-0.5">🔐 New Device Detected!</strong>
                 A 6-digit one-time code has been dispatched via Zoho Mail to <strong>{adminEmail}</strong>. Valid for 10 minutes.
@@ -890,9 +805,11 @@ export default function App() {
                   maxLength={6}
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.trim())}
-                  placeholder="123456"
+                  placeholder="• • • • • •"
                   required
                   autoFocus
+                  autoComplete="off"
+                  spellCheck={false}
                   className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-4 py-3 text-center text-xl font-mono font-bold tracking-widest text-emerald-300 outline-none focus:border-emerald-400 transition"
                 />
               </div>
@@ -921,16 +838,16 @@ export default function App() {
                 <button
                   type="submit"
                   disabled={authLoading || otpCode.length !== 6}
-                  className="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50 cursor-pointer"
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/25 disabled:opacity-50"
                 >
-                  <CheckCircle2 className={`w-4 h-4 ${authLoading ? "animate-spin" : ""}`} />
+                  <ShieldCheck className="w-4 h-4" />
                   <span>{authLoading ? "Verifying..." : "Verify & Unlock"}</span>
                 </button>
               </div>
             </form>
           )}
 
-          <div className="pt-2 text-center text-[10px] text-slate-500 flex items-center justify-center space-x-1 border-t border-slate-800/80">
+          <div className="text-center text-[10px] text-slate-500 flex items-center justify-center space-x-1">
             <Lock className="w-3 h-3 text-slate-600" />
             <span>3 Failed Attempts = 24-Hour IP Security Lockout</span>
           </div>
@@ -939,56 +856,49 @@ export default function App() {
     );
   }
 
-  // 🚀 AUTHENTICATED COMMAND CENTER DASHBOARD
+  // --------------------------------------------------------------------------
+  // AUTHENTICATED COMMAND CENTER INTERFACE
+  // --------------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-      {/* 🚀 TOP MASTER HEADER & CONNECTION CONTROL BAR */}
-      <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
-          {/* Logo & Platform Badge */}
+      {/* 🧭 TOP COMMAND BAR */}
+      <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="p-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/20">
+              <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                <h1 className="font-extrabold text-sm sm:text-base text-white tracking-tight">
                   Botock Command Center
-                </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  Headless v3.0
+                </h1>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  AZURE CLOUD
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Azure VM + Vercel + Supabase Unified Orchestration</p>
+              <p className="text-[11px] text-slate-400">
+                Live Traffic Attribution, Funnel & Error Intelligence
+              </p>
             </div>
           </div>
 
-          {/* Connection Controls & Session Status */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Target Host Dropdown & Input */}
-            <div className="flex items-center bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs">
-              <Server className="w-3.5 h-3.5 text-slate-400 mr-1.5" />
-              <input
-                type="text"
-                value={targetHost}
-                onChange={(e) => setTargetHost(e.target.value)}
-                placeholder="http://localhost:8000"
-                className="bg-transparent border-none outline-none text-slate-200 w-44 font-mono text-xs"
-              />
-              <select
-                onChange={(e) => {
-                  if (e.target.value) setTargetHost(e.target.value);
-                }}
-                className="bg-slate-900 text-slate-400 border-none outline-none text-xs ml-1 cursor-pointer"
-                value={targetHost}
-              >
-                {PRESET_URLS.map((p) => (
-                  <option key={p.url} value={p.url}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="flex items-center flex-wrap gap-2">
+            {/* Target Environment Dropdown */}
+            <select
+              value={targetHost}
+              onChange={(e) => {
+                setTargetHost(e.target.value);
+                localStorage.setItem("botock_admin_host", e.target.value);
+              }}
+              className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-indigo-500"
+            >
+              {PRESET_URLS.map((p) => (
+                <option key={p.url} value={p.url}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
 
             {/* Trusted Device Badge */}
             <div className="flex items-center space-x-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-2.5 py-1 text-xs">
@@ -1005,9 +915,9 @@ export default function App() {
 
             {/* Sync Live Button */}
             <button
-              onClick={fetchOverview}
+              onClick={() => fetchOverview()}
               disabled={loading}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shadow transition ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow ${
                 connected
                   ? "bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30"
                   : "bg-indigo-600 hover:bg-indigo-500 text-white"
@@ -1030,53 +940,37 @@ export default function App() {
         </div>
 
         {/* Real-Time Live Status Bar */}
-        <div className="bg-slate-950/60 border-t border-slate-800/80 px-4 py-1.5 text-xs">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-1.5">
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    connected ? "bg-emerald-400 animate-pulse shadow-md shadow-emerald-500" : "bg-rose-500"
-                  }`}
-                />
-                <span className={connected ? "text-emerald-400 font-medium" : "text-rose-400"}>
-                  {connected ? "Azure Backend Online" : "Disconnected"}
-                </span>
-              </div>
-              {connected && (
-                <>
-                  <span className="text-slate-600">•</span>
-                  <span className="text-slate-400">
-                    CPU: <strong className="text-slate-200">{serverStats.cpu_percent ?? 0}%</strong>
-                  </span>
-                  <span className="text-slate-600">•</span>
-                  <span className="text-slate-400">
-                    RAM: <strong className="text-slate-200">{serverStats.memory_percent ?? 0}%</strong>
-                  </span>
-                  <span className="text-slate-600">•</span>
-                  <span className="text-slate-400">
-                    24h Sessions:{" "}
-                    <strong className="text-indigo-400">{serverStats.active_sessions_24h ?? 0}</strong>
-                  </span>
-                </>
-              )}
-            </div>
+        <div className="bg-slate-950/80 border-t border-slate-800/60 px-4 py-1.5 text-[11px] flex flex-wrap items-center justify-between text-slate-400">
+          <div className="flex items-center space-x-4">
+            <span className="flex items-center space-x-1.5">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  connected ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+                }`}
+              />
+              <span className="font-semibold text-slate-300">
+                {connected ? "Azure Backend Online" : "Backend Disconnected"}
+              </span>
+            </span>
 
+            {serverStats.cpu_percent !== undefined && (
+              <span className="hidden md:inline font-mono">
+                CPU: {serverStats.cpu_percent.toFixed(1)}% | RAM: {serverStats.memory_percent?.toFixed(1)}%
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-3">
             {statusMessage && (
               <div
-                className={`text-xs px-2 py-0.5 rounded font-medium flex items-center space-x-1 ${
+                className={`flex items-center space-x-1 text-[11px] ${
                   statusMessage.type === "success"
-                    ? "text-emerald-400 bg-emerald-500/10"
+                    ? "text-emerald-400"
                     : statusMessage.type === "error"
-                    ? "text-rose-400 bg-rose-500/10"
-                    : "text-sky-400 bg-sky-500/10"
+                    ? "text-rose-400"
+                    : "text-sky-400"
                 }`}
               >
-                {statusMessage.type === "success" ? (
-                  <CheckCircle2 className="w-3 h-3" />
-                ) : (
-                  <AlertCircle className="w-3 h-3" />
-                )}
                 <span>{statusMessage.text}</span>
               </div>
             )}
@@ -1086,12 +980,10 @@ export default function App() {
         {/* 📑 TAB NAVIGATION BAR */}
         <div className="max-w-7xl mx-auto px-4 flex overflow-x-auto no-scrollbar border-t border-slate-800 text-xs">
           {[
-            { id: "journeys", label: "User Journeys (Clickstream)", icon: Compass, count: telemetry.length },
-            { id: "campaigns", label: "Ad Campaigns & UTM", icon: TrendingUp, count: Object.keys(sourceBreakdown).length },
+            { id: "journeys", label: "Live Traffic & Sources", icon: Compass, count: telemetry.length },
+            { id: "funnel", label: "Tool Funnel & Error Inspector", icon: Activity, count: recentErrors.length },
             { id: "tools", label: "Tool Feature Flags", icon: Sliders, count: Object.keys(tools).length },
-            { id: "users", label: "VIP & Ban Manager", icon: Users, count: users.length },
             { id: "quotas", label: "Quotas & Maintenance", icon: Gauge },
-            { id: "coupons", label: "Promo Coupons", icon: Ticket, count: coupons.length },
             { id: "cms", label: "SEO Blog CMS & SERP", icon: FileText, count: blogs.length },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1123,117 +1015,195 @@ export default function App() {
         </div>
       </header>
 
-
       {/* 💻 MAIN CONTENT VIEWS */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
         {/* ==================================================================== */}
-        {/* TAB 1: LIVE USER JOURNEYS (CLICKSTREAM TRACKING)                      */}
+        {/* TAB 1: LIVE TRAFFIC SOURCES & USER JOURNEYS                          */}
         {/* ==================================================================== */}
         {activeTab === "journeys" && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
-              <div>
+          <div className="space-y-6">
+            {/* Top Traffic Attribution Cards */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
                 <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
-                  <Compass className="w-5 h-5 text-indigo-400" />
-                  <span>Real-Time Visitor Clickstream & Progression</span>
+                  <TrendingUp className="w-5 h-5 text-indigo-400" />
+                  <span>Real-Time Traffic Sources Attribution</span>
                 </h2>
-                <p className="text-xs text-slate-400">
-                  Tracks visitor paths from Facebook / Google Ads entry to conversion tools (Fired via &lt;BotockTelemetry /&gt;)
-                </p>
+                <span className="text-xs text-slate-400 font-mono">
+                  Total Tracked: {trafficTotals.total}
+                </span>
               </div>
 
-              <div className="flex items-center space-x-2 text-xs">
-                <span className="text-slate-400">Filter by Source:</span>
-                <select
-                  value={journeyFilter}
-                  onChange={(e) => setJourneyFilter(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-slate-200 outline-none"
-                >
-                  <option value="all">All Sources ({telemetry.length})</option>
-                  <option value="facebook">Facebook Ads / Referral</option>
-                  <option value="instagram">Instagram</option>
-                  <option value="google_search">Google Search</option>
-                  <option value="tiktok">TikTok</option>
-                  <option value="direct">Direct / None</option>
-                  <option value="Mobile">Mobile Only</option>
-                  <option value="Desktop">Desktop Only</option>
-                </select>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {/* Facebook Card */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+                  <div className="flex items-center justify-between text-xs text-blue-400 font-semibold mb-1">
+                    <span>Facebook</span>
+                    <Globe className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-2xl font-black text-white">{trafficTotals.fb}</div>
+                  <div className="text-[10px] text-slate-400 mt-1">
+                    {Math.round((trafficTotals.fb / trafficTotals.total) * 100)}% of traffic
+                  </div>
+                </div>
+
+                {/* Instagram Card */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+                  <div className="flex items-center justify-between text-xs text-pink-400 font-semibold mb-1">
+                    <span>Instagram</span>
+                    <Smartphone className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-2xl font-black text-white">{trafficTotals.insta}</div>
+                  <div className="text-[10px] text-slate-400 mt-1">
+                    {Math.round((trafficTotals.insta / trafficTotals.total) * 100)}% of traffic
+                  </div>
+                </div>
+
+                {/* AI Engines Card */}
+                <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 shadow bg-gradient-to-b from-emerald-500/5 to-transparent">
+                  <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold mb-1">
+                    <span>AI Search</span>
+                    <Bot className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-2xl font-black text-emerald-300">{trafficTotals.ai}</div>
+                  <div className="text-[10px] text-slate-400 mt-1">
+                    ChatGPT / Perplexity
+                  </div>
+                </div>
+
+                {/* Google Search Card */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+                  <div className="flex items-center justify-between text-xs text-amber-400 font-semibold mb-1">
+                    <span>Google</span>
+                    <Search className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-2xl font-black text-white">{trafficTotals.google}</div>
+                  <div className="text-[10px] text-slate-400 mt-1">Organic & Ads</div>
+                </div>
+
+                {/* TikTok & Twitter */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+                  <div className="flex items-center justify-between text-xs text-sky-400 font-semibold mb-1">
+                    <span>X & TikTok</span>
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-2xl font-black text-white">
+                    {trafficTotals.twitter + trafficTotals.tiktok}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1">Social Viral</div>
+                </div>
+
+                {/* Direct & Organic */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
+                  <div className="flex items-center justify-between text-xs text-slate-400 font-semibold mb-1">
+                    <span>Direct</span>
+                    <Laptop className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-2xl font-black text-white">{trafficTotals.direct}</div>
+                  <div className="text-[10px] text-slate-400 mt-1">Direct URL Visits</div>
+                </div>
               </div>
             </div>
 
-            {/* Journey Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
+            {/* Clickstream User Journeys Table */}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
+                    <Compass className="w-4 h-4 text-indigo-400" />
+                    <span>Real-Time Visitor Clickstream Flows</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Live page-by-page paths taken by visitors after clicking your shared links
+                  </p>
+                </div>
+
+                {/* Filter Chips */}
+                <div className="flex items-center space-x-1.5 text-xs">
+                  {["all", "facebook", "instagram", "ai", "google", "direct"].map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setJourneyFilter(f)}
+                      className={`px-2.5 py-1 rounded-lg font-semibold capitalize transition ${
+                        journeyFilter === f
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      {f === "ai" ? "🤖 AI Search" : f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-semibold uppercase tracking-wider">
                     <tr>
-                      <th className="py-3 px-4">Visitor Session</th>
-                      <th className="py-3 px-4">User Email</th>
-                      <th className="py-3 px-4">Step / Path Flow</th>
-                      <th className="py-3 px-4">Source & Campaign</th>
-                      <th className="py-3 px-4">Device</th>
-                      <th className="py-3 px-4">Time</th>
+                      <th className="py-3 px-4">Visitor / Device</th>
+                      <th className="py-3 px-4">Acquisition Source</th>
+                      <th className="py-3 px-4">HTTP Referrer</th>
+                      <th className="py-3 px-4">Navigation Flow Path</th>
+                      <th className="py-3 px-4 text-right">Time</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 font-mono">
-                    {filteredTelemetry.length === 0 ? (
+                    {filteredJourneys.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-slate-500 font-sans">
-                          No visitor telemetry logged yet. Open botock.app to see real-time sessions fire!
+                        <td colSpan={5} className="py-8 text-center text-slate-500 font-sans">
+                          No clickstream visits recorded yet. Share a link on Facebook, Instagram, or AI to start logging.
                         </td>
                       </tr>
                     ) : (
-                      filteredTelemetry.map((t, idx) => (
+                      filteredJourneys.map((j, idx) => (
                         <tr key={idx} className="hover:bg-slate-800/40 transition">
                           <td className="py-3 px-4">
-                            <span className="text-indigo-400 font-semibold">
-                              {t.session_id.substring(0, 14)}...
+                            <div className="font-semibold text-slate-200 font-sans">{j.user_email}</div>
+                            <div className="text-[10px] text-slate-500 flex items-center space-x-1">
+                              <span>{j.device_type}</span>
+                              {j.ip && <span>• {j.ip}</span>}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                j.utm_source === "facebook"
+                                  ? "bg-blue-500/20 text-blue-300"
+                                  : j.utm_source === "instagram"
+                                  ? "bg-pink-500/20 text-pink-300"
+                                  : j.utm_source.startsWith("ai_")
+                                  ? "bg-emerald-500/20 text-emerald-300"
+                                  : j.utm_source.includes("google")
+                                  ? "bg-amber-500/20 text-amber-300"
+                                  : "bg-slate-800 text-slate-300"
+                              }`}
+                            >
+                              {j.utm_source}
                             </span>
                           </td>
-                          <td className="py-3 px-4 font-sans">
-                            {t.user_email === "Guest" ? (
-                              <span className="px-2 py-0.5 rounded text-[10px] bg-slate-800 text-slate-400">
-                                Guest
-                              </span>
-                            ) : (
-                              <span className="text-emerald-400 font-medium">{t.user_email}</span>
-                            )}
+                          <td className="py-3 px-4 text-slate-400 truncate max-w-xs text-[11px]" title={j.referrer}>
+                            {j.referrer || "Direct Entry"}
                           </td>
-                          <td className="py-3 px-4 font-sans">
-                            <div className="flex items-center space-x-1.5">
-                              <span className="px-1.5 py-0.5 rounded text-[11px] bg-slate-800 text-slate-400">
-                                {t.previous_path || "Entry"}
-                              </span>
-                              <ArrowRight className="w-3 h-3 text-slate-500" />
-                              <span className="px-2 py-0.5 rounded text-[11px] bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">
-                                {t.current_path}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 font-sans">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-slate-200 capitalize">
-                                {t.utm_source || "Direct"}
-                              </span>
-                              {t.utm_campaign && t.utm_campaign !== "none" && (
-                                <span className="text-[10px] text-amber-400">
-                                  Camp: {t.utm_campaign}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 font-sans">
-                            <span className="flex items-center space-x-1 text-slate-400 text-xs">
-                              {t.device_type === "Mobile" ? (
-                                <Smartphone className="w-3.5 h-3.5 text-pink-400" />
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-1.5 flex-wrap">
+                              {j.steps && j.steps.length > 0 ? (
+                                j.steps.map((step, sIdx) => (
+                                  <span key={sIdx} className="flex items-center space-x-1 text-[11px]">
+                                    <span className="bg-slate-950 px-2 py-0.5 rounded text-slate-300 border border-slate-800">
+                                      {step}
+                                    </span>
+                                    {j.steps && sIdx < j.steps.length - 1 && (
+                                      <ArrowRight className="w-3 h-3 text-slate-600" />
+                                    )}
+                                  </span>
+                                ))
                               ) : (
-                                <Laptop className="w-3.5 h-3.5 text-sky-400" />
+                                <span className="text-slate-500">/</span >
                               )}
-                              <span>{t.device_type}</span>
-                            </span>
+                            </div>
                           </td>
-                          <td className="py-3 px-4 text-slate-500 text-[11px]">
-                            {new Date(t.timestamp).toLocaleTimeString()}
+                          <td className="py-3 px-4 text-right text-slate-500 text-[11px] whitespace-nowrap font-sans">
+                            {j.timestamp ? new Date(j.timestamp).toLocaleTimeString() : "Just now"}
                           </td>
                         </tr>
                       ))
@@ -1246,60 +1216,166 @@ export default function App() {
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 2: FACEBOOK & CAMPAIGN ATTRIBUTION                                */}
+        {/* TAB 2: TOOL FUNNEL & ERROR INSPECTOR                                  */}
         {/* ==================================================================== */}
-        {activeTab === "campaigns" && (
+        {activeTab === "funnel" && (
           <div className="space-y-6">
-            <div>
-              <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-pink-400" />
-                <span>Ad Attribution & Referral Performance</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                Live attribution breakdown calculated from UTM tags and HTTP Referrers
-              </p>
-            </div>
+            {/* Top Summary Metrics */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
+                <div className="text-xs text-slate-400 font-medium mb-1">Total Tool Visitors</div>
+                <div className="text-2xl font-extrabold text-white">{funnelSummary.totalViews}</div>
+                <div className="text-[11px] text-slate-500 mt-1">Landed on tool page</div>
+              </div>
 
-            {/* Platform Attribution Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { name: "Facebook Ads", count: sourceBreakdown["facebook"] || 0, color: "from-blue-600 to-indigo-600" },
-                { name: "Google Organic", count: sourceBreakdown["google_search"] || 0, color: "from-emerald-600 to-teal-600" },
-                { name: "Instagram / TikTok", count: (sourceBreakdown["instagram"] || 0) + (sourceBreakdown["tiktok"] || 0), color: "from-pink-600 to-rose-600" },
-                { name: "Direct / Organic", count: sourceBreakdown["direct"] || sourceBreakdown["organic"] || 0, color: "from-purple-600 to-slate-700" },
-              ].map((card, i) => (
-                <div key={i} className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
-                  <div className="text-xs text-slate-400 font-medium mb-1">{card.name}</div>
-                  <div className="text-2xl font-extrabold text-white flex items-center justify-between">
-                    <span>{card.count}</span>
-                    <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${card.color}`} />
-                  </div>
-                  <div className="text-[11px] text-slate-500 mt-2">Visits logged</div>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
+                <div className="text-xs text-indigo-400 font-medium mb-1">Input / Started</div>
+                <div className="text-2xl font-extrabold text-indigo-300">{funnelSummary.totalStarted}</div>
+                <div className="text-[11px] text-slate-500 mt-1">Typed prompt or uploaded</div>
+              </div>
+
+              <div className="bg-slate-900 border border-emerald-500/20 rounded-xl p-4 shadow">
+                <div className="text-xs text-emerald-400 font-medium mb-1">Completed (Success)</div>
+                <div className="text-2xl font-extrabold text-emerald-300">{funnelSummary.totalSuccess}</div>
+                <div className="text-[11px] text-slate-500 mt-1">
+                  Overall Success: {funnelSummary.overallSuccessRate}%
                 </div>
-              ))}
+              </div>
+
+              <div className="bg-slate-900 border border-amber-500/20 rounded-xl p-4 shadow">
+                <div className="text-xs text-amber-400 font-medium mb-1">Abandoned (Drop-offs)</div>
+                <div className="text-2xl font-extrabold text-amber-300">{funnelSummary.totalAbandoned}</div>
+                <div className="text-[11px] text-slate-500 mt-1">Left without generating</div>
+              </div>
+
+              <div className="bg-slate-900 border border-rose-500/20 rounded-xl p-4 shadow">
+                <div className="text-xs text-rose-400 font-medium mb-1">Failed (Errors)</div>
+                <div className="text-2xl font-extrabold text-rose-300">{funnelSummary.totalErrors}</div>
+                <div className="text-[11px] text-slate-500 mt-1">Encountered an issue</div>
+              </div>
             </div>
 
-            {/* Active Campaigns Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
-              <h3 className="text-sm font-bold text-slate-200 mb-3">Tracked Ad Campaigns</h3>
-              <div className="space-y-2">
-                {Object.entries(campaignBreakdown).length === 0 ? (
-                  <p className="text-xs text-slate-500">
-                    No active campaign parameters detected yet. Append ?utm_campaign=my_ad to any link to test.
+            {/* Tool Funnel Table */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow">
+              <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
+                    <Activity className="w-4 h-4 text-emerald-400" />
+                    <span>Tool Conversion & Drop-off Ranking</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    See exactly which tools are performing best and where visitors drop off
                   </p>
+                </div>
+              </div>
+
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-semibold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-3 px-4">Tool Name</th>
+                    <th className="py-3 px-4">Visitors (Views)</th>
+                    <th className="py-3 px-4">Inputs Started</th>
+                    <th className="py-3 px-4">Completed</th>
+                    <th className="py-3 px-4">Abandoned</th>
+                    <th className="py-3 px-4">Errors</th>
+                    <th className="py-3 px-4">Success Rate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {toolFunnel.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-500">
+                        No tool funnel events logged yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    toolFunnel.map((t) => (
+                      <tr key={t.tool_id} className="hover:bg-slate-800/40 transition">
+                        <td className="py-3 px-4 font-semibold text-slate-200">
+                          <div className="flex items-center space-x-2">
+                            <span>{t.name}</span>
+                            <span className="font-mono text-[10px] text-slate-500">({t.tool_id})</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-mono font-bold text-slate-300">{t.views}</td>
+                        <td className="py-3 px-4 font-mono text-indigo-300">{t.started}</td>
+                        <td className="py-3 px-4 font-mono font-bold text-emerald-400">{t.success}</td>
+                        <td className="py-3 px-4 font-mono text-amber-400">{t.abandoned}</td>
+                        <td className="py-3 px-4 font-mono font-bold text-rose-400">{t.errors}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-16 h-2 bg-slate-800 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full ${
+                                  t.success_rate >= 95
+                                    ? "bg-emerald-500"
+                                    : t.success_rate >= 80
+                                    ? "bg-amber-500"
+                                    : "bg-rose-500"
+                                }`}
+                                style={{ width: `${t.success_rate}%` }}
+                              />
+                            </div>
+                            <span className="font-mono text-[11px] font-semibold text-slate-300">
+                              {t.success_rate}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Live Error Inspector Console */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow">
+              <div className="p-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-bold text-rose-400 flex items-center space-x-2">
+                    <XCircle className="w-4 h-4 text-rose-500" />
+                    <span>Real-Time Error Inspector Console</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Exact error messages and stack traces whenever a generation or tool fails
+                  </p>
+                </div>
+
+                <div className="relative w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={errorSearch}
+                    onChange={(e) => setErrorSearch(e.target.value)}
+                    placeholder="Search error message, tool, or IP..."
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="divide-y divide-slate-800/60 max-h-96 overflow-y-auto font-mono text-xs">
+                {filteredErrors.length === 0 ? (
+                  <div className="py-8 text-center text-slate-500 font-sans">
+                    ✨ No recent errors detected! All systems operating smoothly.
+                  </div>
                 ) : (
-                  Object.entries(campaignBreakdown).map(([camp, count], idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800/80 text-xs"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <Flame className="w-4 h-4 text-amber-400" />
-                        <span className="font-semibold text-slate-200">{camp}</span>
+                  filteredErrors.map((err) => (
+                    <div key={err.id} className="p-4 hover:bg-slate-850 transition space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 font-sans font-semibold">
+                          <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px]">
+                            {err.tool_name}
+                          </span>
+                          <span className="text-slate-400 text-[11px]">({err.tool_id})</span>
+                          {err.ip && <span className="text-slate-500 text-[10px]">IP: {err.ip}</span>}
+                        </div>
+                        <span className="text-slate-500 text-[10px] font-sans">
+                          {new Date(err.timestamp).toLocaleTimeString()} • {new Date(err.timestamp).toLocaleDateString()}
+                        </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono font-bold">
-                        {count} hits
-                      </span>
+                      <div className="p-2.5 rounded-lg bg-slate-950 border border-rose-500/20 text-rose-300 text-xs font-mono leading-relaxed break-all">
+                        {err.error_message}
+                      </div>
                     </div>
                   ))
                 )}
@@ -1309,7 +1385,7 @@ export default function App() {
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 3: TOOL FEATURE FLAGS & INSTANT SWITCHES                          */}
+        {/* TAB 3: TOOL FEATURE FLAGS                                            */}
         {/* ==================================================================== */}
         {activeTab === "tools" && (
           <div className="space-y-4">
@@ -1320,47 +1396,42 @@ export default function App() {
                   <span>Feature Flags & Maintenance Kill-Switches</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Instantly toggle tools offline, lock behind Pro subscription, or put into maintenance mode
+                  Instantly toggle tools online, enable maintenance banners, or restrict access
                 </p>
               </div>
-              <button
-                onClick={fetchOverview}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold"
-              >
-                Sync with Backend
-              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Object.entries(tools).map(([id, t]) => (
                 <div
                   key={id}
-                  className={`p-4 rounded-xl border transition ${
+                  className={`p-4 rounded-xl border transition-all ${
                     t.maintenance
-                      ? "bg-amber-950/20 border-amber-600/40"
+                      ? "bg-amber-950/20 border-amber-500/40"
                       : !t.enabled
-                      ? "bg-rose-950/20 border-rose-600/40 opacity-70"
+                      ? "bg-slate-900/40 border-slate-800 opacity-60"
                       : "bg-slate-900 border-slate-800"
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-bold text-sm text-slate-100">{t.name}</h3>
-                      <p className="text-xs text-slate-500 font-mono">id: {id}</p>
+                      <div className="text-[11px] text-slate-500 font-mono">/tools/{id}</div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        Uses: <strong className="text-emerald-400">{t.uses}</strong>
-                      </span>
-                      {t.errors > 0 && (
-                        <span className="text-[10px] text-rose-400 font-mono bg-rose-500/10 px-1.5 py-0.5 rounded">
-                          Err: {t.errors}
-                        </span>
-                      )}
-                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        t.maintenance
+                          ? "bg-amber-500/20 text-amber-300"
+                          : t.enabled
+                          ? "bg-emerald-500/20 text-emerald-300"
+                          : "bg-rose-500/20 text-rose-300"
+                      }`}
+                    >
+                      {t.maintenance ? "Maintenance" : t.enabled ? "Active" : "Disabled"}
+                    </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-800/80 text-xs">
+                  <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-800/80 text-xs">
                     {/* Switch: Active */}
                     <button
                       onClick={() => handleToggleTool(id, "enabled", t.enabled)}
@@ -1374,19 +1445,6 @@ export default function App() {
                       <span>{t.enabled ? "Active" : "Disabled"}</span>
                     </button>
 
-                    {/* Switch: Pro Only */}
-                    <button
-                      onClick={() => handleToggleTool(id, "pro_only", t.pro_only)}
-                      className={`py-1.5 px-2 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition ${
-                        t.pro_only
-                          ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                          : "bg-slate-800 text-slate-400"
-                      }`}
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>{t.pro_only ? "Pro Only" : "Free/All"}</span>
-                    </button>
-
                     {/* Switch: Maintenance */}
                     <button
                       onClick={() => handleToggleTool(id, "maintenance", t.maintenance)}
@@ -1397,7 +1455,7 @@ export default function App() {
                       }`}
                     >
                       <ShieldAlert className="w-3.5 h-3.5" />
-                      <span>{t.maintenance ? "Maintenance" : "Normal"}</span>
+                      <span>{t.maintenance ? "Under Maintenance" : "Normal"}</span>
                     </button>
                   </div>
                 </div>
@@ -1407,121 +1465,7 @@ export default function App() {
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 4: USER VIP & BAN MANAGER                                         */}
-        {/* ==================================================================== */}
-        {activeTab === "users" && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
-              <div>
-                <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
-                  <Users className="w-5 h-5 text-indigo-400" />
-                  <span>Registered Users & VIP / Ban Moderation</span>
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Instantly ban fraudulent users or upgrade power creators to lifetime VIP Pro access
-                </p>
-              </div>
-
-              <div className="relative w-64">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="Search email, name or source..."
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Users Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4">User</th>
-                    <th className="py-3 px-4">Acquisition Source</th>
-                    <th className="py-3 px-4">Generations</th>
-                    <th className="py-3 px-4">VIP Status</th>
-                    <th className="py-3 px-4">Account Health</th>
-                    <th className="py-3 px-4 text-right">Moderation Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500">
-                        No users match query.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-slate-800/40 transition">
-                        <td className="py-3 px-4">
-                          <div className="font-semibold text-slate-200">{u.name}</div>
-                          <div className="text-[11px] text-slate-400 font-mono">{u.email}</div>
-                        </td>
-                        <td className="py-3 px-4 font-mono text-[11px] text-slate-400 capitalize">
-                          {u.source || "organic"}
-                        </td>
-                        <td className="py-3 px-4 font-bold text-slate-300 font-mono">
-                          {u.generations}
-                        </td>
-                        <td className="py-3 px-4">
-                          {u.vip ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-                              ⭐ VIP Pro
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-400">
-                              Standard Free
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          {u.banned ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30">
-                              ⛔ Banned (403)
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
-                              ✓ Good Standing
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right space-x-2">
-                          <button
-                            onClick={() => handleUserAction(u.id, "toggle_vip")}
-                            className={`px-2.5 py-1 rounded text-xs font-semibold ${
-                              u.vip
-                                ? "bg-slate-800 text-amber-400 hover:bg-slate-700"
-                                : "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
-                            }`}
-                          >
-                            {u.vip ? "Revoke VIP" : "Make VIP"}
-                          </button>
-                          <button
-                            onClick={() => handleUserAction(u.id, "toggle_ban")}
-                            className={`px-2.5 py-1 rounded text-xs font-semibold ${
-                              u.banned
-                                ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30"
-                                : "bg-rose-500/20 text-rose-300 hover:bg-rose-500/30"
-                            }`}
-                          >
-                            {u.banned ? "Unban" : "Ban User"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ==================================================================== */}
-        {/* TAB 5: GLOBAL QUOTAS & MAINTENANCE                                    */}
+        {/* TAB 4: PLATFORM QUOTAS & MAINTENANCE                                  */}
         {/* ==================================================================== */}
         {activeTab === "quotas" && (
           <div className="max-w-3xl mx-auto space-y-6">
@@ -1554,8 +1498,8 @@ export default function App() {
                 {/* Free User Daily Limit */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
                   <div>
-                    <div className="font-semibold text-slate-200">Registered Free User Daily Limit</div>
-                    <div className="text-slate-500 text-[11px]">Daily cap for signed-in free accounts</div>
+                    <div className="font-semibold text-slate-200">Registered User Daily Limit</div>
+                    <div className="text-slate-500 text-[11px]">Free daily operations for logged-in users</div>
                   </div>
                   <input
                     type="number"
@@ -1570,8 +1514,8 @@ export default function App() {
                 {/* Max File Size */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
                   <div>
-                    <div className="font-semibold text-slate-200">Max File Size (MB)</div>
-                    <div className="text-slate-500 text-[11px]">Enforced on PDF, Audio & Video uploads</div>
+                    <div className="font-semibold text-slate-200">Maximum Upload Size (MB)</div>
+                    <div className="text-slate-500 text-[11px]">Enforced on audio, video and document uploads</div>
                   </div>
                   <input
                     type="number"
@@ -1583,236 +1527,57 @@ export default function App() {
                   />
                 </div>
 
-                {/* Forced Model Selection */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
-                  <div>
-                    <div className="font-semibold text-slate-200">Forced AI Video/Audio Model</div>
-                    <div className="text-slate-500 text-[11px]">Override auto-dispatch engine</div>
-                  </div>
-                  <select
-                    value={quotas.forced_model}
-                    onChange={(e) => setQuotas({ ...quotas, forced_model: e.target.value })}
-                    className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200"
-                  >
-                    <option value="auto">Auto Dynamic Route</option>
-                    <option value="veo-2-flash">Google Veo 2 Flash</option>
-                    <option value="omni-1.1">Omni Flow 1.1</option>
-                    <option value="f5-tts-fast">F5-TTS Neural Voice</option>
-                  </select>
-                </div>
-
-                {/* Global Maintenance Toggle */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-rose-950/20 border border-rose-500/30">
-                  <div>
-                    <div className="font-semibold text-rose-300">Global Platform Emergency Freeze</div>
-                    <div className="text-rose-400/80 text-[11px]">
-                      Displays maintenance mode across all public tools
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setQuotas({ ...quotas, global_maintenance: !quotas.global_maintenance })
-                    }
-                    className={`px-3 py-1 rounded font-bold transition ${
-                      quotas.global_maintenance
-                        ? "bg-rose-600 text-white"
-                        : "bg-slate-800 text-slate-400"
-                    }`}
-                  >
-                    {quotas.global_maintenance ? "FREEZE ACTIVE" : "Normal"}
-                  </button>
-                </div>
-
                 {/* Announcement Banner */}
-                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1.5">
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
                   <div className="font-semibold text-slate-200">Global Announcement Banner</div>
                   <input
                     type="text"
                     value={quotas.announcement_banner}
-                    onChange={(e) => setQuotas({ ...quotas, announcement_banner: e.target.value })}
-                    placeholder="e.g., 🚀 Ramadan Special: Unlimited Voice Cloner unlocked for 48 hours!"
-                    className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100"
+                    onChange={(e) =>
+                      setQuotas({ ...quotas, announcement_banner: e.target.value })
+                    }
+                    placeholder="e.g. 🚀 Welcome to Botock Creative Suite! Enjoy unlimited access."
+                    className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-200 outline-none"
                   />
                 </div>
 
-                {/* Save Button */}
-                <div className="pt-4 flex justify-end">
+                {/* Global Maintenance Switch */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
+                  <div>
+                    <div className="font-semibold text-slate-200">Emergency Maintenance Mode</div>
+                    <div className="text-slate-500 text-[11px]">Lock platform and show maintenance screen</div>
+                  </div>
                   <button
-                    onClick={handleSaveQuotas}
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition shadow-lg shadow-indigo-600/30"
+                    onClick={() => setQuotas({ ...quotas, global_maintenance: !quotas.global_maintenance })}
+                    className={`px-4 py-1.5 rounded-lg font-bold transition ${
+                      quotas.global_maintenance
+                        ? "bg-rose-500 text-white"
+                        : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
                   >
-                    <Save className="w-4 h-4" />
-                    <span>Save All Platform Quotas</span>
+                    {quotas.global_maintenance ? "Active (Locked)" : "Off (Live)"}
                   </button>
                 </div>
               </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+                <button
+                  onClick={handleSaveQuotas}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition flex items-center space-x-2 text-xs shadow-lg shadow-indigo-600/25"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Save Quotas & Settings</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 6: PROMO & DISCOUNT COUPONS                                       */}
-        {/* ==================================================================== */}
-        {activeTab === "coupons" && (
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
-              <div>
-                <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
-                  <Ticket className="w-5 h-5 text-indigo-400" />
-                  <span>Promo Codes & Creator Discounts</span>
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Generate promotional discount vouchers and credit gifts for influencers
-                </p>
-              </div>
-            </div>
-
-            {/* Create Coupon Card */}
-            <form
-              onSubmit={handleCreateCoupon}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-5 gap-3 text-xs items-end"
-            >
-              <div>
-                <label className="text-slate-400 block mb-1 font-medium">Coupon Code</label>
-                <input
-                  type="text"
-                  value={newCouponCode}
-                  onChange={(e) => setNewCouponCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. YOUTUBE50"
-                  required
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-slate-200 font-mono font-bold uppercase"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1 font-medium">Discount %</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={newCouponDiscount}
-                  onChange={(e) => setNewCouponDiscount(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-slate-200 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1 font-medium">Bonus Credits</label>
-                <input
-                  type="number"
-                  value={newCouponCredits}
-                  onChange={(e) => setNewCouponCredits(parseInt(e.target.value) || 0)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-slate-200 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1 font-medium">Max Redemptions</label>
-                <input
-                  type="number"
-                  value={newCouponMax}
-                  onChange={(e) => setNewCouponMax(parseInt(e.target.value) || 1)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-slate-200 font-mono"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center justify-center space-x-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-bold shadow"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Code</span>
-              </button>
-            </form>
-
-            {/* Coupons Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4">Coupon Code</th>
-                    <th className="py-3 px-4">Discount</th>
-                    <th className="py-3 px-4">Gift Credits</th>
-                    <th className="py-3 px-4">Redemptions</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {coupons.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500 font-sans">
-                        No active coupons found.
-                      </td>
-                    </tr>
-                  ) : (
-                    coupons.map((c, i) => (
-                      <tr key={i} className="hover:bg-slate-800/40 transition">
-                        <td className="py-3 px-4 font-bold text-indigo-400 font-mono flex items-center space-x-2">
-                          <span>{c.code}</span>
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(c.code);
-                              setCopiedCode(c.code);
-                              setTimeout(() => setCopiedCode(null), 1500);
-                            }}
-                            className="text-slate-500 hover:text-slate-300"
-                          >
-                            {copiedCode === c.code ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </td>
-                        <td className="py-3 px-4 text-emerald-400 font-bold">{c.discount_percent}% OFF</td>
-                        <td className="py-3 px-4 text-amber-300">+{c.bonus_credits} cr</td>
-                        <td className="py-3 px-4 text-slate-400">
-                          {c.used_count} / {c.max_uses}
-                        </td>
-                        <td className="py-3 px-4 font-sans">
-                          {c.active ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
-                              Active
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-500">
-                              Expired
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right font-sans">
-                          <button
-                            onClick={() => {
-                              setCoupons(
-                                coupons.map((item) =>
-                                  item.code === c.code ? { ...item, active: !item.active } : item
-                                )
-                              );
-                            }}
-                            className="text-xs text-slate-400 hover:text-rose-400"
-                          >
-                            {c.active ? "Deactivate" : "Activate"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ==================================================================== */}
-        {/* TAB 7: ENTERPRISE SEO BLOG CMS & LIVE SERP PUBLISHER                  */}
+        {/* TAB 5: SEO BLOG CMS & GOOGLE SERP PUBLISHER                           */}
         {/* ==================================================================== */}
         {activeTab === "cms" && (
           <div className="space-y-6">
-            {/* Header with New Blog button and Post Selector */}
             <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
               <div>
                 <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
@@ -1827,7 +1592,7 @@ export default function App() {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handleNewBlog}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow"
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center space-x-1.5 shadow"
                 >
                   <Plus className="w-4 h-4" />
                   <span>New Article</span>
@@ -1835,22 +1600,19 @@ export default function App() {
 
                 {blogs.length > 0 && (
                   <select
-                    value={editingBlog.id}
+                    value={editingBlog.id || ""}
                     onChange={(e) => {
-                      const sel = blogs.find((b) => b.id === e.target.value);
-                      if (sel) {
-                        setEditingBlog(sel);
-                        setIsBlogNew(false);
-                      }
+                      const found = blogs.find((b) => b.id === e.target.value);
+                      if (found) handleSelectBlog(found);
                     }}
-                    className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none max-w-xs truncate"
+                    className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none max-w-xs truncate"
                   >
                     <option value="" disabled>
                       Select an existing article ({blogs.length})...
                     </option>
                     {blogs.map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.status === "published" ? "🟢" : "⚪"} {b.title}
+                        {b.title}
                       </option>
                     ))}
                   </select>
@@ -1858,83 +1620,315 @@ export default function App() {
               </div>
             </div>
 
-            {/* CMS Two-Column Grid: Metadata & Score / Content & Preview */}
+            {/* Main CMS Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* LEFT COLUMN: Metadata, Target Keyword, SERP Preview & SEO Score (5 Cols) */}
-              <div className="lg:col-span-5 space-y-4">
-                {/* 1. REAL-TIME SEO AUDIT METER */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <Sparkles className="w-4 h-4 text-amber-400" />
-                      <span className="text-sm font-bold text-slate-200">Real-Time SEO Audit</span>
-                    </div>
-                    <div
-                      className={`text-sm font-extrabold px-2.5 py-0.5 rounded-full ${
-                        seoAudit.score >= 80
-                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                          : seoAudit.score >= 50
-                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                          : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                      }`}
-                    >
-                      {seoAudit.score}% Score
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden mb-3">
-                    <div
-                      className={`h-full transition-all duration-500 ${
-                        seoAudit.score >= 80
-                          ? "bg-emerald-400"
-                          : seoAudit.score >= 50
-                          ? "bg-amber-400"
-                          : "bg-rose-500"
-                      }`}
-                      style={{ width: `${seoAudit.score}%` }}
+              {/* Left Column: Form & Editor */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-4">
+                  {/* Article Title */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Article Main Title
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBlog.title}
+                      onChange={(e) => {
+                        const newTitle = e.target.value;
+                        const slug = newTitle
+                          .toLowerCase()
+                          .replace(/[^\w\s-]/g, "")
+                          .replace(/[\s_-]+/g, "-")
+                          .replace(/^-+|-+$/g, "");
+                        setEditingBlog({
+                          ...editingBlog,
+                          title: newTitle,
+                          slug: isBlogNew ? slug : editingBlog.slug,
+                          meta_title: isBlogNew ? `${newTitle} | Botock AI` : editingBlog.meta_title,
+                        });
+                      }}
+                      placeholder="e.g. How to Clone Any Voice for Free with Zero-Shot AI in 2026"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-white outline-none focus:border-indigo-500"
                     />
                   </div>
 
-                  {/* Checklist */}
-                  <div className="space-y-1.5 text-xs">
-                    {seoAudit.checks.map((c, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-slate-400">
-                        <span className="flex items-center space-x-1.5">
-                          {c.passed ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                          ) : (
-                            <AlertCircle className="w-3.5 h-3.5 text-slate-600" />
-                          )}
-                          <span className={c.passed ? "text-slate-200 font-medium" : "text-slate-500"}>
-                            {c.label}
-                          </span>
+                  {/* Slug & Target Keyword */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        URL Slug (botock.app/blog/...)
+                      </label>
+                      <input
+                        type="text"
+                        value={editingBlog.slug}
+                        onChange={(e) => setEditingBlog({ ...editingBlog, slug: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-indigo-300 font-mono outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        Target SEO Keyword
+                      </label>
+                      <input
+                        type="text"
+                        value={editingBlog.target_keyword}
+                        onChange={(e) => setEditingBlog({ ...editingBlog, target_keyword: e.target.value })}
+                        placeholder="e.g. free ai voice cloner"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-emerald-300 font-mono outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Markdown Toolbar */}
+                  <div className="pt-2 border-t border-slate-800">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-1">
+                        <button
+                          type="button"
+                          onClick={() => insertMarkdown("**", "**")}
+                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          title="Bold"
+                        >
+                          <Bold className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertMarkdown("*", "*")}
+                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          title="Italic"
+                        >
+                          <Italic className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertMarkdown("## ")}
+                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          title="Heading 2"
+                        >
+                          <Heading2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertMarkdown("### ")}
+                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          title="Heading 3"
+                        >
+                          <Heading3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertMarkdown("[Link Text](", ")")}
+                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          title="Link"
+                        >
+                          <Link2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertMarkdown("- ")}
+                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          title="Bullet List"
+                        >
+                          <List className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertMarkdown("> ")}
+                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          title="Quote"
+                        >
+                          <Quote className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => insertMarkdown("```\n", "\n```")}
+                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          title="Code Block"
+                        >
+                          <Code className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center space-x-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => setBlogPreviewMode("edit")}
+                          className={`px-2 py-0.5 rounded ${
+                            blogPreviewMode === "edit"
+                              ? "bg-indigo-600 text-white font-bold"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          Editor
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBlogPreviewMode("preview")}
+                          className={`px-2 py-0.5 rounded ${
+                            blogPreviewMode === "preview"
+                              ? "bg-indigo-600 text-white font-bold"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          Live Reader View
+                        </button>
+                      </div>
+                    </div>
+
+                    {blogPreviewMode === "edit" ? (
+                      <textarea
+                        id="blog-content-editor"
+                        rows={16}
+                        value={editingBlog.content}
+                        onChange={(e) => setEditingBlog({ ...editingBlog, content: e.target.value })}
+                        placeholder="Write your in-depth Markdown guide here..."
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200 outline-none leading-relaxed focus:border-indigo-500"
+                      />
+                    ) : (
+                      <div className="w-full bg-slate-950 border border-slate-800 rounded-lg p-5 min-h-[380px] prose prose-invert prose-xs max-w-none">
+                        <div className="text-xl font-bold text-white mb-2">{editingBlog.title}</div>
+                        <div className="text-xs text-slate-400 mb-4 pb-3 border-b border-slate-800">
+                          By {editingBlog.author} • {editingBlog.reading_time}
+                        </div>
+                        <div className="whitespace-pre-wrap font-sans text-xs text-slate-300 leading-relaxed">
+                          {editingBlog.content}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                    {!isBlogNew && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBlog(editingBlog.id)}
+                        className="px-3 py-2 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition flex items-center space-x-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Article</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSaveBlog}
+                      className="ml-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 flex items-center space-x-2 transition"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>{isBlogNew ? "Publish Article Live" : "Update Live Publication"}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: SEO Audit & Google SERP Snippet Preview */}
+              <div className="lg:col-span-5 space-y-4">
+                {/* Real-time SEO Score Card */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-bold text-xs text-slate-200 flex items-center space-x-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span>Real-Time SEO Audit</span>
+                    </h3>
+                    <span
+                      className={`px-2 py-0.5 rounded font-mono font-bold text-xs ${
+                        seoScore >= 80
+                          ? "bg-emerald-500/20 text-emerald-300"
+                          : seoScore >= 50
+                          ? "bg-amber-500/20 text-amber-300"
+                          : "bg-rose-500/20 text-rose-300"
+                      }`}
+                    >
+                      {seoScore}% Score
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden mb-4">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        seoScore >= 80
+                          ? "bg-emerald-500"
+                          : seoScore >= 50
+                          ? "bg-amber-500"
+                          : "bg-rose-500"
+                      }`}
+                      style={{ width: `${seoScore}%` }}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 text-[11px]">
+                    {[
+                      { label: "Target Keyword specified", pass: Boolean(editingBlog.target_keyword.trim()) },
+                      {
+                        label: "Keyword appears in Main Title",
+                        pass: Boolean(
+                          editingBlog.target_keyword &&
+                            editingBlog.title.toLowerCase().includes(editingBlog.target_keyword.toLowerCase())
+                        ),
+                      },
+                      {
+                        label: "Keyword in Meta Title or URL Slug",
+                        pass: Boolean(
+                          editingBlog.target_keyword &&
+                            (editingBlog.meta_title
+                              .toLowerCase()
+                              .includes(editingBlog.target_keyword.toLowerCase()) ||
+                              editingBlog.slug.includes(editingBlog.target_keyword.toLowerCase().replace(/\s+/g, "-")))
+                        ),
+                      },
+                      {
+                        label: "Keyword in Meta Description",
+                        pass: Boolean(
+                          editingBlog.target_keyword &&
+                            editingBlog.meta_description
+                              .toLowerCase()
+                              .includes(editingBlog.target_keyword.toLowerCase())
+                        ),
+                      },
+                      {
+                        label: "Article word count depth (>300 words)",
+                        pass: editingBlog.content.trim().split(/\s+/).filter(Boolean).length > 300,
+                      },
+                      {
+                        label: "Includes H2 / H3 subheadings",
+                        pass: editingBlog.content.includes("## "),
+                      },
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center space-x-2">
+                        {item.pass ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                        )}
+                        <span className={item.pass ? "text-slate-300" : "text-slate-500"}>
+                          {item.label}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-500">+{c.score}%</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* 2. LIVE GOOGLE SERP SNIPPET PREVIEW */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center space-x-1">
-                      <Globe className="w-3.5 h-3.5 text-sky-400" />
-                      <span>Google Search Result Snippet</span>
-                    </span>
-                    <div className="flex items-center space-x-1 bg-slate-950 p-0.5 rounded border border-slate-800 text-[10px]">
+                {/* Google SERP Live Snippet */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-xs text-slate-200 flex items-center space-x-1.5">
+                      <Globe className="w-4 h-4 text-sky-400" />
+                      <span>Google SERP Live Snippet</span>
+                    </h3>
+                    <div className="flex items-center space-x-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px]">
                       <button
+                        type="button"
                         onClick={() => setSerpDevice("desktop")}
-                        className={`px-1.5 py-0.5 rounded ${
+                        className={`px-2 py-0.5 rounded ${
                           serpDevice === "desktop" ? "bg-slate-800 text-white font-bold" : "text-slate-500"
                         }`}
                       >
                         Desktop
                       </button>
                       <button
+                        type="button"
                         onClick={() => setSerpDevice("mobile")}
-                        className={`px-1.5 py-0.5 rounded ${
+                        className={`px-2 py-0.5 rounded ${
                           serpDevice === "mobile" ? "bg-slate-800 text-white font-bold" : "text-slate-500"
                         }`}
                       >
@@ -1943,319 +1937,55 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Google Card Simulation */}
-                  <div className="bg-white text-slate-900 p-3.5 rounded-lg border border-slate-200 font-sans shadow-sm">
-                    <div className="flex items-center space-x-2 text-[11px] text-slate-700 truncate mb-1">
-                      <div className="w-4 h-4 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[9px]">
+                  {/* Rendered Google SERP Result Card */}
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 text-left font-sans text-xs">
+                    <div className="flex items-center space-x-2 text-[11px] text-slate-800 mb-1">
+                      <div className="w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px] font-bold">
                         B
                       </div>
-                      <span className="font-medium text-slate-900">Botock AI</span>
-                      <span className="text-slate-400">›</span>
-                      <span className="text-slate-600 truncate">
-                        https://botock.app/blog/{editingBlog.slug || "guide-slug"}
-                      </span>
+                      <span className="font-semibold text-slate-900">Botock AI</span>
+                      <span className="text-slate-400">https://botock.app › blog › {editingBlog.slug || "slug"}</span>
                     </div>
 
-                    <h4 className="text-[15px] text-[#1a0dab] hover:underline cursor-pointer font-medium leading-snug line-clamp-2">
-                      {editingBlog.meta_title || editingBlog.title || "Your Engaging Article Title Goes Here"}
-                    </h4>
+                    <div className="text-base text-blue-800 hover:underline font-medium cursor-pointer line-clamp-1 mb-1">
+                      {editingBlog.meta_title || editingBlog.title || "Untitled Guide | Botock AI"}
+                    </div>
 
-                    <p className="text-[12px] text-[#4d5156] mt-1 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                       {editingBlog.meta_description ||
                         editingBlog.excerpt ||
-                        "Write an actionable 150-character meta description targeting high search CTR..."}
+                        "Explore Botock AI free in-browser creative tools..."}
                     </p>
                   </div>
-                </div>
 
-                {/* 3. METADATA INPUTS */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow space-y-3 text-xs">
-                  <div>
-                    <label className="text-slate-300 font-semibold block mb-1">Primary Target Keyword</label>
-                    <input
-                      type="text"
-                      value={editingBlog.target_keyword}
-                      onChange={(e) => setEditingBlog({ ...editingBlog, target_keyword: e.target.value })}
-                      placeholder="e.g., free ai voice cloner"
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-100 font-medium"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Meta Title & Description Inputs */}
+                  <div className="space-y-3 pt-2">
                     <div>
-                      <label className="text-slate-300 font-semibold block mb-1">Category</label>
-                      <select
-                        value={editingBlog.category}
-                        onChange={(e) => setEditingBlog({ ...editingBlog, category: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200"
-                      >
-                        <option value="AI Audio & Voice">AI Audio & Voice</option>
-                        <option value="Video Creation">Video Creation</option>
-                        <option value="Image Tools">Image Tools</option>
-                        <option value="PDF Productivity">PDF Productivity</option>
-                        <option value="AI Tutorials">AI Tutorials</option>
-                      </select>
+                      <div className="flex justify-between text-[11px] font-semibold text-slate-400 mb-1">
+                        <span>Meta Title</span>
+                        <span>{editingBlog.meta_title.length}/60</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={editingBlog.meta_title}
+                        onChange={(e) => setEditingBlog({ ...editingBlog, meta_title: e.target.value })}
+                        placeholder="Google Title Tag"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none"
+                      />
                     </div>
 
                     <div>
-                      <label className="text-slate-300 font-semibold block mb-1">Author Name</label>
-                      <input
-                        type="text"
-                        value={editingBlog.author}
-                        onChange={(e) => setEditingBlog({ ...editingBlog, author: e.target.value })}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-300 font-semibold">SEO Meta Title</label>
-                      <span
-                        className={`text-[10px] font-mono ${
-                          editingBlog.meta_title.length > 60 ? "text-rose-400 font-bold" : "text-slate-400"
-                        }`}
-                      >
-                        {editingBlog.meta_title.length}/60 chars
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      value={editingBlog.meta_title}
-                      onChange={(e) => setEditingBlog({ ...editingBlog, meta_title: e.target.value })}
-                      placeholder="Title tag for search engines..."
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-slate-300 font-semibold">SEO Meta Description</label>
-                      <span
-                        className={`text-[10px] font-mono ${
-                          editingBlog.meta_description.length > 160
-                            ? "text-rose-400 font-bold"
-                            : editingBlog.meta_description.length < 100
-                            ? "text-amber-400"
-                            : "text-emerald-400"
-                        }`}
-                      >
-                        {editingBlog.meta_description.length}/160 chars
-                      </span>
-                    </div>
-                    <textarea
-                      rows={2}
-                      value={editingBlog.meta_description}
-                      onChange={(e) => setEditingBlog({ ...editingBlog, meta_description: e.target.value })}
-                      placeholder="Snippet shown under title in Google..."
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-slate-200 resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* RIGHT COLUMN: Full Editor, Markdown Toolbar & Live Preview (7 Cols) */}
-              <div className="lg:col-span-7 space-y-4">
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow space-y-4">
-                  {/* Article Title & Auto-Generated Slug */}
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={editingBlog.title}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setEditingBlog({
-                          ...editingBlog,
-                          title: val,
-                          slug: isBlogNew ? generateSlug(val) : editingBlog.slug,
-                        });
-                      }}
-                      placeholder="Enter a Compelling Article Title..."
-                      className="w-full bg-transparent border-b border-slate-700 pb-2 text-xl font-extrabold text-slate-100 placeholder-slate-600 outline-none focus:border-indigo-500 transition"
-                    />
-
-                    <div className="flex items-center space-x-2 text-xs font-mono text-slate-400">
-                      <span>URL Slug:</span>
-                      <span className="text-indigo-400">botock.app/blog/</span>
-                      <input
-                        type="text"
-                        value={editingBlog.slug}
-                        onChange={(e) => setEditingBlog({ ...editingBlog, slug: e.target.value })}
-                        placeholder="article-slug"
-                        className="bg-slate-950 border border-slate-800 rounded px-2 py-0.5 text-slate-200 outline-none text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Markdown Toolbar */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800 text-xs">
-                    <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => insertMarkdown("b", "bold text")}
-                        className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-                        title="Bold"
-                      >
-                        <Bold className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertMarkdown("i", "italic text")}
-                        className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-                        title="Italic"
-                      >
-                        <Italic className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertMarkdown("h2")}
-                        className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-                        title="Heading 2"
-                      >
-                        <Heading2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertMarkdown("h3")}
-                        className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-                        title="Heading 3"
-                      >
-                        <Heading3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertMarkdown("link")}
-                        className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-                        title="Hyperlink"
-                      >
-                        <Link2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertMarkdown("list")}
-                        className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-                        title="List"
-                      >
-                        <List className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertMarkdown("quote")}
-                        className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-                        title="Blockquote"
-                      >
-                        <Quote className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertMarkdown("code")}
-                        className="p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-slate-200"
-                        title="Code block"
-                      >
-                        <Code className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    {/* Edit vs Preview Toggle */}
-                    <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-                      <button
-                        type="button"
-                        onClick={() => setBlogPreviewMode("edit")}
-                        className={`px-2.5 py-1 rounded text-xs font-semibold ${
-                          blogPreviewMode === "edit"
-                            ? "bg-indigo-600 text-white"
-                            : "text-slate-400 hover:text-slate-200"
-                        }`}
-                      >
-                        Editor
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBlogPreviewMode("preview")}
-                        className={`px-2.5 py-1 rounded text-xs font-semibold ${
-                          blogPreviewMode === "preview"
-                            ? "bg-indigo-600 text-white"
-                            : "text-slate-400 hover:text-slate-200"
-                        }`}
-                      >
-                        Live Reader View
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Main Editor Textarea or Live Preview */}
-                  {blogPreviewMode === "edit" ? (
-                    <div className="space-y-2">
+                      <div className="flex justify-between text-[11px] font-semibold text-slate-400 mb-1">
+                        <span>Meta Description</span>
+                        <span>{editingBlog.meta_description.length}/160</span>
+                      </div>
                       <textarea
-                        rows={16}
-                        value={editingBlog.content}
-                        onChange={(e) => setEditingBlog({ ...editingBlog, content: e.target.value })}
-                        placeholder="Write your in-depth Markdown guide here..."
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-100 font-mono text-xs leading-relaxed outline-none focus:border-indigo-500 transition resize-y"
+                        rows={3}
+                        value={editingBlog.meta_description}
+                        onChange={(e) => setEditingBlog({ ...editingBlog, meta_description: e.target.value })}
+                        placeholder="Snippet description displayed on Google Search..."
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"
                       />
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
-                        <span>Words: {seoAudit.wordCount}</span>
-                        <span>Estimated: {Math.max(1, Math.round(seoAudit.wordCount / 200))} min read</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-6 bg-slate-950 border border-slate-800 rounded-xl min-h-[380px] prose prose-invert prose-sm max-w-none">
-                      <h1 className="text-2xl font-bold text-white mb-2">{editingBlog.title || "Untitled Article"}</h1>
-                      <div className="text-xs text-slate-400 mb-6 flex items-center space-x-4">
-                        <span>By {editingBlog.author}</span>
-                        <span>•</span>
-                        <span>{editingBlog.category}</span>
-                      </div>
-                      <div className="whitespace-pre-wrap font-sans text-slate-300 text-sm leading-relaxed">
-                        {editingBlog.content}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Publish & Action Controls */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800">
-                    <div className="flex items-center space-x-3 text-xs">
-                      <label className="flex items-center space-x-1.5 cursor-pointer text-slate-300">
-                        <input
-                          type="checkbox"
-                          checked={editingBlog.featured}
-                          onChange={(e) => setEditingBlog({ ...editingBlog, featured: e.target.checked })}
-                          className="rounded bg-slate-950 border-slate-700 text-indigo-600"
-                        />
-                        <span>Feature on Homepage</span>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      {!isBlogNew && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteBlog(editingBlog.id)}
-                          className="flex items-center space-x-1 px-3 py-2 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-semibold"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => handleSaveBlog("draft")}
-                        disabled={loading}
-                        className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
-                      >
-                        Save Draft
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSaveBlog("published")}
-                        disabled={loading}
-                        className="flex items-center space-x-1.5 px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                        <span>Publish to Live SERP</span>
-                      </button>
                     </div>
                   </div>
                 </div>

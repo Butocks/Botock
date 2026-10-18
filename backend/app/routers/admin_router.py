@@ -40,15 +40,9 @@ DEFAULT_STATE: Dict[str, Any] = {
         "image-upscale": {"name": "AI Image Upscaler 4K/8K", "enabled": True, "pro_only": False, "maintenance": False, "uses": 710, "errors": 1},
         "image-compress": {"name": "Smart Image Compressor", "enabled": True, "pro_only": False, "maintenance": False, "uses": 1890, "errors": 0},
     },
-    "users": [
-        {"id": "u_1", "email": "creator@gmail.com", "name": "Ali Raza", "vip": True, "banned": False, "generations": 342, "source": "facebook", "joined": "2026-09-12"},
-        {"id": "u_2", "email": "sarah.media@outlook.com", "name": "Sarah Khan", "vip": False, "banned": False, "generations": 48, "source": "google_search", "joined": "2026-10-01"},
-        {"id": "u_3", "email": "spammer99@temp.io", "name": "Bot User", "vip": False, "banned": True, "generations": 950, "source": "direct", "joined": "2026-10-14"},
-    ],
-    "coupons": [
-        {"code": "LAUNCH50", "discount_percent": 50, "bonus_credits": 250, "used_count": 34, "max_uses": 100, "active": True},
-        {"code": "BOTOCKVIP", "discount_percent": 100, "bonus_credits": 1000, "used_count": 5, "max_uses": 20, "active": True},
-    ],
+    "users": [],
+    "coupons": [],
+    "tool_events": [],
     "telemetry": [],
     "blogs": [
         {
@@ -180,12 +174,59 @@ async def track_user_journey(request: Request):
     # Keep latest 2,000 events in memory/JSON
     state["telemetry"] = telemetry_list[:2000]
 
-    # Auto-increment tool counter if visiting a tool page
+    # Track tool visits from telemetry
     path_str = event["current_path"]
     if path_str.startswith("/tools/"):
         slug = path_str.replace("/tools/", "").strip("/")
         if slug in state.get("tool_flags", {}):
             state["tool_flags"][slug]["uses"] = state["tool_flags"][slug].get("uses", 0) + 1
+
+    save_state(state)
+    return {"ok": True}
+
+
+@router.post("/telemetry/tool")
+async def track_tool_lifecycle(request: Request):
+    """
+    Records tool lifecycle events:
+    - status: 'view' | 'input_started' | 'success' | 'error'
+    - error_message: exact failure message if error
+    - tool_id: identifier (e.g. voice-changer, ai-video)
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return {"ok": False}
+
+    state = load_state()
+    tool_id = str(body.get("tool_id", "unknown")).strip()
+    status = str(body.get("status", "view")).strip()  # view, input_started, success, error
+    error_message = body.get("error_message")
+    user_email = str(body.get("user_email", "Guest"))[:80]
+    session_id = str(body.get("session_id", "anon"))[:40]
+    client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "0.0.0.0").split(",")[0].strip()
+
+    event = {
+        "id": f"t_{int(time.time() * 1000)}",
+        "tool_id": tool_id,
+        "status": status,
+        "error_message": str(error_message)[:300] if error_message else None,
+        "user_email": user_email,
+        "session_id": session_id,
+        "ip": client_ip,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+    tool_events: List[Dict[str, Any]] = state.get("tool_events", [])
+    tool_events.insert(0, event)
+    state["tool_events"] = tool_events[:3000]
+
+    # Update tool flags stats
+    if tool_id in state.get("tool_flags", {}):
+        if status == "success":
+            state["tool_flags"][tool_id]["uses"] = state["tool_flags"][tool_id].get("uses", 0) + 1
+        elif status == "error":
+            state["tool_flags"][tool_id]["errors"] = state["tool_flags"][tool_id].get("errors", 0) + 1
 
     save_state(state)
     return {"ok": True}
@@ -247,6 +288,50 @@ async def get_admin_overview():
             "steps": [e.get("current_path", "/") for e in chronological],
         })
 
+    # Tool Funnel & Error Analytics
+    tool_events = state.get("tool_events", [])
+    tool_funnel: List[Dict[str, Any]] = []
+    recent_errors: List[Dict[str, Any]] = []
+
+    tool_flags = state.get("tool_flags", {})
+    for tid, tcfg in tool_flags.items():
+        tool_name = tcfg.get("name", tid)
+        # Count tool visits from telemetry page views
+        t_views = sum(1 for e in telemetry if e.get("current_path", "").startswith(f"/tools/{tid}"))
+        t_started = sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "input_started")
+        t_success = tcfg.get("uses", 0) + sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "success")
+        t_errors = tcfg.get("errors", 0) + sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "error")
+        total_runs = t_success + t_errors
+        t_abandoned = max(0, t_views - total_runs)
+        s_rate = round((t_success / total_runs * 100), 1) if total_runs > 0 else 100.0
+
+        tool_funnel.append({
+            "tool_id": tid,
+            "name": tool_name,
+            "views": max(t_views, total_runs),
+            "started": max(t_started, total_runs),
+            "success": t_success,
+            "errors": t_errors,
+            "abandoned": t_abandoned,
+            "success_rate": s_rate,
+            "enabled": tcfg.get("enabled", True),
+            "maintenance": tcfg.get("maintenance", False),
+        })
+
+    for te in tool_events:
+        if te.get("status") == "error" and te.get("error_message"):
+            if len(recent_errors) < 40:
+                tid = te.get("tool_id", "tool")
+                recent_errors.append({
+                    "id": te.get("id"),
+                    "tool_id": tid,
+                    "tool_name": tool_flags.get(tid, {}).get("name", tid),
+                    "error_message": te.get("error_message"),
+                    "timestamp": te.get("timestamp"),
+                    "user_email": te.get("user_email", "Guest"),
+                    "ip": te.get("ip", ""),
+                })
+
     # Server Hardware Health
     cpu_usage = 18.5
     mem_info = 42.0
@@ -275,6 +360,8 @@ async def get_admin_overview():
         "source_breakdown": source_counts,
         "campaign_breakdown": campaign_counts,
         "user_journeys": user_journeys,
+        "tool_funnel": tool_funnel,
+        "recent_errors": recent_errors,
         "quotas": state.get("quotas", {}),
         "tool_flags": state.get("tool_flags", {}),
         "users": state.get("users", []),

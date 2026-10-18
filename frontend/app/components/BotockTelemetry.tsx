@@ -40,6 +40,11 @@ function TelemetryTracker({ userEmail }: { userEmail?: string }) {
       const ref = rawReferrer.toLowerCase();
       if (ref.includes("facebook.com") || ref.includes("fb.com") || ref.includes("m.facebook.com")) detectedSource = "facebook";
       else if (ref.includes("instagram.com")) detectedSource = "instagram";
+      else if (ref.includes("chatgpt.com") || ref.includes("openai.com")) detectedSource = "ai_chatgpt";
+      else if (ref.includes("perplexity.ai")) detectedSource = "ai_perplexity";
+      else if (ref.includes("claude.ai")) detectedSource = "ai_claude";
+      else if (ref.includes("gemini.google.com")) detectedSource = "ai_gemini";
+      else if (ref.includes("copilot.microsoft.com")) detectedSource = "ai_copilot";
       else if (ref.includes("google.")) detectedSource = "google_search";
       else if (ref.includes("t.co") || ref.includes("twitter.com") || ref.includes("x.com")) detectedSource = "twitter_x";
       else if (ref.includes("youtube.com") || ref.includes("youtu.be")) detectedSource = "youtube";
