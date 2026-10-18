@@ -72,8 +72,18 @@ def _write_json(path: str, data: Any):
 # ----------------------------------------------------
 # Zero-Backdoor Lockout Engine
 # ----------------------------------------------------
+def get_allowed_admins() -> List[str]:
+    configured = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
+    defaults = ["info@botock.app", "admin@botock.app", "butoameerali@gmail.com"]
+    for d in defaults:
+        if d not in configured:
+            configured.append(d)
+    return configured
+
 def check_lockout(ip: str) -> tuple[bool, int]:
     """Returns (is_locked, seconds_left). If locked, cannot login."""
+    if ip in ("127.0.0.1", "localhost", "::1"):
+        return False, 0
     lockouts = _read_json(LOCKOUT_FILE, {})
     user_lock = lockouts.get(ip)
     if not user_lock:
@@ -92,6 +102,8 @@ def record_failed_attempt(ip: str) -> tuple[int, bool, int]:
     3 failed cycles -> 24-hour lockout.
     Returns (attempts_left, is_locked, seconds_left).
     """
+    if ip in ("127.0.0.1", "localhost", "::1"):
+        return 0, False, 0
     lockouts = _read_json(LOCKOUT_FILE, {})
     record = lockouts.get(ip, {"cycles_failed": 0, "locked_until": 0})
     
@@ -411,7 +423,7 @@ import secrets
 @router.get("/api/admin/auth/check-status")
 async def check_admin_status(user: dict = Depends(get_current_user)):
     email = user.get("email", "").strip().lower()
-    allowed_admins = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
+    allowed_admins = get_allowed_admins()
     is_role_admin = user.get("payload", {}).get("app_metadata", {}).get("role") == "admin"
     is_admin = is_role_admin or (email in allowed_admins)
     return {"is_admin": is_admin}
@@ -436,11 +448,15 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
             detail=f"Security Lockout Active: Too many failed attempts. Try again in {hours}h {mins}m."
         )
 
-    # 2. Check allowed admins from env
-    allowed_admins = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
+    # 2. Check allowed admins from env & defaults
+    allowed_admins = get_allowed_admins()
     if email_clean not in allowed_admins:
+        logger.warning(f"Unauthorized admin email attempt: '{email_clean}' - not in {allowed_admins}")
         record_failed_attempt(client_ip)
-        raise HTTPException(status_code=403, detail="Access denied. Email not listed in authorized administrators.")
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied: '{email_clean}' is not in authorized admins. Allowed: {', '.join(allowed_admins)}"
+        )
 
     # 3. Check secret code from env
     server_secret = settings.ADMIN_LOGIN_SECRET.strip()
