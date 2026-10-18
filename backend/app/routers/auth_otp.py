@@ -534,6 +534,7 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
 
     return {
         "success": True,
+        "token": admin_token,
         "admin_token": admin_token,
         "message": "Admin authorization granted.",
     }

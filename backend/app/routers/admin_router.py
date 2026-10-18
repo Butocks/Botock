@@ -255,6 +255,13 @@ async def get_admin_overview():
             pass
 
     return {
+        "ok": True,
+        "server": {
+            "cpu_percent": cpu_usage,
+            "memory_percent": mem_info,
+            "active_sessions_24h": len(active_sessions),
+            "total_telemetry_events": len(telemetry),
+        },
         "system_health": {
             "cpu_percent": cpu_usage,
             "ram_percent": mem_info,
