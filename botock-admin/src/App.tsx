@@ -447,9 +447,7 @@ export default function App() {
       } else if (res.data?.otp_required) {
         // 🔒 New Device -> Proceed to 6-digit Zoho OTP verification
         setLoginStep("otp");
-        if (res.data?.dev_otp) {
-          setOtpCode(res.data.dev_otp);
-        }
+        setOtpCode("");
         setStatusMessage({
           type: "info",
           text: res.data?.message || `6-digit verification code dispatched to ${adminEmail.trim()} via Zoho Mail.`,

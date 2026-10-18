@@ -549,13 +549,9 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
         "expires_in_seconds": settings.ADMIN_OTP_EXPIRY_MINUTES * 60,
     }
 
-    # If running on local machine or SMTP failed, provide code in payload & terminal so owner is never blocked
-    is_local = client_ip in ("127.0.0.1", "localhost", "::1", "unknown") or not email_delivered
-    if is_local:
-        logger.warning(f"🔑 [LOCAL DEV 2FA CODE FOR {email_clean}]: {otp_code}")
-        response_payload["dev_otp"] = otp_code
-        if not email_delivered:
-            response_payload["message"] = f"SMTP delivery failed. Your 6-digit code is: {otp_code}"
+    # Log only in server terminal logs for security inspection
+    if not email_delivered:
+        logger.warning(f"⚠️ [SMTP DELIVERY FAILED FOR {email_clean}]. Check SMTP credentials in .env")
 
     return response_payload
 
