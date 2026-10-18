@@ -105,6 +105,11 @@ async def safe_generate_task(
                 rollback_video_generation(is_guest=False, duration=duration_seconds, user_key=user_id)
     except Exception as e:
         logger.exception("Video generation task failed: %s", generation_id)
+        try:
+            from app.routers.admin_router import log_tool_error
+            log_tool_error("video-generator", "AI Video Generator Studio", e, user_email=user_id or "Guest")
+        except Exception:
+            pass
         if user_id:
             from app.services.stats_service import rollback_video_generation
             rollback_video_generation(is_guest=False, duration=duration_seconds, user_key=user_id)
@@ -175,13 +180,22 @@ async def generate_video(
         selected_model = "omni-1.1-flash-360p"
 
     from app.routers.auth_otp import get_platform_settings
-    quotas = get_platform_settings().get("quotas", {})
+    from app.routers.admin_router import load_state as load_admin_state
+    admin_state = load_admin_state()
+    admin_quotas = admin_state.get("quotas", {})
+    quotas = {**get_platform_settings().get("quotas", {}), **admin_quotas}
     
-    # Check Guest Video Lock
-    if is_guest and quotas.get("guest_video_locked", False):
+    # Check Video Generation Access Controller ('all' | 'login_only' | 'off')
+    video_access = quotas.get("video_gen_access", "all")
+    if video_access == "off":
         raise HTTPException(
             status_code=403,
-            detail="Guest video generation is currently locked by the administrator. Please log in or create an account to generate videos."
+            detail="AI Video Generation is currently disabled by the administrator."
+        )
+    if is_guest and (video_access == "login_only" or quotas.get("guest_video_locked", False)):
+        raise HTTPException(
+            status_code=403,
+            detail="Video generation is restricted to registered users only. Please log in or create an account to generate videos."
         )
 
     # Guest restrictions
@@ -238,15 +252,19 @@ async def generate_video(
                 detail="Service temporarily unavailable. Quota full for this month. Please try again later."
             )
             
-        # 3. Individual User Daily Limit Check
+        # 3. Individual User Daily Limit Check (Single unified quota if set, otherwise legacy limits)
         user_key = client_ip if is_guest else (user_email or user_id_str)
-        user_daily_limit = int(quotas.get("guest_daily_video_limit" if is_guest else "user_daily_video_limit", 1 if is_guest else 3))
+        unified_quota = int(quotas.get("video_daily_quota", 0))
+        if unified_quota > 0:
+            user_daily_limit = unified_quota
+        else:
+            user_daily_limit = int(quotas.get("guest_daily_video_limit" if is_guest else "user_daily_video_limit", 1 if is_guest else 3))
         user_today_count = global_stats.get("user_daily", {}).get(user_key, 0)
         
         if user_daily_limit > 0 and user_today_count >= user_daily_limit:
             raise HTTPException(
                 status_code=429,
-                detail="Quota full for today. Please try again tomorrow."
+                detail=f"Daily video generation quota ({user_daily_limit} videos/day) reached for today. Please try again tomorrow."
             )
 
     # In distributed mode we reserve a queue position

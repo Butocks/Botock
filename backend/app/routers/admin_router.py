@@ -3,6 +3,7 @@ import json
 import time
 import logging
 import hashlib
+import traceback
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, Header, Request, Depends
@@ -23,6 +24,8 @@ STATE_FILE = os.path.join(os.path.dirname(__file__), "../../botock_admin_state.j
 
 DEFAULT_STATE: Dict[str, Any] = {
     "quotas": {
+        "video_gen_access": "all",  # "all" (Guest + Login) | "login_only" | "off"
+        "video_daily_quota": 5,     # Single unified daily video quota
         "guest_daily_limit": 10,
         "free_user_daily_limit": 30,
         "max_file_size_mb": 60,
@@ -31,14 +34,16 @@ DEFAULT_STATE: Dict[str, Any] = {
         "announcement_banner": "",
     },
     "tool_flags": {
-        "voice-changer": {"name": "AI Voice Studio & Cloner", "enabled": True, "pro_only": False, "maintenance": False, "uses": 1420, "errors": 4},
-        "pdf-to-docx": {"name": "PDF to Word Converter", "enabled": True, "pro_only": False, "maintenance": False, "uses": 980, "errors": 2},
-        "pdf-to-excel": {"name": "PDF to Excel Converter", "enabled": True, "pro_only": False, "maintenance": False, "uses": 610, "errors": 1},
-        "ai-video": {"name": "AI Video Generator (Veo/Flow)", "enabled": True, "pro_only": True, "maintenance": False, "uses": 540, "errors": 9},
-        "bg-remover": {"name": "AI Background Remover", "enabled": True, "pro_only": False, "maintenance": False, "uses": 2150, "errors": 0},
-        "audio-enhance": {"name": "AI Studio Audio Enhancer", "enabled": True, "pro_only": False, "maintenance": False, "uses": 830, "errors": 3},
-        "image-upscale": {"name": "AI Image Upscaler 4K/8K", "enabled": True, "pro_only": False, "maintenance": False, "uses": 710, "errors": 1},
-        "image-compress": {"name": "Smart Image Compressor", "enabled": True, "pro_only": False, "maintenance": False, "uses": 1890, "errors": 0},
+        "video-generator": {"name": "AI Video Generator Studio", "category": "AI Video", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 540, "errors": 0},
+        "ai-video-generator": {"name": "AI Video Generator Studio", "category": "AI Video", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 540, "errors": 0},
+        "voice-changer": {"name": "AI Voice Studio & Cloner", "category": "AI Audio", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 1420, "errors": 4},
+        "audio-enhance": {"name": "AI Studio Audio Enhancer", "category": "AI Audio", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 830, "errors": 3},
+        "bg-remover": {"name": "AI Background Remover", "category": "AI Image", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 2150, "errors": 0},
+        "image-upscaler": {"name": "4K AI Image Upscaler", "category": "AI Image", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 710, "errors": 1},
+        "pdf-to-docx": {"name": "PDF to Word Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 980, "errors": 2},
+        "pdf-to-excel": {"name": "PDF to Excel Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 610, "errors": 1},
+        "docx-to-pdf": {"name": "Word to PDF Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 430, "errors": 0},
+        "pdf-protect": {"name": "PDF Password Protector", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 220, "errors": 0},
     },
     "users": [],
     "coupons": [],
@@ -202,6 +207,7 @@ async def track_tool_lifecycle(request: Request):
     tool_id = str(body.get("tool_id", "unknown")).strip()
     status = str(body.get("status", "view")).strip()  # view, input_started, success, error
     error_message = body.get("error_message")
+    stack_trace = body.get("stack_trace")
     user_email = str(body.get("user_email", "Guest"))[:80]
     session_id = str(body.get("session_id", "anon"))[:40]
     client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "0.0.0.0").split(",")[0].strip()
@@ -210,7 +216,8 @@ async def track_tool_lifecycle(request: Request):
         "id": f"t_{int(time.time() * 1000)}",
         "tool_id": tool_id,
         "status": status,
-        "error_message": str(error_message)[:300] if error_message else None,
+        "error_message": str(error_message)[:500] if error_message else None,
+        "stack_trace": str(stack_trace)[:2500] if stack_trace else None,
         "user_email": user_email,
         "session_id": session_id,
         "ip": client_ip,
@@ -320,13 +327,14 @@ async def get_admin_overview():
 
     for te in tool_events:
         if te.get("status") == "error" and te.get("error_message"):
-            if len(recent_errors) < 40:
+            if len(recent_errors) < 100:
                 tid = te.get("tool_id", "tool")
                 recent_errors.append({
                     "id": te.get("id"),
                     "tool_id": tid,
                     "tool_name": tool_flags.get(tid, {}).get("name", tid),
                     "error_message": te.get("error_message"),
+                    "stack_trace": te.get("stack_trace"),
                     "timestamp": te.get("timestamp"),
                     "user_email": te.get("user_email", "Guest"),
                     "ip": te.get("ip", ""),
@@ -423,6 +431,47 @@ async def create_coupon(request: Request):
     state.setdefault("coupons", []).insert(0, new_coupon)
     save_state(state)
     return {"ok": True, "coupons": state["coupons"]}
+
+
+@router.post("/errors/clear", dependencies=[Depends(verify_admin_token)])
+async def clear_admin_errors():
+    """
+    Clears all recorded tool error events and resets error counters on all tools.
+    """
+    state = load_state()
+    state["tool_events"] = [e for e in state.get("tool_events", []) if e.get("status") != "error"]
+    for tid, tcfg in state.get("tool_flags", {}).items():
+        if isinstance(tcfg, dict):
+            tcfg["errors"] = 0
+    save_state(state)
+    return {"ok": True, "message": "All error logs cleared"}
+
+
+def log_tool_error(tool_id: str, tool_name: str, err: Exception, client_ip: str = "", user_email: str = "Guest"):
+    """
+    Direct helper to log tool exceptions into admin error console.
+    """
+    try:
+        state = load_state()
+        event = {
+            "id": f"err_{int(time.time() * 1000)}",
+            "tool_id": tool_id,
+            "status": "error",
+            "error_message": str(err)[:500],
+            "stack_trace": traceback.format_exc()[:2500],
+            "user_email": user_email,
+            "session_id": "sys_err",
+            "ip": client_ip,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        tool_events = state.setdefault("tool_events", [])
+        tool_events.insert(0, event)
+        state["tool_events"] = tool_events[:3000]
+        if tool_id in state.get("tool_flags", {}):
+            state["tool_flags"][tool_id]["errors"] = state["tool_flags"][tool_id].get("errors", 0) + 1
+        save_state(state)
+    except Exception as e:
+        logger.error(f"Failed to log tool error for {tool_id}: {e}")
 
 
 # =====================================================================

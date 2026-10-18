@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import {
   Compass,
@@ -22,15 +22,12 @@ import {
   Laptop,
   Sparkles,
   ArrowRight,
-  Check,
   Bold,
   Italic,
   Heading2,
   Heading3,
   Link2,
   List,
-  Quote,
-  Code,
   ShieldCheck,
   ShieldAlert,
   Mail,
@@ -38,7 +35,18 @@ import {
   Bot,
   Activity,
   XCircle,
+  Video,
+  Users,
+  UserX,
+  Upload,
+  Copy,
+  Flame,
+  AlertTriangle,
+  Power,
+  Image as ImageIcon,
 } from "lucide-react";
+
+export type AccessLevel = "all" | "login_only" | "off";
 
 interface TelemetryEvent {
   session_id: string;
@@ -60,11 +68,14 @@ interface TelemetryEvent {
 
 interface ToolConfig {
   name: string;
+  category?: string;
   enabled: boolean;
+  access_mode?: AccessLevel; // 'all' (Guest + Login) | 'login_only' (Registered Only) | 'off' (Not Allowed / Off)
   pro_only: boolean;
   maintenance: boolean;
   uses: number;
   errors: number;
+  daily_quota?: number;
 }
 
 interface ToolFunnelMetric {
@@ -85,6 +96,7 @@ interface ToolErrorLog {
   tool_id: string;
   tool_name: string;
   error_message: string;
+  stack_trace?: string;
   timestamp: string;
   user_email?: string;
   ip?: string;
@@ -111,6 +123,10 @@ interface BlogPost {
 }
 
 interface QuotasConfig {
+  // Video Generation Specific Controls
+  video_gen_access: AccessLevel; // "all" (Guest + Login) | "login_only" | "off"
+  video_daily_quota: number; // Single unified daily video quota for Guest or Logged-in user
+  // Global Platform Controls
   guest_daily_limit: number;
   free_user_daily_limit: number;
   max_file_size_mb: number;
@@ -118,6 +134,100 @@ interface QuotasConfig {
   global_maintenance: boolean;
   announcement_banner: string;
 }
+
+const DEFAULT_WEBSITE_TOOLS: Record<string, ToolConfig> = {
+  "video-generator": {
+    name: "AI Video Generator Studio",
+    category: "AI Video",
+    enabled: true,
+    access_mode: "all",
+    pro_only: false,
+    maintenance: false,
+    uses: 0,
+    errors: 0,
+    daily_quota: 5,
+  },
+  "voice-changer": {
+    name: "AI Voice Changer & Cloner",
+    category: "AI Audio",
+    enabled: true,
+    access_mode: "all",
+    pro_only: false,
+    maintenance: false,
+    uses: 0,
+    errors: 0,
+  },
+  "audio-enhance": {
+    name: "AI Studio Audio Enhancer",
+    category: "AI Audio",
+    enabled: true,
+    access_mode: "all",
+    pro_only: false,
+    maintenance: false,
+    uses: 0,
+    errors: 0,
+  },
+  "bg-remover": {
+    name: "AI Background Remover",
+    category: "AI Image",
+    enabled: true,
+    access_mode: "all",
+    pro_only: false,
+    maintenance: false,
+    uses: 0,
+    errors: 0,
+  },
+  "image-upscaler": {
+    name: "4K AI Image Upscaler",
+    category: "AI Image",
+    enabled: true,
+    access_mode: "all",
+    pro_only: false,
+    maintenance: false,
+    uses: 0,
+    errors: 0,
+  },
+  "pdf-to-docx": {
+    name: "PDF to Word Converter",
+    category: "Document Tools",
+    enabled: true,
+    access_mode: "all",
+    pro_only: false,
+    maintenance: false,
+    uses: 0,
+    errors: 0,
+  },
+  "pdf-to-excel": {
+    name: "PDF to Excel Converter",
+    category: "Document Tools",
+    enabled: true,
+    access_mode: "all",
+    pro_only: false,
+    maintenance: false,
+    uses: 0,
+    errors: 0,
+  },
+  "docx-to-pdf": {
+    name: "Word to PDF Converter",
+    category: "Document Tools",
+    enabled: true,
+    access_mode: "all",
+    pro_only: false,
+    maintenance: false,
+    uses: 0,
+    errors: 0,
+  },
+  "pdf-protect": {
+    name: "PDF Password Protector",
+    category: "Document Tools",
+    enabled: true,
+    access_mode: "all",
+    pro_only: false,
+    maintenance: false,
+    uses: 0,
+    errors: 0,
+  },
+};
 
 const PRESET_URLS = [
   { label: "🚀 Azure Backend (Auto Proxy)", url: "auto" },
@@ -169,7 +279,6 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState<boolean>(false);
   const [otpCode, setOtpCode] = useState<string>("");
 
-  // Clean any previously cached sensitive credentials from browser localStorage
   useEffect(() => {
     localStorage.removeItem("botock_admin_secret");
     localStorage.removeItem("botock_admin_email");
@@ -182,7 +291,10 @@ export default function App() {
   // Connection & Server Health
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{
+    type: "success" | "error" | "info";
+    text: string;
+  } | null>(null);
   const [serverStats, setServerStats] = useState<{
     cpu_percent?: number;
     memory_percent?: number;
@@ -194,10 +306,12 @@ export default function App() {
   // Tab Data States
   const [telemetry, setTelemetry] = useState<TelemetryEvent[]>([]);
   const [sourceBreakdown, setSourceBreakdown] = useState<Record<string, number>>({});
-  const [tools, setTools] = useState<Record<string, ToolConfig>>({});
+  const [tools, setTools] = useState<Record<string, ToolConfig>>(DEFAULT_WEBSITE_TOOLS);
   const [toolFunnel, setToolFunnel] = useState<ToolFunnelMetric[]>([]);
   const [recentErrors, setRecentErrors] = useState<ToolErrorLog[]>([]);
   const [quotas, setQuotas] = useState<QuotasConfig>({
+    video_gen_access: "all",
+    video_daily_quota: 5,
     guest_daily_limit: 10,
     free_user_daily_limit: 30,
     max_file_size_mb: 60,
@@ -207,9 +321,14 @@ export default function App() {
   });
   const [blogs, setBlogs] = useState<BlogPost[]>([]);
 
-  // Search & Filter States
+  // Search, Filter & Modal States
   const [journeyFilter, setJourneyFilter] = useState("all");
   const [errorSearch, setErrorSearch] = useState("");
+  const [errorToolFilter, setErrorToolFilter] = useState("all");
+  const [expandedErrorId, setExpandedErrorId] = useState<string | null>(null);
+  const [newToolSlug, setNewToolSlug] = useState("");
+  const [newToolName, setNewToolName] = useState("");
+  const [newToolCategory, setNewToolCategory] = useState("AI Tools");
 
   // SEO Blog CMS Form State
   const [editingBlog, setEditingBlog] = useState<BlogPost>({
@@ -218,20 +337,21 @@ export default function App() {
     slug: "",
     excerpt: "",
     content: "",
-    category: "AI Audio & Voice",
+    category: "AI Audio Tutorials",
     target_keyword: "",
     meta_title: "",
     meta_description: "",
     cover_image: "https://botock.app/og-image.jpg",
-    author: "Botock Editorial Team",
-    reading_time: "3 min read",
+    author: "Ameer Ali",
+    reading_time: "4 min read",
     status: "published",
     featured: false,
     views: 0,
   });
   const [isBlogNew, setIsBlogNew] = useState(true);
-  const [blogPreviewMode, setBlogPreviewMode] = useState<"edit" | "preview" | "serp">("edit");
+  const [blogPreviewMode, setBlogPreviewMode] = useState<"edit" | "preview">("edit");
   const [serpDevice, setSerpDevice] = useState<"desktop" | "mobile">("desktop");
+  const [blogSearch, setBlogSearch] = useState("");
 
   // Axios Client Generator
   const getClient = useCallback(() => {
@@ -256,10 +376,9 @@ export default function App() {
   // Fetch Entire Overview from Backend
   const fetchOverview = useCallback(async () => {
     setLoading(true);
-    setStatusMessage({ type: "info", text: "Connecting to backend..." });
+    setStatusMessage({ type: "info", text: "Syncing live telemetry & configurations..." });
     const cleanHost = resolveHost(targetHost);
 
-    // 1. Probe readiness & health check
     try {
       const healthRes = await axios.get(`${cleanHost}/health`, { timeout: 6000 });
       if (healthRes.data?.status === "ok") {
@@ -275,26 +394,43 @@ export default function App() {
       return;
     }
 
-    // 2. If session token is not yet established, return
     if (!sessionToken.trim()) {
       setLoading(false);
       return;
     }
 
-    // 3. Authenticated overview request
     const client = getClient();
     try {
       const res = await client.get("/api/admin/overview");
       if (res.data?.ok || res.data?.tool_flags) {
         setConnected(true);
-        setStatusMessage({ type: "success", text: "Connected! All systems operational." });
+        setStatusMessage({ type: "success", text: "Connected! Live metrics synced." });
         setServerStats(res.data.server || {});
         setTelemetry(res.data.user_journeys || []);
         setSourceBreakdown(res.data.source_breakdown || {});
-        setTools(res.data.tool_flags || {});
+
+        // Merge default website tools with backend saved flags
+        const mergedTools: Record<string, ToolConfig> = { ...DEFAULT_WEBSITE_TOOLS };
+        if (res.data.tool_flags) {
+          Object.entries(res.data.tool_flags).forEach(([k, v]: [string, any]) => {
+            // Unify video-generator and ai-video / ai-video-generator
+            const normalizedKey = k === "ai-video" || k === "ai-video-generator" ? "video-generator" : k;
+            mergedTools[normalizedKey] = {
+              ...(mergedTools[normalizedKey] || {}),
+              ...v,
+              access_mode:
+                v.access_mode || (!v.enabled ? "off" : v.pro_only ? "login_only" : "all"),
+            };
+          });
+        }
+        setTools(mergedTools);
+
         setToolFunnel(res.data.tool_funnel || []);
         setRecentErrors(res.data.recent_errors || []);
-        setQuotas(res.data.quotas || {});
+        setQuotas((prev) => ({
+          ...prev,
+          ...(res.data.quotas || {}),
+        }));
         setBlogs(res.data.blogs || []);
 
         localStorage.setItem("botock_admin_host", targetHost);
@@ -313,14 +449,13 @@ export default function App() {
     }
   }, [targetHost, sessionToken, getClient]);
 
-  // Initial load on mount or host change
   useEffect(() => {
     if (sessionToken) {
       fetchOverview();
     }
   }, [fetchOverview, sessionToken]);
 
-  // Real-time Traffic Attribution Totals
+  // Real-time Traffic Attribution Totals & Ranked Top Sources
   const trafficTotals = useMemo(() => {
     const fb = sourceBreakdown["facebook"] || 0;
     const insta = sourceBreakdown["instagram"] || 0;
@@ -336,8 +471,54 @@ export default function App() {
     const direct = (sourceBreakdown["direct"] || 0) + (sourceBreakdown["organic"] || 0);
     const referral = sourceBreakdown["referral"] || 0;
     const total = fb + insta + ai + google + twitter + tiktok + direct + referral;
-    return { fb, insta, ai, google, twitter, tiktok, direct, referral, total: Math.max(total, 1) };
+
+    const ranked = [
+      { name: "Facebook Ads & Shares", key: "facebook", count: fb, color: "bg-blue-500" },
+      { name: "Instagram Reels & Bio", key: "instagram", count: insta, color: "bg-pink-500" },
+      { name: "AI Engines (ChatGPT/Perplexity)", key: "ai", count: ai, color: "bg-emerald-500" },
+      { name: "Google Search & Ads", key: "google", count: google, color: "bg-amber-500" },
+      { name: "TikTok & X (Twitter)", key: "social", count: twitter + tiktok, color: "bg-sky-500" },
+      { name: "Direct & Bookmarks", key: "direct", count: direct, color: "bg-indigo-500" },
+    ].sort((a, b) => b.count - a.count);
+
+    return {
+      fb,
+      insta,
+      ai,
+      google,
+      twitter,
+      tiktok,
+      direct,
+      referral,
+      total: Math.max(total, 1),
+      ranked,
+    };
   }, [sourceBreakdown]);
+
+  // Top Most Used Tools & Highest Error Tools Ranking
+  const toolRankings = useMemo(() => {
+    const list = Object.entries(tools).map(([id, cfg]) => {
+      const funnelMatch = toolFunnel.find(
+        (f) => f.tool_id === id || (id === "video-generator" && (f.tool_id === "ai-video" || f.tool_id === "ai-video-generator"))
+      );
+      const uses = funnelMatch ? funnelMatch.success + funnelMatch.started : cfg.uses || 0;
+      const errors = funnelMatch ? funnelMatch.errors : cfg.errors || 0;
+      return {
+        id,
+        name: cfg.name || id,
+        uses,
+        errors,
+        errorRate: uses + errors > 0 ? Math.round((errors / (uses + errors)) * 100) : 0,
+      };
+    });
+
+    const mostUsed = [...list].sort((a, b) => b.uses - a.uses);
+    const mostErrors = [...list].sort((a, b) => b.errors - a.errors);
+    const maxUses = Math.max(...mostUsed.map((t) => t.uses), 1);
+    const maxErrors = Math.max(...mostErrors.map((t) => t.errors), 1);
+
+    return { mostUsed, mostErrors, maxUses, maxErrors };
+  }, [tools, toolFunnel]);
 
   // Tool Funnel Summary Calculations
   const funnelSummary = useMemo(() => {
@@ -350,7 +531,14 @@ export default function App() {
       totalSuccess + totalErrors > 0
         ? Math.round((totalSuccess / (totalSuccess + totalErrors)) * 100)
         : 100;
-    return { totalViews, totalStarted, totalSuccess, totalErrors, totalAbandoned, overallSuccessRate };
+    return {
+      totalViews,
+      totalStarted,
+      totalSuccess,
+      totalErrors,
+      totalAbandoned,
+      overallSuccessRate,
+    };
   }, [toolFunnel]);
 
   // Filtered Journeys
@@ -361,38 +549,42 @@ export default function App() {
       if (journeyFilter === "instagram") return j.utm_source === "instagram";
       if (journeyFilter === "ai") return j.utm_source.startsWith("ai_");
       if (journeyFilter === "google") return j.utm_source.includes("google");
-      if (journeyFilter === "direct") return j.utm_source === "direct" || j.utm_source === "organic";
+      if (journeyFilter === "direct")
+        return j.utm_source === "direct" || j.utm_source === "organic";
       return true;
     });
   }, [telemetry, journeyFilter]);
 
   // Filtered Error Logs
   const filteredErrors = useMemo(() => {
-    if (!errorSearch.trim()) return recentErrors;
-    const q = errorSearch.toLowerCase();
-    return recentErrors.filter(
-      (e) =>
+    return recentErrors.filter((e) => {
+      if (errorToolFilter !== "all" && e.tool_id !== errorToolFilter) return false;
+      if (!errorSearch.trim()) return true;
+      const q = errorSearch.toLowerCase();
+      return (
         e.tool_name.toLowerCase().includes(q) ||
+        e.tool_id.toLowerCase().includes(q) ||
         e.error_message.toLowerCase().includes(q) ||
         (e.ip && e.ip.includes(q))
-    );
-  }, [recentErrors, errorSearch]);
+      );
+    });
+  }, [recentErrors, errorSearch, errorToolFilter]);
 
   // SEO Score Auditor
   const seoScore = useMemo(() => {
     let score = 0;
     const kw = editingBlog.target_keyword.trim().toLowerCase();
-    if (!kw) return 0;
+    if (!kw) return 20;
     score += 10;
     if (editingBlog.title.toLowerCase().includes(kw)) score += 15;
     if (editingBlog.meta_title.toLowerCase().includes(kw)) score += 15;
     if (editingBlog.meta_description.toLowerCase().includes(kw)) score += 15;
     if (editingBlog.content.toLowerCase().includes(kw)) score += 15;
     const words = editingBlog.content.trim().split(/\s+/).filter(Boolean).length;
-    if (words > 300) score += 10;
-    if (words > 800) score += 10;
+    if (words > 250) score += 10;
+    if (words > 600) score += 10;
     if (editingBlog.content.includes("## ")) score += 5;
-    if (editingBlog.content.includes("### ")) score += 5;
+    if (editingBlog.content.includes("](/tools/")) score += 5;
     return Math.min(score, 100);
   }, [editingBlog]);
 
@@ -424,7 +616,6 @@ export default function App() {
       localStorage.setItem("botock_admin_host", targetHost);
 
       if (res.data?.trusted_device && (res.data?.token || res.data?.admin_token)) {
-        // Trusted Device Recognized -> Direct 1-Click Entry!
         const token = res.data.token || res.data.admin_token;
         sessionStorage.setItem("botock_admin_session_token", token);
         setSessionToken(token);
@@ -436,12 +627,13 @@ export default function App() {
         });
         setTimeout(() => fetchOverview(), 150);
       } else if (res.data?.otp_required) {
-        // New Device -> Proceed to 6-digit Zoho OTP verification
         setLoginStep("otp");
         setOtpCode("");
         setStatusMessage({
           type: "info",
-          text: res.data?.message || `6-digit verification code dispatched to ${adminEmail.trim()} via Zoho Mail.`,
+          text:
+            res.data?.message ||
+            `6-digit verification code dispatched to ${adminEmail.trim()} via Zoho Mail.`,
         });
       }
     } catch (err: any) {
@@ -501,11 +693,13 @@ export default function App() {
     const cleanHost = resolveHost(targetHost);
     try {
       if (sessionToken) {
-        await axios.post(
-          `${cleanHost}/api/admin/auth/logout`,
-          {},
-          { headers: { "x-admin-token": sessionToken }, timeout: 4000 }
-        ).catch(() => {});
+        await axios
+          .post(
+            `${cleanHost}/api/admin/auth/logout`,
+            {},
+            { headers: { "x-admin-token": sessionToken }, timeout: 4000 }
+          )
+          .catch(() => {});
       }
     } finally {
       sessionStorage.removeItem("botock_admin_session_token");
@@ -544,37 +738,138 @@ export default function App() {
     };
   }, [sessionToken]);
 
-  // Toggle Tool Feature Flag
-  const handleToggleTool = async (
-    toolId: string,
-    field: "enabled" | "pro_only" | "maintenance",
-    currentVal: boolean
-  ) => {
+  // Update Any Tool Configuration (Access Level, Enabled, Maintenance, Quota)
+  const handleUpdateToolConfig = async (toolId: string, updates: Partial<ToolConfig>) => {
+    const currentTool = tools[toolId] || {
+      name: toolId,
+      enabled: true,
+      access_mode: "all",
+      pro_only: false,
+      maintenance: false,
+      uses: 0,
+      errors: 0,
+    };
+
+    // Synchronize enabled & pro_only flags with access_mode for backward compatibility
+    const syncedUpdates: Partial<ToolConfig> = { ...updates };
+    if (updates.access_mode) {
+      syncedUpdates.enabled = updates.access_mode !== "off";
+      syncedUpdates.pro_only = updates.access_mode === "login_only";
+    } else if (updates.enabled !== undefined) {
+      syncedUpdates.access_mode = updates.enabled ? "all" : "off";
+    }
+
+    const updatedLocal = {
+      ...tools,
+      [toolId]: { ...currentTool, ...syncedUpdates },
+    };
+    setTools(updatedLocal);
+
     const client = getClient();
     try {
       const res = await client.post("/api/admin/tool-flags", {
         tool_id: toolId,
-        updates: { [field]: !currentVal },
+        updates: { ...currentTool, ...syncedUpdates },
       });
+      // Also update alias if video-generator
+      if (toolId === "video-generator") {
+        client.post("/api/admin/tool-flags", {
+          tool_id: "ai-video-generator",
+          updates: { ...currentTool, ...syncedUpdates },
+        }).catch(() => {});
+      }
       if (res.data?.ok) {
-        setTools(res.data.tool_flags);
-        setStatusMessage({ type: "success", text: `Updated ${toolId} successfully.` });
+        setStatusMessage({ type: "success", text: `Updated ${currentTool.name} settings.` });
       }
     } catch (err: any) {
-      setStatusMessage({ type: "error", text: err.response?.data?.detail || "Update failed." });
+      setStatusMessage({
+        type: "error",
+        text: err.response?.data?.detail || "Failed to update tool on server.",
+      });
     }
   };
 
-  // Save Quotas Configuration
-  const handleSaveQuotas = async () => {
+  // Bulk Turn All Tools ON or OFF
+  const handleBulkToggleAllTools = async (enableAll: boolean) => {
+    const mode: AccessLevel = enableAll ? "all" : "off";
+    const client = getClient();
+    const nextTools: Record<string, ToolConfig> = {};
+    for (const [id, cfg] of Object.entries(tools)) {
+      nextTools[id] = { ...cfg, enabled: enableAll, access_mode: mode, pro_only: false };
+      client
+        .post("/api/admin/tool-flags", {
+          tool_id: id,
+          updates: nextTools[id],
+        })
+        .catch(() => {});
+    }
+    setTools(nextTools);
+    setStatusMessage({
+      type: "success",
+      text: enableAll ? "All website tools switched ON!" : "All website tools switched OFF!",
+    });
+  };
+
+  // Register a New Website Tool into Admin Control
+  const handleAddNewTool = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanSlug = newToolSlug
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (!cleanSlug || !newToolName.trim()) return;
+
+    await handleUpdateToolConfig(cleanSlug, {
+      name: newToolName.trim(),
+      category: newToolCategory,
+      enabled: true,
+      access_mode: "all",
+      pro_only: false,
+      maintenance: false,
+      uses: 0,
+      errors: 0,
+    });
+    setNewToolSlug("");
+    setNewToolName("");
+  };
+
+  // Save Quotas Configuration (Including Video Gen Access & Single Video Quota)
+  const handleSaveQuotas = async (overrideQuotas?: QuotasConfig) => {
+    const payload = overrideQuotas || quotas;
     const client = getClient();
     try {
-      const res = await client.post("/api/admin/quotas", quotas);
+      const res = await client.post("/api/admin/quotas", payload);
+      // Also sync video generator tool flags with video_gen_access
+      await handleUpdateToolConfig("video-generator", {
+        access_mode: payload.video_gen_access,
+        enabled: payload.video_gen_access !== "off",
+        pro_only: payload.video_gen_access === "login_only",
+        daily_quota: payload.video_daily_quota,
+      });
       if (res.data?.ok) {
-        setStatusMessage({ type: "success", text: "Global quotas & limits saved." });
+        setStatusMessage({
+          type: "success",
+          text: "Video Generation Access, Single Quota & Global Limits saved!",
+        });
       }
     } catch (err: any) {
-      setStatusMessage({ type: "error", text: err.response?.data?.detail || "Failed to save quotas." });
+      setStatusMessage({
+        type: "error",
+        text: err.response?.data?.detail || "Failed to save quotas.",
+      });
+    }
+  };
+
+  // Clear Error Logs
+  const handleClearErrors = async () => {
+    const client = getClient();
+    try {
+      await client.post("/api/admin/errors/clear", {});
+      setRecentErrors([]);
+      setStatusMessage({ type: "success", text: "Cleared error inspector logs." });
+    } catch {
+      setRecentErrors([]);
+      setStatusMessage({ type: "info", text: "Error logs cleared locally." });
     }
   };
 
@@ -582,6 +877,7 @@ export default function App() {
   const handleSelectBlog = (blog: BlogPost) => {
     setEditingBlog({ ...blog });
     setIsBlogNew(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleNewBlog = () => {
@@ -596,7 +892,7 @@ export default function App() {
       meta_title: "",
       meta_description: "",
       cover_image: "https://botock.app/og-image.jpg",
-      author: "Botock Editorial Team",
+      author: "Ameer Ali",
       reading_time: "4 min read",
       status: "published",
       featured: false,
@@ -605,25 +901,50 @@ export default function App() {
     setIsBlogNew(true);
   };
 
+  // Local Cover Image Upload to Base64 Data URL
+  const handleCoverImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      setStatusMessage({ type: "error", text: "Cover image must be under 2MB for optimal performance." });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setEditingBlog((prev) => ({ ...prev, cover_image: reader.result as string }));
+        setStatusMessage({ type: "success", text: "Cover image loaded into article!" });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveBlog = async () => {
     if (!editingBlog.title.trim() || !editingBlog.slug.trim()) {
       setStatusMessage({ type: "error", text: "Blog title and URL slug are required." });
       return;
     }
 
+    const words = editingBlog.content.trim().split(/\s+/).filter(Boolean).length;
+    const computedReadingTime = `${Math.max(1, Math.round(words / 200))} min read`;
+    const payload = { ...editingBlog, reading_time: computedReadingTime };
+
     const client = getClient();
     try {
-      const res = await client.post("/api/admin/blogs/save", editingBlog);
+      const res = await client.post("/api/admin/blogs/save", payload);
       if (res.data?.ok) {
         setBlogs(res.data.blogs || []);
         setIsBlogNew(false);
         setStatusMessage({
           type: "success",
-          text: `Article "${editingBlog.title}" successfully published directly to botock.app/blog/${editingBlog.slug}!`,
+          text: `Article "${editingBlog.title}" (${editingBlog.status}) saved to botock.app/blog/${editingBlog.slug}!`,
         });
       }
     } catch (err: any) {
-      setStatusMessage({ type: "error", text: err.response?.data?.detail || "Failed to save blog post." });
+      setStatusMessage({
+        type: "error",
+        text: err.response?.data?.detail || "Failed to save blog post.",
+      });
     }
   };
 
@@ -638,11 +959,13 @@ export default function App() {
         setStatusMessage({ type: "success", text: "Article deleted from publication." });
       }
     } catch (err: any) {
-      setStatusMessage({ type: "error", text: err.response?.data?.detail || "Failed to delete article." });
+      setStatusMessage({
+        type: "error",
+        text: err.response?.data?.detail || "Failed to delete article.",
+      });
     }
   };
 
-  // Helper Markdown Inserter
   const insertMarkdown = (prefix: string, suffix: string = "") => {
     const textarea = document.getElementById("blog-content-editor") as HTMLTextAreaElement;
     if (!textarea) return;
@@ -652,15 +975,16 @@ export default function App() {
     const before = text.substring(0, start);
     const selected = text.substring(start, end);
     const after = text.substring(end);
-    const newText = before + prefix + (selected || "text") + suffix + after;
+    const newText = before + prefix + (selected || "") + suffix + after;
     setEditingBlog({ ...editingBlog, content: newText });
     setTimeout(() => {
       textarea.focus();
-      textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selected || "text").length);
     }, 50);
   };
 
-  // If Not Authenticated, Render Command Gate Screen
+  // ===========================================================================
+  // 🔐 GATE SCREEN (WHEN NOT AUTHENTICATED)
+  // ===========================================================================
   if (!sessionToken) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 selection:bg-indigo-500 selection:text-white">
@@ -672,12 +996,9 @@ export default function App() {
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
               Botock Command Center
             </h1>
-            <p className="text-xs text-slate-400">
-              RESTRICTED GATE • ZERO-BACKDOOR ACCESS
-            </p>
+            <p className="text-xs text-slate-400">RESTRICTED GATE • ZERO-BACKDOOR ACCESS</p>
           </div>
 
-          {/* Backend Selector */}
           <div>
             <label className="text-[11px] font-semibold text-slate-400 block mb-1">
               Target Backend Environment
@@ -698,7 +1019,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Status / Alert Message */}
           {statusMessage && (
             <div
               className={`p-3 rounded-xl text-xs flex items-center space-x-2.5 border ${
@@ -719,45 +1039,34 @@ export default function App() {
           )}
 
           {loginStep === "credentials" ? (
-            /* STEP 1: EMAIL & SECRET CREDENTIALS */
-            <form onSubmit={handleLoginSubmit} autoComplete="off" data-lpignore="true" className="space-y-4 text-xs">
+            <form onSubmit={handleLoginSubmit} autoComplete="off" className="space-y-4 text-xs">
               <div>
                 <label className="font-semibold text-slate-300 block mb-1">Admin Email</label>
                 <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 focus-within:border-indigo-500 transition">
                   <Mail className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                   <input
                     type="email"
-                    name="botock_admin_user_id"
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
                     placeholder="Enter Admin Email"
                     required
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    data-lpignore="true"
                     className="w-full bg-transparent border-none outline-none text-slate-100 text-xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-semibold text-slate-300 block mb-1">Admin Password / Secret</label>
+                <label className="font-semibold text-slate-300 block mb-1">
+                  Admin Password / Secret
+                </label>
                 <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 focus-within:border-indigo-500 transition">
                   <Lock className="w-4 h-4 text-amber-400 mr-2 shrink-0" />
                   <input
                     type={showSecret ? "text" : "password"}
-                    name="botock_admin_auth_key"
                     value={adminSecret}
                     onChange={(e) => setAdminSecret(e.target.value)}
                     placeholder="Enter Password"
                     required
-                    autoComplete="new-password"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    data-lpignore="true"
                     className="w-full bg-transparent border-none outline-none text-slate-100 font-mono text-xs"
                   />
                   <button
@@ -770,13 +1079,18 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Device Recognition Badge */}
               <div className="flex items-center justify-between text-[11px] bg-slate-950/70 border border-slate-800 rounded-xl p-2.5">
                 <div className="flex items-center space-x-2">
                   <Laptop className="w-3.5 h-3.5 text-indigo-400" />
                   <span className="text-slate-400">Device Status:</span>
                 </div>
-                <span className={isTrustedDevice ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
+                <span
+                  className={
+                    isTrustedDevice
+                      ? "text-emerald-400 font-semibold"
+                      : "text-amber-400 font-semibold"
+                  }
+                >
                   {isTrustedDevice ? "🛡️ Trusted Device (1-Click)" : "🔒 Unverified (OTP Required)"}
                 </span>
               </div>
@@ -791,15 +1105,17 @@ export default function App() {
               </button>
             </form>
           ) : (
-            /* STEP 2: 2FA OTP VERIFICATION (NEW DEVICE) */
             <form onSubmit={handleOtpSubmit} autoComplete="off" className="space-y-4 text-xs">
               <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-slate-300 leading-relaxed text-[11px]">
-                <strong className="text-indigo-400 block mb-0.5">🔐 New Device Detected!</strong>
-                A 6-digit one-time code has been dispatched via Zoho Mail to <strong>{adminEmail}</strong>. Valid for 10 minutes.
+                <strong className="text-indigo-400 block mb-0.5">🔐 New Device Detected!</strong>A
+                6-digit one-time code has been dispatched via Zoho Mail to{" "}
+                <strong>{adminEmail}</strong>.
               </div>
 
               <div>
-                <label className="text-slate-300 font-semibold block mb-1">Enter 6-Digit OTP Code</label>
+                <label className="text-slate-300 font-semibold block mb-1">
+                  Enter 6-Digit OTP Code
+                </label>
                 <input
                   type="text"
                   maxLength={6}
@@ -808,8 +1124,6 @@ export default function App() {
                   placeholder="• • • • • •"
                   required
                   autoFocus
-                  autoComplete="off"
-                  spellCheck={false}
                   className="w-full bg-slate-950 border border-emerald-500/50 rounded-xl px-4 py-3 text-center text-xl font-mono font-bold tracking-widest text-emerald-300 outline-none focus:border-emerald-400 transition"
                 />
               </div>
@@ -846,19 +1160,14 @@ export default function App() {
               </div>
             </form>
           )}
-
-          <div className="text-center text-[10px] text-slate-500 flex items-center justify-center space-x-1">
-            <Lock className="w-3 h-3 text-slate-600" />
-            <span>3 Failed Attempts = 24-Hour IP Security Lockout</span>
-          </div>
         </div>
       </div>
     );
   }
 
-  // --------------------------------------------------------------------------
-  // AUTHENTICATED COMMAND CENTER INTERFACE
-  // --------------------------------------------------------------------------
+  // ===========================================================================
+  // 🖥️ AUTHENTICATED COMMAND CENTER INTERFACE
+  // ===========================================================================
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
       {/* 🧭 TOP COMMAND BAR */}
@@ -874,17 +1183,16 @@ export default function App() {
                   Botock Command Center
                 </h1>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  AZURE CLOUD
+                  V4.0 MASTER
                 </span>
               </div>
               <p className="text-[11px] text-slate-400">
-                Live Traffic Attribution, Funnel & Error Intelligence
+                Traffic Attribution • Video Quota & Tool Access • Error Inspector • SEO CMS
               </p>
             </div>
           </div>
 
           <div className="flex items-center flex-wrap gap-2">
-            {/* Target Environment Dropdown */}
             <select
               value={targetHost}
               onChange={(e) => {
@@ -900,20 +1208,13 @@ export default function App() {
               ))}
             </select>
 
-            {/* Trusted Device Badge */}
             <div className="flex items-center space-x-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-2.5 py-1 text-xs">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-emerald-300 font-semibold text-[11px]">
-                {adminEmail}
+                {adminEmail || "Master Admin"}
               </span>
             </div>
 
-            {/* Inactivity Auto-Lock Badge */}
-            <div className="hidden sm:flex items-center space-x-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-400">
-              <span>⏳ 15m Idle Lock</span>
-            </div>
-
-            {/* Sync Live Button */}
             <button
               onClick={() => fetchOverview()}
               disabled={loading}
@@ -927,11 +1228,9 @@ export default function App() {
               <span>{connected ? "Sync Live" : "Connect"}</span>
             </button>
 
-            {/* Logout Button */}
             <button
               onClick={() => handleLogout()}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition shadow"
-              title="Logout session and clear access"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Logout</span>
@@ -939,7 +1238,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Real-Time Live Status Bar */}
+        {/* Status Bar */}
         <div className="bg-slate-950/80 border-t border-slate-800/60 px-4 py-1.5 text-[11px] flex flex-wrap items-center justify-between text-slate-400">
           <div className="flex items-center space-x-4">
             <span className="flex items-center space-x-1.5">
@@ -954,37 +1253,44 @@ export default function App() {
             </span>
 
             {serverStats.cpu_percent !== undefined && (
-              <span className="hidden md:inline font-mono">
-                CPU: {serverStats.cpu_percent.toFixed(1)}% | RAM: {serverStats.memory_percent?.toFixed(1)}%
+              <span className="hidden lg:inline text-slate-400 font-mono text-[10px]">
+                ⚡ CPU: {serverStats.cpu_percent}% | RAM: {serverStats.memory_percent}%
               </span>
             )}
+
+            <span className="hidden sm:inline text-indigo-400 font-semibold">
+              🎬 Video Gen:{" "}
+              {quotas.video_gen_access === "all"
+                ? `Guests + Login (${quotas.video_daily_quota}/day)`
+                : quotas.video_gen_access === "login_only"
+                ? `Login Users Only (${quotas.video_daily_quota}/day)`
+                : "🔴 OFF"}
+            </span>
           </div>
 
-          <div className="flex items-center space-x-3">
-            {statusMessage && (
-              <div
-                className={`flex items-center space-x-1 text-[11px] ${
-                  statusMessage.type === "success"
-                    ? "text-emerald-400"
-                    : statusMessage.type === "error"
-                    ? "text-rose-400"
-                    : "text-sky-400"
-                }`}
-              >
-                <span>{statusMessage.text}</span>
-              </div>
-            )}
-          </div>
+          {statusMessage && (
+            <div
+              className={`flex items-center space-x-1 text-[11px] font-medium ${
+                statusMessage.type === "success"
+                  ? "text-emerald-400"
+                  : statusMessage.type === "error"
+                  ? "text-rose-400"
+                  : "text-sky-400"
+              }`}
+            >
+              <span>{statusMessage.text}</span>
+            </div>
+          )}
         </div>
 
         {/* 📑 TAB NAVIGATION BAR */}
         <div className="max-w-7xl mx-auto px-4 flex overflow-x-auto no-scrollbar border-t border-slate-800 text-xs">
           {[
-            { id: "journeys", label: "Live Traffic & Sources", icon: Compass, count: telemetry.length },
-            { id: "funnel", label: "Tool Funnel & Error Inspector", icon: Activity, count: recentErrors.length },
-            { id: "tools", label: "Tool Feature Flags", icon: Sliders, count: Object.keys(tools).length },
-            { id: "quotas", label: "Quotas & Maintenance", icon: Gauge },
-            { id: "cms", label: "SEO Blog CMS & SERP", icon: FileText, count: blogs.length },
+            { id: "journeys", label: "Live Traffic & Top Sources", icon: Compass, count: telemetry.length },
+            { id: "funnel", label: "Most Used Tools & Error Inspector", icon: Activity, count: recentErrors.length },
+            { id: "tools", label: "Website Tools ON/OFF & Video Access", icon: Sliders, count: Object.keys(tools).length },
+            { id: "quotas", label: "Video Quota & Global Limits", icon: Gauge },
+            { id: "cms", label: "Professional SEO Blog CMS", icon: FileText, count: blogs.length },
           ].map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -1018,24 +1324,23 @@ export default function App() {
       {/* 💻 MAIN CONTENT VIEWS */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
         {/* ==================================================================== */}
-        {/* TAB 1: LIVE TRAFFIC SOURCES & USER JOURNEYS                          */}
+        {/* TAB 1: LIVE TRAFFIC SOURCES, LEADERBOARD & USER JOURNEYS              */}
         {/* ==================================================================== */}
         {activeTab === "journeys" && (
           <div className="space-y-6">
-            {/* Top Traffic Attribution Cards */}
+            {/* Top 6 Channel Cards */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
                   <TrendingUp className="w-5 h-5 text-indigo-400" />
-                  <span>Real-Time Traffic Sources Attribution</span>
+                  <span>Where Are Users Coming From? (Live Traffic Attribution)</span>
                 </h2>
                 <span className="text-xs text-slate-400 font-mono">
-                  Total Tracked: {trafficTotals.total}
+                  Total Tracked Visits: {trafficTotals.total}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {/* Facebook Card */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
                   <div className="flex items-center justify-between text-xs text-blue-400 font-semibold mb-1">
                     <span>Facebook</span>
@@ -1047,7 +1352,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Instagram Card */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
                   <div className="flex items-center justify-between text-xs text-pink-400 font-semibold mb-1">
                     <span>Instagram</span>
@@ -1059,19 +1363,15 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* AI Engines Card */}
                 <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3.5 shadow bg-gradient-to-b from-emerald-500/5 to-transparent">
                   <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold mb-1">
                     <span>AI Search</span>
                     <Bot className="w-3.5 h-3.5" />
                   </div>
                   <div className="text-2xl font-black text-emerald-300">{trafficTotals.ai}</div>
-                  <div className="text-[10px] text-slate-400 mt-1">
-                    ChatGPT / Perplexity
-                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1">ChatGPT / Perplexity</div>
                 </div>
 
-                {/* Google Search Card */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
                   <div className="flex items-center justify-between text-xs text-amber-400 font-semibold mb-1">
                     <span>Google</span>
@@ -1081,7 +1381,6 @@ export default function App() {
                   <div className="text-[10px] text-slate-400 mt-1">Organic & Ads</div>
                 </div>
 
-                {/* TikTok & Twitter */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
                   <div className="flex items-center justify-between text-xs text-sky-400 font-semibold mb-1">
                     <span>X & TikTok</span>
@@ -1093,7 +1392,6 @@ export default function App() {
                   <div className="text-[10px] text-slate-400 mt-1">Social Viral</div>
                 </div>
 
-                {/* Direct & Organic */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 shadow">
                   <div className="flex items-center justify-between text-xs text-slate-400 font-semibold mb-1">
                     <span>Direct</span>
@@ -1101,6 +1399,74 @@ export default function App() {
                   </div>
                   <div className="text-2xl font-black text-white">{trafficTotals.direct}</div>
                   <div className="text-[10px] text-slate-400 mt-1">Direct URL Visits</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Intelligence Grid: Top Sources + Top Used Tools */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Top Traffic Sources Bar Chart */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-amber-400" />
+                  Highest Traffic Acquisition Ranking
+                </h3>
+                <div className="space-y-2.5">
+                  {trafficTotals.ranked.map((ch) => {
+                    const pct = Math.round((ch.count / trafficTotals.total) * 100);
+                    return (
+                      <div key={ch.key} className="space-y-1 text-xs">
+                        <div className="flex justify-between font-medium">
+                          <span className="text-slate-200">{ch.name}</span>
+                          <span className="font-mono text-slate-400">
+                            {ch.count} visits ({pct}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${ch.color}`}
+                            style={{ width: `${Math.max(pct, 2)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Most Used Tools vs Most Error Tools Snapshot */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  Most Used Tools & Error Hotspots
+                </h3>
+                <div className="space-y-2.5">
+                  {toolRankings.mostUsed.slice(0, 6).map((t) => {
+                    const widthPct = Math.round((t.uses / toolRankings.maxUses) * 100);
+                    return (
+                      <div key={t.id} className="space-y-1 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-200">{t.name}</span>
+                          <div className="flex items-center gap-3 font-mono text-[11px]">
+                            <span className="text-emerald-400 font-bold">{t.uses} uses</span>
+                            <span
+                              className={
+                                t.errors > 0 ? "text-rose-400 font-bold" : "text-slate-500"
+                              }
+                            >
+                              {t.errors} errors
+                            </span>
+                          </div>
+                        </div>
+                        <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500"
+                            style={{ width: `${Math.max(widthPct, 3)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1114,11 +1480,10 @@ export default function App() {
                     <span>Real-Time Visitor Clickstream Flows</span>
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Live page-by-page paths taken by visitors after clicking your shared links
+                    Exact step-by-step page path of each user from entry to tool execution
                   </p>
                 </div>
 
-                {/* Filter Chips */}
                 <div className="flex items-center space-x-1.5 text-xs">
                   {["all", "facebook", "instagram", "ai", "google", "direct"].map((f) => (
                     <button
@@ -1151,14 +1516,16 @@ export default function App() {
                     {filteredJourneys.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-slate-500 font-sans">
-                          No clickstream visits recorded yet. Share a link on Facebook, Instagram, or AI to start logging.
+                          No clickstream visits recorded for this filter yet.
                         </td>
                       </tr>
                     ) : (
                       filteredJourneys.map((j, idx) => (
                         <tr key={idx} className="hover:bg-slate-800/40 transition">
                           <td className="py-3 px-4">
-                            <div className="font-semibold text-slate-200 font-sans">{j.user_email}</div>
+                            <div className="font-semibold text-slate-200 font-sans">
+                              {j.user_email}
+                            </div>
                             <div className="text-[10px] text-slate-500 flex items-center space-x-1">
                               <span>{j.device_type}</span>
                               {j.ip && <span>• {j.ip}</span>}
@@ -1181,7 +1548,10 @@ export default function App() {
                               {j.utm_source}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-slate-400 truncate max-w-xs text-[11px]" title={j.referrer}>
+                          <td
+                            className="py-3 px-4 text-slate-400 truncate max-w-xs text-[11px]"
+                            title={j.referrer}
+                          >
                             {j.referrer || "Direct Entry"}
                           </td>
                           <td className="py-3 px-4">
@@ -1198,7 +1568,7 @@ export default function App() {
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-slate-500">/</span >
+                                <span className="text-slate-500">/</span>
                               )}
                             </div>
                           </td>
@@ -1216,7 +1586,7 @@ export default function App() {
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 2: TOOL FUNNEL & ERROR INSPECTOR                                  */}
+        {/* TAB 2: MOST USED TOOLS, FUNNEL & REAL-TIME ERROR INSPECTOR            */}
         {/* ==================================================================== */}
         {activeTab === "funnel" && (
           <div className="space-y-6">
@@ -1230,13 +1600,17 @@ export default function App() {
 
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow">
                 <div className="text-xs text-indigo-400 font-medium mb-1">Input / Started</div>
-                <div className="text-2xl font-extrabold text-indigo-300">{funnelSummary.totalStarted}</div>
+                <div className="text-2xl font-extrabold text-indigo-300">
+                  {funnelSummary.totalStarted}
+                </div>
                 <div className="text-[11px] text-slate-500 mt-1">Typed prompt or uploaded</div>
               </div>
 
               <div className="bg-slate-900 border border-emerald-500/20 rounded-xl p-4 shadow">
                 <div className="text-xs text-emerald-400 font-medium mb-1">Completed (Success)</div>
-                <div className="text-2xl font-extrabold text-emerald-300">{funnelSummary.totalSuccess}</div>
+                <div className="text-2xl font-extrabold text-emerald-300">
+                  {funnelSummary.totalSuccess}
+                </div>
                 <div className="text-[11px] text-slate-500 mt-1">
                   Overall Success: {funnelSummary.overallSuccessRate}%
                 </div>
@@ -1244,88 +1618,81 @@ export default function App() {
 
               <div className="bg-slate-900 border border-amber-500/20 rounded-xl p-4 shadow">
                 <div className="text-xs text-amber-400 font-medium mb-1">Abandoned (Drop-offs)</div>
-                <div className="text-2xl font-extrabold text-amber-300">{funnelSummary.totalAbandoned}</div>
+                <div className="text-2xl font-extrabold text-amber-300">
+                  {funnelSummary.totalAbandoned}
+                </div>
                 <div className="text-[11px] text-slate-500 mt-1">Left without generating</div>
               </div>
 
               <div className="bg-slate-900 border border-rose-500/20 rounded-xl p-4 shadow">
                 <div className="text-xs text-rose-400 font-medium mb-1">Failed (Errors)</div>
-                <div className="text-2xl font-extrabold text-rose-300">{funnelSummary.totalErrors}</div>
-                <div className="text-[11px] text-slate-500 mt-1">Encountered an issue</div>
+                <div className="text-2xl font-extrabold text-rose-300">
+                  {funnelSummary.totalErrors}
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1">Logged in Error Console</div>
               </div>
             </div>
 
-            {/* Tool Funnel Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow">
-              <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
-                    <Activity className="w-4 h-4 text-emerald-400" />
-                    <span>Tool Conversion & Drop-off Ranking</span>
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    See exactly which tools are performing best and where visitors drop off
-                  </p>
+            {/* Dual Leaderboards: Most Used Tools vs Most Failing Tools */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                  <Flame className="w-4 h-4" />
+                  Most Used Tools Leaderboard
+                </h3>
+                <div className="space-y-2">
+                  {toolRankings.mostUsed.map((t, i) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-xs"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold flex items-center justify-center">
+                          #{i + 1}
+                        </span>
+                        <span className="font-semibold text-slate-200">{t.name}</span>
+                      </div>
+                      <span className="font-mono font-bold text-emerald-400">{t.uses} runs</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="py-3 px-4">Tool Name</th>
-                    <th className="py-3 px-4">Visitors (Views)</th>
-                    <th className="py-3 px-4">Inputs Started</th>
-                    <th className="py-3 px-4">Completed</th>
-                    <th className="py-3 px-4">Abandoned</th>
-                    <th className="py-3 px-4">Errors</th>
-                    <th className="py-3 px-4">Success Rate</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {toolFunnel.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center text-slate-500">
-                        No tool funnel events logged yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    toolFunnel.map((t) => (
-                      <tr key={t.tool_id} className="hover:bg-slate-800/40 transition">
-                        <td className="py-3 px-4 font-semibold text-slate-200">
-                          <div className="flex items-center space-x-2">
-                            <span>{t.name}</span>
-                            <span className="font-mono text-[10px] text-slate-500">({t.tool_id})</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 font-mono font-bold text-slate-300">{t.views}</td>
-                        <td className="py-3 px-4 font-mono text-indigo-300">{t.started}</td>
-                        <td className="py-3 px-4 font-mono font-bold text-emerald-400">{t.success}</td>
-                        <td className="py-3 px-4 font-mono text-amber-400">{t.abandoned}</td>
-                        <td className="py-3 px-4 font-mono font-bold text-rose-400">{t.errors}</td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-16 h-2 bg-slate-800 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full ${
-                                  t.success_rate >= 95
-                                    ? "bg-emerald-500"
-                                    : t.success_rate >= 80
-                                    ? "bg-amber-500"
-                                    : "bg-rose-500"
-                                }`}
-                                style={{ width: `${t.success_rate}%` }}
-                              />
-                            </div>
-                            <span className="font-mono text-[11px] font-semibold text-slate-300">
-                              {t.success_rate}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+              <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Tools With Highest Errors (Needs Attention)
+                </h3>
+                <div className="space-y-2">
+                  {toolRankings.mostErrors.map((t, i) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-xs"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-5 h-5 rounded-full bg-rose-500/20 text-rose-300 font-mono text-[10px] font-bold flex items-center justify-center">
+                          #{i + 1}
+                        </span>
+                        <span className="font-semibold text-slate-200">{t.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3 font-mono">
+                        <span className="text-slate-500 text-[11px]">
+                          Fail Rate: {t.errorRate}%
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded font-bold ${
+                            t.errors > 0
+                              ? "bg-rose-500/20 text-rose-300"
+                              : "bg-slate-800 text-slate-500"
+                          }`}
+                        >
+                          {t.errors} errors
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Live Error Inspector Console */}
@@ -1334,47 +1701,114 @@ export default function App() {
                 <div>
                   <h3 className="text-sm font-bold text-rose-400 flex items-center space-x-2">
                     <XCircle className="w-4 h-4 text-rose-500" />
-                    <span>Real-Time Error Inspector Console</span>
+                    <span>Real-Time Tool Error Inspector & Stack Trace Console</span>
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Exact error messages and stack traces whenever a generation or tool fails
+                    Exact reason, endpoint, and stack message whenever any user hits an error
                   </p>
                 </div>
 
-                <div className="relative w-64">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={errorSearch}
-                    onChange={(e) => setErrorSearch(e.target.value)}
-                    placeholder="Search error message, tool, or IP..."
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none"
-                  />
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={errorToolFilter}
+                    onChange={(e) => setErrorToolFilter(e.target.value)}
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none"
+                  >
+                    <option value="all">All Tools ({recentErrors.length})</option>
+                    {Object.entries(tools).map(([id, cfg]) => (
+                      <option key={id} value={id}>
+                        {cfg.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="relative w-56">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={errorSearch}
+                      onChange={(e) => setErrorSearch(e.target.value)}
+                      placeholder="Search error, tool, IP..."
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 outline-none"
+                    />
+                  </div>
+
+                  {recentErrors.length > 0 && (
+                    <button
+                      onClick={handleClearErrors}
+                      className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 text-xs font-semibold cursor-pointer"
+                    >
+                      Clear Logs
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="divide-y divide-slate-800/60 max-h-96 overflow-y-auto font-mono text-xs">
+              <div className="divide-y divide-slate-800/60 max-h-[420px] overflow-y-auto font-mono text-xs">
                 {filteredErrors.length === 0 ? (
                   <div className="py-8 text-center text-slate-500 font-sans">
-                    ✨ No recent errors detected! All systems operating smoothly.
+                    ✨ Zero errors matching filter! All tools operating smoothly.
                   </div>
                 ) : (
                   filteredErrors.map((err) => (
-                    <div key={err.id} className="p-4 hover:bg-slate-850 transition space-y-1.5">
-                      <div className="flex items-center justify-between">
+                    <div key={err.id} className="p-4 hover:bg-slate-800/30 transition space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center space-x-2 font-sans font-semibold">
                           <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px]">
                             {err.tool_name}
                           </span>
-                          <span className="text-slate-400 text-[11px]">({err.tool_id})</span>
-                          {err.ip && <span className="text-slate-500 text-[10px]">IP: {err.ip}</span>}
+                          <span className="text-slate-400 text-[11px]">(/tools/{err.tool_id})</span>
+                          {err.user_email && (
+                            <span className="text-indigo-300 text-[11px]">
+                              User: {err.user_email}
+                            </span>
+                          )}
+                          {err.ip && (
+                            <span className="text-slate-500 text-[10px]">IP: {err.ip}</span>
+                          )}
                         </div>
-                        <span className="text-slate-500 text-[10px] font-sans">
-                          {new Date(err.timestamp).toLocaleTimeString()} • {new Date(err.timestamp).toLocaleDateString()}
-                        </span>
+
+                        <div className="flex items-center gap-2 font-sans">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(
+                                `${err.tool_name}: ${err.error_message}\n${err.stack_trace || ""}`
+                              );
+                              setStatusMessage({
+                                type: "info",
+                                text: "Copied error details to clipboard.",
+                              });
+                            }}
+                            className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] flex items-center gap-1 cursor-pointer"
+                          >
+                            <Copy className="w-3 h-3" /> Copy
+                          </button>
+                          <span className="text-slate-500 text-[10px]">
+                            {new Date(err.timestamp).toLocaleTimeString()} •{" "}
+                            {new Date(err.timestamp).toLocaleDateString()}
+                          </span>
+                        </div>
                       </div>
-                      <div className="p-2.5 rounded-lg bg-slate-950 border border-rose-500/20 text-rose-300 text-xs font-mono leading-relaxed break-all">
+
+                      <div
+                        onClick={() =>
+                          setExpandedErrorId(expandedErrorId === err.id ? null : err.id)
+                        }
+                        className="p-2.5 rounded-lg bg-slate-950 border border-rose-500/20 text-rose-300 text-xs font-mono leading-relaxed break-all cursor-pointer"
+                      >
                         {err.error_message}
+                        {err.stack_trace && (
+                          <div className="text-[10px] text-slate-400 mt-1 underline">
+                            {expandedErrorId === err.id
+                              ? "Hide Stack Trace ▲"
+                              : "Click to view full stack trace ▼"}
+                          </div>
+                        )}
+                        {expandedErrorId === err.id && err.stack_trace && (
+                          <pre className="mt-2 pt-2 border-t border-slate-800 text-[11px] text-slate-300 whitespace-pre-wrap">
+                            {err.stack_trace}
+                          </pre>
+                        )}
                       </div>
                     </div>
                   ))
@@ -1385,105 +1819,380 @@ export default function App() {
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 3: TOOL FEATURE FLAGS                                            */}
+        {/* TAB 3: WEBSITE TOOLS ON/OFF SWITCHES & VIDEO GEN ACCESS CONTROL       */}
         {/* ==================================================================== */}
         {activeTab === "tools" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between bg-slate-900 p-4 rounded-xl border border-slate-800">
-              <div>
-                <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
-                  <Sliders className="w-5 h-5 text-indigo-400" />
-                  <span>Feature Flags & Maintenance Kill-Switches</span>
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Instantly toggle tools online, enable maintenance banners, or restrict access
-                </p>
+          <div className="space-y-6">
+            {/* 🎬 FEATURED MASTER CARD: AI VIDEO GENERATION ACCESS & SINGLE QUOTA */}
+            <div className="bg-gradient-to-r from-indigo-950/60 via-slate-900 to-purple-950/40 border border-indigo-500/40 rounded-2xl p-5 shadow-xl space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30">
+                    <Video className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-extrabold text-white">
+                        AI Video Generation Master Controller
+                      </h2>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        Priority Control
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300">
+                      Choose who is allowed to generate AI videos (Guest + Login, Login Only, or Off) and set the single daily video quota.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Unified Single Daily Video Quota Input */}
+                <div className="flex items-center gap-3 bg-slate-950/90 border border-slate-800 rounded-xl px-4 py-2.5">
+                  <div>
+                    <div className="text-xs font-bold text-slate-200">
+                      Daily Video Quota (Per User)
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Single daily limit for Guest or Logged-in user
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    max={500}
+                    value={quotas.video_daily_quota}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      setQuotas({ ...quotas, video_daily_quota: val });
+                    }}
+                    className="w-20 bg-slate-900 border border-indigo-500/50 rounded-lg px-2.5 py-1.5 text-sm font-mono font-bold text-white text-center outline-none"
+                  />
+                  <button
+                    onClick={() => handleSaveQuotas()}
+                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition cursor-pointer"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+
+              {/* 3-Way Access Selector for Video Generation */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                {[
+                  {
+                    id: "all" as AccessLevel,
+                    title: "🟢 Allowed: Guests + Login Users",
+                    desc: "Everyone can generate AI videos up to the daily video quota",
+                    icon: Globe,
+                    activeClass:
+                      "border-emerald-500 bg-emerald-500/15 text-emerald-300 shadow-lg shadow-emerald-500/10",
+                  },
+                  {
+                    id: "login_only" as AccessLevel,
+                    title: "🔐 Allowed: Login Users Only",
+                    desc: "Guests are prompted to sign in; logged-in users get the daily quota",
+                    icon: Users,
+                    activeClass:
+                      "border-indigo-500 bg-indigo-500/15 text-indigo-300 shadow-lg shadow-indigo-500/10",
+                  },
+                  {
+                    id: "off" as AccessLevel,
+                    title: "🔴 Not Allowed (Video Tool OFF)",
+                    desc: "Completely disables AI Video Generation across the website",
+                    icon: UserX,
+                    activeClass:
+                      "border-rose-500 bg-rose-500/15 text-rose-300 shadow-lg shadow-rose-500/10",
+                  },
+                ].map((opt) => {
+                  const Icon = opt.icon;
+                  const isSelected = quotas.video_gen_access === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        const updated = { ...quotas, video_gen_access: opt.id };
+                        setQuotas(updated);
+                        handleSaveQuotas(updated);
+                      }}
+                      className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                        isSelected
+                          ? opt.activeClass
+                          : "border-slate-800 bg-slate-950/70 text-slate-400 hover:border-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-xs">{opt.title}</span>
+                        <Icon className="w-4 h-4 shrink-0" />
+                      </div>
+                      <p className="text-[11px] opacity-80 leading-relaxed">{opt.desc}</p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(tools).map(([id, t]) => (
-                <div
-                  key={id}
-                  className={`p-4 rounded-xl border transition-all ${
-                    t.maintenance
-                      ? "bg-amber-950/20 border-amber-500/40"
-                      : !t.enabled
-                      ? "bg-slate-900/40 border-slate-800 opacity-60"
-                      : "bg-slate-900 border-slate-800"
-                  }`}
+            {/* Website All Tools Header + Bulk Switches + Add Tool Form */}
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
+              <div>
+                <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
+                  <Sliders className="w-5 h-5 text-indigo-400" />
+                  <span>All Website Tools Master Switchboard ({Object.keys(tools).length} Tools)</span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Turn any tool ON/OFF, restrict to Logged-in Users only, or enable Maintenance mode
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => handleBulkToggleAllTools(true)}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-bold text-sm text-slate-100">{t.name}</h3>
-                      <div className="text-[11px] text-slate-500 font-mono">/tools/{id}</div>
+                  <Power className="w-3.5 h-3.5" /> Turn All Tools ON
+                </button>
+                <button
+                  onClick={() => handleBulkToggleAllTools(false)}
+                  className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Power className="w-3.5 h-3.5" /> Turn All Tools OFF
+                </button>
+              </div>
+            </div>
+
+            {/* Add New Website Tool Bar */}
+            <form
+              onSubmit={handleAddNewTool}
+              className="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex flex-wrap items-center gap-3 text-xs"
+            >
+              <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                <Plus className="w-4 h-4 text-indigo-400" /> Register New Website Tool:
+              </span>
+              <input
+                type="text"
+                value={newToolName}
+                onChange={(e) => setNewToolName(e.target.value)}
+                placeholder="Tool Name (e.g. AI Music Generator)"
+                className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 outline-none"
+              />
+              <input
+                type="text"
+                value={newToolSlug}
+                onChange={(e) => setNewToolSlug(e.target.value)}
+                placeholder="Slug (e.g. ai-music)"
+                className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-indigo-300 font-mono outline-none"
+              />
+              <select
+                value={newToolCategory}
+                onChange={(e) => setNewToolCategory(e.target.value)}
+                className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 outline-none"
+              >
+                <option value="AI Video">AI Video</option>
+                <option value="AI Audio">AI Audio</option>
+                <option value="AI Image">AI Image</option>
+                <option value="Document Tools">Document Tools</option>
+              </select>
+              <button
+                type="submit"
+                className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold cursor-pointer"
+              >
+                + Add Tool to Switchboard
+              </button>
+            </form>
+
+            {/* All Website Tools Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(tools).map(([id, t]) => {
+                const accessMode: AccessLevel =
+                  t.access_mode || (!t.enabled ? "off" : t.pro_only ? "login_only" : "all");
+
+                return (
+                  <div
+                    key={id}
+                    className={`p-4 rounded-xl border transition-all flex flex-col justify-between space-y-4 ${
+                      t.maintenance
+                        ? "bg-amber-950/20 border-amber-500/40"
+                        : accessMode === "off"
+                        ? "bg-slate-900/40 border-rose-500/30 opacity-75"
+                        : "bg-slate-900 border-slate-800"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+                          {t.category || "Website Tool"}
+                        </span>
+                        <h3 className="font-bold text-sm text-slate-100">{t.name}</h3>
+                        <div className="text-[11px] text-slate-500 font-mono">/tools/{id}</div>
+                      </div>
+
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                          t.maintenance
+                            ? "bg-amber-500/20 text-amber-300"
+                            : accessMode === "all"
+                            ? "bg-emerald-500/20 text-emerald-300"
+                            : accessMode === "login_only"
+                            ? "bg-indigo-500/20 text-indigo-300"
+                            : "bg-rose-500/20 text-rose-300"
+                        }`}
+                      >
+                        {t.maintenance
+                          ? "🚧 Maintenance"
+                          : accessMode === "all"
+                          ? "🟢 Guests + Login"
+                          : accessMode === "login_only"
+                          ? "🔐 Login Only"
+                          : "🔴 Tool OFF"}
+                      </span>
                     </div>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        t.maintenance
-                          ? "bg-amber-500/20 text-amber-300"
-                          : t.enabled
-                          ? "bg-emerald-500/20 text-emerald-300"
-                          : "bg-rose-500/20 text-rose-300"
-                      }`}
-                    >
-                      {t.maintenance ? "Maintenance" : t.enabled ? "Active" : "Disabled"}
-                    </span>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-slate-800/80 text-xs">
-                    {/* Switch: Active */}
-                    <button
-                      onClick={() => handleToggleTool(id, "enabled", t.enabled)}
-                      className={`py-1.5 px-2 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition ${
-                        t.enabled
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                          : "bg-slate-800 text-slate-500"
-                      }`}
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>{t.enabled ? "Active" : "Disabled"}</span>
-                    </button>
+                    {/* 3-Button Access Mode Switcher per Tool */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold uppercase text-slate-400">
+                        Allowed Access Level:
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateToolConfig(id, { access_mode: "all" })}
+                          className={`py-1.5 px-2 rounded-lg font-bold transition cursor-pointer ${
+                            accessMode === "all"
+                              ? "bg-emerald-600 text-white"
+                              : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+                          }`}
+                        >
+                          Guest+Login
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateToolConfig(id, { access_mode: "login_only" })}
+                          className={`py-1.5 px-2 rounded-lg font-bold transition cursor-pointer ${
+                            accessMode === "login_only"
+                              ? "bg-indigo-600 text-white"
+                              : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+                          }`}
+                        >
+                          Login Only
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateToolConfig(id, { access_mode: "off" })}
+                          className={`py-1.5 px-2 rounded-lg font-bold transition cursor-pointer ${
+                            accessMode === "off"
+                              ? "bg-rose-600 text-white"
+                              : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+                          }`}
+                        >
+                          Turn OFF
+                        </button>
+                      </div>
+                    </div>
 
-                    {/* Switch: Maintenance */}
-                    <button
-                      onClick={() => handleToggleTool(id, "maintenance", t.maintenance)}
-                      className={`py-1.5 px-2 rounded-lg font-semibold flex items-center justify-center space-x-1.5 transition ${
-                        t.maintenance
-                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                          : "bg-slate-800 text-slate-500"
-                      }`}
-                    >
-                      <ShieldAlert className="w-3.5 h-3.5" />
-                      <span>{t.maintenance ? "Under Maintenance" : "Normal"}</span>
-                    </button>
+                    {/* Footer Stats & Maintenance Toggle */}
+                    <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                      <div className="font-mono text-[11px] text-slate-400">
+                        <span className="text-emerald-400 font-bold">{t.uses || 0}</span> uses •{" "}
+                        <span className="text-rose-400 font-bold">{t.errors || 0}</span> err
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateToolConfig(id, { maintenance: !t.maintenance })
+                        }
+                        className={`py-1 px-2.5 rounded-lg font-semibold flex items-center space-x-1 transition text-[11px] cursor-pointer ${
+                          t.maintenance
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                            : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                        }`}
+                      >
+                        <ShieldAlert className="w-3 h-3" />
+                        <span>{t.maintenance ? "Maintenance ON" : "Maintenance OFF"}</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 4: PLATFORM QUOTAS & MAINTENANCE                                  */}
+        {/* TAB 4: VIDEO QUOTA, PLATFORM QUOTAS & GLOBAL MAINTENANCE              */}
         {/* ==================================================================== */}
         {activeTab === "quotas" && (
           <div className="max-w-3xl mx-auto space-y-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow">
-              <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2 mb-1">
-                <Gauge className="w-5 h-5 text-indigo-400" />
-                <span>Global Quotas, File Limits & Platform Maintenance</span>
-              </h2>
-              <p className="text-xs text-slate-400 mb-6">
-                Applies globally across all public tools and user session verifications
-              </p>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2 mb-1">
+                  <Gauge className="w-5 h-5 text-indigo-400" />
+                  <span>Video Generation Single Quota & Global Platform Limits</span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Manage AI Video Generation permissions, unified daily video quota, and global tool limits
+                </p>
+              </div>
 
               <div className="space-y-4 text-xs">
-                {/* Guest Daily Limit */}
+                {/* Video Generation Access Mode */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-indigo-950/30 border border-indigo-500/30">
+                  <div>
+                    <div className="font-bold text-indigo-300">
+                      🎬 AI Video Generation Allowed To
+                    </div>
+                    <div className="text-slate-400 text-[11px]">
+                      Control whether Guests, Logged-in users, or No One can use AI Video Gen
+                    </div>
+                  </div>
+                  <select
+                    value={quotas.video_gen_access}
+                    onChange={(e) =>
+                      setQuotas({
+                        ...quotas,
+                        video_gen_access: e.target.value as AccessLevel,
+                      })
+                    }
+                    className="bg-slate-950 border border-indigo-500/40 rounded-lg px-3 py-2 text-xs font-bold text-white outline-none cursor-pointer"
+                  >
+                    <option value="all">🟢 Guests + Logged-in Users (Allowed)</option>
+                    <option value="login_only">🔐 Logged-in Users Only</option>
+                    <option value="off">🔴 Not Allowed (Video Tool OFF)</option>
+                  </select>
+                </div>
+
+                {/* Single Unified Daily Video Quota */}
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-indigo-950/30 border border-indigo-500/30">
+                  <div>
+                    <div className="font-bold text-indigo-300">
+                      🎬 Single Daily Video Generation Quota
+                    </div>
+                    <div className="text-slate-400 text-[11px]">
+                      Unified daily video limit applied per user (Guest or Logged-in)
+                    </div>
+                  </div>
+                  <input
+                    type="number"
+                    min={0}
+                    value={quotas.video_daily_quota}
+                    onChange={(e) =>
+                      setQuotas({
+                        ...quotas,
+                        video_daily_quota: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="w-24 bg-slate-950 border border-indigo-500/50 rounded-lg px-3 py-1.5 text-white font-mono font-bold text-right"
+                  />
+                </div>
+
+                {/* Other Tools: Guest Daily Limit */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
                   <div>
-                    <div className="font-semibold text-slate-200">Guest Daily Generations</div>
-                    <div className="text-slate-500 text-[11px]">Free operations allowed without login</div>
+                    <div className="font-semibold text-slate-200">
+                      Other Tools: Guest Daily Limit
+                    </div>
+                    <div className="text-slate-500 text-[11px]">
+                      Daily operations for audio/PDF/image tools without login
+                    </div>
                   </div>
                   <input
                     type="number"
@@ -1495,17 +2204,24 @@ export default function App() {
                   />
                 </div>
 
-                {/* Free User Daily Limit */}
+                {/* Other Tools: Registered User Daily Limit */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
                   <div>
-                    <div className="font-semibold text-slate-200">Registered User Daily Limit</div>
-                    <div className="text-slate-500 text-[11px]">Free daily operations for logged-in users</div>
+                    <div className="font-semibold text-slate-200">
+                      Other Tools: Logged-in User Daily Limit
+                    </div>
+                    <div className="text-slate-500 text-[11px]">
+                      Daily operations for logged-in users on standard tools
+                    </div>
                   </div>
                   <input
                     type="number"
                     value={quotas.free_user_daily_limit}
                     onChange={(e) =>
-                      setQuotas({ ...quotas, free_user_daily_limit: parseInt(e.target.value) || 0 })
+                      setQuotas({
+                        ...quotas,
+                        free_user_daily_limit: parseInt(e.target.value) || 0,
+                      })
                     }
                     className="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-100 font-mono text-right"
                   />
@@ -1515,7 +2231,9 @@ export default function App() {
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
                   <div>
                     <div className="font-semibold text-slate-200">Maximum Upload Size (MB)</div>
-                    <div className="text-slate-500 text-[11px]">Enforced on audio, video and document uploads</div>
+                    <div className="text-slate-500 text-[11px]">
+                      Enforced on audio, video and document uploads
+                    </div>
                   </div>
                   <input
                     type="number"
@@ -1536,7 +2254,7 @@ export default function App() {
                     onChange={(e) =>
                       setQuotas({ ...quotas, announcement_banner: e.target.value })
                     }
-                    placeholder="e.g. 🚀 Welcome to Botock Creative Suite! Enjoy unlimited access."
+                    placeholder="e.g. 🚀 Welcome to Botock Creative Suite! Enjoy free AI tools."
                     className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-200 outline-none"
                   />
                 </div>
@@ -1545,11 +2263,15 @@ export default function App() {
                 <div className="flex items-center justify-between p-3 rounded-lg bg-slate-950 border border-slate-800">
                   <div>
                     <div className="font-semibold text-slate-200">Emergency Maintenance Mode</div>
-                    <div className="text-slate-500 text-[11px]">Lock platform and show maintenance screen</div>
+                    <div className="text-slate-500 text-[11px]">
+                      Lock entire platform and display maintenance screen
+                    </div>
                   </div>
                   <button
-                    onClick={() => setQuotas({ ...quotas, global_maintenance: !quotas.global_maintenance })}
-                    className={`px-4 py-1.5 rounded-lg font-bold transition ${
+                    onClick={() =>
+                      setQuotas({ ...quotas, global_maintenance: !quotas.global_maintenance })
+                    }
+                    className={`px-4 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                       quotas.global_maintenance
                         ? "bg-rose-500 text-white"
                         : "bg-slate-800 text-slate-400 hover:text-slate-200"
@@ -1560,13 +2282,13 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+              <div className="pt-4 border-t border-slate-800 flex justify-end">
                 <button
-                  onClick={handleSaveQuotas}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition flex items-center space-x-2 text-xs shadow-lg shadow-indigo-600/25"
+                  onClick={() => handleSaveQuotas()}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition flex items-center space-x-2 text-xs shadow-lg shadow-indigo-600/25 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
-                  <span>Save Quotas & Settings</span>
+                  <span>Save All Quotas & Video Rules</span>
                 </button>
               </div>
             </div>
@@ -1574,61 +2296,42 @@ export default function App() {
         )}
 
         {/* ==================================================================== */}
-        {/* TAB 5: SEO BLOG CMS & GOOGLE SERP PUBLISHER                           */}
+        {/* TAB 5: PROFESSIONAL SEO BLOG CMS & PUBLISHER                          */}
         {/* ==================================================================== */}
         {activeTab === "cms" && (
           <div className="space-y-6">
+            {/* Top Bar */}
             <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
               <div>
                 <h2 className="text-base font-bold text-slate-100 flex items-center space-x-2">
                   <FileText className="w-5 h-5 text-indigo-400" />
-                  <span>Enterprise SEO Blog CMS & Google SERP Publisher</span>
+                  <span>Enterprise SEO Blog Studio & Live Publisher</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Publish programmatic, SEO-optimized guides directly to botock.app/blog with Live Snippet previews
+                  Write, upload cover images, audit Google SERP rankings, and publish directly to botock.app/blog
                 </p>
               </div>
 
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handleNewBlog}
-                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center space-x-1.5 shadow"
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center space-x-1.5 shadow cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>New Article</span>
                 </button>
-
-                {blogs.length > 0 && (
-                  <select
-                    value={editingBlog.id || ""}
-                    onChange={(e) => {
-                      const found = blogs.find((b) => b.id === e.target.value);
-                      if (found) handleSelectBlog(found);
-                    }}
-                    className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none max-w-xs truncate"
-                  >
-                    <option value="" disabled>
-                      Select an existing article ({blogs.length})...
-                    </option>
-                    {blogs.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.title}
-                      </option>
-                    ))}
-                  </select>
-                )}
               </div>
             </div>
 
             {/* Main CMS Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Column: Form & Editor */}
+              {/* Left 7 Columns: Professional Blog Editor */}
               <div className="lg:col-span-7 space-y-4">
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-4">
-                  {/* Article Title */}
+                  {/* Title */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
-                      Article Main Title
+                      Article H1 Headline *
                     </label>
                     <input
                       type="text"
@@ -1644,7 +2347,9 @@ export default function App() {
                           ...editingBlog,
                           title: newTitle,
                           slug: isBlogNew ? slug : editingBlog.slug,
-                          meta_title: isBlogNew ? `${newTitle} | Botock AI` : editingBlog.meta_title,
+                          meta_title: isBlogNew
+                            ? `${newTitle} | Botock AI`
+                            : editingBlog.meta_title,
                         });
                       }}
                       placeholder="e.g. How to Clone Any Voice for Free with Zero-Shot AI in 2026"
@@ -1652,41 +2357,124 @@ export default function App() {
                     />
                   </div>
 
-                  {/* Slug & Target Keyword */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Slug, Category & Author */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-300 mb-1">
-                        URL Slug (botock.app/blog/...)
+                        URL Slug (/blog/...)
                       </label>
                       <input
                         type="text"
                         value={editingBlog.slug}
-                        onChange={(e) => setEditingBlog({ ...editingBlog, slug: e.target.value })}
+                        onChange={(e) =>
+                          setEditingBlog({ ...editingBlog, slug: e.target.value })
+                        }
                         className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-indigo-300 font-mono outline-none"
                       />
                     </div>
+
                     <div>
                       <label className="block text-xs font-semibold text-slate-300 mb-1">
-                        Target SEO Keyword
+                        Category
+                      </label>
+                      <select
+                        value={editingBlog.category}
+                        onChange={(e) =>
+                          setEditingBlog({ ...editingBlog, category: e.target.value })
+                        }
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none cursor-pointer"
+                      >
+                        <option value="AI Audio Tutorials">AI Audio Tutorials</option>
+                        <option value="AI Video & Animation">AI Video & Animation</option>
+                        <option value="PDF & Document Guides">PDF & Document Guides</option>
+                        <option value="AI Image & Design">AI Image & Design</option>
+                        <option value="Product Updates">Product Updates</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">
+                        Author Name
                       </label>
                       <input
                         type="text"
-                        value={editingBlog.target_keyword}
-                        onChange={(e) => setEditingBlog({ ...editingBlog, target_keyword: e.target.value })}
-                        placeholder="e.g. free ai voice cloner"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-emerald-300 font-mono outline-none"
+                        value={editingBlog.author}
+                        onChange={(e) =>
+                          setEditingBlog({ ...editingBlog, author: e.target.value })
+                        }
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none"
                       />
                     </div>
                   </div>
 
-                  {/* Markdown Toolbar */}
+                  {/* Cover Image URL + Direct Image File Upload */}
+                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                        <ImageIcon className="w-4 h-4 text-indigo-400" />
+                        Featured Cover Image (Upload File or Paste URL)
+                      </label>
+                      <label className="cursor-pointer px-3 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-[11px] font-bold flex items-center gap-1.5 transition">
+                        <Upload className="w-3.5 h-3.5" />
+                        Upload Image File
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleCoverImageUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        value={editingBlog.cover_image}
+                        onChange={(e) =>
+                          setEditingBlog({ ...editingBlog, cover_image: e.target.value })
+                        }
+                        placeholder="https://botock.app/og-image.jpg"
+                        className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none"
+                      />
+                      {editingBlog.cover_image && (
+                        <img
+                          src={editingBlog.cover_image}
+                          alt="Cover preview"
+                          className="w-16 h-10 object-cover rounded-lg border border-slate-700 shrink-0"
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Short Card Excerpt */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Article Card Excerpt (Summary shown on /blog)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={editingBlog.excerpt}
+                      onChange={(e) =>
+                        setEditingBlog({
+                          ...editingBlog,
+                          excerpt: e.target.value,
+                          meta_description:
+                            editingBlog.meta_description || e.target.value,
+                        })
+                      }
+                      placeholder="Brief 2-sentence summary that hooks readers..."
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 outline-none"
+                    />
+                  </div>
+
+                  {/* Rich Markdown Toolbar & Content Editor */}
                   <div className="pt-2 border-t border-slate-800">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-1">
                         <button
                           type="button"
                           onClick={() => insertMarkdown("**", "**")}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
                           title="Bold"
                         >
                           <Bold className="w-3.5 h-3.5" />
@@ -1694,58 +2482,64 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => insertMarkdown("*", "*")}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
                           title="Italic"
                         >
                           <Italic className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => insertMarkdown("## ")}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          onClick={() => insertMarkdown("\n## ")}
+                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
                           title="Heading 2"
                         >
                           <Heading2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => insertMarkdown("### ")}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          onClick={() => insertMarkdown("\n### ")}
+                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
                           title="Heading 3"
                         >
                           <Heading3 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => insertMarkdown("[Link Text](", ")")}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
-                          title="Link"
+                          onClick={() => insertMarkdown("[Anchor Text](https://botock.app/tools/voice-changer)")}
+                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
+                          title="Insert Link"
                         >
                           <Link2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => insertMarkdown("- ")}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                          onClick={() => insertMarkdown("\n- ")}
+                          className="p-1.5 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 cursor-pointer"
                           title="Bullet List"
                         >
                           <List className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => insertMarkdown("> ")}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
-                          title="Quote"
+                          onClick={() =>
+                            insertMarkdown(
+                              "\n\n### 🚀 Try It Free on Botock AI\n[Launch AI Voice Changer & Cloner Studio →](/tools/voice-changer)\n"
+                            )
+                          }
+                          className="px-2 py-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-[10px] font-bold cursor-pointer"
                         >
-                          <Quote className="w-3.5 h-3.5" />
+                          + Voice CTA
                         </button>
                         <button
                           type="button"
-                          onClick={() => insertMarkdown("```\n", "\n```")}
-                          className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
-                          title="Code Block"
+                          onClick={() =>
+                            insertMarkdown(
+                              "\n\n### 🎬 Generate AI Videos Free\n[Launch Botock AI Video Studio →](/tools/video-generator)\n"
+                            )
+                          }
+                          className="px-2 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold cursor-pointer"
                         >
-                          <Code className="w-3.5 h-3.5" />
+                          + Video CTA
                         </button>
                       </div>
 
@@ -1753,24 +2547,24 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setBlogPreviewMode("edit")}
-                          className={`px-2 py-0.5 rounded ${
+                          className={`px-2.5 py-1 rounded cursor-pointer ${
                             blogPreviewMode === "edit"
                               ? "bg-indigo-600 text-white font-bold"
                               : "text-slate-400"
                           }`}
                         >
-                          Editor
+                          Markdown Editor
                         </button>
                         <button
                           type="button"
                           onClick={() => setBlogPreviewMode("preview")}
-                          className={`px-2 py-0.5 rounded ${
+                          className={`px-2.5 py-1 rounded cursor-pointer ${
                             blogPreviewMode === "preview"
                               ? "bg-indigo-600 text-white font-bold"
                               : "text-slate-400"
                           }`}
                         >
-                          Live Reader View
+                          Live Article Preview
                         </button>
                       </div>
                     </div>
@@ -1778,17 +2572,26 @@ export default function App() {
                     {blogPreviewMode === "edit" ? (
                       <textarea
                         id="blog-content-editor"
-                        rows={16}
+                        rows={15}
                         value={editingBlog.content}
-                        onChange={(e) => setEditingBlog({ ...editingBlog, content: e.target.value })}
-                        placeholder="Write your in-depth Markdown guide here..."
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-200 outline-none leading-relaxed focus:border-indigo-500"
+                        onChange={(e) =>
+                          setEditingBlog({ ...editingBlog, content: e.target.value })
+                        }
+                        placeholder="Write your SEO tutorial in Markdown..."
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3.5 text-xs font-mono text-slate-200 outline-none leading-relaxed focus:border-indigo-500"
                       />
                     ) : (
-                      <div className="w-full bg-slate-950 border border-slate-800 rounded-lg p-5 min-h-[380px] prose prose-invert prose-xs max-w-none">
-                        <div className="text-xl font-bold text-white mb-2">{editingBlog.title}</div>
-                        <div className="text-xs text-slate-400 mb-4 pb-3 border-b border-slate-800">
-                          By {editingBlog.author} • {editingBlog.reading_time}
+                      <div className="w-full bg-slate-950 border border-slate-800 rounded-lg p-5 min-h-[360px] space-y-3">
+                        {editingBlog.cover_image && (
+                          <img
+                            src={editingBlog.cover_image}
+                            alt=""
+                            className="w-full h-44 object-cover rounded-xl border border-slate-800"
+                          />
+                        )}
+                        <div className="text-xl font-bold text-white">{editingBlog.title}</div>
+                        <div className="text-xs text-slate-400 pb-3 border-b border-slate-800">
+                          By {editingBlog.author} • {editingBlog.category}
                         </div>
                         <div className="whitespace-pre-wrap font-sans text-xs text-slate-300 leading-relaxed">
                           {editingBlog.content}
@@ -1797,38 +2600,70 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                    {!isBlogNew && (
+                  {/* Publish Status, Featured Pin & Save Button */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800 text-xs">
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={editingBlog.status}
+                        onChange={(e) =>
+                          setEditingBlog({
+                            ...editingBlog,
+                            status: e.target.value as "published" | "draft",
+                          })
+                        }
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-white cursor-pointer"
+                      >
+                        <option value="published">🟢 Status: Published (Live)</option>
+                        <option value="draft">📝 Status: Draft (Hidden)</option>
+                      </select>
+
+                      <label className="flex items-center gap-1.5 cursor-pointer text-slate-300 font-semibold">
+                        <input
+                          type="checkbox"
+                          checked={editingBlog.featured}
+                          onChange={(e) =>
+                            setEditingBlog({ ...editingBlog, featured: e.target.checked })
+                          }
+                          className="accent-indigo-500 w-4 h-4 rounded"
+                        />
+                        Pin as Featured Hero Post
+                      </label>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {!isBlogNew && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBlog(editingBlog.id)}
+                          className="px-3 py-2 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition flex items-center space-x-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      )}
                       <button
                         type="button"
-                        onClick={() => handleDeleteBlog(editingBlog.id)}
-                        className="px-3 py-2 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition flex items-center space-x-1"
+                        onClick={handleSaveBlog}
+                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 flex items-center space-x-2 transition cursor-pointer"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete Article</span>
+                        <Save className="w-4 h-4" />
+                        <span>
+                          {isBlogNew ? "Publish Article Live" : "Update Live Article"}
+                        </span>
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleSaveBlog}
-                      className="ml-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 flex items-center space-x-2 transition"
-                    >
-                      <Save className="w-4 h-4" />
-                      <span>{isBlogNew ? "Publish Article Live" : "Update Live Publication"}</span>
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: SEO Audit & Google SERP Snippet Preview */}
+              {/* Right 5 Columns: SEO Audit, Google SERP & Published Posts List */}
               <div className="lg:col-span-5 space-y-4">
-                {/* Real-time SEO Score Card */}
-                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow">
-                  <div className="flex items-center justify-between mb-3">
+                {/* SEO Score Card */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-3">
+                  <div className="flex items-center justify-between">
                     <h3 className="font-bold text-xs text-slate-200 flex items-center space-x-1.5">
                       <Sparkles className="w-4 h-4 text-amber-400" />
-                      <span>Real-Time SEO Audit</span>
+                      <span>Real-Time SEO Readiness Score</span>
                     </h3>
                     <span
                       className={`px-2 py-0.5 rounded font-mono font-bold text-xs ${
@@ -1839,88 +2674,39 @@ export default function App() {
                           : "bg-rose-500/20 text-rose-300"
                       }`}
                     >
-                      {seoScore}% Score
+                      {seoScore}/100
                     </span>
                   </div>
 
-                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden mb-4">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        seoScore >= 80
-                          ? "bg-emerald-500"
-                          : seoScore >= 50
-                          ? "bg-amber-500"
-                          : "bg-rose-500"
-                      }`}
-                      style={{ width: `${seoScore}%` }}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                      Target Focus Keyword
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBlog.target_keyword}
+                      onChange={(e) =>
+                        setEditingBlog({ ...editingBlog, target_keyword: e.target.value })
+                      }
+                      placeholder="e.g. free ai voice changer"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-emerald-300 font-mono outline-none"
                     />
-                  </div>
-
-                  <div className="space-y-1.5 text-[11px]">
-                    {[
-                      { label: "Target Keyword specified", pass: Boolean(editingBlog.target_keyword.trim()) },
-                      {
-                        label: "Keyword appears in Main Title",
-                        pass: Boolean(
-                          editingBlog.target_keyword &&
-                            editingBlog.title.toLowerCase().includes(editingBlog.target_keyword.toLowerCase())
-                        ),
-                      },
-                      {
-                        label: "Keyword in Meta Title or URL Slug",
-                        pass: Boolean(
-                          editingBlog.target_keyword &&
-                            (editingBlog.meta_title
-                              .toLowerCase()
-                              .includes(editingBlog.target_keyword.toLowerCase()) ||
-                              editingBlog.slug.includes(editingBlog.target_keyword.toLowerCase().replace(/\s+/g, "-")))
-                        ),
-                      },
-                      {
-                        label: "Keyword in Meta Description",
-                        pass: Boolean(
-                          editingBlog.target_keyword &&
-                            editingBlog.meta_description
-                              .toLowerCase()
-                              .includes(editingBlog.target_keyword.toLowerCase())
-                        ),
-                      },
-                      {
-                        label: "Article word count depth (>300 words)",
-                        pass: editingBlog.content.trim().split(/\s+/).filter(Boolean).length > 300,
-                      },
-                      {
-                        label: "Includes H2 / H3 subheadings",
-                        pass: editingBlog.content.includes("## "),
-                      },
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex items-center space-x-2">
-                        {item.pass ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        ) : (
-                          <AlertCircle className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-                        )}
-                        <span className={item.pass ? "text-slate-300" : "text-slate-500"}>
-                          {item.label}
-                        </span>
-                      </div>
-                    ))}
                   </div>
                 </div>
 
-                {/* Google SERP Live Snippet */}
+                {/* Google SERP Snippet Preview */}
                 <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-xs text-slate-200 flex items-center space-x-1.5">
                       <Globe className="w-4 h-4 text-sky-400" />
-                      <span>Google SERP Live Snippet</span>
+                      <span>Google Search Result Preview</span>
                     </h3>
                     <div className="flex items-center space-x-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[10px]">
                       <button
                         type="button"
                         onClick={() => setSerpDevice("desktop")}
-                        className={`px-2 py-0.5 rounded ${
-                          serpDevice === "desktop" ? "bg-slate-800 text-white font-bold" : "text-slate-500"
+                        className={`px-2 py-0.5 rounded font-bold cursor-pointer ${
+                          serpDevice === "desktop" ? "bg-indigo-600 text-white" : "text-slate-400"
                         }`}
                       >
                         Desktop
@@ -1928,8 +2714,8 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setSerpDevice("mobile")}
-                        className={`px-2 py-0.5 rounded ${
-                          serpDevice === "mobile" ? "bg-slate-800 text-white font-bold" : "text-slate-500"
+                        className={`px-2 py-0.5 rounded font-bold cursor-pointer ${
+                          serpDevice === "mobile" ? "bg-indigo-600 text-white" : "text-slate-400"
                         }`}
                       >
                         Mobile
@@ -1937,56 +2723,129 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Rendered Google SERP Result Card */}
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 text-left font-sans text-xs">
+                  <div className={`bg-white rounded-xl p-4 shadow-sm border border-slate-200 text-left font-sans text-xs transition-all ${serpDevice === "mobile" ? "max-w-xs mx-auto" : "w-full"}`}>
                     <div className="flex items-center space-x-2 text-[11px] text-slate-800 mb-1">
                       <div className="w-4 h-4 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px] font-bold">
                         B
                       </div>
                       <span className="font-semibold text-slate-900">Botock AI</span>
-                      <span className="text-slate-400">https://botock.app › blog › {editingBlog.slug || "slug"}</span>
+                      <span className="text-slate-400 truncate">
+                        https://botock.app › blog › {editingBlog.slug || "slug"}
+                      </span>
                     </div>
-
-                    <div className="text-base text-blue-800 hover:underline font-medium cursor-pointer line-clamp-1 mb-1">
-                      {editingBlog.meta_title || editingBlog.title || "Untitled Guide | Botock AI"}
+                    <div className="text-base text-blue-800 font-medium line-clamp-1 mb-1">
+                      {editingBlog.meta_title || editingBlog.title || "Article Title | Botock AI"}
                     </div>
-
                     <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                       {editingBlog.meta_description ||
                         editingBlog.excerpt ||
-                        "Explore Botock AI free in-browser creative tools..."}
+                        "Write a compelling meta description for Google Search..."}
                     </p>
                   </div>
 
-                  {/* Meta Title & Description Inputs */}
-                  <div className="space-y-3 pt-2">
+                  <div className="space-y-2.5 pt-1">
                     <div>
                       <div className="flex justify-between text-[11px] font-semibold text-slate-400 mb-1">
-                        <span>Meta Title</span>
+                        <span>SEO Meta Title</span>
                         <span>{editingBlog.meta_title.length}/60</span>
                       </div>
                       <input
                         type="text"
                         value={editingBlog.meta_title}
-                        onChange={(e) => setEditingBlog({ ...editingBlog, meta_title: e.target.value })}
-                        placeholder="Google Title Tag"
+                        onChange={(e) =>
+                          setEditingBlog({ ...editingBlog, meta_title: e.target.value })
+                        }
                         className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none"
                       />
                     </div>
 
                     <div>
                       <div className="flex justify-between text-[11px] font-semibold text-slate-400 mb-1">
-                        <span>Meta Description</span>
+                        <span>SEO Meta Description</span>
                         <span>{editingBlog.meta_description.length}/160</span>
                       </div>
                       <textarea
-                        rows={3}
+                        rows={2}
                         value={editingBlog.meta_description}
-                        onChange={(e) => setEditingBlog({ ...editingBlog, meta_description: e.target.value })}
-                        placeholder="Snippet description displayed on Google Search..."
-                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 outline-none leading-relaxed"
+                        onChange={(e) =>
+                          setEditingBlog({ ...editingBlog, meta_description: e.target.value })
+                        }
+                        className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-slate-200 outline-none"
                       />
                     </div>
+                  </div>
+                </div>
+
+                {/* Published & Draft Articles Manager List */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-xs text-slate-200">
+                      All Articles ({blogs.length})
+                    </h3>
+                    <input
+                      type="text"
+                      value={blogSearch}
+                      onChange={(e) => setBlogSearch(e.target.value)}
+                      placeholder="Filter articles..."
+                      className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-200 outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                    {blogs
+                      .filter((b) =>
+                        b.title.toLowerCase().includes(blogSearch.toLowerCase())
+                      )
+                      .map((b) => (
+                        <div
+                          key={b.id}
+                          onClick={() => handleSelectBlog(b)}
+                          className={`p-3 rounded-xl border cursor-pointer transition flex items-center justify-between gap-2 ${
+                            editingBlog.id === b.id
+                              ? "bg-indigo-500/10 border-indigo-500/40"
+                              : "bg-slate-950 border-slate-800 hover:border-slate-700"
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span
+                                className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                                  b.status === "published"
+                                    ? "bg-emerald-500/20 text-emerald-300"
+                                    : "bg-amber-500/20 text-amber-300"
+                                }`}
+                              >
+                                {b.status}
+                              </span>
+                              {b.featured && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300">
+                                  ★ Featured
+                                </span>
+                              )}
+                              <span className="text-[10px] text-slate-500 font-mono">
+                                👁️ {b.views || 0}
+                              </span>
+                            </div>
+                            <div className="text-xs font-bold text-slate-200 truncate">
+                              {b.title}
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-mono truncate">
+                              /blog/{b.slug}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteBlog(b.id);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 shrink-0 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
                   </div>
                 </div>
               </div>
