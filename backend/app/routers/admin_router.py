@@ -121,15 +121,18 @@ def verify_admin_token(
 
     # 1. Strictly verify 2FA Session Token from auth_otp
     try:
-        from app.routers.auth_otp import SESSION_TOKENS_FILE, _read_json
+        from app.routers.auth_otp import SESSION_TOKENS_FILE, _read_json, _write_json
         tokens = _read_json(SESSION_TOKENS_FILE, {})
         hashed = hashlib.sha256(clean_token.encode()).hexdigest()
         exp = tokens.get(hashed)
         if exp:
             if time.time() <= exp:
+                # Slide activity window (30-minute auto-expiry)
+                tokens[hashed] = time.time() + (30 * 60)
+                _write_json(SESSION_TOKENS_FILE, tokens)
                 return True
             else:
-                raise HTTPException(status_code=401, detail="Admin 2FA session has expired. Please re-login.")
+                raise HTTPException(status_code=401, detail="Admin session has expired. Please re-login.")
     except HTTPException:
         raise
     except Exception as e:

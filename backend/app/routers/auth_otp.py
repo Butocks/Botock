@@ -34,6 +34,7 @@ OTP_RATE_LIMITS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "s
 USER_STATUS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "user_status.json")
 SUBSCRIPTION_REQUESTS_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "subscription_requests.json")
 USERNAMES_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "usernames.json")
+TRUSTED_DEVICES_FILE = os.path.join(os.path.dirname(settings.SESSION_PATH) or "session", "admin_trusted_devices.json")
 
 # ----------------------------------------------------
 # Persistence Helpers
@@ -342,10 +343,44 @@ def get_platform_settings() -> Dict[str, Any]:
 class AdminSecretRequest(BaseModel):
     email: str
     secret: str
+    device_id: Optional[str] = None
+    device_name: Optional[str] = None
 
 class AdminOtpVerifyRequest(BaseModel):
     email: str
     otp: str
+    device_id: Optional[str] = None
+    device_name: Optional[str] = None
+    remember_device: Optional[bool] = True
+
+
+def is_device_trusted(email: str, device_id: Optional[str]) -> bool:
+    if not device_id or not device_id.strip():
+        return False
+    devices = _read_json(TRUSTED_DEVICES_FILE, {})
+    device_hash = hashlib.sha256(f"{email.lower().strip()}:{device_id.strip()}".encode()).hexdigest()
+    device_info = devices.get(device_hash)
+    if not device_info:
+        return False
+    return device_info.get("active", True)
+
+
+def register_trusted_device(email: str, device_id: str, device_name: Optional[str] = None, user_agent: Optional[str] = None):
+    if not device_id or not device_id.strip():
+        return
+    devices = _read_json(TRUSTED_DEVICES_FILE, {})
+    device_hash = hashlib.sha256(f"{email.lower().strip()}:{device_id.strip()}".encode()).hexdigest()
+    devices[device_hash] = {
+        "email": email.lower().strip(),
+        "device_id": device_id.strip(),
+        "device_name": device_name or "Authorized Admin Workstation",
+        "user_agent": user_agent or "",
+        "trusted_at": time.time(),
+        "last_login_at": time.time(),
+        "active": True,
+    }
+    _write_json(TRUSTED_DEVICES_FILE, devices)
+
 
 class UserOtpRequest(BaseModel):
     email: str
@@ -408,11 +443,15 @@ def verify_admin_token(x_admin_token: Optional[str] = Header(None)) -> str:
     if not x_admin_token:
         raise HTTPException(status_code=401, detail="Admin authorization token missing.")
     tokens = _read_json(SESSION_TOKENS_FILE, {})
-    hashed_token = hashlib.sha256(x_admin_token.encode()).hexdigest()
+    hashed_token = hashlib.sha256(x_admin_token.strip().encode()).hexdigest()
     exp = tokens.get(hashed_token)
     if not exp or time.time() > exp:
         raise HTTPException(status_code=401, detail="Admin session expired. Please re-login.")
+    # Slide active session window: 30 minutes
+    tokens[hashed_token] = time.time() + (30 * 60)
+    _write_json(SESSION_TOKENS_FILE, tokens)
     return x_admin_token
+
 
 
 import secrets
@@ -462,9 +501,30 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
     server_secret = settings.ADMIN_LOGIN_SECRET.strip()
     if not server_secret or not hmac.compare_digest(req.secret.strip(), server_secret):
         record_failed_attempt(client_ip)
-        raise HTTPException(status_code=401, detail="Invalid admin secret authorization code.")
+        raise HTTPException(status_code=401, detail="Invalid admin secret password.")
 
-    # 4. Generate 6-digit OTP (valid 10 minutes)
+    # 4. Check Device Recognition (Trusted Device)
+    if req.device_id and is_device_trusted(email_clean, req.device_id):
+        # Recognized Device! 1-Click access without OTP!
+        admin_token = "adm_" + secrets.token_hex(32)
+        hashed_token = hashlib.sha256(admin_token.encode()).hexdigest()
+        tokens = _read_json(SESSION_TOKENS_FILE, {})
+        tokens[hashed_token] = time.time() + (30 * 60)  # 30-minute auto-expiring session
+        _write_json(SESSION_TOKENS_FILE, tokens)
+
+        # Update last login on device
+        register_trusted_device(email_clean, req.device_id, req.device_name, request.headers.get("user-agent"))
+
+        return {
+            "success": True,
+            "trusted_device": True,
+            "otp_required": False,
+            "token": admin_token,
+            "admin_token": admin_token,
+            "message": "Welcome back! Trusted device recognized. Direct access granted.",
+        }
+
+    # 5. NEW / UNRECOGNIZED DEVICE: Generate 6-digit OTP (valid 10 minutes)
     otp_code = "".join(secrets.choice(string.digits) for _ in range(6))
     expires_at = time.time() + (settings.ADMIN_OTP_EXPIRY_MINUTES * 60)
     
@@ -474,16 +534,18 @@ async def verify_admin_secret(req: AdminSecretRequest, request: Request):
         "otp_hash": otp_hash,
         "expires_at": expires_at,
         "attempts_left": 3,
-        "purpose": "Admin Command Center Login",
+        "purpose": "Admin Command Center Login (New Device Verification)",
     }
     _write_json(OTP_STORE_FILE, otps)
 
-    # 5. Dispatch email
-    email_delivered = send_otp_email(to_email=email_clean, otp_code=otp_code, purpose="Admin Command Center Login")
+    # 6. Dispatch email via Zoho Mail SMTP
+    email_delivered = send_otp_email(to_email=email_clean, otp_code=otp_code, purpose="Admin Command Center Login (New Device Verification)")
 
     response_payload = {
         "success": True,
-        "message": f"Verification code dispatched to {email_clean}. Valid for 10 minutes (3 attempts max).",
+        "trusted_device": False,
+        "otp_required": True,
+        "message": f"New device detected. A 6-digit verification code has been dispatched via Zoho Mail to {email_clean}. Valid for 10 minutes.",
         "expires_in_seconds": settings.ADMIN_OTP_EXPIRY_MINUTES * 60,
     }
 
@@ -540,20 +602,37 @@ async def verify_admin_otp(req: AdminOtpVerifyRequest, request: Request):
             
             raise HTTPException(status_code=400, detail=f"Invalid verification code. {stored['attempts_left']} attempt(s) remaining.")
 
-        # Success: Issue admin session token (valid 24 hours)
+        # Success: Issue admin session token (valid 30 minutes inactivity timeout)
         if email_clean in otps: del otps[email_clean]; _write_json(OTP_STORE_FILE, otps)
     admin_token = "adm_" + secrets.token_hex(32)
     hashed_token = hashlib.sha256(admin_token.encode()).hexdigest()
     tokens = _read_json(SESSION_TOKENS_FILE, {})
-    tokens[hashed_token] = time.time() + (24 * 3600)
+    tokens[hashed_token] = time.time() + (30 * 60)
     _write_json(SESSION_TOKENS_FILE, tokens)
+
+    # Register this device as trusted so future logins from this device bypass OTP
+    if req.device_id and req.remember_device:
+        register_trusted_device(email_clean, req.device_id, req.device_name, request.headers.get("user-agent"))
 
     return {
         "success": True,
         "token": admin_token,
         "admin_token": admin_token,
-        "message": "Admin authorization granted.",
+        "trusted_device": True,
+        "message": "2FA Verified! Device is now recognized. Future logins will not require OTP.",
     }
+
+
+@router.post("/api/admin/auth/logout")
+async def admin_logout(x_admin_token: Optional[str] = Header(None, alias="x-admin-token")):
+    if x_admin_token:
+        tokens = _read_json(SESSION_TOKENS_FILE, {})
+        hashed = hashlib.sha256(x_admin_token.strip().encode()).hexdigest()
+        if hashed in tokens:
+            del tokens[hashed]
+            _write_json(SESSION_TOKENS_FILE, tokens)
+    return {"success": True, "message": "Logged out successfully. Session revoked."}
+
 
 
 # ----------------------------------------------------
