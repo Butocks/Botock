@@ -141,18 +141,14 @@ export default function App() {
   const [targetHost, setTargetHost] = useState<string>(() => {
     return localStorage.getItem("botock_admin_host") || "http://localhost:8000";
   });
-  const [adminSecret, setAdminSecret] = useState<string>(() => {
-    return localStorage.getItem("botock_admin_secret") || "";
-  });
+  const [adminSecret, setAdminSecret] = useState<string>("");
   const [showSecret, setShowSecret] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "journeys" | "campaigns" | "tools" | "users" | "quotas" | "coupons" | "cms"
   >("journeys");
 
-  // Enterprise Security & Device Recognition States
-  const [adminEmail, setAdminEmail] = useState<string>(() => {
-    return localStorage.getItem("botock_admin_email") || "butoameerali@gmail.com";
-  });
+  // Enterprise Security & Device Recognition States (Never pre-fill or cache credentials)
+  const [adminEmail, setAdminEmail] = useState<string>("");
   const [sessionToken, setSessionToken] = useState<string>(() => {
     return sessionStorage.getItem("botock_admin_session_token") || "";
   });
@@ -163,6 +159,16 @@ export default function App() {
   });
   const [authLoading, setAuthLoading] = useState<boolean>(false);
   const [otpCode, setOtpCode] = useState<string>("");
+
+  // Clean any previously cached sensitive credentials from browser localStorage
+  useEffect(() => {
+    localStorage.removeItem("botock_admin_secret");
+    localStorage.removeItem("botock_admin_email");
+    localStorage.removeItem("botock_admin_api_key");
+    localStorage.removeItem("admin_secret");
+    localStorage.removeItem("admin_email");
+    localStorage.removeItem("admin_api_key");
+  }, []);
 
   // Connection & Server Health
   const [connected, setConnected] = useState(false);
@@ -292,7 +298,6 @@ export default function App() {
         setBlogs(res.data.blogs || []);
 
         localStorage.setItem("botock_admin_host", targetHost);
-        localStorage.setItem("botock_admin_secret", adminSecret);
       } else {
         setStatusMessage({ type: "error", text: "Session invalid or expired. Please re-login." });
       }
@@ -420,9 +425,7 @@ export default function App() {
         device_name: "Admin Workstation (" + (navigator.platform || "PC") + ")",
       });
 
-      localStorage.setItem("botock_admin_email", adminEmail.trim());
       localStorage.setItem("botock_admin_host", targetHost);
-      localStorage.setItem("botock_admin_secret", adminSecret);
 
       if (res.data?.trusted_device && (res.data?.token || res.data?.admin_token)) {
         // 🚀 Trusted Device Recognized -> Direct 1-Click Entry!
@@ -513,6 +516,9 @@ export default function App() {
     } finally {
       sessionStorage.removeItem("botock_admin_session_token");
       setSessionToken("");
+      setAdminEmail("");
+      setAdminSecret("");
+      setOtpCode("");
       setConnected(false);
       setLoginStep("credentials");
       setStatusMessage({
@@ -796,58 +802,44 @@ export default function App() {
 
           {loginStep === "credentials" ? (
             /* STEP 1: EMAIL & SECRET CREDENTIALS */
-            <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleLoginSubmit} autoComplete="off" data-lpignore="true" className="space-y-4 text-xs">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="font-semibold text-slate-300">Registered Admin Email</label>
-                  <div className="flex items-center space-x-1 text-[10px]">
-                    <button
-                      type="button"
-                      onClick={() => setAdminEmail("butoameerali@gmail.com")}
-                      className={`px-1.5 py-0.5 rounded border transition ${
-                        adminEmail === "butoameerali@gmail.com"
-                          ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
-                          : "bg-slate-800 border-slate-700 text-slate-400"
-                      }`}
-                    >
-                      butoameerali@gmail.com
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAdminEmail("info@botock.app")}
-                      className={`px-1.5 py-0.5 rounded border transition ${
-                        adminEmail === "info@botock.app"
-                          ? "bg-indigo-500/20 border-indigo-500 text-indigo-300"
-                          : "bg-slate-800 border-slate-700 text-slate-400"
-                      }`}
-                    >
-                      info@botock.app
-                    </button>
-                  </div>
-                </div>
+                <label className="font-semibold text-slate-300 block mb-1">Admin Email</label>
                 <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 focus-within:border-indigo-500 transition">
                   <Mail className="w-4 h-4 text-slate-400 mr-2 shrink-0" />
                   <input
                     type="email"
+                    name="botock_admin_user_id"
                     value={adminEmail}
                     onChange={(e) => setAdminEmail(e.target.value)}
-                    placeholder="e.g. butoameerali@gmail.com"
+                    placeholder="Enter Admin Email"
                     required
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    data-lpignore="true"
                     className="w-full bg-transparent border-none outline-none text-slate-100 text-xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="font-semibold text-slate-300 block mb-1">Admin Login Secret Password</label>
+                <label className="font-semibold text-slate-300 block mb-1">Admin Password / Secret</label>
                 <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 focus-within:border-indigo-500 transition">
                   <Lock className="w-4 h-4 text-amber-400 mr-2 shrink-0" />
                   <input
                     type={showSecret ? "text" : "password"}
+                    name="botock_admin_auth_key"
                     value={adminSecret}
                     onChange={(e) => setAdminSecret(e.target.value)}
-                    placeholder="Enter Secret Password from .env"
+                    placeholder="Enter Password"
                     required
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    data-lpignore="true"
                     className="w-full bg-transparent border-none outline-none text-slate-100 font-mono text-xs"
                   />
                   <button
