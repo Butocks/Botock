@@ -34,42 +34,22 @@ DEFAULT_STATE: Dict[str, Any] = {
         "announcement_banner": "",
     },
     "tool_flags": {
-        "video-generator": {"name": "AI Video Generator Studio", "category": "AI Video", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 540, "errors": 0},
-        "ai-video-generator": {"name": "AI Video Generator Studio", "category": "AI Video", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 540, "errors": 0},
-        "voice-changer": {"name": "AI Voice Studio & Cloner", "category": "AI Audio", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 1420, "errors": 4},
-        "audio-enhance": {"name": "AI Studio Audio Enhancer", "category": "AI Audio", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 830, "errors": 3},
-        "bg-remover": {"name": "AI Background Remover", "category": "AI Image", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 2150, "errors": 0},
-        "image-upscaler": {"name": "4K AI Image Upscaler", "category": "AI Image", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 710, "errors": 1},
-        "pdf-to-docx": {"name": "PDF to Word Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 980, "errors": 2},
-        "pdf-to-excel": {"name": "PDF to Excel Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 610, "errors": 1},
-        "docx-to-pdf": {"name": "Word to PDF Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 430, "errors": 0},
-        "pdf-protect": {"name": "PDF Password Protector", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 220, "errors": 0},
+        "video-generator": {"name": "AI Video Generator Studio", "category": "AI Video", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
+        "ai-video-generator": {"name": "AI Video Generator Studio", "category": "AI Video", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
+        "voice-changer": {"name": "AI Voice Studio & Cloner", "category": "AI Audio", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
+        "audio-enhance": {"name": "AI Studio Audio Enhancer", "category": "AI Audio", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
+        "bg-remover": {"name": "AI Background Remover", "category": "AI Image", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
+        "image-upscaler": {"name": "4K AI Image Upscaler", "category": "AI Image", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
+        "pdf-to-docx": {"name": "PDF to Word Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
+        "pdf-to-excel": {"name": "PDF to Excel Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
+        "docx-to-pdf": {"name": "Word to PDF Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
+        "pdf-protect": {"name": "PDF Password Protector", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
     },
     "users": [],
     "coupons": [],
     "tool_events": [],
     "telemetry": [],
-    "blogs": [
-        {
-            "id": "blog_1",
-            "title": "How to Clone Any Voice for Free with Zero-Shot AI in 2026",
-            "slug": "how-to-clone-any-voice-free-zero-shot-ai",
-            "excerpt": "Complete guide to using F5-TTS, Seed-VC, and Botock AI Voice Studio for podcasting, YouTube automation, and Urdu/Hindi voiceovers.",
-            "content": "## Introduction to Zero-Shot Voice Cloning\n\nModern neural voice synthesis no longer requires hours of studio recordings. With zero-shot architectures like F5-TTS, creators can clone a voice using as little as 5 to 10 seconds of clear sample audio.\n\n### Why Botock Voice Studio is Different\n- Zero installation required\n- In-browser noise suppression\n- Full support for Pakistani & Indian accents",
-            "category": "AI Audio Tutorials",
-            "target_keyword": "free ai voice cloner",
-            "meta_title": "Free AI Voice Cloner & Text to Speech Studio (2026 Guide) | Botock AI",
-            "meta_description": "Learn how to clone voices from a 10-second audio clip and generate deep podcast or Urdu/Hindi neural voiceovers for free.",
-            "cover_image": "https://botock.app/og-image.jpg",
-            "author": "Ameer Ali",
-            "reading_time": "4 min read",
-            "status": "published",
-            "featured": True,
-            "views": 1240,
-            "created_at": "2026-10-15T12:00:00Z",
-            "updated_at": "2026-10-15T12:00:00Z",
-        }
-    ],
+    "blogs": [],
 }
 
 
@@ -82,6 +62,14 @@ def load_state() -> Dict[str, Any]:
                 for k, v in DEFAULT_STATE.items():
                     if k not in data:
                         data[k] = v
+
+                # Purge any legacy mock blog entries
+                if "blogs" in data and isinstance(data["blogs"], list):
+                    data["blogs"] = [
+                        b for b in data["blogs"]
+                        if b.get("id") != "blog_1" and "Zero-Shot" not in b.get("title", "")
+                    ]
+
                 return data
         except Exception as e:
             logger.warning("Could not read admin state file: %s", e)
@@ -340,13 +328,26 @@ async def get_admin_overview():
                     "ip": te.get("ip", ""),
                 })
 
-    # Server Hardware Health
-    cpu_usage = 18.5
-    mem_info = 42.0
+    # Server Hardware Health (Read live metrics without mock fallbacks)
+    cpu_usage = 0.0
+    mem_info = 0.0
     if psutil:
         try:
             cpu_usage = psutil.cpu_percent(interval=0.1)
             mem_info = psutil.virtual_memory().percent
+        except Exception:
+            pass
+    elif os.path.exists("/proc/meminfo"):
+        try:
+            with open("/proc/meminfo", "r") as mf:
+                m_dict = {}
+                for line in mf:
+                    parts = line.split(":")
+                    if len(parts) == 2:
+                        m_dict[parts[0].strip()] = float(parts[1].split()[0].strip())
+                total = m_dict.get("MemTotal", 1.0)
+                free = m_dict.get("MemAvailable", m_dict.get("MemFree", 0.0))
+                mem_info = round(((total - free) / total) * 100, 1)
         except Exception:
             pass
 
