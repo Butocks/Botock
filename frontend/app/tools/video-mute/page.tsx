@@ -14,9 +14,9 @@ const VideoMuteClient = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "Mute Video Online Free (No Upload Limit) – Remove Audio | Botock",
+  title: "Mute Video Online – 100% Free Audio Remover from Video | Botock",
   description:
-    "Remove audio and mute video clips online for free. Lossless stream copy removes sound in 1 second with no quality loss and zero server uploads.",
+    "Mute video online for free without quality loss. Remove sound tracks from MP4, MOV, and WebM videos instantly in 1 second with no file size limit and zero server uploads.",
   keywords: [
     "mute video online",
     "mute video online free",

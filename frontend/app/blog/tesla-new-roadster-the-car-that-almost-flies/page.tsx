@@ -35,6 +35,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/blog/tesla-new-roadster-the-car-that-almost-flies",
   },
+  robots: {
+    index: false,
+    follow: true,
+  },
   openGraph: {
     title: "Tesla's New Roadster: The Car That Almost Flies — Full Engineering Breakdown",
     description:
