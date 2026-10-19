@@ -71,7 +71,7 @@ export default function SecurityPage() {
       <div className="max-w-[1560px] w-full mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold mb-4">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Enterprise Security & Trust Center</span>
           </div>
@@ -86,9 +86,9 @@ export default function SecurityPage() {
         {/* 4 Architectural Pillars */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {/* Pillar 1 */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] flex flex-col justify-between">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm flex flex-col justify-between">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4">
                 <EyeOff className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">Client-Side & Ephemeral Isolation</h3>
@@ -96,15 +96,15 @@ export default function SecurityPage() {
                 Offline utilities execute locally via WebAssembly. For server-assisted conversions, files are handled in ephemeral memory and automatically purged immediately upon completion.
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-emerald-400 font-semibold">
+            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
               ✓ Zero Permanent Data Retention
             </div>
           </div>
 
           {/* Pillar 2 */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] flex flex-col justify-between">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm flex flex-col justify-between">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center mb-4">
                 <Trash2 className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">24h Automated Purging</h3>
@@ -112,15 +112,15 @@ export default function SecurityPage() {
                 When you generate AI videos or images, media is retained for strictly 24 hours to give you time to download or bridge into the Video Studio. After 24h, it is irreversibly wiped.
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-violet-400 font-semibold">
+            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-violet-600 dark:text-violet-400 font-semibold">
               ✓ Automated Daily Cron Purge
             </div>
           </div>
 
           {/* Pillar 3 */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] flex flex-col justify-between">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm flex flex-col justify-between">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-4">
                 <Lock className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">AES-256 & TLS 1.3</h3>
@@ -128,15 +128,15 @@ export default function SecurityPage() {
                 All communications between client and server are encrypted using modern TLS 1.3 with Perfect Forward Secrecy. Database records are secured with AES-256 encryption.
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-blue-400 font-semibold">
+            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-blue-600 dark:text-blue-400 font-semibold">
               ✓ Enterprise Encryption Standard
             </div>
           </div>
 
           {/* Pillar 4 */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] flex flex-col justify-between">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm flex flex-col justify-between">
             <div>
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-4">
                 <Server className="w-5 h-5" />
               </div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white mb-2">Supabase JWT & RLS</h3>
@@ -144,7 +144,7 @@ export default function SecurityPage() {
                 Supabase Row-Level Security (RLS) policies enforce cryptographic isolation between user accounts. Even internal backend queries cannot read another user's generation tokens.
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-amber-400 font-semibold">
+            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/[0.06] text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
               ✓ Row-Level Cryptographic Isolation
             </div>
           </div>
@@ -152,47 +152,47 @@ export default function SecurityPage() {
 
         {/* Detailed Breakdown Sections */}
         <div id="compliance" className="max-w-4xl mx-auto space-y-8 mb-16 scroll-mt-24">
-          <div className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] p-8">
+          <div className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm p-8">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
               <span>Zero-Training Guarantee</span>
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-              Botock has a strict binding policy: <strong className="text-white">We never use your uploaded documents, photos, or prompts to train public AI models</strong>. Your creative prompts and proprietary documents remain exclusively your intellectual property.
+              Botock has a strict binding policy: <strong className="font-semibold text-slate-900 dark:text-white">We never use your uploaded documents, photos, or prompts to train public AI models</strong>. Your creative prompts and proprietary documents remain exclusively your intellectual property.
             </p>
             <ul className="space-y-2 text-xs text-slate-700 dark:text-slate-300">
               <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                 No training on confidential user PDFs, spreadsheets, or images.
               </li>
               <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                 Ephemeral API sessions isolated per user request.
               </li>
               <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                 Immediate unlinking upon manual deletion from "My Library".
               </li>
             </ul>
           </div>
 
-          <div className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] p-8">
+          <div className="rounded-2xl bg-white dark:bg-[#111114] border border-slate-200 dark:border-white/[0.08] shadow-sm p-8">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-violet-400" />
+              <Mail className="w-5 h-5 text-violet-500 dark:text-violet-400" />
               <span>Responsible Vulnerability Disclosure</span>
             </h2>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
               We welcome reports from independent cybersecurity researchers. If you discover a potential security flaw or vulnerability in any of our web services, please notify our security team directly:
             </p>
-            <div className="p-4 rounded-xl bg-black/40 border border-slate-200 dark:border-white/[0.06] flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="text-xs font-bold text-slate-900 dark:text-white">Security Contact</div>
-                <div className="text-xs text-violet-400 font-mono">services@botock.app</div>
-                <div className="text-xs text-red-400 font-mono">complaint@botock.app</div>
+                <div className="text-xs text-violet-600 dark:text-violet-400 font-mono mt-0.5">services@botock.app</div>
+                <div className="text-xs text-rose-600 dark:text-rose-400 font-mono mt-0.5">complaint@botock.app</div>
               </div>
               <Link
                 href="/contact"
-                className="px-4 py-2 rounded-lg bg-white/[0.08] hover:bg-white/[0.12] text-xs font-bold text-slate-900 dark:text-white transition-colors"
+                className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white dark:bg-white/[0.08] dark:hover:bg-white/[0.12] dark:text-white text-xs font-bold transition-colors inline-flex items-center gap-1.5 self-start sm:self-auto"
               >
                 Submit PGP Encrypted Report →
               </Link>
