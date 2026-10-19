@@ -135,9 +135,13 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
 
   
   // ----------------------------------------------------
-  // Module 10: Tool Usage Analytics
-  // ----------------------------------------------------
-  const [toolUsage, setToolUsage] = useState<{ summary: any[], errors: any[] }>({ summary: [], errors: [] });
+  const [toolUsage, setToolUsage] = useState<{ summary: any[]; errors: any[]; abandons: any[] }>({
+    summary: [],
+    errors: [],
+    abandons: [],
+  });
+  const [toolSearchQuery, setToolSearchQuery] = useState("");
+  const [toolCategoryFilter, setToolCategoryFilter] = useState("all");
 
   // ----------------------------------------------------
   // Module 1: Analytics & Demographics
@@ -324,15 +328,37 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
         setBlogs(await resBlogs.json());
       }
 
-      // 5. Analytics
+      // 5. Analytics & Deep Telemetry
       try {
         const resToolUsage = await fetch(`/api/analytics/tool-usage`);
         if (resToolUsage.ok) {
-          setToolUsage(await resToolUsage.json());
+          const udata = await resToolUsage.json();
+          setToolUsage({
+            summary: udata.summary || [],
+            errors: udata.errors || [],
+            abandons: udata.abandons || [],
+          });
         }
       } catch (e) {
         console.warn("Failed to load tool usage analytics:", e);
       }
+
+      // Also check Backend Deep Telemetry Drop-offs
+      try {
+        const resTel = await fetch(`${backendUrl}/api/admin/telemetry-summary`, {
+          headers: { "x-admin-token": token },
+        });
+        if (resTel.ok) {
+          const tdata = await resTel.json();
+          if (tdata.recent_abandons?.length) {
+            setToolUsage(prev => ({
+              ...prev,
+              abandons: tdata.recent_abandons,
+              errors: tdata.recent_failures?.length ? tdata.recent_failures : prev.errors,
+            }));
+          }
+        }
+      } catch {}
 
       const resAnalytics = await fetch(`${backendUrl}/api/admin/analytics`, {
         headers: { "x-admin-token": token },
@@ -1772,6 +1798,63 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                  </div>
                </div>
             </div>
+
+            {/* Mid-Way Drop-offs & Abandonment Telemetry */}
+            <div className="p-6 rounded-2xl bg-white dark:bg-[#111115] border border-amber-500/20 shadow-sm overflow-auto max-h-[450px]">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-amber-500 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" /> Users Who Stopped Mid-Way (Mid-Way Drop-Offs & Abandonments)
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Captures users who closed tab, cancelled, or dropped off mid-processing via beacon telemetry</p>
+                </div>
+                <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 font-mono">
+                  {toolUsage.abandons?.length || 0} Events
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 pb-2">
+                      <th className="py-2.5 px-3">Tool</th>
+                      <th className="py-2.5 px-3">Stage Stopped</th>
+                      <th className="py-2.5 px-3">Why Stopped / Reason</th>
+                      <th className="py-2.5 px-3">Time Waited</th>
+                      <th className="py-2.5 px-3">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {toolUsage.abandons?.map((item: any, i: number) => (
+                      <tr key={i} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
+                        <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-white">
+                          {item.tool || item.tool_id || item.tool_name}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-amber-400">
+                          {item.stage_stopped || item.stage_reached || "processing"}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">
+                          {item.why_stopped || item.abandon_reason || "User closed tab or cancelled"}
+                        </td>
+                        <td className="py-2.5 px-3 font-mono text-slate-400">
+                          {item.waited_sec ? `${item.waited_sec}s` : item.elapsed_ms ? `${Math.round(item.elapsed_ms / 1000)}s` : "< 2s"}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-500 text-[11px]">
+                          {item.created_at || item.used_at ? new Date(item.created_at || item.used_at).toLocaleTimeString() : "Just now"}
+                        </td>
+                      </tr>
+                    ))}
+                    {(!toolUsage.abandons || toolUsage.abandons.length === 0) && (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-slate-500 text-xs">
+                          No midway drop-offs recorded yet. Your tools are running smoothly!
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1973,22 +2056,70 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
           {/* TAB 8: TOOL ACCESS RULES */}
           {activeTab === "tools" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Tool Access & In-Development Controls</h2>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Lock tools for free users or restrict completely with "In Development" notice</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Master Tool Controls & Access Rules ({toolRules.length} Tools)</h2>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Manage operational status, Pro-only tier locking, and maintenance across all 52+ tools</p>
                 </div>
                 <button
                   onClick={handleSaveToolRules}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer self-start sm:self-auto"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Save Tool Matrix (2-Step)</span>
                 </button>
               </div>
 
+              {/* Filters & Search */}
+              <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between p-4 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-black/30 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 flex-1 max-w-md">
+                  <Search className="w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search any tool (e.g. video-editor, pdf, audio)..."
+                    value={toolSearchQuery}
+                    onChange={(e) => setToolSearchQuery(e.target.value)}
+                    className="bg-transparent border-none text-xs text-white placeholder-slate-500 focus:outline-none w-full"
+                  />
+                  {toolSearchQuery && (
+                    <button onClick={() => setToolSearchQuery("")} className="text-xs text-slate-400 hover:text-white">✕</button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                  {(["all", "video", "image", "pdf", "audio"] as const).map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setToolCategoryFilter(cat)}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition ${
+                        toolCategoryFilter === cat
+                          ? "bg-indigo-600 text-white shadow-sm"
+                          : "bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/[0.08]"
+                      }`}
+                    >
+                      {cat === "all" ? "All Tools" : cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-3">
-                {toolRules.map((t, idx) => (
+                {toolRules
+                  .filter((t) => {
+                    const q = toolSearchQuery.toLowerCase();
+                    const matchesSearch = t.name.toLowerCase().includes(q) || t.id.toLowerCase().includes(q);
+                    if (!matchesSearch) return false;
+                    if (toolCategoryFilter === "all") return true;
+                    if (toolCategoryFilter === "video") return t.id.includes("video") || t.id === "subtitles" || t.id.includes("reaction");
+                    if (toolCategoryFilter === "image") return t.id.includes("image");
+                    if (toolCategoryFilter === "pdf") return t.id.includes("pdf") || t.id.includes("excel") || t.id.includes("word") || t.id.includes("html") || t.id.includes("live-data");
+                    if (toolCategoryFilter === "audio") return t.id.includes("audio") || t.id.includes("voice");
+                    return true;
+                  })
+                  .map((t) => {
+                    const idx = toolRules.findIndex((item) => item.id === t.id);
+                    return (
                   <div key={t.id} className="p-5 rounded-2xl bg-white dark:bg-[#111116] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                       <div className="text-sm font-bold text-slate-900 dark:text-white">{t.name}</div>
@@ -2033,7 +2164,8 @@ export default function AdminConsole({ token, email }: AdminConsoleProps = {}) {
                       </button>
                     </div>
                   </div>
-                ))}
+                );
+              })}
               </div>
             </div>
           )}

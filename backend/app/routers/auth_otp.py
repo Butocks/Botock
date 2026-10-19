@@ -334,6 +334,24 @@ def get_platform_settings() -> Dict[str, Any]:
     for k, v in DEFAULT_SETTINGS.items():
         if k not in current:
             current[k] = v
+
+    # Ensure all 52 tools exist in tool_rules
+    if "tool_rules" in current and isinstance(current["tool_rules"], list):
+        existing_ids = {r.get("id") for r in current["tool_rules"] if isinstance(r, dict)}
+        try:
+            from app.routers.admin_router import ALL_BOTOCK_TOOLS
+            for tid, tcfg in ALL_BOTOCK_TOOLS.items():
+                if tid not in existing_ids:
+                    current["tool_rules"].append({
+                        "id": tid,
+                        "name": tcfg.get("name", tid),
+                        "isProOnly": bool(tcfg.get("pro_only", False)),
+                        "isInDevelopment": bool(tcfg.get("maintenance", False)),
+                        "statusMessage": "Operational"
+                    })
+        except Exception:
+            pass
+
     return current
 
 

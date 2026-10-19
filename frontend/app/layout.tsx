@@ -5,6 +5,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import GoogleOneTap from "./components/GoogleOneTap";
 import BotockTelemetry from "./components/BotockTelemetry";
+import CookieConsent from "./components/CookieConsent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -179,6 +180,7 @@ export default function RootLayout({
         <main className="flex-1 flex flex-col">{children}</main>
         <Footer />
         <Analytics />
+        <CookieConsent />
       </body>
     </html>
   );

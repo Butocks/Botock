@@ -22,6 +22,61 @@ router = APIRouter(prefix="/api/admin", tags=["Admin Control Center"])
 ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY", settings.ADMIN_LOGIN_SECRET or "botock_master_admin_2026")
 STATE_FILE = os.path.join(os.path.dirname(__file__), "../../botock_admin_state.json")
 
+ALL_BOTOCK_TOOLS: Dict[str, Dict[str, Any]] = {
+    "video-generator": {"name": "AI Video Generator", "category": "video", "enabled": True, "access_mode": "login_users", "guest_daily_quota": 0, "user_daily_quota": 3, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-generator": {"name": "AI Image Generator", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 2, "user_daily_quota": 10, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-editor": {"name": "Botock Video Editor", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 5, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "reaction-video-maker": {"name": "Reaction Video Maker", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 5, "user_daily_quota": 25, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-remove-bg": {"name": "Video Background Remover", "category": "video", "enabled": True, "access_mode": "login_users", "guest_daily_quota": 1, "user_daily_quota": 10, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-auto-reframe": {"name": "Video Auto Reframe", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 5, "user_daily_quota": 25, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-compress": {"name": "Video Compressor", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-convert": {"name": "Video Converter", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-trim": {"name": "Video Trimmer", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-to-mp3": {"name": "Video to MP3", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-to-gif": {"name": "Video to GIF", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-mute": {"name": "Video Mute", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "video-rotate": {"name": "Video Rotate", "category": "video", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "subtitles": {"name": "AI Subtitles Generator", "category": "video", "enabled": True, "access_mode": "login_users", "guest_daily_quota": 1, "user_daily_quota": 10, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-remove-bg": {"name": "Image Background Remover", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 5, "user_daily_quota": 30, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-upscale": {"name": "AI Image Upscaler", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 3, "user_daily_quota": 20, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-compress": {"name": "Image Compressor", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 20, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-convert": {"name": "Image Converter", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 20, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-crop": {"name": "Image Cropper", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 25, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-resize": {"name": "Image Resizer", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 25, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-rotate": {"name": "Image Rotator", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 25, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-filters": {"name": "Image Filters", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 25, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "image-color-picker": {"name": "Image Color Picker", "category": "image", "enabled": True, "access_mode": "guest", "guest_daily_quota": 50, "user_daily_quota": 200, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-ai-summarizer": {"name": "PDF AI Summarizer", "category": "pdf", "enabled": True, "access_mode": "login_users", "guest_daily_quota": 2, "user_daily_quota": 15, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "translate-pdf": {"name": "Translate PDF", "category": "pdf", "enabled": True, "access_mode": "login_users", "guest_daily_quota": 2, "user_daily_quota": 15, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-ocr": {"name": "PDF OCR", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 5, "user_daily_quota": 25, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-merge": {"name": "Merge PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-split": {"name": "Split PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-compress": {"name": "Compress PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-to-word": {"name": "PDF to Word", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "word-to-pdf": {"name": "Word to PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-to-excel": {"name": "PDF to Excel", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "excel-to-pdf": {"name": "Excel to PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-to-jpg": {"name": "PDF to JPG", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "jpg-to-pdf": {"name": "JPG to PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-to-powerpoint": {"name": "PDF to PowerPoint", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-protect": {"name": "Protect PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-watermark": {"name": "Watermark PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-page-delete": {"name": "Delete PDF Pages", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-page-numbers": {"name": "PDF Page Numbers", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-rotate": {"name": "Rotate PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "organize-pdf": {"name": "Organize PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "crop-pdf": {"name": "Crop PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 15, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "repair-pdf": {"name": "Repair PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "html-to-pdf": {"name": "HTML to PDF", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-forms": {"name": "PDF Forms Filler", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "pdf-to-book": {"name": "PDF to Book", "category": "pdf", "enabled": True, "access_mode": "guest", "guest_daily_quota": 10, "user_daily_quota": 50, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "audio-enhance": {"name": "AI Audio Enhancer", "category": "audio", "enabled": True, "access_mode": "guest", "guest_daily_quota": 5, "user_daily_quota": 30, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "voice-changer": {"name": "AI Voice Changer", "category": "audio", "enabled": True, "access_mode": "guest", "guest_daily_quota": 5, "user_daily_quota": 30, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "audio-trim": {"name": "Audio Trimmer", "category": "audio", "enabled": True, "access_mode": "guest", "guest_daily_quota": 20, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "audio-volume": {"name": "Audio Volume Booster", "category": "audio", "enabled": True, "access_mode": "guest", "guest_daily_quota": 20, "user_daily_quota": 100, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+    "live-data-extractor": {"name": "Live Data Extractor", "category": "pdf", "enabled": True, "access_mode": "login_users", "guest_daily_quota": 2, "user_daily_quota": 20, "pro_only": False, "maintenance": False, "uses": 0, "errors": 0, "abandons": 0},
+}
+
 DEFAULT_STATE: Dict[str, Any] = {
     "quotas": {
         "video_gen_access": "all",  # "all" (Guest + Login) | "login_only" | "off"
@@ -33,18 +88,7 @@ DEFAULT_STATE: Dict[str, Any] = {
         "global_maintenance": False,
         "announcement_banner": "",
     },
-    "tool_flags": {
-        "video-generator": {"name": "AI Video Generator Studio", "category": "AI Video", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-        "ai-video-generator": {"name": "AI Video Generator Studio", "category": "AI Video", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-        "voice-changer": {"name": "AI Voice Studio & Cloner", "category": "AI Audio", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-        "audio-enhance": {"name": "AI Studio Audio Enhancer", "category": "AI Audio", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-        "bg-remover": {"name": "AI Background Remover", "category": "AI Image", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-        "image-upscaler": {"name": "4K AI Image Upscaler", "category": "AI Image", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-        "pdf-to-docx": {"name": "PDF to Word Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-        "pdf-to-excel": {"name": "PDF to Excel Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-        "docx-to-pdf": {"name": "Word to PDF Converter", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-        "pdf-protect": {"name": "PDF Password Protector", "category": "Document Tools", "enabled": True, "access_mode": "all", "pro_only": False, "maintenance": False, "uses": 0, "errors": 0},
-    },
+    "tool_flags": {k: v.copy() for k, v in ALL_BOTOCK_TOOLS.items()},
     "users": [],
     "coupons": [],
     "tool_events": [],
@@ -60,26 +104,21 @@ def load_state() -> Dict[str, Any]:
                 data = json.load(f)
                 # Purge mock tools and mock numbers from tool_flags
                 if "tool_flags" in data and isinstance(data["tool_flags"], dict):
-                    mock_tools = ["image-compress", "ai-video"]
+                    mock_tools = ["image-compress-legacy", "ai-video"]
                     for mt in mock_tools:
                         data["tool_flags"].pop(mt, None)
 
-                    mock_uses = {4300, 3780, 2844, 2150, 1962, 1890, 1663, 1421, 1420, 980, 830, 710, 610, 540, 430, 220}
-                    mock_errs = {1, 2, 3, 4, 9}
-                    tool_events = data.get("tool_events", [])
-                    for tid, tcfg in data["tool_flags"].items():
-                        if isinstance(tcfg, dict):
-                            if tcfg.get("uses") in mock_uses or not tool_events:
-                                tcfg["uses"] = sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "success")
-                            if tcfg.get("errors") in mock_errs or not tool_events:
-                                tcfg["errors"] = sum(1 for te in tool_events if te.get("tool_id") == tid and te.get("status") == "error")
+                else:
+                    data["tool_flags"] = {}
 
-                # Purge any legacy mock blog entries
-                if "blogs" in data and isinstance(data["blogs"], list):
-                    data["blogs"] = [
-                        b for b in data["blogs"]
-                        if b.get("id") != "blog_1" and "Zero-Shot" not in b.get("title", "")
-                    ]
+                # Seed any missing tools from ALL_BOTOCK_TOOLS
+                for tid, tcfg in ALL_BOTOCK_TOOLS.items():
+                    if tid not in data["tool_flags"]:
+                        data["tool_flags"][tid] = tcfg.copy()
+                    else:
+                        for sk, sv in tcfg.items():
+                            if sk not in data["tool_flags"][tid]:
+                                data["tool_flags"][tid][sk] = sv
 
                 # Ensure all default keys exist
                 for k, v in DEFAULT_STATE.items():
@@ -89,7 +128,7 @@ def load_state() -> Dict[str, Any]:
                 return data
         except Exception as e:
             logger.warning("Could not read admin state file: %s", e)
-    return DEFAULT_STATE.copy()
+    return {k: (v.copy() if isinstance(v, dict) else v) for k, v in DEFAULT_STATE.items()}
 
 
 def save_state(state: Dict[str, Any]):
@@ -104,8 +143,12 @@ def verify_admin_token(
     x_admin_token: Optional[str] = Header(None, alias="x-admin-token"),
     x_admin_secret: Optional[str] = Header(None, alias="X-Admin-Secret"),
     admin_api_key: Optional[str] = Header(None, alias="admin-api-key"),
+    authorization: Optional[str] = Header(None, alias="Authorization"),
 ):
     token = x_admin_token
+    if not token and authorization and authorization.startswith("Bearer "):
+        token = authorization.removeprefix("Bearer ").strip()
+
     # If someone tries to pass a raw static key directly, reject immediately!
     if not token and (x_admin_secret or admin_api_key):
         logger.warning("Rejected direct static key attempt on admin endpoint.")
@@ -140,6 +183,20 @@ def verify_admin_token(
         raise
     except Exception as e:
         logger.warning(f"Error checking 2FA session token: {e}")
+
+    # 2. Check if it is a valid Supabase Super-Admin token
+    try:
+        from app.middleware.auth import get_current_user
+        user = get_current_user(authorization=f"Bearer {clean_token}")
+        if user:
+            email = user.get("email", "").strip().lower()
+            allowed_admins = [e.strip().lower() for e in settings.ADMIN_EMAILS.split(",") if e.strip()]
+            app_meta = user.get("payload", {}).get("app_metadata", {})
+            role = app_meta.get("role", "")
+            if role in ("owner", "super_admin", "admin") or (email in allowed_admins):
+                return True
+    except Exception:
+        pass
 
     logger.warning("Unauthorized admin access attempt with invalid session token.")
     raise HTTPException(status_code=403, detail="Unauthorized: Invalid or expired 2FA Admin session token.")
@@ -197,10 +254,12 @@ async def track_user_journey(request: Request):
 @router.post("/telemetry/tool")
 async def track_tool_lifecycle(request: Request):
     """
-    Records tool lifecycle events:
-    - status: 'view' | 'input_started' | 'success' | 'error'
-    - error_message: exact failure message if error
-    - tool_id: identifier (e.g. voice-changer, ai-video)
+    Records deep tool lifecycle events:
+    - status: 'started' | 'completed' | 'success' | 'failed' | 'error' | 'abandoned_midway'
+    - stage_reached: 'upload' | 'loading_engine' | 'processing' | 'done', etc.
+    - elapsed_ms: time taken or time waited
+    - abandon_reason: why user exited/closed tab
+    - error_code / error_message: exact failure diagnostics
     """
     try:
         body = await request.json()
@@ -208,22 +267,34 @@ async def track_tool_lifecycle(request: Request):
         return {"ok": False}
 
     state = load_state()
-    tool_id = str(body.get("tool_id", "unknown")).strip()
-    status = str(body.get("status", "view")).strip()  # view, input_started, success, error
+    tool_id = str(body.get("tool_slug") or body.get("tool_id", "unknown")).strip()
+    status = str(body.get("status", "view")).strip().lower()
     error_message = body.get("error_message")
+    error_code = body.get("error_code")
+    stage_reached = str(body.get("stage_reached") or "init")
+    elapsed_ms = int(body.get("elapsed_ms") or 0)
+    abandon_reason = body.get("abandon_reason")
+    file_size_bytes = body.get("file_size_bytes")
     stack_trace = body.get("stack_trace")
     user_email = str(body.get("user_email", "Guest"))[:80]
-    session_id = str(body.get("session_id", "anon"))[:40]
+    session_id = str(body.get("session_id", "anon"))[:60]
+    device_type = str(body.get("device_type") or "desktop")
     client_ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "0.0.0.0").split(",")[0].strip()
 
     event = {
         "id": f"t_{int(time.time() * 1000)}",
         "tool_id": tool_id,
         "status": status,
+        "stage_reached": stage_reached,
+        "elapsed_ms": elapsed_ms,
+        "abandon_reason": str(abandon_reason)[:250] if abandon_reason else None,
+        "error_code": str(error_code)[:50] if error_code else None,
         "error_message": str(error_message)[:500] if error_message else None,
+        "file_size_bytes": file_size_bytes,
         "stack_trace": str(stack_trace)[:2500] if stack_trace else None,
         "user_email": user_email,
         "session_id": session_id,
+        "device_type": device_type,
         "ip": client_ip,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -234,12 +305,47 @@ async def track_tool_lifecycle(request: Request):
 
     # Update tool flags stats
     if tool_id in state.get("tool_flags", {}):
-        if status == "success":
-            state["tool_flags"][tool_id]["uses"] = state["tool_flags"][tool_id].get("uses", 0) + 1
-        elif status == "error":
-            state["tool_flags"][tool_id]["errors"] = state["tool_flags"][tool_id].get("errors", 0) + 1
+        tcfg = state["tool_flags"][tool_id]
+        if status in ("success", "completed"):
+            tcfg["uses"] = tcfg.get("uses", 0) + 1
+        elif status in ("error", "failed"):
+            tcfg["errors"] = tcfg.get("errors", 0) + 1
+        elif status == "abandoned_midway":
+            tcfg["abandons"] = tcfg.get("abandons", 0) + 1
 
     save_state(state)
+
+    # Sync to Supabase tool_usage_log if service role key is present
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            import httpx
+            db_status = "success" if status == "completed" else "error" if status == "failed" else status
+            async with httpx.AsyncClient(timeout=2.0) as client:
+                await client.post(
+                    f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/tool_usage_log",
+                    headers={
+                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal",
+                    },
+                    json={
+                        "tool_id": tool_id,
+                        "tool_name": state.get("tool_flags", {}).get(tool_id, {}).get("name", tool_id),
+                        "status": db_status,
+                        "stage_reached": stage_reached,
+                        "elapsed_ms": elapsed_ms,
+                        "abandon_reason": str(abandon_reason)[:200] if abandon_reason else None,
+                        "error_code": str(error_code)[:50] if error_code else None,
+                        "error_message": str(error_message)[:500] if error_message else None,
+                        "file_size_bytes": file_size_bytes,
+                        "session_id": session_id,
+                        "device_type": device_type,
+                    }
+                )
+        except Exception:
+            pass
+
     return {"ok": True}
 
 
@@ -577,3 +683,152 @@ async def delete_blog(request: Request):
     state["blogs"] = [b for b in state.get("blogs", []) if b.get("id") != blog_id]
     save_state(state)
     return {"ok": True, "blogs": state["blogs"]}
+
+
+# =====================================================================
+# 6. MASTER TOOLS CONTROL & ADVANCED TELEMETRY (50+ Tools)
+# =====================================================================
+
+class ToolConfigUpdatePayload(BaseModel):
+    is_enabled: bool = True
+    access_mode: str = "guest"  # guest | login_users | not_allowed
+    guest_daily_quota: int = 10
+    user_daily_quota: int = 50
+    tool_name: Optional[str] = None
+    category: Optional[str] = None
+
+
+@router.get("/tools", dependencies=[Depends(verify_admin_token)])
+async def get_all_tools_admin():
+    """
+    Returns full master tool registry of all 52+ Botock tools.
+    """
+    state = load_state()
+    flags = state.get("tool_flags", {})
+    tools_list = []
+    for slug, cfg in flags.items():
+        tools_list.append({
+            "tool_slug": slug,
+            "tool_name": cfg.get("name", slug),
+            "category": cfg.get("category", "other"),
+            "is_enabled": bool(cfg.get("enabled", True)),
+            "access_mode": cfg.get("access_mode", "guest"),
+            "guest_daily_quota": int(cfg.get("guest_daily_quota", 10)),
+            "user_daily_quota": int(cfg.get("user_daily_quota", 50)),
+            "uses": int(cfg.get("uses", 0)),
+            "errors": int(cfg.get("errors", 0)),
+            "abandons": int(cfg.get("abandons", 0)),
+        })
+    # Sort by category then name
+    tools_list.sort(key=lambda x: (x["category"], x["tool_name"]))
+    return {"tools": tools_list}
+
+
+@router.put("/tools/{tool_slug}", dependencies=[Depends(verify_admin_token)])
+async def update_tool_admin(tool_slug: str, payload: ToolConfigUpdatePayload):
+    """
+    Updates a tool's On/Off status, Access Mode (guest/login/off), and Daily Quotas.
+    """
+    state = load_state()
+    flags = state.setdefault("tool_flags", {})
+    if tool_slug not in flags:
+        flags[tool_slug] = {"name": payload.tool_name or tool_slug, "category": payload.category or "other"}
+
+    flags[tool_slug]["enabled"] = payload.is_enabled
+    flags[tool_slug]["access_mode"] = payload.access_mode
+    flags[tool_slug]["guest_daily_quota"] = payload.guest_daily_quota
+    flags[tool_slug]["user_daily_quota"] = payload.user_daily_quota
+    if payload.tool_name:
+        flags[tool_slug]["name"] = payload.tool_name
+    if payload.category:
+        flags[tool_slug]["category"] = payload.category
+
+    save_state(state)
+
+    # Sync to Supabase tool_configs table if configured
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                await client.post(
+                    f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1/tool_configs",
+                    headers={
+                        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+                        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+                        "Content-Type": "application/json",
+                        "Prefer": "resolution=merge-duplicates"
+                    },
+                    json={
+                        "tool_slug": tool_slug,
+                        "tool_name": flags[tool_slug].get("name", tool_slug),
+                        "category": flags[tool_slug].get("category", "other"),
+                        "is_enabled": payload.is_enabled,
+                        "access_mode": payload.access_mode,
+                        "guest_daily_quota": payload.guest_daily_quota,
+                        "user_daily_quota": payload.user_daily_quota,
+                    }
+                )
+        except Exception as e:
+            logger.warning(f"Failed to sync tool config to Supabase: {e}")
+
+    return {"status": "updated", "tool": flags[tool_slug]}
+
+
+@router.get("/telemetry-summary", dependencies=[Depends(verify_admin_token)])
+async def get_telemetry_summary_admin():
+    """
+    Returns aggregated analytics on:
+    - Recent Failures (exact stage, error code, error message, time taken)
+    - Recent Mid-way Abandons (where user stopped, reason, seconds waited)
+    - Per-tool usage, completion, error, and drop-off counts.
+    """
+    state = load_state()
+    events = state.get("tool_events", [])
+
+    tool_stats: Dict[str, Any] = {}
+    recent_failures: List[Dict[str, Any]] = []
+    recent_abandons: List[Dict[str, Any]] = []
+
+    for ev in events:
+        tid = ev.get("tool_id", "unknown")
+        status = ev.get("status", "view")
+        elapsed = ev.get("elapsed_ms", 0)
+
+        if tid not in tool_stats:
+            tool_stats[tid] = {"uses": 0, "completed": 0, "failed": 0, "abandoned": 0, "total_ms": 0, "avg_ms": 0}
+
+        tool_stats[tid]["uses"] += 1
+        tool_stats[tid]["total_ms"] += elapsed
+        tool_stats[tid]["avg_ms"] = round(tool_stats[tid]["total_ms"] / tool_stats[tid]["uses"])
+
+        if status in ("success", "completed"):
+            tool_stats[tid]["completed"] += 1
+        elif status in ("error", "failed"):
+            tool_stats[tid]["failed"] += 1
+            if len(recent_failures) < 35:
+                recent_failures.append({
+                    "tool": tid,
+                    "stage": ev.get("stage_reached", "processing"),
+                    "error_code": ev.get("error_code", "PROCESS_ERR"),
+                    "error_message": ev.get("error_message") or "Unknown execution error",
+                    "elapsed_sec": round(elapsed / 1000, 1),
+                    "created_at": ev.get("timestamp"),
+                })
+        elif status == "abandoned_midway":
+            tool_stats[tid]["abandoned"] += 1
+            if len(recent_abandons) < 35:
+                recent_abandons.append({
+                    "tool": tid,
+                    "stage_stopped": ev.get("stage_reached", "init"),
+                    "why_stopped": ev.get("abandon_reason") or "User exited mid-way",
+                    "waited_sec": round(elapsed / 1000, 1),
+                    "created_at": ev.get("timestamp"),
+                })
+
+    return {
+        "tool_stats": tool_stats,
+        "recent_failures": recent_failures,
+        "recent_abandons": recent_abandons,
+        "total_events": len(events),
+    }
+
