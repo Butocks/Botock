@@ -105,9 +105,8 @@ function MediaCard({
 
   return (
     <div
-      onClick={() => onAddToTimeline(item)}
-      className="group relative rounded-xl overflow-hidden border border-[#2b2b36] bg-[#0d0d12] aspect-video flex items-center justify-center hover:border-[#ff6b4a] hover:shadow-lg hover:shadow-[#ff6b4a]/10 transition-all cursor-pointer text-left"
-      title={`Add "${item.name}" to timeline`}
+      className="group relative rounded-xl overflow-hidden border border-[#2b2b36] bg-[#0d0d12] aspect-video flex items-center justify-center hover:border-[#ff6b4a] hover:shadow-lg hover:shadow-[#ff6b4a]/10 transition-all text-left"
+      title={item.name}
     >
       {isAudio ? (
         <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-950/40 to-blue-900/10 p-2">

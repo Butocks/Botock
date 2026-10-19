@@ -249,6 +249,18 @@ export default function VideoEditorComponent() {
     [timeline.project.tracks]
   );
 
+  // Prevent accidental data loss on refresh or close
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (allClips.length > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [allClips.length]);
+
   const currentMaxTime =
     allClips.length > 0
       ? Math.max(...allClips.map((c) => c.timelineStart + c.duration))
@@ -445,6 +457,24 @@ export default function VideoEditorComponent() {
     showToast(`Added "${effectType}" effect track on timeline!`);
     setOpenTool(null);
     setActiveDrawer(null);
+  };
+
+  const handleToggleMuteAll = (muted: boolean) => {
+    timeline.beginLiveUpdate();
+    timeline.project.tracks.forEach((t) => {
+      t.clips.forEach((c) => {
+        if (c.type === "video" || c.type === "audio") {
+          timeline.updateClipLive(c.id, {
+            audio: {
+              ...(c.audio || { volumePercent: 100, fadeInSeconds: 0, fadeOutSeconds: 0 }),
+              muted,
+            },
+          });
+        }
+      });
+    });
+    timeline.commitLiveUpdate();
+    showToast(muted ? "Muted all clips on timeline" : "Unmuted all clips on timeline");
   };
 
   const applyEffect = (type: string) => {
@@ -1400,6 +1430,7 @@ export default function VideoEditorComponent() {
                     onDeleteClip={(id) => timeline.deleteClip(id)}
                     onSeek={seekTo}
                     onPreview={handlePreviewClipRange}
+                    onMuteAll={handleToggleMuteAll}
                   />
                 ) : (
                   <div className="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto">
@@ -2128,6 +2159,7 @@ export default function VideoEditorComponent() {
                       onDeleteClip={(id) => timeline.deleteClip(id)}
                       onSeek={seekTo}
                       onPreview={handlePreviewClipRange}
+                      onMuteAll={handleToggleMuteAll}
                     />
                   ) : (
                     <div className="p-6 text-center text-gray-500">
@@ -2273,6 +2305,17 @@ export default function VideoEditorComponent() {
             <div className="w-10 h-10 border-4 border-[#ff6b4a] border-t-transparent rounded-full animate-spin mx-auto" />
             <h3 className="text-sm font-bold text-[#ff6b4a]">{exportStage || "Rendering video…"}</h3>
             <p className="text-xs text-gray-500">Processing locally in your browser with WebAssembly</p>
+            <button
+              type="button"
+              onClick={() => {
+                setIsExporting(false);
+                setExportStage("");
+                showToast("Export cancelled");
+              }}
+              className="mt-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white text-xs font-semibold transition-all cursor-pointer"
+            >
+              Cancel Export
+            </button>
           </div>
         </div>
       )}

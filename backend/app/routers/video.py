@@ -1072,6 +1072,234 @@ async def video_fast_render(
             raise HTTPException(status_code=500, detail=f"Fast-render processing failed: {str(e)}")
 
 
+@router.post("/video-merge")
+@router.post("/merge")
+async def video_merge(
+    videos: list[UploadFile] = File(...),
+    audio: Optional[UploadFile] = File(None),
+    aspect_ratio: str = Form("original"),
+    audio_mode: str = Form("replace"),
+    audio_volume: float = Form(1.0),
+    video_volume: float = Form(1.0),
+):
+    """
+    High-Performance Multi-Video Merger with Audio Track Injection.
+    - Normalizes video dimensions, framerates, and aspect ratios.
+    - Replaces, mixes, or retains video soundtrack.
+    - Ultra-fast native FFmpeg pipeline.
+    """
+    import tempfile
+    import json
+    from starlette.background import BackgroundTask
+
+    if not videos or len(videos) < 2:
+        raise HTTPException(status_code=400, detail="Please upload at least 2 videos to merge.")
+
+    ALLOWED_VIDEO_EXTS = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
+    ALLOWED_AUDIO_EXTS = {".mp3", ".wav", ".aac", ".m4a", ".ogg", ".flac", ".wma"}
+
+    all_temp_paths = []
+    video_paths = []
+
+    try:
+        # 1. Validate and save video files
+        for idx, v in enumerate(videos):
+            ext = os.path.splitext(v.filename or "")[1].lower()
+            if ext not in ALLOWED_VIDEO_EXTS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Video #{idx + 1} has an unsupported format ({ext}). Supported: MP4, MOV, WebM, MKV, AVI."
+                )
+            v_bytes = await read_bounded_video(v, max_size=100 * 1024 * 1024)
+            vf = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
+            vf.write(v_bytes)
+            vf.close()
+            video_paths.append(vf.name)
+            all_temp_paths.append(vf.name)
+
+        # 2. Validate and save optional audio file
+        audio_path = None
+        has_custom_audio = False
+        if audio and audio.filename and audio.filename.strip():
+            a_ext = os.path.splitext(audio.filename)[1].lower()
+            if a_ext not in ALLOWED_AUDIO_EXTS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unsupported audio format ({a_ext}). Supported: MP3, WAV, AAC, M4A, OGG, FLAC."
+                )
+            a_bytes = await read_bounded_video(audio, max_size=50 * 1024 * 1024)
+            if len(a_bytes) > 0:
+                af = tempfile.NamedTemporaryFile(suffix=a_ext, delete=False)
+                af.write(a_bytes)
+                af.close()
+                audio_path = af.name
+                all_temp_paths.append(audio_path)
+                has_custom_audio = True
+
+        out_f = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+        out_f.close()
+        out_path = out_f.name
+        all_temp_paths.append(out_path)
+
+        # 3. Determine target resolution
+        dim_map = {
+            "9:16": (1080, 1920),
+            "16:9": (1920, 1080),
+            "1:1": (1080, 1080),
+            "4:5": (1080, 1350)
+        }
+        if aspect_ratio in dim_map:
+            canvas_w, canvas_h = dim_map[aspect_ratio]
+        else:
+            # Probe first video resolution
+            canvas_w, canvas_h = 1920, 1080
+            try:
+                probe_proc = await asyncio.create_subprocess_exec(
+                    "ffprobe", "-v", "error", "-select_streams", "v:0",
+                    "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0",
+                    video_paths[0],
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, _ = await probe_proc.communicate()
+                parts = stdout.decode().strip().split("x")
+                if len(parts) == 2:
+                    w, h = int(parts[0]), int(parts[1])
+                    canvas_w = w if w % 2 == 0 else w - 1
+                    canvas_h = h if h % 2 == 0 else h - 1
+            except Exception:
+                canvas_w, canvas_h = 1920, 1080
+
+        # 4. Probe durations and audio streams for each video
+        async def probe_clip(path: str):
+            has_a = False
+            dur = 5.0
+            try:
+                p = await asyncio.create_subprocess_exec(
+                    "ffprobe", "-v", "error", "-show_entries",
+                    "format=duration:stream=codec_type", "-of", "json",
+                    path,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                so, _ = await p.communicate()
+                data = json.loads(so.decode())
+                dur = float(data.get("format", {}).get("duration", 5.0))
+                streams = data.get("streams", [])
+                has_a = any(s.get("codec_type") == "audio" for s in streams)
+            except Exception:
+                pass
+            return has_a, dur
+
+        probe_results = await asyncio.gather(*(probe_clip(p) for p in video_paths))
+        has_audios = [r[0] for r in probe_results]
+        durations = [r[1] for r in probe_results]
+
+        N = len(video_paths)
+        cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error"]
+        for vp in video_paths:
+            cmd += ["-i", vp]
+
+        if has_custom_audio:
+            cmd += ["-stream_loop", "-1", "-i", audio_path]
+
+        filter_parts = []
+        # Video scaling & normalization filter
+        for i in range(N):
+            filter_parts.append(
+                f"[{i}:v]scale={canvas_w}:{canvas_h}:force_original_aspect_ratio=decrease,"
+                f"pad={canvas_w}:{canvas_h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p[v{i}]"
+            )
+
+        output_maps = []
+        is_shortest = False
+
+        if has_custom_audio and audio_mode == "replace":
+            # Concat only video streams, inject custom audio
+            v_inputs = "".join(f"[v{i}]" for i in range(N))
+            filter_parts.append(f"{v_inputs}concat=n={N}:v=1:a=0[outv]")
+            filter_parts.append(
+                f"[{N}:a]volume={audio_volume},aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[outa]"
+            )
+            output_maps = ["-map", "[outv]", "-map", "[outa]"]
+            is_shortest = True
+
+        elif has_custom_audio and audio_mode == "mix":
+            # Concat video and audio, then amix with custom audio
+            for i in range(N):
+                if has_audios[i]:
+                    filter_parts.append(
+                        f"[{i}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume={video_volume}[a{i}]"
+                    )
+                else:
+                    filter_parts.append(f"aevalsrc=0:d={durations[i]}:s=44100:c=stereo[a{i}]")
+
+            va_inputs = "".join(f"[v{i}][a{i}]" for i in range(N))
+            filter_parts.append(f"{va_inputs}concat=n={N}:v=1:a=1[vcat][acat]")
+            filter_parts.append(
+                f"[{N}:a]volume={audio_volume},aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]"
+            )
+            filter_parts.append("[acat][ca]amix=inputs=2:duration=first:dropout_transition=2[outa]")
+            output_maps = ["-map", "[vcat]", "-map", "[outa]"]
+            is_shortest = True
+
+        else:
+            # Keep original video sound (or mute if no videos have audio)
+            any_audio = any(has_audios)
+            if any_audio:
+                for i in range(N):
+                    if has_audios[i]:
+                        filter_parts.append(
+                            f"[{i}:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume={video_volume}[a{i}]"
+                        )
+                    else:
+                        filter_parts.append(f"aevalsrc=0:d={durations[i]}:s=44100:c=stereo[a{i}]")
+                va_inputs = "".join(f"[v{i}][a{i}]" for i in range(N))
+                filter_parts.append(f"{va_inputs}concat=n={N}:v=1:a=1[outv][outa]")
+                output_maps = ["-map", "[outv]", "-map", "[outa]"]
+            else:
+                v_inputs = "".join(f"[v{i}]" for i in range(N))
+                filter_parts.append(f"{v_inputs}concat=n={N}:v=1:a=0[outv]")
+                output_maps = ["-map", "[outv]"]
+
+        cmd += ["-filter_complex", ";".join(filter_parts)] + output_maps
+        cmd += ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23"]
+
+        if "-map" in output_maps and "[outa]" in output_maps:
+            cmd += ["-c:a", "aac", "-b:a", "192k"]
+
+        if is_shortest:
+            cmd += ["-shortest"]
+
+        cmd += ["-movflags", "+faststart", out_path]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        _, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            logger.error("FFmpeg video merge error: %s", stderr.decode())
+            raise HTTPException(status_code=500, detail="Failed to merge videos. Please check input formats.")
+
+        uid = uuid.uuid4().hex[:8]
+        cleanup_targets = [p for p in all_temp_paths if p != out_path]
+        return FileResponse(
+            out_path,
+            media_type="video/mp4",
+            filename=f"merged_{uid}.mp4",
+            background=BackgroundTask(_fast_cleanup_files, *all_temp_paths)
+        )
+
+    except HTTPException:
+        _fast_cleanup_files(*all_temp_paths)
+        raise
+    except Exception as e:
+        _fast_cleanup_files(*all_temp_paths)
+        logger.exception("Video merge processing error: %s", str(e))
+        raise HTTPException(status_code=500, detail=f"Video merge failed: {str(e)}")
+
+
 def _fast_cleanup_files(*paths: str):
     for p in paths:
         if p and os.path.exists(p):
@@ -1083,7 +1311,8 @@ def _fast_cleanup_files(*paths: str):
 
 RESERVED_CORE_ENDPOINTS = {
     "generate", "status", "download", "list", "credits", "close-session",
-    "reaction-combine", "rotate", "fast-render", "remove-bg", "auto-reframe"
+    "reaction-combine", "rotate", "fast-render", "remove-bg", "auto-reframe",
+    "merge", "video-merge"
 }
 
 

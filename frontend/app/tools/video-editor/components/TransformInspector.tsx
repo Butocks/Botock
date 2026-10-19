@@ -21,6 +21,7 @@ interface Props {
   onDeleteClip?: (clipId: string) => void;
   onSeek?: (time: number) => void;
   onPreview?: (time: number, duration?: number) => void;
+  onMuteAll?: (muted: boolean) => void;
 }
 
 export default function TransformInspector({
@@ -36,6 +37,7 @@ export default function TransformInspector({
   onDeleteClip,
   onSeek,
   onPreview,
+  onMuteAll,
 }: Props) {
   const [activeTab, setActiveTab] = useState<InspectorTab>("Basic");
   const [activeTransitionSide, setActiveTransitionSide] = useState<"in" | "out">("in");
@@ -1152,6 +1154,23 @@ export default function TransformInspector({
           >
             {isMuted ? "Unmute Audio" : "Mute Audio"}
           </button>
+
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => onMuteAll?.(true)}
+              className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-[#0a0a0c] hover:bg-red-500/20 hover:text-red-400 text-gray-300 border border-[#2b2b36] transition-colors cursor-pointer"
+            >
+              Mute All Clips
+            </button>
+            <button
+              type="button"
+              onClick={() => onMuteAll?.(false)}
+              className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-[#0a0a0c] hover:bg-emerald-500/20 hover:text-emerald-400 text-gray-300 border border-[#2b2b36] transition-colors cursor-pointer"
+            >
+              Unmute All
+            </button>
+          </div>
         </div>
 
         <div className="bg-[#181822] rounded-xl border border-[#2b2b36] p-3 space-y-3">

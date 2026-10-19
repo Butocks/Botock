@@ -397,6 +397,14 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
 
   // 4. Video Suite
   {
+    id: "video-merge",
+    name: "Merge Videos Online",
+    desc: "Combine multiple video clips, reorder scenes, and inject custom audio or background music with instant export.",
+    category: "video",
+    href: "/tools/video-merge",
+    icon: Film,
+  },
+  {
     id: "video-mute",
     name: "Mute Video Online",
     desc: "Remove audio tracks and mute video clips in 1 second with lossless stream copy.",

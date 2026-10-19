@@ -1686,6 +1686,26 @@ ToolRegistry.registerTool({
   outputs: [{ name: "output", type: "string", description: "Target search URL" }]
 });
 
+ToolRegistry.registerTool({
+  id: "video-merge",
+  name: "Merge Videos Online",
+  description: "Combine multiple video clips into a single video, reorder clips, and inject or mix custom background audio tracks.",
+  category: "video",
+  seoTitle: "Merge Videos Online Free - Video Joiner with Audio - Botock",
+  seoDescription: "Combine multiple MP4, MOV, and WebM videos into one seamless video. Reorder clips, add custom background music or voiceovers, and download without watermarks.",
+  endpoint: "/api/video/video-merge",
+  isClientSideOnly: false,
+  parameters: [
+    { name: "videos", type: "file", description: "Array of video files to merge in chronological order", required: true },
+    { name: "audio", type: "file", description: "Optional background audio or music track", required: false },
+    { name: "aspectRatio", type: "enum", description: "Target aspect ratio (original, 16:9, 9:16, 1:1, 4:5)", required: false, options: ["original", "16:9", "9:16", "1:1", "4:5"], default: "original" },
+    { name: "audioMode", type: "enum", description: "Audio blending mode (replace, mix, keep_original)", required: false, options: ["replace", "mix", "keep_original"], default: "replace" },
+    { name: "audioVolume", type: "number", description: "Custom audio volume multiplier", required: false, default: 1.0, min: 0, max: 2, step: 0.1 },
+    { name: "videoVolume", type: "number", description: "Original video sound volume multiplier", required: false, default: 1.0, min: 0, max: 2, step: 0.1 },
+  ],
+  outputs: [{ name: "mergedVideo", type: "file", mimeType: "video/mp4", description: "Merged high-definition MP4 video" }]
+});
+
 export interface ImageProcessOptions {
   maxWidth?: number;
   maxHeight?: number;

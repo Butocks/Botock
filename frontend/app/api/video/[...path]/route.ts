@@ -20,6 +20,8 @@ const ALLOWED_VIDEO_ACTIONS = new Set([
   "trim",
   "subtitles",
   "fast-render",
+  "merge",
+  "video-merge",
 ]);
 
 const MAX_VIDEO_PAYLOAD_BYTES = 100 * 1024 * 1024; // 100MB limit

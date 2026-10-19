@@ -133,19 +133,55 @@ export default function EditorTimeline({
       .sort((a, b) => getTrackRank(a) - getTrackRank(b));
   }, [project.tracks]);
 
-  // Keyboard shortcut: Delete or Backspace to delete selected clip/effect
+  // Keyboard shortcuts: Delete/Backspace, S/C (split), Ctrl+Z (undo), Ctrl+Y / Ctrl+Shift+Z (redo)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const isMac = typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+
+      if (mod && (e.key === "z" || e.key === "Z")) {
+        if (e.shiftKey) {
+          if (onRedo && canRedo) {
+            e.preventDefault();
+            onRedo();
+          }
+        } else {
+          if (onUndo && canUndo) {
+            e.preventDefault();
+            onUndo();
+          }
+        }
+        return;
+      }
+
+      if (mod && (e.key === "y" || e.key === "Y")) {
+        if (onRedo && canRedo) {
+          e.preventDefault();
+          onRedo();
+        }
+        return;
+      }
+
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedClipId && onDeleteClip) {
+          e.preventDefault();
           onDeleteClip(selectedClipId);
+        }
+        return;
+      }
+
+      if (e.key === "s" || e.key === "S" || e.key === "c" || e.key === "C") {
+        if (!mod && selectedClipId && onSplit) {
+          e.preventDefault();
+          onSplit(currentTime);
         }
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedClipId, onDeleteClip]);
+  }, [selectedClipId, onDeleteClip, onSplit, currentTime, onUndo, onRedo, canUndo, canRedo]);
 
   const sourceIndexOf = (id: string) => {
     const i = uniqueSources.indexOf(id);

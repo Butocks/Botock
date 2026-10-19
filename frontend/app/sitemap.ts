@@ -57,6 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/tools/image-color-picker",
 
     // Video & Audio Utilities
+    "/tools/video-merge",
     "/tools/reaction-video-maker",
     "/tools/audio-enhance",
     "/tools/audio-volume",
