@@ -8,9 +8,23 @@ function TelemetryTracker({ userEmail }: { userEmail?: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const prevPathRef = useRef<string>("");
+  const lastTrackRef = useRef<{ path: string; query: string; time: number }>({ path: "", query: "", time: 0 });
 
   useEffect(() => {
     if (!pathname) return;
+
+    const queryString = searchParams ? searchParams.toString() : "";
+    const now = Date.now();
+
+    // Deduplicate rapid double executions (React StrictMode, hydration, rapid back-to-back renders)
+    if (
+      lastTrackRef.current.path === pathname &&
+      lastTrackRef.current.query === queryString &&
+      now - lastTrackRef.current.time < 5000
+    ) {
+      return;
+    }
+    lastTrackRef.current = { path: pathname, query: queryString, time: now };
 
     // 1. Generate or retrieve persistent Session ID for this visitor
     let sessionId = sessionStorage.getItem("botock_sid");

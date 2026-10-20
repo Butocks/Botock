@@ -120,36 +120,116 @@ async def delete_post(post_id: str, _owner: dict = Depends(require_owner)):
 @pub_router.get("/blogs")
 async def get_public_blogs():
     """Returns all PUBLISHED blog posts for public display."""
-    posts = await _rpc("get_blog_posts", {"p_status": "PUBLISHED"})
+    posts = None
+    try:
+        posts = await _rpc("get_blog_posts", {"p_status": "PUBLISHED"})
+    except Exception:
+        posts = None
+
+    if not posts:
+        try:
+            from app.routers.admin_router import load_state
+            state = load_state()
+            local_blogs = state.get("blogs", [])
+            posts = [
+                {
+                    "id": b.get("slug") or b.get("id"),
+                    "title": b.get("title", ""),
+                    "slug": b.get("slug", ""),
+                    "excerpt": b.get("excerpt", ""),
+                    "content": b.get("content", ""),
+                    "category": b.get("category", "General"),
+                    "categoryLabel": b.get("category", "General"),
+                    "author": b.get("author", "Botock Editorial"),
+                    "featured_image": b.get("cover_image") or b.get("featured_image"),
+                    "cover_image": b.get("cover_image") or b.get("featured_image"),
+                    "og_image": b.get("cover_image") or b.get("featured_image"),
+                    "meta_title": b.get("meta_title", b.get("title")),
+                    "meta_description": b.get("meta_description", b.get("excerpt")),
+                    "reading_time": b.get("reading_time", "4 min read"),
+                    "readTime": b.get("reading_time", "4 min read"),
+                    "date": (b.get("created_at") or "").split("T")[0],
+                    "status": "PUBLISHED",
+                    "featured": b.get("featured", False),
+                    "views": b.get("views", 0),
+                    "tags": [b.get("category", "AI Tools").lower().replace(" ", "-")],
+                }
+                for b in local_blogs
+                if b.get("status") in ("published", "PUBLISHED")
+            ]
+        except Exception:
+            posts = []
+
     return posts or []
 
 
 @pub_router.get("/blogs/{slug}")
 async def get_public_blog(slug: str):
     """Returns a single PUBLISHED blog post by slug with parent/children context."""
-    posts = await _rpc("get_blog_posts", {})
+    posts = None
+    try:
+        posts = await _rpc("get_blog_posts", {})
+    except Exception:
+        posts = None
+
+    if not posts:
+        try:
+            from app.routers.admin_router import load_state
+            state = load_state()
+            local_blogs = state.get("blogs", [])
+            posts = [
+                {
+                    "id": b.get("slug") or b.get("id"),
+                    "title": b.get("title", ""),
+                    "slug": b.get("slug", ""),
+                    "excerpt": b.get("excerpt", ""),
+                    "content": b.get("content", ""),
+                    "category": b.get("category", "General"),
+                    "categoryLabel": b.get("category", "General"),
+                    "author": b.get("author", "Botock Editorial"),
+                    "featured_image": b.get("cover_image") or b.get("featured_image"),
+                    "cover_image": b.get("cover_image") or b.get("featured_image"),
+                    "og_image": b.get("cover_image") or b.get("featured_image"),
+                    "meta_title": b.get("meta_title", b.get("title")),
+                    "meta_description": b.get("meta_description", b.get("excerpt")),
+                    "reading_time": b.get("reading_time", "4 min read"),
+                    "readTime": b.get("reading_time", "4 min read"),
+                    "date": (b.get("created_at") or "").split("T")[0],
+                    "status": "PUBLISHED",
+                    "featured": b.get("featured", False),
+                    "views": b.get("views", 0),
+                    "tags": [b.get("category", "AI Tools").lower().replace(" ", "-")],
+                }
+                for b in local_blogs
+            ]
+        except Exception:
+            posts = []
+
     posts = posts or []
-    
     target_post = None
     for p in posts:
         if p.get("slug") == slug:
-            if p.get("status") != "PUBLISHED":
+            if p.get("status") not in ("PUBLISHED", "published"):
                 raise HTTPException(status_code=404, detail="Blog post not found")
-            target_post = p
+            target_post = p.copy()
             break
             
     if not target_post:
         raise HTTPException(status_code=404, detail="Blog post not found")
 
     # Map fields
-    target_post["id"] = target_post["slug"]
-    target_post["date"] = (target_post.get("published_at") or target_post.get("created_at") or "").split("T")[0]
-    target_post["author"] = "Botock Editorial"
+    target_post["id"] = target_post.get("slug") or target_post.get("id")
+    target_post["date"] = (target_post.get("published_at") or target_post.get("created_at") or target_post.get("date") or "").split("T")[0]
+    target_post["author"] = target_post.get("author") or "Botock Editorial"
+    if not target_post.get("featured_image") and target_post.get("cover_image"):
+        target_post["featured_image"] = target_post["cover_image"]
+    if not target_post.get("readTime") and target_post.get("reading_time"):
+        target_post["readTime"] = target_post["reading_time"]
     
     # 1. Parent/Breadcrumb logic
     parent_post = None
     if target_post.get("parent_id"):
-        parent_post = next((p for p in posts if p["id"] == target_post["parent_id"] and p.get("status") == "PUBLISHED"), None)
+        parent_post = next((p for p in posts if p["id"] == target_post["parent_id"] and p.get("status") in ("PUBLISHED", "published")), None)
         if parent_post:
             target_post["parent"] = {"title": parent_post["title"], "slug": parent_post["slug"]}
             
@@ -157,7 +237,7 @@ async def get_public_blog(slug: str):
     children = [
         {"title": p["title"], "slug": p["slug"], "excerpt": p.get("excerpt")} 
         for p in posts 
-        if p.get("parent_id") == target_post["id"] and p.get("status") == "PUBLISHED"
+        if p.get("parent_id") == target_post["id"] and p.get("status") in ("PUBLISHED", "published")
     ]
     target_post["children"] = children
     
@@ -168,13 +248,13 @@ async def get_public_blog(slug: str):
         related = [
             {"title": p["title"], "slug": p["slug"]} 
             for p in posts 
-            if p.get("content_cluster") == cluster and p["id"] != target_post["id"] and p.get("status") == "PUBLISHED"
+            if p.get("content_cluster") == cluster and p["id"] != target_post["id"] and p.get("status") in ("PUBLISHED", "published")
         ][:5]
     elif parent_post:
         related = [
             {"title": p["title"], "slug": p["slug"]} 
             for p in posts 
-            if p.get("parent_id") == parent_post["id"] and p["id"] != target_post["id"] and p.get("status") == "PUBLISHED"
+            if p.get("parent_id") == parent_post["id"] and p["id"] != target_post["id"] and p.get("status") in ("PUBLISHED", "published")
         ][:5]
         
     target_post["related"] = related

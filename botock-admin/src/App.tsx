@@ -22,6 +22,7 @@ import {
   Laptop,
   Sparkles,
   ArrowRight,
+  Check,
   Heading2,
   Heading3,
   List,
@@ -134,97 +135,66 @@ interface QuotasConfig {
 }
 
 const DEFAULT_WEBSITE_TOOLS: Record<string, ToolConfig> = {
-  "video-generator": {
-    name: "AI Video Generator Studio",
-    category: "AI Video",
-    enabled: true,
-    access_mode: "all",
-    pro_only: false,
-    maintenance: false,
-    uses: 0,
-    errors: 0,
-    daily_quota: 5,
-  },
-  "voice-changer": {
-    name: "AI Voice Changer & Cloner",
-    category: "AI Audio",
-    enabled: true,
-    access_mode: "all",
-    pro_only: false,
-    maintenance: false,
-    uses: 0,
-    errors: 0,
-  },
-  "audio-enhance": {
-    name: "AI Studio Audio Enhancer",
-    category: "AI Audio",
-    enabled: true,
-    access_mode: "all",
-    pro_only: false,
-    maintenance: false,
-    uses: 0,
-    errors: 0,
-  },
-  "bg-remover": {
-    name: "AI Background Remover",
-    category: "AI Image",
-    enabled: true,
-    access_mode: "all",
-    pro_only: false,
-    maintenance: false,
-    uses: 0,
-    errors: 0,
-  },
-  "image-upscaler": {
-    name: "4K AI Image Upscaler",
-    category: "AI Image",
-    enabled: true,
-    access_mode: "all",
-    pro_only: false,
-    maintenance: false,
-    uses: 0,
-    errors: 0,
-  },
-  "pdf-to-docx": {
-    name: "PDF to Word Converter",
-    category: "Document Tools",
-    enabled: true,
-    access_mode: "all",
-    pro_only: false,
-    maintenance: false,
-    uses: 0,
-    errors: 0,
-  },
-  "pdf-to-excel": {
-    name: "PDF to Excel Converter",
-    category: "Document Tools",
-    enabled: true,
-    access_mode: "all",
-    pro_only: false,
-    maintenance: false,
-    uses: 0,
-    errors: 0,
-  },
-  "docx-to-pdf": {
-    name: "Word to PDF Converter",
-    category: "Document Tools",
-    enabled: true,
-    access_mode: "all",
-    pro_only: false,
-    maintenance: false,
-    uses: 0,
-    errors: 0,
-  },
-  "pdf-protect": {
-    name: "PDF Password Protector",
-    category: "Document Tools",
-    enabled: true,
-    access_mode: "all",
-    pro_only: false,
-    maintenance: false,
-    uses: 0,
-    errors: 0,
-  },
+  // --- AI Video Studio (14 Tools) ---
+  "video-generator": { name: "AI Video Generator Studio", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0, daily_quota: 5 },
+  "reaction-video-maker": { name: "AI Reaction Video Maker", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-auto-reframe": { name: "AI Video Auto-Reframe (9:16 / 16:9)", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-remove-bg": { name: "AI Video Background Remover", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "subtitles": { name: "AI Video Subtitles & Auto-Captions", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-editor": { name: "Botock Pro Video Editor", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-compress": { name: "Smart Video Compressor", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-convert": { name: "Universal Video Converter (MP4/MKV/MOV)", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-trim": { name: "Fast Video Trimmer & Cutter", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-rotate": { name: "Video Orientation & Rotator", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-merge": { name: "Video Merger & Clip Joiner", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-mute": { name: "Video Audio Remover / Mute", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-to-gif": { name: "HD Video to Animated GIF", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "video-to-mp3": { name: "High-Bitrate Video to MP3 Extractor", category: "AI Video", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+
+  // --- AI Voice & Audio Studio (5 Tools) ---
+  "voice-changer": { name: "AI Voice Studio & Cloner", category: "AI Audio", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "audio-enhance": { name: "AI Studio Sound Enhancer & De-Noiser", category: "AI Audio", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "audio-trim": { name: "Audio Trimmer & Ringtone Cutter", category: "AI Audio", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "audio-volume": { name: "Audio & Video Volume Booster", category: "AI Audio", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "live-data-extractor": { name: "Live Audio & Web Data Extractor", category: "AI Audio", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+
+  // --- AI Image Studio (10 Tools) ---
+  "image-generator": { name: "Ultra-Realistic AI Image Generator (FLUX.1)", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "image-remove-bg": { name: "AI Image Background Remover (HD Cutout)", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "image-upscale": { name: "4K / 8K AI Image Upscaler & Restorer", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "image-compress": { name: "Smart Lossless Image Compressor", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "image-convert": { name: "Multi-Format Image Converter (WebP/PNG/JPG)", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "image-crop": { name: "Aspect Ratio Image Cropper", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "image-resize": { name: "Pixel & Percentage Image Resizer", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "image-rotate": { name: "Image Rotator & Flip", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "image-filters": { name: "Creative Photo Filters & Effects", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "image-color-picker": { name: "HEX/RGB Image Color Eyedropper", category: "AI Image", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+
+  // --- PDF & Document Suite (24 Tools) ---
+  "pdf-ai-summarizer": { name: "AI PDF Document Summarizer", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "translate-pdf": { name: "Multi-Language AI PDF Translator", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-ocr": { name: "Searchable PDF OCR Text Extractor", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-merge": { name: "Combine Multiple PDFs (Merge)", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-split": { name: "Split PDF into Separate Pages", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-compress": { name: "Ultra-Compact PDF File Compressor", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-protect": { name: "AES Encrypted PDF Password Protector", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-watermark": { name: "Custom Text & Stamp PDF Watermarker", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-forms": { name: "Interactive PDF Form Filler & Signer", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-rotate": { name: "Permanent PDF Page Rotator", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-page-delete": { name: "Selective PDF Page Remover", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-page-numbers": { name: "Header/Footer PDF Page Numbering", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "organize-pdf": { name: "Visual Drag & Drop PDF Page Reorder", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "crop-pdf": { name: "Precise PDF Margin & Content Cropper", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "repair-pdf": { name: "Corrupt & Broken PDF Repair", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-to-word": { name: "PDF to Word Converter (.docx)", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "word-to-pdf": { name: "Microsoft Word to PDF Converter", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-to-excel": { name: "PDF Table to Excel Spreadsheet (.xlsx)", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "excel-to-pdf": { name: "Excel Sheets to PDF (.xlsx to .pdf)", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-to-powerpoint": { name: "PDF Slides to PowerPoint (.pptx)", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-to-jpg": { name: "High-Resolution PDF to JPG Images", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "jpg-to-pdf": { name: "Multi-Image JPG/PNG to PDF Book", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "html-to-pdf": { name: "Full Webpage HTML to PDF Document", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
+  "pdf-to-book": { name: "Printable PDF Booklet & Magazine Layout", category: "Document Tools", enabled: true, access_mode: "all", pro_only: false, maintenance: false, uses: 0, errors: 0 },
 };
 
 const PRESET_URLS = [
@@ -332,7 +302,18 @@ export default function App() {
   const [newToolSlug, setNewToolSlug] = useState("");
   const [newToolName, setNewToolName] = useState("");
   const [newToolCategory, setNewToolCategory] = useState("AI Tools");
+  const [toolCategoryTab, setToolCategoryTab] = useState<string>("all");
+  const [toolSearchQuery, setToolSearchQuery] = useState<string>("");
   const [toolTestResults, setToolTestResults] = useState<Record<string, string>>({});
+
+  // Media Inserter Dialog Modals (Tab 5)
+  const [activeMediaDialog, setActiveMediaDialog] = useState<"video" | "image" | "cta" | null>(null);
+  const [videoModalUrl, setVideoModalUrl] = useState("");
+  const [videoModalTitle, setVideoModalTitle] = useState("");
+  const [imageModalUrl, setImageModalUrl] = useState("");
+  const [imageModalCaption, setImageModalCaption] = useState("");
+  const [ctaModalTool, setCtaModalTool] = useState("video-generator");
+  const [ctaModalLabel, setCtaModalLabel] = useState("Launch AI Video Studio Free →");
 
   // SEO Blog CMS Form State
   const [editingBlog, setEditingBlog] = useState<BlogPost>({
@@ -428,7 +409,7 @@ export default function App() {
         if (res.data.tool_flags) {
           Object.entries(res.data.tool_flags).forEach(([k, v]: [string, any]) => {
             // Filter out old legacy mock tools
-            if (k === "image-compress" || k === "ai-video") return;
+            if (k === "image-compress-legacy" || k === "ai-video") return;
             const normalizedKey = k === "ai-video-generator" ? "video-generator" : k;
             mergedTools[normalizedKey] = {
               ...(mergedTools[normalizedKey] || {}),
@@ -585,6 +566,206 @@ export default function App() {
       );
     });
   }, [recentErrors, errorSearch, errorToolFilter]);
+
+  // Filtered Website Tools (Tab 3: Category pills + Search query)
+  const filteredToolEntries = useMemo(() => {
+    return Object.entries(tools).filter(([id, t]) => {
+      if (toolCategoryTab !== "all") {
+        const cat = (t.category || "").toLowerCase();
+        const target = toolCategoryTab.toLowerCase();
+        if (!cat.includes(target)) return false;
+      }
+      if (toolSearchQuery.trim()) {
+        const q = toolSearchQuery.trim().toLowerCase();
+        const matchesName = (t.name || "").toLowerCase().includes(q);
+        const matchesId = id.toLowerCase().includes(q);
+        const matchesCat = (t.category || "").toLowerCase().includes(q);
+        if (!matchesName && !matchesId && !matchesCat) return false;
+      }
+      return true;
+    });
+  }, [tools, toolCategoryTab, toolSearchQuery]);
+
+  const toolCategoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: Object.keys(tools).length,
+      "AI Video": 0,
+      "AI Audio": 0,
+      "AI Image": 0,
+      "Document Tools": 0,
+    };
+    Object.values(tools).forEach((t) => {
+      const cat = t.category || "";
+      if (cat.includes("Video")) counts["AI Video"] = (counts["AI Video"] || 0) + 1;
+      else if (cat.includes("Audio")) counts["AI Audio"] = (counts["AI Audio"] || 0) + 1;
+      else if (cat.includes("Image")) counts["AI Image"] = (counts["AI Image"] || 0) + 1;
+      else counts["Document Tools"] = (counts["Document Tools"] || 0) + 1;
+    });
+    return counts;
+  }, [tools]);
+
+  // Live Visual Preview Renderer for SEO Blog Studio (Tab 5)
+  const renderLiveBlogPreview = useCallback((content: string) => {
+    if (!content.trim()) {
+      return (
+        <div className="py-12 text-center text-slate-500 text-xs">
+          Your article content will be previewed live here with embedded videos, pictures, callouts, and interactive tool widgets.
+        </div>
+      );
+    }
+
+    const blocks = content.split(/\n\n+/).filter(Boolean);
+
+    return blocks.map((block, idx) => {
+      const trimmed = block.trim();
+
+      // 1. Headings
+      if (trimmed.startsWith("### ")) {
+        return (
+          <h3 key={idx} className="text-base sm:text-lg font-bold text-slate-100 mt-5 mb-2">
+            {trimmed.replace(/^###\s+/, "")}
+          </h3>
+        );
+      }
+      if (trimmed.startsWith("## ")) {
+        return (
+          <h2 key={idx} className="text-lg sm:text-xl font-black text-white mt-6 mb-3 border-b border-slate-800 pb-2">
+            {trimmed.replace(/^##\s+/, "")}
+          </h2>
+        );
+      }
+      if (trimmed.startsWith("# ")) {
+        return (
+          <h1 key={idx} className="text-xl sm:text-2xl font-black text-white mt-7 mb-4">
+            {trimmed.replace(/^#\s+/, "")}
+          </h1>
+        );
+      }
+
+      // 2. Video Frame Embeds: [video:URL:Title] or [video:URL]
+      const videoMatch = trimmed.match(/^\[video:(https?:\/\/[^\]\s]+)(?:\s*:\s*([^\]]+))?\]/i);
+      if (videoMatch) {
+        const rawUrl = videoMatch[1];
+        const videoTitle = videoMatch[2] || "Featured Video Demonstration";
+        let embedUrl = rawUrl;
+        if (rawUrl.includes("youtube.com/watch?v=")) {
+          const id = rawUrl.split("v=")[1]?.split("&")[0];
+          embedUrl = `https://www.youtube-nocookie.com/embed/${id}`;
+        } else if (rawUrl.includes("youtu.be/")) {
+          const id = rawUrl.split("youtu.be/")[1]?.split("?")[0];
+          embedUrl = `https://www.youtube-nocookie.com/embed/${id}`;
+        } else if (rawUrl.includes("vimeo.com/")) {
+          const id = rawUrl.split("vimeo.com/")[1]?.split("?")[0];
+          embedUrl = `https://player.vimeo.com/video/${id}`;
+        }
+
+        return (
+          <div key={idx} className="my-5 rounded-xl overflow-hidden border border-slate-800 bg-black shadow-lg">
+            <div className="aspect-video w-full">
+              {embedUrl.endsWith(".mp4") || embedUrl.endsWith(".webm") ? (
+                <video src={embedUrl} controls className="w-full h-full object-cover" />
+              ) : (
+                <iframe
+                  src={embedUrl}
+                  title={videoTitle}
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
+            </div>
+            {videoTitle && (
+              <div className="px-3.5 py-1.5 bg-slate-900/90 text-[11px] text-slate-300 font-semibold text-center border-t border-slate-800">
+                🎬 {videoTitle}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // 3. Image Embeds: ![caption](url)
+      const imgMatch = trimmed.match(/^!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/i);
+      if (imgMatch) {
+        const caption = imgMatch[1];
+        const imgUrl = imgMatch[2];
+        return (
+          <figure key={idx} className="my-5 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 shadow-md">
+            <img src={imgUrl} alt={caption || "Blog image"} className="w-full h-auto max-h-[380px] object-contain mx-auto" />
+            {caption && (
+              <figcaption className="p-2.5 text-center text-[11px] font-medium text-slate-400 border-t border-slate-800/80 bg-slate-900/40">
+                {caption}
+              </figcaption>
+            )}
+          </figure>
+        );
+      }
+
+      // 4. Pro-Tip / Callout: > ...
+      if (trimmed.startsWith("> ")) {
+        return (
+          <div key={idx} className="my-4 p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/30 text-xs text-indigo-200 flex items-start gap-2.5 shadow-sm">
+            <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              {trimmed.replace(/^>\s*/, "").replace(/\*\*([^*]+)\*\*/g, "$1")}
+            </div>
+          </div>
+        );
+      }
+
+      // 5. Tool CTA Widget: [cta:tool-slug:Label]
+      const ctaMatch = trimmed.match(/^\[cta:([^:\]]+)(?:\s*:\s*([^\]]+))?\]/i);
+      if (ctaMatch) {
+        const toolSlug = ctaMatch[1].trim();
+        const ctaLabel = ctaMatch[2]?.trim() || `Launch ${toolSlug} Free →`;
+        const matchedTool = tools[toolSlug] || DEFAULT_WEBSITE_TOOLS[toolSlug];
+        const toolDisplayName = matchedTool?.name || toolSlug;
+
+        return (
+          <div key={idx} className="my-6 p-4 rounded-xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-purple-950/40 border border-indigo-500/40 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+                ⚡ Recommended Botock Tool
+              </span>
+              <h4 className="text-sm font-extrabold text-white mt-0.5">
+                {toolDisplayName}
+              </h4>
+              <p className="text-[11px] text-slate-300">
+                Experience maximum speed and unlimited quality on Botock.
+              </p>
+            </div>
+            <a
+              href={`https://botock.app/tools/${toolSlug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shrink-0 flex items-center gap-1.5 shadow-lg shadow-indigo-600/30 transition no-underline"
+            >
+              <span>{ctaLabel}</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        );
+      }
+
+      // 6. Ordered list / Steps
+      if (/^\d+\.\s+/.test(trimmed)) {
+        const lines = trimmed.split("\n").filter(Boolean);
+        return (
+          <ol key={idx} className="space-y-1.5 my-3 pl-4 list-decimal text-xs text-slate-300 leading-relaxed">
+            {lines.map((l, li) => (
+              <li key={li}>{l.replace(/^\d+\.\s+/, "")}</li>
+            ))}
+          </ol>
+        );
+      }
+
+      // 7. Regular paragraph
+      return (
+        <p key={idx} className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
+          {trimmed}
+        </p>
+      );
+    });
+  }, [tools]);
 
   // SEO Score Auditor
   const seoScore = useMemo(() => {
@@ -2165,9 +2346,78 @@ export default function App() {
               </button>
             </form>
 
+            {/* Category Filter Pills & Search Bar */}
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+              {/* Category Pills */}
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                {[
+                  { id: "all", label: `All Tools (${toolCategoryCounts.all || Object.keys(tools).length})` },
+                  { id: "AI Video", label: `🎬 AI Video (${toolCategoryCounts["AI Video"] || 14})` },
+                  { id: "AI Audio", label: `🎙️ AI Audio (${toolCategoryCounts["AI Audio"] || 5})` },
+                  { id: "AI Image", label: `🖼️ AI Image (${toolCategoryCounts["AI Image"] || 10})` },
+                  { id: "Document Tools", label: `📄 Document Suite (${toolCategoryCounts["Document Tools"] || 24})` },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setToolCategoryTab(cat.id)}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                      toolCategoryTab === cat.id
+                        ? "bg-indigo-600 text-white shadow"
+                        : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Tools Input */}
+              <div className="relative min-w-[240px]">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={toolSearchQuery}
+                  onChange={(e) => setToolSearchQuery(e.target.value)}
+                  placeholder="Search 53 tools by name or slug..."
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg pl-9 pr-8 py-1.5 text-xs text-white outline-none"
+                />
+                {toolSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setToolSearchQuery("")}
+                    className="absolute right-2.5 top-2 text-slate-500 hover:text-white text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Results count banner if filtered */}
+            {(toolCategoryTab !== "all" || toolSearchQuery) && (
+              <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                <span>
+                  Showing <strong className="text-white font-mono">{filteredToolEntries.length}</strong> of {Object.keys(tools).length} tools
+                  {toolCategoryTab !== "all" && <span> in <strong className="text-indigo-400">{toolCategoryTab}</strong></span>}
+                  {toolSearchQuery && <span> matching &ldquo;<strong className="text-emerald-400">{toolSearchQuery}</strong>&rdquo;</span>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setToolCategoryTab("all");
+                    setToolSearchQuery("");
+                  }}
+                  className="text-indigo-400 hover:underline cursor-pointer"
+                >
+                  Reset filters
+                </button>
+              </div>
+            )}
+
             {/* All Website Tools Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Object.entries(tools).map(([id, t]) => {
+              {filteredToolEntries.map(([id, t]) => {
                 const accessMode: AccessLevel =
                   t.access_mode || (!t.enabled ? "off" : t.pro_only ? "login_only" : "all");
 
@@ -2689,16 +2939,26 @@ export default function App() {
 
                       <button
                         type="button"
-                        onClick={() => {
-                          const url = prompt("Enter Image URL (or paste image link):", "https://botock.app/og-image.jpg");
-                          if (url) {
-                            const caption = prompt("Enter Image Caption / Description:", "Step illustration") || "Image";
-                            insertMarkdown(`\n\n![${caption}](${url})\n*Caption: ${caption}*\n\n`);
-                          }
-                        }}
+                        onClick={() => setActiveMediaDialog("video")}
+                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-rose-300 font-semibold border border-rose-500/30 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Video className="w-3.5 h-3.5 text-rose-400" /> + 🎬 Embed Video Frame
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveMediaDialog("image")}
                         className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-emerald-300 font-semibold border border-emerald-500/30 flex items-center gap-1 cursor-pointer"
                       >
-                        <ImageIcon className="w-3.5 h-3.5" /> + Insert Picture
+                        <ImageIcon className="w-3.5 h-3.5" /> + 🖼️ Insert Picture
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveMediaDialog("cta")}
+                        className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-indigo-300 font-semibold border border-indigo-500/30 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> + ⚡ Insert Tool CTA
                       </button>
 
                       <button
@@ -2716,31 +2976,287 @@ export default function App() {
                       >
                         <List className="w-3.5 h-3.5 text-indigo-400" /> + Step Guide
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          insertMarkdown(
-                            "\n\n### 🎙️ Try Botock AI Voice Studio Free\n[Launch AI Voice Changer & Cloner →](/tools/voice-changer)\n\n"
-                          )
-                        }
-                        className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-bold border border-indigo-500/30 cursor-pointer"
-                      >
-                        + Voice CTA Box
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          insertMarkdown(
-                            "\n\n### 🎬 Create Cinematic AI Videos Free\n[Launch Botock AI Video Studio →](/tools/video-generator)\n\n"
-                          )
-                        }
-                        className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold border border-emerald-500/30 cursor-pointer"
-                      >
-                        + Video CTA Box
-                      </button>
                     </div>
+
+                    {/* Interactive Media Inserter Dialogs */}
+                    {activeMediaDialog === "video" && (
+                      <div className="p-4 rounded-xl bg-slate-950 border border-rose-500/40 shadow-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                            <Video className="w-4 h-4 text-rose-400" />
+                            Embed Responsive Video Frame (YouTube, Vimeo, MP4)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveMediaDialog(null)}
+                            className="text-slate-400 hover:text-white text-xs font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                              Video URL (YouTube Watch/Share, Vimeo, or MP4) *
+                            </label>
+                            <input
+                              type="text"
+                              value={videoModalUrl}
+                              onChange={(e) => setVideoModalUrl(e.target.value)}
+                              placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-rose-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                              Video Title / Caption (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              value={videoModalTitle}
+                              onChange={(e) => setVideoModalTitle(e.target.value)}
+                              placeholder="e.g. Complete Video Studio Tutorial Walkthrough"
+                              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-rose-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setActiveMediaDialog(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 text-xs font-semibold"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!videoModalUrl.trim()}
+                            onClick={() => {
+                              if (!videoModalUrl.trim()) return;
+                              insertMarkdown(`\n\n[video:${videoModalUrl.trim()}:${videoModalTitle.trim() || "Tutorial Video"}]\n\n`);
+                              setActiveMediaDialog(null);
+                              setVideoModalUrl("");
+                              setVideoModalTitle("");
+                            }}
+                            className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Insert Video Frame</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeMediaDialog === "image" && (
+                      <div className="p-4 rounded-xl bg-slate-950 border border-emerald-500/40 shadow-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                            <ImageIcon className="w-4 h-4 text-emerald-400" />
+                            Insert Picture with Caption & Placement
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveMediaDialog(null)}
+                            className="text-slate-400 hover:text-white text-xs font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-semibold text-slate-400">
+                              Image URL or Upload from Computer:
+                            </label>
+                            <label className="cursor-pointer px-2.5 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 transition">
+                              <Upload className="w-3 h-3" />
+                              Browse Image File
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                      setImageModalUrl(event.target?.result as string);
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={imageModalUrl}
+                              onChange={(e) => setImageModalUrl(e.target.value)}
+                              placeholder="https://botock.app/screenshots/tool.png or paste image link"
+                              className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+                            />
+                            {imageModalUrl && (
+                              <img
+                                src={imageModalUrl}
+                                alt=""
+                                className="w-12 h-8 object-cover rounded border border-slate-700 shrink-0"
+                              />
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                              Image Caption / Descriptive Alt Text
+                            </label>
+                            <input
+                              type="text"
+                              value={imageModalCaption}
+                              onChange={(e) => setImageModalCaption(e.target.value)}
+                              placeholder="e.g. Dashboard interface preview showing real-time metrics"
+                              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-emerald-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setActiveMediaDialog(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 text-xs font-semibold"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!imageModalUrl.trim()}
+                            onClick={() => {
+                              if (!imageModalUrl.trim()) return;
+                              const caption = imageModalCaption.trim() || "Illustration";
+                              insertMarkdown(`\n\n![${caption}](${imageModalUrl.trim()})\n\n`);
+                              setActiveMediaDialog(null);
+                              setImageModalUrl("");
+                              setImageModalCaption("");
+                            }}
+                            className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Insert Picture</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeMediaDialog === "cta" && (
+                      <div className="p-4 rounded-xl bg-slate-950 border border-indigo-500/40 shadow-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-indigo-400" />
+                            Insert Interactive Tool Action Widget (All 53 Tools)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveMediaDialog(null)}
+                            className="text-slate-400 hover:text-white text-xs font-bold"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                              Select Botock Tool *
+                            </label>
+                            <select
+                              value={ctaModalTool}
+                              onChange={(e) => {
+                                const slug = e.target.value;
+                                setCtaModalTool(slug);
+                                const tName = tools[slug]?.name || DEFAULT_WEBSITE_TOOLS[slug]?.name || slug;
+                                setCtaModalLabel(`Launch ${tName} Free →`);
+                              }}
+                              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none cursor-pointer focus:border-indigo-500"
+                            >
+                              <optgroup label="🎬 AI Video Studio (14 Tools)">
+                                {Object.entries(tools)
+                                  .filter(([_, t]) => (t.category || "").includes("Video"))
+                                  .map(([slug, t]) => (
+                                    <option key={slug} value={slug}>
+                                      {t.name} (/tools/{slug})
+                                    </option>
+                                  ))}
+                              </optgroup>
+                              <optgroup label="🎙️ AI Voice & Audio Studio (5 Tools)">
+                                {Object.entries(tools)
+                                  .filter(([_, t]) => (t.category || "").includes("Audio"))
+                                  .map(([slug, t]) => (
+                                    <option key={slug} value={slug}>
+                                      {t.name} (/tools/{slug})
+                                    </option>
+                                  ))}
+                              </optgroup>
+                              <optgroup label="🖼️ AI Image Studio (10 Tools)">
+                                {Object.entries(tools)
+                                  .filter(([_, t]) => (t.category || "").includes("Image"))
+                                  .map(([slug, t]) => (
+                                    <option key={slug} value={slug}>
+                                      {t.name} (/tools/{slug})
+                                    </option>
+                                  ))}
+                              </optgroup>
+                              <optgroup label="📄 PDF & Document Suite (24 Tools)">
+                                {Object.entries(tools)
+                                  .filter(([_, t]) => (t.category || "").includes("Document") || (t.category || "").includes("PDF"))
+                                  .map(([slug, t]) => (
+                                    <option key={slug} value={slug}>
+                                      {t.name} (/tools/{slug})
+                                    </option>
+                                  ))}
+                              </optgroup>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                              Button Action Label
+                            </label>
+                            <input
+                              type="text"
+                              value={ctaModalLabel}
+                              onChange={(e) => setCtaModalLabel(e.target.value)}
+                              placeholder="e.g. Try Botock AI Image Upscaler Free →"
+                              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-indigo-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setActiveMediaDialog(null)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 text-xs font-semibold"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              insertMarkdown(`\n\n[cta:${ctaModalTool}:${ctaModalLabel.trim() || "Launch Tool Free →"}]\n\n`);
+                              setActiveMediaDialog(null);
+                            }}
+                            className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Insert Tool Widget</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Editor / Live Preview Display */}
                     {blogPreviewMode === "edit" ? (
@@ -2751,7 +3267,7 @@ export default function App() {
                         onChange={(e) =>
                           setEditingBlog({ ...editingBlog, content: e.target.value })
                         }
-                        placeholder="Design your article using the buttons above or write in Markdown..."
+                        placeholder="Design your article using the section buttons above, embed YouTube/Vimeo videos, pictures, or write in Markdown..."
                         className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3.5 text-xs font-mono text-slate-200 outline-none leading-relaxed focus:border-indigo-500"
                       />
                     ) : (
@@ -2768,8 +3284,8 @@ export default function App() {
                           <span>By {editingBlog.author} • {editingBlog.category}</span>
                           <span className="text-indigo-400 font-mono">{editingBlog.reading_time || "4 min read"}</span>
                         </div>
-                        <div className="whitespace-pre-wrap font-sans text-xs text-slate-300 leading-relaxed space-y-2">
-                          {editingBlog.content || "Write some content or click the section buttons above to preview."}
+                        <div className="font-sans text-xs text-slate-300 leading-relaxed space-y-3">
+                          {renderLiveBlogPreview(editingBlog.content)}
                         </div>
                       </div>
                     )}

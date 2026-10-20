@@ -2,6 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import { createClient } from "../../utils/supabase/client";
+import {
+  generateAuthNonce,
+  storeAuthNonce,
+  getStoredAuthNonce,
+  clearStoredAuthNonce,
+} from "../../utils/auth-nonce";
 
 declare global {
   interface Window {
@@ -14,6 +20,7 @@ declare global {
 export default function GoogleOneTap() {
   const supabase = createClient();
   const initializedRef = useRef(false);
+  const rawNonceRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -28,15 +35,36 @@ export default function GoogleOneTap() {
         try {
           if (!response?.credential) return;
 
+          // Retrieve the raw nonce from memory or sessionStorage fallback
+          const rawNonce = rawNonceRef.current || getStoredAuthNonce();
+
           const { data: authData, error } = await supabase.auth.signInWithIdToken({
             provider: "google",
             token: response.credential,
+            nonce: rawNonce || undefined,
           });
 
           if (error) {
-            console.error("Supabase One Tap signInWithIdToken error:", error);
+            console.error("Supabase One Tap signInWithIdToken error, falling back to OAuth:", error);
+            clearStoredAuthNonce();
+
+            // Seamless fallback to standard OAuth redirect so user is never stuck
+            const origin = window.location.origin;
+            const currentNext = window.location.pathname || "/";
+            await supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: {
+                redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(currentNext)}`,
+                queryParams: {
+                  access_type: "offline",
+                  prompt: "select_account",
+                },
+              },
+            });
             return;
           }
+
+          clearStoredAuthNonce();
 
           if (authData?.session) {
             window.location.reload();
@@ -46,42 +74,43 @@ export default function GoogleOneTap() {
         }
       };
 
-      const initGoogle = () => {
+      const initGoogle = async () => {
         if (!window.google?.accounts?.id || initializedRef.current) return;
         initializedRef.current = true;
 
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleCredentialResponse,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          context: "signin",
-          prompt_parent_id: "google-one-tap-container",
-        });
+        try {
+          const { nonce, hashedNonce } = await generateAuthNonce();
+          rawNonceRef.current = nonce;
+          storeAuthNonce(nonce);
 
-        // Prompt Google One Tap natively on botock.app
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // Can be suppressed by browser third-party cookie policy or cooldown
-          }
-        });
-
-        // Expose helper to trigger prompt when clicking Navbar sign-in button
-        window.__botockTriggerGoogleSignIn = () => {
-          return new Promise((resolve) => {
-            if (!window.google?.accounts?.id) {
-              resolve(false);
-              return;
-            }
-            window.google.accounts.id.prompt((notification: any) => {
-              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                resolve(false);
-              } else {
-                resolve(true);
-              }
-            });
+          window.google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleCredentialResponse,
+            nonce: hashedNonce,
+            use_fedcm_for_prompt: true,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+            context: "signin",
+            prompt_parent_id: "google-one-tap-container",
           });
-        };
+
+          // Prompt Google One Tap natively on botock.app
+          window.google.accounts.id.prompt();
+
+          // Expose helper to trigger prompt when clicking Navbar sign-in button
+          window.__botockTriggerGoogleSignIn = () => {
+            return new Promise((resolve) => {
+              if (!window.google?.accounts?.id) {
+                resolve(false);
+                return;
+              }
+              window.google.accounts.id.prompt();
+              resolve(true);
+            });
+          };
+        } catch (err) {
+          console.warn("Failed to initialize Google One Tap with nonce:", err);
+        }
       };
 
       // Check if Google GSI script already exists

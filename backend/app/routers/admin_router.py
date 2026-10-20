@@ -236,16 +236,25 @@ async def track_user_journey(request: Request):
     }
 
     telemetry_list: List[Dict[str, Any]] = state.get("telemetry", [])
+
+    # Strict server-side deduplication: if exact same session & path logged within 5 seconds, ignore duplicate
+    sid = event["session_id"]
+    c_path = event["current_path"]
+    now_dt = datetime.now(timezone.utc)
+    for prev in telemetry_list[:10]:
+        if prev.get("session_id") == sid and prev.get("current_path") == c_path:
+            try:
+                prev_time_str = prev.get("timestamp")
+                if prev_time_str:
+                    prev_dt = datetime.fromisoformat(prev_time_str.replace("Z", "+00:00"))
+                    if (now_dt - prev_dt).total_seconds() < 5.0:
+                        return {"ok": True, "deduplicated": True}
+            except Exception:
+                pass
+
     telemetry_list.insert(0, event)
     # Keep latest 2,000 events in memory/JSON
     state["telemetry"] = telemetry_list[:2000]
-
-    # Track tool visits from telemetry
-    path_str = event["current_path"]
-    if path_str.startswith("/tools/"):
-        slug = path_str.replace("/tools/", "").strip("/")
-        if slug in state.get("tool_flags", {}):
-            state["tool_flags"][slug]["uses"] = state["tool_flags"][slug].get("uses", 0) + 1
 
     save_state(state)
     return {"ok": True}

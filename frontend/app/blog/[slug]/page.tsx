@@ -159,7 +159,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     }
   ];
 
-  const featuredImgUrl = blog.featured_image || blog.blocks?.find(b => b.type === "attachment" && b.url)?.url;
+  const featuredImgUrl = blog.featured_image || (blog as any).cover_image || blog.og_image || blog.blocks?.find(b => b.type === "attachment" && b.url)?.url;
 
   return (
     <article className="min-h-screen bg-slate-50 dark:bg-[#0a0a0c] text-slate-900 dark:text-slate-100 py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -298,12 +298,104 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               })
             ) : (
               <div className="space-y-6">
-                {(blog.content || blog.excerpt || "").split('\n\n').filter(Boolean).map((block, idx) => {
+                {(blog.content || blog.excerpt || "").split(/\n\n+/).filter(Boolean).map((block, idx) => {
                   const trimmed = block.trim();
-                  if (trimmed.startsWith("### ")) return <h3 key={idx} className="text-xl font-bold mt-8 mb-4 text-slate-900 dark:text-white">{trimmed.replace("### ", "")}</h3>;
-                  if (trimmed.startsWith("## ")) return <h2 key={idx} className="text-2xl font-black mt-10 mb-4 text-slate-900 dark:text-white">{trimmed.replace("## ", "")}</h2>;
-                  if (trimmed.startsWith("# ")) return <h1 key={idx} className="text-3xl font-black mt-12 mb-6 text-slate-900 dark:text-white">{trimmed.replace("# ", "")}</h1>;
-                  return <p key={idx} className="whitespace-pre-wrap mb-6">{trimmed}</p>;
+
+                  // 1. Headings
+                  if (trimmed.startsWith("### ")) return <h3 key={idx} className="text-xl sm:text-2xl font-bold mt-8 mb-4 text-slate-900 dark:text-white">{trimmed.replace(/^###\s+/, "")}</h3>;
+                  if (trimmed.startsWith("## ")) return <h2 key={idx} className="text-2xl sm:text-3xl font-black mt-10 mb-4 text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-800 pb-2">{trimmed.replace(/^##\s+/, "")}</h2>;
+                  if (trimmed.startsWith("# ")) return <h1 key={idx} className="text-3xl sm:text-4xl font-black mt-12 mb-6 text-slate-900 dark:text-white">{trimmed.replace(/^#\s+/, "")}</h1>;
+
+                  // 2. Video Frame Embeds: [video:url] or [video:url:Title]
+                  const videoMatch = trimmed.match(/^\[video:(https?:\/\/[^\]\s]+)(?:\s*:\s*([^\]]+))?\]/i);
+                  if (videoMatch) {
+                    const rawUrl = videoMatch[1];
+                    const videoTitle = videoMatch[2] || "Featured Video";
+                    let embedUrl = rawUrl;
+                    if (rawUrl.includes("youtube.com/watch?v=")) {
+                      const id = rawUrl.split("v=")[1]?.split("&")[0];
+                      embedUrl = `https://www.youtube-nocookie.com/embed/${id}`;
+                    } else if (rawUrl.includes("youtu.be/")) {
+                      const id = rawUrl.split("youtu.be/")[1]?.split("?")[0];
+                      embedUrl = `https://www.youtube-nocookie.com/embed/${id}`;
+                    } else if (rawUrl.includes("vimeo.com/")) {
+                      const id = rawUrl.split("vimeo.com/")[1]?.split("?")[0];
+                      embedUrl = `https://player.vimeo.com/video/${id}`;
+                    }
+
+                    return (
+                      <div key={idx} className="my-8 rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-800 shadow-2xl bg-black">
+                        <div className="aspect-video w-full">
+                          {embedUrl.endsWith(".mp4") || embedUrl.endsWith(".webm") ? (
+                            <video src={embedUrl} controls className="w-full h-full object-cover" />
+                          ) : (
+                            <iframe
+                              src={embedUrl}
+                              title={videoTitle}
+                              className="w-full h-full border-0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          )}
+                        </div>
+                        {videoTitle && (
+                          <div className="px-4 py-2 bg-slate-900 text-xs text-slate-400 font-semibold text-center border-t border-slate-800">
+                            🎬 {videoTitle}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // 3. Image Embeds: ![caption](url)
+                  const imgMatch = trimmed.match(/^!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/i);
+                  if (imgMatch) {
+                    const caption = imgMatch[1];
+                    const imgUrl = imgMatch[2];
+                    return (
+                      <figure key={idx} className="my-8 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl bg-slate-100 dark:bg-slate-900/40">
+                        <img src={imgUrl} alt={caption || "Blog image"} className="w-full h-auto max-h-[550px] object-contain mx-auto" />
+                        {caption && (
+                          <figcaption className="p-3 text-center text-xs font-medium text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-black/20">
+                            {caption}
+                          </figcaption>
+                        )}
+                      </figure>
+                    );
+                  }
+
+                  // 4. Blockquotes / Callout Tips: > ...
+                  if (trimmed.startsWith("> ")) {
+                    const quoteText = trimmed.replace(/^>\s*/gm, "");
+                    return (
+                      <div key={idx} className="my-6 p-5 rounded-2xl bg-violet-500/10 border-l-4 border-violet-500 text-slate-800 dark:text-slate-200 shadow-sm">
+                        <p className="font-semibold text-sm leading-relaxed">{quoteText}</p>
+                      </div>
+                    );
+                  }
+
+                  // 5. Tool CTA Shortcode: [cta:tool-slug:Button Label]
+                  const ctaMatch = trimmed.match(/^\[cta:([a-z0-9\-]+)(?:\s*:\s*([^\]]+))?\]/i);
+                  if (ctaMatch) {
+                    const toolSlug = ctaMatch[1];
+                    const buttonLabel = ctaMatch[2] || `Launch ${toolSlug}`;
+                    return (
+                      <div key={idx} className="my-8 p-6 rounded-2xl bg-gradient-to-r from-violet-600/20 via-purple-600/10 to-transparent border border-violet-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div>
+                          <h4 className="font-bold text-base text-slate-900 dark:text-white">Experience This Tool on Botock</h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">High-performance AI processing with instant results.</p>
+                        </div>
+                        <Link
+                          href={`/tools/${toolSlug}`}
+                          className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm shadow-lg shadow-violet-600/30 transition-all hover:scale-105 whitespace-nowrap"
+                        >
+                          {buttonLabel} →
+                        </Link>
+                      </div>
+                    );
+                  }
+
+                  return <p key={idx} className="whitespace-pre-wrap mb-6 text-slate-700 dark:text-slate-300 leading-relaxed">{trimmed}</p>;
                 })}
               </div>
             )}

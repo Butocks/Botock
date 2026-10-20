@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { createClient } from "../utils/supabase/client";
 import { getSiteUrl } from "../utils/runtime-urls";
+import {
+  generateAuthNonce,
+  storeAuthNonce,
+  getStoredAuthNonce,
+  clearStoredAuthNonce,
+} from "../utils/auth-nonce";
 
 declare global {
   interface Window {
@@ -24,6 +30,7 @@ export default function GoogleAuthButton({
 }: GoogleAuthButtonProps) {
   const buttonRef = useRef<HTMLDivElement>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const rawNonceRef = useRef<string | null>(null);
   const supabase = createClient();
 
   const clientId =
@@ -37,17 +44,23 @@ export default function GoogleAuthButton({
         throw new Error("No credential received from Google.");
       }
 
+      const rawNonce = rawNonceRef.current || getStoredAuthNonce();
+
       // Exchange Google ID Token directly with Supabase Auth
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: "google",
         token: idToken,
+        nonce: rawNonce || undefined,
       });
 
       if (error) {
         console.error("Supabase ID Token Auth Error:", error);
+        clearStoredAuthNonce();
         if (onError) onError(error.message);
         return;
       }
+
+      clearStoredAuthNonce();
 
       if (onSuccess) {
         onSuccess();
@@ -60,12 +73,18 @@ export default function GoogleAuthButton({
     }
   };
 
-  const renderGoogleButton = () => {
+  const renderGoogleButton = async () => {
     if (typeof window !== "undefined" && window.google && buttonRef.current) {
       try {
+        const { nonce, hashedNonce } = await generateAuthNonce();
+        rawNonceRef.current = nonce;
+        storeAuthNonce(nonce);
+
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleCredentialResponse,
+          nonce: hashedNonce,
+          use_fedcm_for_prompt: true,
           auto_select: false,
           cancel_on_tap_outside: true,
         });
