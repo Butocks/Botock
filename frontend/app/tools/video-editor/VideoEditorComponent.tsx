@@ -442,7 +442,19 @@ export default function VideoEditorComponent() {
         { load, writeFile, exec, readFile, deleteFile },
         (msg) => setExportStage(msg)
       );
-      setResultUrl(URL.createObjectURL(blob));
+      const url = URL.createObjectURL(blob);
+      setResultUrl(url);
+
+      // Auto-trigger browser download
+      try {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `botock-video-${Date.now()}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showToast("Export complete! Download started.");
+      } catch (_) {}
     } catch (err) {
       setExportError(err instanceof Error ? err.message : "Export failed.");
     } finally {
@@ -2304,7 +2316,11 @@ export default function VideoEditorComponent() {
           <div className="bg-[#14141c] border border-[#2b2b36] rounded-2xl p-6 text-center max-w-sm w-full space-y-4 shadow-2xl">
             <div className="w-10 h-10 border-4 border-[#ff6b4a] border-t-transparent rounded-full animate-spin mx-auto" />
             <h3 className="text-sm font-bold text-[#ff6b4a]">{exportStage || "Rendering video…"}</h3>
-            <p className="text-xs text-gray-500">Processing locally in your browser with WebAssembly</p>
+            <p className="text-xs text-gray-400">
+              {exportStage?.toLowerCase().includes("local")
+                ? "Processing in browser (local fallback engine)"
+                : "⚡ Accelerated Cloud Rendering Engine"}
+            </p>
             <button
               type="button"
               onClick={() => {

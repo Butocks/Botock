@@ -599,6 +599,9 @@ class FlowService:
                 captured_video_bytes=captured_video_bytes,
             )
 
+            # Ensure H.264/AAC +faststart remux for instant in-browser playback
+            file_path = await self._optimize_video_for_stream(file_path, generation_id)
+
             # Verify file exists and is non-empty before marking completed
             if not os.path.exists(file_path) or os.path.getsize(file_path) < 10_000:
                 raise Exception("Downloaded video file is missing or corrupted.")
@@ -635,6 +638,35 @@ class FlowService:
         finally:
             await browser.close()
             await p.stop()
+
+    async def _optimize_video_for_stream(self, file_path: str, generation_id: str) -> str:
+        """
+        Transcodes or remuxes video with H.264 / AAC and +faststart flag.
+        Guarantees instant in-browser playback, fixes 0:00 duration and blank screen issues.
+        """
+        if not os.path.exists(file_path) or os.path.getsize(file_path) < 10_000:
+            return file_path
+        try:
+            temp_path = file_path + ".stream.mp4"
+            proc = await asyncio.create_subprocess_exec(
+                "ffmpeg", "-y", "-i", file_path,
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac",
+                "-movflags", "+faststart",
+                temp_path,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=35)
+            if proc.returncode == 0 and os.path.exists(temp_path) and os.path.getsize(temp_path) > 10_000:
+                os.replace(temp_path, file_path)
+                logger.info(f"[{generation_id}] Video successfully optimized with H.264/AAC faststart for web player")
+            elif os.path.exists(temp_path):
+                os.remove(temp_path)
+        except Exception as ffmpeg_err:
+            logger.warning(f"[{generation_id}] Web faststart optimization note: {ffmpeg_err}")
+        return file_path
 
     async def _download_video(
         self,

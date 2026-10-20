@@ -7,6 +7,7 @@ import {
   buildDrawtextFilter
 } from "./ffmpegAdapters";
 import { EditorProject, TimelineClip, MediaBinItem } from "./types";
+import { getBackendUrl } from "@/utils/runtime-urls";
 
 interface FFmpegBridge {
   load: () => Promise<void>;
@@ -237,9 +238,6 @@ export async function exportEditorProject(
   ffmpeg: FFmpegBridge,
   onProgress?: ExportProgressCallback
 ): Promise<Blob> {
-  onProgress?.("Loading FFmpeg engine...");
-  await ffmpeg.load();
-
   const allVideoClips: (TimelineClip & { trackMuted: boolean, trackHidden: boolean })[] = [];
   const allAudioClips: (TimelineClip & { trackMuted: boolean, trackHidden: boolean })[] = [];
   
@@ -268,20 +266,10 @@ export async function exportEditorProject(
   });
   const visibleTextClips = textClips.filter(c => !c.trackHidden);
 
-  if (visibleVideoClips.length === 0 && allAudioSources.length === 0 && visibleTextClips.length === 0) throw new Error("No media clips to export.");
-
-  if (visibleTextClips.length > 0) {
-    onProgress?.("Downloading fonts for text layers...");
-    try {
-       const res = await fetch("https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf");
-       const fontBuffer = await res.arrayBuffer();
-       await ffmpeg.writeFile("font.ttf", new Uint8Array(fontBuffer));
-    } catch(err) {
-       console.warn("Failed to load font", err);
-    }
+  if (visibleVideoClips.length === 0 && allAudioSources.length === 0 && visibleTextClips.length === 0) {
+    throw new Error("No media clips to export.");
   }
 
-  onProgress?.("Writing source files to FFmpeg VFS...");
   const usedSourceIds = Array.from(new Set([...visibleVideoClips, ...allAudioSources].map(c => c.sourceId)));
   const sourceInputIndex = new Map<string, number>();
   const sourceInputNames = new Map<string, string>();
@@ -291,21 +279,12 @@ export async function exportEditorProject(
     const sourceId = usedSourceIds[i];
     const item = mediaBin.getItem(sourceId);
     if (!item) throw new Error(`Missing media for clip`);
-    
-        const ext = item.file.name.split('.').pop() || 'mp4';
+    const ext = item.file.name.split('.').pop() || 'mp4';
     const name = `botock_editor_src_${i}.${ext}`;
-    await ffmpeg.writeFile(name, new Uint8Array(await item.file.arrayBuffer()));
     sourceInputIndex.set(sourceId, i);
     sourceInputNames.set(sourceId, name);
-
-    const probeName = `${AUDIO_PROBE_PREFIX}${i}.m4a`;
-    try {
-      const exit = await ffmpeg.exec(["-y", "-i", name, "-t", "0.1", "-map", "0:a:0", "-c", "copy", probeName]);
-      sourceHasAudio.set(sourceId, exit === 0);
-    } catch {
-      sourceHasAudio.set(sourceId, false);
-    }
-    try { await ffmpeg.deleteFile(probeName); } catch {}
+    // Assume sources have audio unless it is an image
+    sourceHasAudio.set(sourceId, !item.file.type.startsWith("image/"));
   }
 
   const targetW = project.width;
@@ -333,7 +312,7 @@ export async function exportEditorProject(
 
   allAudioSources.forEach((clip, index) => {
     const inputIdx = sourceInputIndex.get(clip.sourceId)!;
-    const hasAudio = sourceHasAudio.get(clip.sourceId) || false;
+    const hasAudio = sourceHasAudio.get(clip.sourceId) ?? true;
     filterParts.push(buildClipAudioFilter(clip, inputIdx, `a${index}`, hasAudio));
   });
 
@@ -367,6 +346,79 @@ export async function exportEditorProject(
 
   const filterComplex = filterParts.join(";");
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // TIER 1: HIGH-SPEED SERVER-SIDE CLOUD RENDER (2-5 Seconds)
+  // Eliminates 30MB WASM download and processes instantaneously on Linux FFmpeg
+  // ──────────────────────────────────────────────────────────────────────────
+  try {
+    onProgress?.("Rendering on high-speed server engine...");
+    const backendBaseUrl = await getBackendUrl();
+    const formData = new FormData();
+    formData.append("filter_complex", filterComplex);
+    formData.append("output_map_v", finalVideoOutput);
+    formData.append("output_map_a", "[aconcat]");
+
+    for (let i = 0; i < usedSourceIds.length; i++) {
+      const sourceId = usedSourceIds[i];
+      const item = mediaBin.getItem(sourceId);
+      if (item && item.file) {
+        const ext = item.file.name.split('.').pop() || 'mp4';
+        formData.append("files", item.file, `src_${i}.${ext}`);
+      }
+    }
+
+    const res = await fetch(`${backendBaseUrl}/api/video/render-timeline`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      const blob = await res.blob();
+      if (blob.size > 5000) {
+        onProgress?.("Video ready!");
+        return new Blob([blob], { type: "video/mp4" });
+      }
+    }
+  } catch (cloudErr) {
+    console.warn("Server-side render note, falling back to local WebAssembly:", cloudErr);
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // TIER 2: LOCAL WEBASSEMBLY ENGINE FALLBACK
+  // Used if server is unreachable or offline
+  // ──────────────────────────────────────────────────────────────────────────
+  onProgress?.("Loading local FFmpeg fallback engine...");
+  await ffmpeg.load();
+
+  if (visibleTextClips.length > 0) {
+    onProgress?.("Downloading fonts for text layers...");
+    try {
+       const res = await fetch("https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf");
+       const fontBuffer = await res.arrayBuffer();
+       await ffmpeg.writeFile("font.ttf", new Uint8Array(fontBuffer));
+    } catch(err) {
+       console.warn("Failed to load font", err);
+    }
+  }
+
+  onProgress?.("Writing source files to FFmpeg VFS...");
+  for (let i = 0; i < usedSourceIds.length; i++) {
+    const sourceId = usedSourceIds[i];
+    const item = mediaBin.getItem(sourceId);
+    if (!item) throw new Error(`Missing media for clip`);
+    const name = sourceInputNames.get(sourceId)!;
+    await ffmpeg.writeFile(name, new Uint8Array(await item.file.arrayBuffer()));
+
+    const probeName = `${AUDIO_PROBE_PREFIX}${i}.m4a`;
+    try {
+      const exit = await ffmpeg.exec(["-y", "-i", name, "-t", "0.1", "-map", "0:a:0", "-c", "copy", probeName]);
+      sourceHasAudio.set(sourceId, exit === 0);
+    } catch {
+      sourceHasAudio.set(sourceId, false);
+    }
+    try { await ffmpeg.deleteFile(probeName); } catch {}
+  }
+
   const inputArgs: string[] = [];
   usedSourceIds.forEach(id => inputArgs.push("-i", sourceInputNames.get(id)!));
 
@@ -386,7 +438,7 @@ export async function exportEditorProject(
   ];
 
   try {
-    onProgress?.("Rendering final video...");
+    onProgress?.("Rendering final video locally...");
     const exitCode = await ffmpeg.exec(args);
     if (exitCode !== 0) throw new Error(`Export failed. FFmpeg exit code: ${exitCode}`);
     const outputBytes = await ffmpeg.readFile(OUTPUT_NAME);

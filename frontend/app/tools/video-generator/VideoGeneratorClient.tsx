@@ -63,6 +63,7 @@ export default function VideoGeneratorClient() {
   const [hasLoadedTransfer, setHasLoadedTransfer] = useState(false);
   const [guestId, setGuestId] = useState<string>("");
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -257,6 +258,9 @@ export default function VideoGeneratorClient() {
         : (err?.message || "An unexpected error occurred.");
       setErrorMessage(msg);
       setStatus("error");
+      if (!user && (msg.includes("limit") || msg.includes("Guest") || msg.includes("login") || msg.includes("log in") || msg.includes("Unauthorized"))) {
+        setShowGuestCTA(true);
+      }
     }
   };
 
@@ -307,24 +311,31 @@ export default function VideoGeneratorClient() {
             if (finalUrl.startsWith("/")) {
               finalUrl = `${backendBaseUrl.replace(/\/$/, "")}${finalUrl}`;
             }
+
+            // Build authenticated stream/fallback URL with inline content disposition
+            const authParams = new URLSearchParams();
+            if (token) authParams.set("token", token);
+            else if (gid) authParams.set("guest_id", gid);
+            authParams.set("inline", "1");
+            const authenticatedUrl = `${finalUrl}${finalUrl.includes("?") ? "&" : "?"}${authParams.toString()}`;
             
             // Fetch video safely with headers without leaking JWT access token in URL query params
             try {
               const videoReq = await fetch(finalUrl, { headers });
               if (videoReq.ok) {
                 const blob = await videoReq.blob();
-                const blobUrl = URL.createObjectURL(blob);
-                setVideoBlob(blob);
+                // Explicitly tag as video/mp4 so browsers can decode immediately
+                const mp4Blob = new Blob([blob], { type: "video/mp4" });
+                const blobUrl = URL.createObjectURL(mp4Blob);
+                setVideoBlob(mp4Blob);
                 setVideoBlobUrl(blobUrl);
-                setVideoUrl(blobUrl);
+                setVideoUrl(authenticatedUrl);
               } else {
-                setVideoUrl(finalUrl);
+                setVideoUrl(authenticatedUrl);
               }
             } catch (e) {
-              setVideoUrl(finalUrl);
+              setVideoUrl(authenticatedUrl);
             }
-
-            if (!user) setShowGuestCTA(true);
           } else if (data.status === "failed" || data.status === "error") {
             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
             setStatus("error");
@@ -333,6 +344,9 @@ export default function VideoGeneratorClient() {
               ? (rawErr.message || JSON.stringify(rawErr))
               : String(rawErr);
             setErrorMessage(errMsg);
+            if (!user && (errMsg.includes("limit") || errMsg.includes("Guest") || errMsg.includes("login") || errMsg.includes("log in") || errMsg.includes("Unauthorized"))) {
+              setShowGuestCTA(true);
+            }
           }
         } catch (e) {
           // keep trying
@@ -345,6 +359,9 @@ export default function VideoGeneratorClient() {
         ? JSON.stringify(err.message)
         : (err?.message || "An unexpected error occurred.");
       setErrorMessage(msg);
+      if (!user && (msg.includes("limit") || msg.includes("Guest") || msg.includes("login") || msg.includes("log in") || msg.includes("Unauthorized"))) {
+        setShowGuestCTA(true);
+      }
     }
   };
 
@@ -391,12 +408,19 @@ export default function VideoGeneratorClient() {
           <div className="w-full flex flex-col items-center space-y-4 max-w-3xl py-2">
             <div className="relative w-full rounded-3xl overflow-hidden bg-black/90 border border-slate-200 dark:border-white/10 flex items-center justify-center shadow-2xl aspect-video">
               <video 
+                key={videoBlobUrl || videoUrl}
+                ref={videoRef}
                 src={videoBlobUrl || videoUrl || ""} 
                 controls 
                 autoPlay 
+                muted
                 loop 
                 playsInline
+                preload="auto"
                 className="w-full h-full object-contain"
+                onLoadedMetadata={(e) => {
+                  e.currentTarget.play().catch(() => {});
+                }}
               />
               <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/80 backdrop-blur-md text-xs text-violet-300 font-bold border border-violet-500/30 flex items-center gap-1.5 shadow-md pointer-events-none">
                 <Clock className="w-3.5 h-3.5 text-violet-400" />
@@ -411,7 +435,7 @@ export default function VideoGeneratorClient() {
 
             <div className="flex flex-wrap items-center justify-center gap-3">
               <a
-                href={videoUrl || "#"}
+                href={videoBlobUrl || videoUrl || "#"}
                 download={`botock-video-${generationId || "clip"}.mp4`}
                 className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-sm flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
               >

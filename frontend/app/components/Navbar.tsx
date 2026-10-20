@@ -34,6 +34,7 @@ export default function Navbar() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(false);
   const supabase = createClient();
   const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hoverOpenTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -88,8 +89,6 @@ export default function Navbar() {
   }, []);
 
   if (pathname === "/tools/video-editor") return null;
-
-  const [authLoading, setAuthLoading] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

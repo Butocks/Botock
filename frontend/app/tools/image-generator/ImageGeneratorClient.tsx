@@ -41,7 +41,8 @@ const ASPECT_RATIOS = [
 ];
 
 const IMAGE_MODELS = [
-  { id: "botockGen", label: "BotockGen (Unlimited Free)" }
+  { id: "botockGen", label: "BotockGen (Neural Flux)" },
+  { id: "nano-banana-2", label: "Google Imagen 3 (Flow AI)" },
 ];
 
 const STYLE_PRESETS = [
@@ -588,6 +589,17 @@ export default function ImageGeneratorClient() {
               ))}
             </select>
 
+
+            {/* Model Selector */}
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-300 dark:border-white/10 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-slate-200 outline-none focus:border-amber-500 cursor-pointer"
+            >
+              {IMAGE_MODELS.map((m) => (
+                <option key={m.id} value={m.id} className="bg-white dark:bg-[#09090b]">{m.label}</option>
+              ))}
+            </select>
 
             {/* Style Preset */}
             <select

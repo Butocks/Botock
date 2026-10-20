@@ -8,7 +8,7 @@ from typing import Optional
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Depends, UploadFile, File, Form, Query
 from fastapi.responses import FileResponse, Response
 from app.models.schemas import VideoGenerateRequest, VideoGenerateResponse, VideoStatusResponse, VideoListResponse
 from app.services.flow_service import FlowVideoService
@@ -449,7 +449,11 @@ def check_ownership(generation_id: str, user_id: str):
         raise HTTPException(status_code=403, detail="Access denied: You do not own this video generation.")
 
 @router.get("/download/{generation_id}")
-async def download_video(generation_id: str, user: dict = Depends(get_current_user_or_guest)):
+async def download_video(
+    generation_id: str,
+    inline: bool = Query(False),
+    user: dict = Depends(get_current_user_or_guest),
+):
     validate_uuid(generation_id)
 
     if settings.DISTRIBUTED_QUEUE_ENABLED:
@@ -466,10 +470,11 @@ async def download_video(generation_id: str, user: dict = Depends(get_current_us
         except Exception:
             logger.exception("Unable to fetch completed video %s from object storage", generation_id)
             raise HTTPException(status_code=404, detail="Video file is temporarily unavailable.")
+        disposition_type = "inline" if inline else "attachment"
         return Response(
             content=content,
             media_type="video/mp4",
-            headers={"Content-Disposition": f'attachment; filename="{generation_id}.mp4"'},
+            headers={"Content-Disposition": f'{disposition_type}; filename="{generation_id}.mp4"'},
         )
 
     # Persistent Ownership check
@@ -487,7 +492,13 @@ async def download_video(generation_id: str, user: dict = Depends(get_current_us
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Video file not found or not yet generated.")
         
-    return FileResponse(path=file_path, media_type="video/mp4", filename=safe_filename)
+    content_disp = "inline" if inline else "attachment"
+    return FileResponse(
+        path=file_path,
+        media_type="video/mp4",
+        filename=safe_filename,
+        content_disposition_type=content_disp,
+    )
 
 
 @router.get("/list", response_model=VideoListResponse)
@@ -1070,6 +1081,108 @@ async def video_fast_render(
                 raise e
             logger.exception("Fast-render error: %s", str(e))
             raise HTTPException(status_code=500, detail=f"Fast-render processing failed: {str(e)}")
+
+
+@router.post("/render-timeline")
+async def render_timeline(
+    filter_complex: str = Form(...),
+    output_map_v: str = Form(...),
+    output_map_a: str = Form("[aconcat]"),
+    files: list[UploadFile] = File(...),
+):
+    """
+    High-speed server-side multi-track timeline rendering.
+    Accepts timeline media files and compiled filter_complex, renders with
+    native multi-threaded FFmpeg on Linux, and streams the finished MP4 back in seconds.
+    """
+    import tempfile
+    import shutil
+    import os
+    import asyncio
+    from fastapi.responses import FileResponse
+    from starlette.background import BackgroundTask
+
+    temp_dir = tempfile.mkdtemp(prefix="botock_timeline_")
+
+    async with RENDER_SEMAPHORE:
+        try:
+            # 1. Save uploaded source files
+            input_args = []
+            for i, upload_file in enumerate(files):
+                ext = upload_file.filename.split(".")[-1] if upload_file.filename and "." in upload_file.filename else "mp4"
+                file_path = os.path.join(temp_dir, f"src_{i}.{ext}")
+                with open(file_path, "wb") as f:
+                    while chunk := await upload_file.read(1024 * 1024):
+                        f.write(chunk)
+                input_args.extend(["-i", file_path])
+
+            # 2. Ensure font is available if drawtext is used
+            system_font = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+            if not os.path.exists(system_font):
+                system_font = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"
+
+            font_dest = os.path.join(temp_dir, "font.ttf")
+            if os.path.exists(system_font):
+                try:
+                    shutil.copyfile(system_font, font_dest)
+                except Exception:
+                    pass
+
+            # Adapt filter_complex fontfile references if any
+            adapted_filter = filter_complex.replace("font.ttf", font_dest.replace(":", r"\:"))
+
+            output_file = os.path.join(temp_dir, "output.mp4")
+
+            # 3. Assemble FFmpeg execution args
+            ffmpeg_cmd = [
+                "ffmpeg", "-y",
+                *input_args,
+                "-filter_complex", adapted_filter,
+                "-map", output_map_v,
+                "-map", output_map_a,
+                "-c:v", "libx264",
+                "-preset", "ultrafast",
+                "-crf", "22",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-movflags", "+faststart",
+                output_file
+            ]
+
+            proc = await asyncio.create_subprocess_exec(
+                *ffmpeg_cmd,
+                cwd=temp_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=180)
+
+            if proc.returncode != 0 or not os.path.exists(output_file) or os.path.getsize(output_file) < 1000:
+                err_msg = stderr.decode(errors="ignore")[-400:]
+                logger.error(f"Server-side timeline render failed: {err_msg}")
+                raise HTTPException(status_code=500, detail=f"Render engine error: {err_msg}")
+
+            def cleanup():
+                try:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                except Exception:
+                    pass
+
+            return FileResponse(
+                path=output_file,
+                media_type="video/mp4",
+                filename="botock_edited_video.mp4",
+                content_disposition_type="attachment",
+                background=BackgroundTask(cleanup)
+            )
+        except HTTPException:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            raise
+        except Exception as e:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            logger.exception("Timeline render exception")
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/video-merge")

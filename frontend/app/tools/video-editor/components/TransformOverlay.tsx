@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { TimelineClip, EditorProject, MediaBinItem, MotionPath } from "@/lib/editor/types";
-import { RotateCw, Check, Undo2, Move, Zap, Play, Maximize2 } from "lucide-react";
+import { RotateCw, Check, Undo2, Move, Zap, Play, Maximize2, ChevronUp, ChevronDown, ArrowUpDown } from "lucide-react";
 
 interface Props {
   clip: TimelineClip;
@@ -61,6 +61,11 @@ export default function TransformOverlay({
   useEffect(() => {
     tRef.current = t;
   });
+
+  // Smart initial position: place opposite to element to avoid covering it
+  const defaultPosition = t.y > 45 ? "top" : "bottom";
+  const [toolbarPosition, setToolbarPosition] = useState<"top" | "bottom">(defaultPosition);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const motion = clip.motionPath;
   const hasMotion = !!motion?.enabled;
@@ -617,11 +622,11 @@ export default function TransformOverlay({
             A
           </div>
           <div
-            className={`absolute -top-7 ${
+            className={`absolute -top-6 ${
               motionStartX < 25 ? "left-0" : motionStartX > 75 ? "right-0" : "left-1/2 -translate-x-1/2"
-            } bg-emerald-950/95 border border-emerald-500/80 text-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg pointer-events-none whitespace-nowrap`}
+            } bg-emerald-950/90 border border-emerald-500/70 text-emerald-200 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow-md pointer-events-none whitespace-nowrap`}
           >
-            Start (Person 1)
+            Start
           </div>
         </div>
       )}
@@ -638,11 +643,11 @@ export default function TransformOverlay({
             B
           </div>
           <div
-            className={`absolute -top-7 ${
+            className={`absolute -top-6 ${
               motionEndX < 25 ? "left-0" : motionEndX > 75 ? "right-0" : "left-1/2 -translate-x-1/2"
-            } bg-rose-950/95 border border-rose-500/80 text-rose-200 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg pointer-events-none whitespace-nowrap`}
+            } bg-rose-950/90 border border-rose-500/70 text-rose-200 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full shadow-md pointer-events-none whitespace-nowrap`}
           >
-            End (Person 2)
+            End
           </div>
         </div>
       )}
@@ -723,113 +728,153 @@ export default function TransformOverlay({
         </div>
       )}
 
-      {/* Quick Actions Floating Pill Toolbar - Fully Responsive, Never Hidden/Clipped */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 max-w-[calc(100%-12px)] flex items-center justify-center flex-wrap gap-1 bg-[#12121a]/95 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-[#2b2b36] shadow-2xl z-50 pointer-events-auto">
-        {/* Toggle Animation / Motion Arrow */}
-        <button
-          onClick={handleToggleMotionArrow}
-          title="Toggle PowerPoint-style Motion Arrow Animation (Person 1 ➔ Person 2)"
-          className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors ${
-            hasMotion
-              ? "bg-amber-500/25 text-amber-300 border border-amber-500/60 shadow-sm"
-              : "text-gray-200 hover:text-white hover:bg-white/10"
+      {/* Quick Actions Floating Pill Toolbar - Fully Responsive, Non-wrapping, Collapsible & Fades on Drag */}
+      {isMinimized ? (
+        <div className={`absolute ${toolbarPosition === "top" ? "top-2" : "bottom-2"} right-2 z-50 pointer-events-auto transition-all`}>
+          <button
+            onClick={() => setIsMinimized(false)}
+            title="Expand Animation Toolbar"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#12121a]/95 backdrop-blur-md border border-amber-500/50 text-amber-300 text-[11px] font-bold shadow-2xl hover:bg-amber-500/20 active:scale-95 transition-all cursor-pointer"
+          >
+            <Zap className="w-3.5 h-3.5 fill-current" />
+            <span>Animation</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div 
+          className={`absolute ${toolbarPosition === "top" ? "top-2" : "bottom-2"} left-1/2 -translate-x-1/2 max-w-[calc(100%-16px)] z-50 pointer-events-auto transition-all duration-150 ${
+            isTransforming ? "opacity-15 hover:opacity-100 pointer-events-none" : "opacity-100"
           }`}
         >
-          <Zap className={`w-3 h-3 ${hasMotion ? "text-amber-400 fill-current" : "text-gray-400"}`} />
-          <span>Animation</span>
-        </button>
+          <div className="flex items-center flex-nowrap gap-1 bg-[#12121a]/95 backdrop-blur-md px-2 py-1 rounded-xl border border-[#2b2b36] shadow-2xl overflow-x-auto scrollbar-none whitespace-nowrap">
+            {/* Minimize Toggle */}
+            <button
+              onClick={() => setIsMinimized(true)}
+              title="Minimize Toolbar (Clear Screen for animating)"
+              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              {toolbarPosition === "top" ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
 
-        {/* Path Type Selectors (when Animation is enabled) */}
-        {hasMotion && (
-          <>
-            <div className="w-px h-3.5 bg-gray-700 mx-0.5" />
-            <div className="flex items-center bg-black/50 rounded-lg p-0.5 border border-[#2b2b36]">
-              <button
-                onClick={() => handleChangePathType("line")}
-                title="Straight Line motion"
-                className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${
-                  pathType === "line"
-                    ? "bg-amber-500 text-black font-extrabold shadow"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                Line
-              </button>
-              <button
-                onClick={() => handleChangePathType("arc")}
-                title="Curved Arc (parabolic throw) motion"
-                className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${
-                  pathType === "arc"
-                    ? "bg-amber-500 text-black font-extrabold shadow"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                Arc ↷
-              </button>
-              <button
-                onClick={() => handleChangePathType("zigzag")}
-                title="Zigzag lightning motion"
-                className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all ${
-                  pathType === "zigzag"
-                    ? "bg-amber-500 text-black font-extrabold shadow"
-                    : "text-gray-400 hover:text-white"
-                }`}
-              >
-                Zigzag ⚡
-              </button>
-            </div>
-            {onPreview && (
-              <button
-                onClick={() => onPreview(clip.timelineStart, clip.duration)}
-                title="Test Play Motion Animation"
-                className="px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 transition-colors"
-              >
-                <Play className="w-2.5 h-2.5 fill-current" />
-                <span>Play</span>
-              </button>
+            {/* Position Flip Button (Top ↔ Bottom) */}
+            <button
+              onClick={() => setToolbarPosition((prev) => (prev === "top" ? "bottom" : "top"))}
+              title={toolbarPosition === "top" ? "Move Toolbar to Bottom" : "Move Toolbar to Top"}
+              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="w-px h-3.5 bg-gray-700 mx-0.5 shrink-0" />
+
+            {/* Toggle Animation / Motion Arrow */}
+            <button
+              onClick={handleToggleMotionArrow}
+              title="Toggle PowerPoint-style Motion Arrow Animation (Person 1 ➔ Person 2)"
+              className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0 ${
+                hasMotion
+                  ? "bg-amber-500/25 text-amber-300 border border-amber-500/60 shadow-sm"
+                  : "text-gray-200 hover:text-white hover:bg-white/10"
+              }`}
+            >
+              <Zap className={`w-3 h-3 ${hasMotion ? "text-amber-400 fill-current" : "text-gray-400"}`} />
+              <span>Animation</span>
+            </button>
+
+            {/* Path Type Selectors (when Animation is enabled) */}
+            {hasMotion && (
+              <>
+                <div className="w-px h-3.5 bg-gray-700 mx-0.5 shrink-0" />
+                <div className="flex items-center bg-black/50 rounded-lg p-0.5 border border-[#2b2b36] shrink-0">
+                  <button
+                    onClick={() => handleChangePathType("line")}
+                    title="Straight Line motion"
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer ${
+                      pathType === "line"
+                        ? "bg-amber-500 text-black font-extrabold shadow"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Line
+                  </button>
+                  <button
+                    onClick={() => handleChangePathType("arc")}
+                    title="Curved Arc (parabolic throw) motion"
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer ${
+                      pathType === "arc"
+                        ? "bg-amber-500 text-black font-extrabold shadow"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Arc ↷
+                  </button>
+                  <button
+                    onClick={() => handleChangePathType("zigzag")}
+                    title="Zigzag lightning motion"
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer ${
+                      pathType === "zigzag"
+                        ? "bg-amber-500 text-black font-extrabold shadow"
+                        : "text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    Zigzag ⚡
+                  </button>
+                </div>
+                {onPreview && (
+                  <button
+                    onClick={() => onPreview(clip.timelineStart, clip.duration)}
+                    title="Test Play Motion Animation"
+                    className="px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                  >
+                    <Play className="w-2.5 h-2.5 fill-current" />
+                    <span>Play</span>
+                  </button>
+                )}
+              </>
             )}
-          </>
-        )}
 
-        <div className="w-px h-3.5 bg-gray-700 mx-0.5" />
-        <button
-          onClick={handleToggleFitFill}
-          title="Fill Screen / Fit Screen (Cover canvas width/height)"
-          className="px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-200 hover:text-white hover:bg-white/10 flex items-center gap-1 transition-colors"
-        >
-          <Maximize2 className="w-3 h-3 text-cyan-400" />
-          <span>{t.scaleX > 1.05 ? "Fit" : "Fill"}</span>
-        </button>
-        <button
-          onClick={handleCenterTransform}
-          title="Center on Screen"
-          className="px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-200 hover:text-white hover:bg-white/10 flex items-center gap-1 transition-colors"
-        >
-          <Move className="w-3 h-3 text-[#ff6b4a]" />
-          <span>Center</span>
-        </button>
-        <button
-          onClick={handleResetTransform}
-          title="Reset Scale & Rotation to 100%"
-          className="px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-200 hover:text-white hover:bg-white/10 flex items-center gap-1 transition-colors"
-        >
-          <Undo2 className="w-3 h-3 text-yellow-400" />
-          <span>Reset</span>
-        </button>
-        <div className="w-px h-3.5 bg-gray-700 mx-0.5" />
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (onDone) onDone();
-            else if (onDeselect) onDeselect();
-          }}
-          title="Done Transforming"
-          className="px-2 py-1 rounded-lg text-[10px] font-bold bg-[#ff6b4a] hover:bg-[#ff856b] text-white flex items-center gap-1 transition-colors shadow-md"
-        >
-          <Check className="w-3 h-3" />
-          <span>Done</span>
-        </button>
-      </div>
+            <div className="w-px h-3.5 bg-gray-700 mx-0.5 shrink-0" />
+            <button
+              onClick={handleToggleFitFill}
+              title="Fill Screen / Fit Screen (Cover canvas width/height)"
+              className="px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-200 hover:text-white hover:bg-white/10 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            >
+              <Maximize2 className="w-3 h-3 text-cyan-400" />
+              <span>{t.scaleX > 1.05 ? "Fit" : "Fill"}</span>
+            </button>
+            <button
+              onClick={handleCenterTransform}
+              title="Center on Screen"
+              className="px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-200 hover:text-white hover:bg-white/10 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            >
+              <Move className="w-3 h-3 text-[#ff6b4a]" />
+              <span>Center</span>
+            </button>
+            <button
+              onClick={handleResetTransform}
+              title="Reset Scale & Rotation to 100%"
+              className="px-1.5 py-1 rounded-lg text-[10px] font-semibold text-gray-200 hover:text-white hover:bg-white/10 flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            >
+              <Undo2 className="w-3 h-3 text-yellow-400" />
+              <span>Reset</span>
+            </button>
+            <div className="w-px h-3.5 bg-gray-700 mx-0.5 shrink-0" />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onDone) onDone();
+                else if (onDeselect) onDeselect();
+              }}
+              title="Done Transforming"
+              className="px-2 py-1 rounded-lg text-[10px] font-bold bg-[#ff6b4a] hover:bg-[#ff856b] text-white flex items-center gap-1 transition-colors shadow-md cursor-pointer shrink-0"
+            >
+              <Check className="w-3 h-3" />
+              <span>Done</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
