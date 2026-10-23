@@ -88,6 +88,9 @@ export const metadata: Metadata = {
   },
   verification: {
     yandex: "8358fe73c13b5bb6",
+    other: {
+      "naver-site-verification": "259d528e3711f16ea6034d4197866123",
+    },
   },
 };
 
@@ -155,6 +158,7 @@ export default function RootLayout({
     >
       <head>
         <meta name="yandex-verification" content="8358fe73c13b5bb6" />
+        <meta name="naver-site-verification" content="259d528e3711f16ea6034d4197866123" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
