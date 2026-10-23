@@ -86,6 +86,9 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  verification: {
+    yandex: "8358fe73c13b5bb6",
+  },
 };
 
 import Analytics from "./components/Analytics";
@@ -151,6 +154,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
+        <meta name="yandex-verification" content="8358fe73c13b5bb6" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
