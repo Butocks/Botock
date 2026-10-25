@@ -781,14 +781,14 @@ ToolRegistry.registerTool({
 
 ToolRegistry.registerTool({
   id: "audio-converter",
-  status: "coming_soon",
+  status: "active",
   name: "Audio Format Converter",
-  description: "Convert audio files between MP3, WAV, AAC, OGG, and FLAC formats with custom bitrates and sample rates.",
-  category: "ai",
+  description: "Convert audio files between MP3, WAV, AAC, M4A, OGG, and FLAC formats with custom bitrates and sample rates.",
+  category: "video",
   seoTitle: "Audio Format Converter Free Online - MP3, WAV, AAC, FLAC - Botock",
-  seoDescription: "Convert audio files between MP3, WAV, AAC, OGG, and FLAC directly in your browser.",
+  seoDescription: "Convert audio files between MP3, WAV, AAC, M4A, OGG, and FLAC directly in your browser.",
   endpoint: "/tools/audio-converter",
-  isClientSideOnly: true,
+  isClientSideOnly: false,
   parameters: [
     {
       name: "file",
@@ -801,7 +801,7 @@ ToolRegistry.registerTool({
       type: "enum",
       description: "Target audio format",
       required: true,
-      options: ["mp3", "wav", "aac", "ogg", "flac"],
+      options: ["mp3", "wav", "aac", "m4a", "ogg", "flac"],
       default: "mp3",
     },
     {
@@ -1820,6 +1820,7 @@ export async function processVideoOrAudioTool(
     | 'video-to-mp3'
     | 'video-remove-bg'
     | 'video-auto-reframe'
+    | 'audio-converter'
     | 'audio-enhance'
     | 'audio-trim'
     | 'audio-volume'
@@ -1853,6 +1854,24 @@ export async function processVideoOrAudioTool(
       let args: string[] = ['-i', inputName];
 
       switch (toolSlug) {
+        case 'audio-converter': {
+          const fmt = String(options.format || 'mp3').toLowerCase();
+          const bitrate = String(options.bitrate || '192k');
+          if (fmt === 'mp3') {
+            args = ['-i', inputName, '-vn', '-acodec', 'libmp3lame', '-b:a', bitrate, outputName];
+          } else if (fmt === 'wav') {
+            args = ['-i', inputName, '-vn', '-acodec', 'pcm_s16le', outputName];
+          } else if (fmt === 'aac' || fmt === 'm4a') {
+            args = ['-i', inputName, '-vn', '-acodec', 'aac', '-b:a', bitrate, outputName];
+          } else if (fmt === 'ogg') {
+            args = ['-i', inputName, '-vn', '-acodec', 'libvorbis', '-q:a', '5', outputName];
+          } else if (fmt === 'flac') {
+            args = ['-i', inputName, '-vn', '-acodec', 'flac', outputName];
+          } else {
+            args = ['-i', inputName, '-vn', '-b:a', bitrate, outputName];
+          }
+          break;
+        }
         case 'video-trim':
         case 'audio-trim':
           // Fast stream copy in browser too! No re-encoding needed
@@ -1905,7 +1924,17 @@ export async function processVideoOrAudioTool(
       await ffmpeg.deleteFile(inputName).catch(() => {});
       await ffmpeg.deleteFile(outputName).catch(() => {});
 
-      const mimeType = ext === 'mp3' ? 'audio/mpeg' : ext === 'gif' ? 'image/gif' : 'video/mp4';
+      const mimeMap: Record<string, string> = {
+        mp3: 'audio/mpeg',
+        wav: 'audio/wav',
+        aac: 'audio/aac',
+        m4a: 'audio/mp4',
+        ogg: 'audio/ogg',
+        flac: 'audio/flac',
+        gif: 'image/gif',
+        mp4: 'video/mp4',
+      };
+      const mimeType = mimeMap[ext] || (ext === 'mp3' ? 'audio/mpeg' : ext === 'gif' ? 'image/gif' : 'video/mp4');
       return new Blob([data as unknown as BlobPart], { type: mimeType });
     },
   });

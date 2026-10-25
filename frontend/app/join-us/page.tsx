@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/join-us",
   },
+  robots: {
+    index: false,
+    follow: true,
+  },
   openGraph: {
     title: "Careers & Join the Team",
     description:

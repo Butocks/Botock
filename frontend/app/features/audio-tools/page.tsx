@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { Music, Volume2, Mic, CheckCircle, ArrowRight } from "lucide-react";
+import { Music, Volume2, Mic, CheckCircle, ArrowRight, Scissors } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Audio Editing & Conversion | Botock",
-  description: "Trim, compress, and convert audio files directly in your browser.",
+  description: "Trim, convert, amplify, and enhance audio files directly in your browser.",
   alternates: {
     canonical: "/features/audio-tools",
   },
@@ -19,11 +19,19 @@ export default function AudioToolsFeaturePage() {
           Advanced <span className="text-amber-600 dark:text-amber-500">Audio Tools</span>
         </h1>
         <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-10">
-          Perfect your sound. Trim long recordings, convert between MP3 and WAV, and compress audio files without losing quality.
+          Perfect your sound. Convert between MP3, WAV, AAC, and FLAC, boost volume up to 5x, and trim audio tracks with zero quality loss.
         </p>
-        <Link href="/tools?cat=audio" className="inline-flex items-center gap-2 px-8 py-4 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-amber-600/20 transition-all active:scale-95">
-          <Music className="w-5 h-5" /> Open Audio Tools
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <Link href="/tools/audio-converter" className="inline-flex items-center gap-2 px-8 py-4 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-amber-600/20 transition-all active:scale-95">
+            <Music className="w-5 h-5" /> Open Audio Converter
+          </Link>
+          <Link href="/tools/audio-volume" className="inline-flex items-center gap-2 px-6 py-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-amber-500 text-slate-900 dark:text-white rounded-2xl font-bold text-base transition-all">
+            <Volume2 className="w-5 h-5 text-amber-500" /> Boost Volume
+          </Link>
+          <Link href="/tools/audio-trim" className="inline-flex items-center gap-2 px-6 py-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-amber-500 text-slate-900 dark:text-white rounded-2xl font-bold text-base transition-all">
+            <Scissors className="w-5 h-5 text-amber-500" /> Trim Audio
+          </Link>
+        </div>
       </div>
 
       {/* How to Use */}

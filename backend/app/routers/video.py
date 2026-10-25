@@ -1467,6 +1467,9 @@ async def handle_fast_video_tool(
 
     if tool_slug == "subtitles":
         out_ext = f".{opts.get('format', 'srt')}"
+    elif tool_slug == "audio-converter":
+        out_fmt = str(opts.get('format', 'mp3')).lower().strip('.')
+        out_ext = f".{out_fmt}"
     elif tool_slug in ("video-to-mp3", "audio-trim", "audio-volume", "audio-enhance", "voice-changer") or tool_slug.startswith("audio-"):
         out_ext = ".mp3"
     elif tool_slug == "video-to-gif":
@@ -1581,6 +1584,24 @@ async def handle_fast_video_tool(
             out_path
         ]
 
+    elif tool_slug == "audio-converter":
+        fmt = str(opts.get("format", "mp3")).lower().strip(".")
+        bitrate = str(opts.get("bitrate", "192k"))
+        cmd += ["-i", in_path, "-vn"]
+        if fmt == "mp3":
+            cmd += ["-c:a", "libmp3lame", "-b:a", bitrate]
+        elif fmt == "wav":
+            cmd += ["-c:a", "pcm_s16le"]
+        elif fmt in ("aac", "m4a"):
+            cmd += ["-c:a", "aac", "-b:a", bitrate]
+        elif fmt == "ogg":
+            cmd += ["-c:a", "libvorbis", "-q:a", "5"]
+        elif fmt == "flac":
+            cmd += ["-c:a", "flac"]
+        else:
+            cmd += ["-c:a", "libmp3lame", "-b:a", bitrate]
+        cmd += [out_path]
+
     elif tool_slug == "audio-volume":
         vol = str(opts.get("volume", 1.5))
         cmd += ["-i", in_path, "-af", f"volume={vol}", out_path]
@@ -1608,7 +1629,16 @@ async def handle_fast_video_tool(
             logger.error(f"Native FFmpeg failed ({tool_slug}): {err_msg}")
             raise HTTPException(status_code=500, detail=f"FFmpeg processing failed: {err_msg}")
 
-        media_type = "audio/mpeg" if out_ext == ".mp3" else "image/gif" if out_ext == ".gif" else "video/mp4"
+        media_map = {
+            ".mp3": "audio/mpeg",
+            ".wav": "audio/wav",
+            ".aac": "audio/aac",
+            ".m4a": "audio/mp4",
+            ".ogg": "audio/ogg",
+            ".flac": "audio/flac",
+            ".gif": "image/gif",
+        }
+        media_type = media_map.get(out_ext, "video/mp4" if out_ext == ".mp4" else "application/octet-stream")
         return FileResponse(
             out_path,
             media_type=media_type,

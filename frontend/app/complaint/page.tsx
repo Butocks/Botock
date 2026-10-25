@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/complaint",
   },
+  robots: {
+    index: false,
+    follow: true,
+  },
   openGraph: {
     title: "Formal Complaint & Grievance Redressal",
     description:

@@ -413,6 +413,14 @@ export const IMPLEMENTED_TOOLS: ToolItem[] = [
     icon: VolumeX,
   },
   {
+    id: "audio-converter",
+    name: "Audio Format Converter",
+    desc: "Convert audio files between MP3, WAV, AAC, M4A, OGG, and FLAC formats with custom bitrates.",
+    category: "video",
+    href: "/tools/audio-converter",
+    icon: Music,
+  },
+  {
     id: "audio-volume",
     name: "Amplify MP3 Volume",
     desc: "Boost quiet audio and MP3 volume levels up to 500% with clear normalization.",
@@ -527,7 +535,11 @@ function ToolsDirectoryInner() {
   ];
 
   const filteredTools = IMPLEMENTED_TOOLS.filter((t) => {
-    const matchesCat = activeCategory === "all" || t.category === activeCategory;
+    const matchesCat =
+      activeCategory === "all" ||
+      t.category === activeCategory ||
+      (activeCategory === "audio" &&
+        (t.href.includes("audio") || t.id.includes("voice") || t.id.includes("to-mp3")));
     const matchesSearch =
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.desc.toLowerCase().includes(searchQuery.toLowerCase());

@@ -114,7 +114,12 @@ export default function RootLayout({
           "@type": "ImageObject",
           url: "https://botock.app/logo.png",
         },
-        sameAs: ["https://www.facebook.com/botockapp/"],
+        sameAs: [
+          "https://www.facebook.com/botockapp/",
+          "https://www.instagram.com/botockai/",
+          "https://www.tiktok.com/@botockapp",
+          "https://x.com/botockapp",
+        ],
       },
       {
         "@type": "WebSite",

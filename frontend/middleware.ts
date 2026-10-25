@@ -7,10 +7,9 @@ export function middleware(request: NextRequest) {
   const isLocal = host.includes("localhost") || host.includes("127.0.0.1") || host.includes("192.168.");
 
   // Enforce HTTPS and canonical apex domain (botock.app)
-  if (!isLocal && (host.startsWith("www.") || proto === "http")) {
-    const newHost = host.replace(/^www\./, "");
+  if (!isLocal && (host !== "botock.app" || proto === "http")) {
     const url = request.nextUrl.clone();
-    url.host = newHost;
+    url.host = "botock.app";
     url.protocol = "https:";
     return NextResponse.redirect(url, 301);
   }

@@ -57,6 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/tools/image-color-picker",
 
     // Video & Audio Utilities
+    "/tools/audio-converter",
     "/tools/video-merge",
     "/tools/reaction-video-maker",
     "/tools/audio-enhance",
@@ -81,8 +82,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/features/image-tools",
     "/features/audio-tools",
 
-    // Blog Articles
-    "/blog/tesla-new-roadster-the-car-that-almost-flies",
+    // Blog Articles & High-Value Guides
     "/blog/complete-guide-to-botock-video-editor",
     "/blog/complete-guide-to-pdf-tools-workflows",
     "/blog/complete-guide-to-ai-video-tools-creators",
@@ -98,14 +98,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/blog/guide-to-photo-generation-and-faq",
     "/blog/guide-to-image-editing-and-background-removal",
     "/blog/guide-to-pdf-and-document-tools",
+    "/blog/ai-video-prompt-engineering-master-handbook",
+    "/blog/ai-video-camera-movements-angles-guide",
+    "/blog/ai-video-actions-body-gestures-prompt-guide",
+    "/blog/ai-video-cinematic-lighting-optics-guide",
+    "/blog/how-to-write-image-to-video-prompt-one-action-rule",
+    "/blog/which-hand-how-to-describe-hand-actions-ai-video-prompts",
+    "/blog/left-right-confusion-frame-left-vs-character-left-ai-video",
+    "/blog/how-to-keep-same-character-across-ai-video-clips",
+    "/blog/silent-clip-voiceover-fix-lips-moving-ai-video",
+    "/blog/20-camera-movement-prompts-you-can-copy",
+    "/blog/two-person-dialogue-scenes-ai-video-prompts",
+    "/blog/ai-video-prompts-for-products-ecommerce-ads",
+    "/blog/25-reasons-ai-video-looks-wrong-and-fixes",
+    "/blog/free-text-to-video-photo-to-video-what-to-expect-4-10s-clips",
 
-    // Information & Legal
+    // Information & Trust Pages
     "/contact",
     "/privacy",
     "/terms",
     "/security",
-    "/join-us",
-    "/complaint",
   ];
 
   // Try fetching dynamically published blogs from CMS/backend
