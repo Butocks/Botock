@@ -1445,14 +1445,13 @@ ToolRegistry.registerTool({
 });
 
 ToolRegistry.registerTool({
-  id: "video-filters",
-  status: "coming_soon",
-  name: "Video Filters & Effects",
-  description: "Color grade, adjust brightness/contrast, and apply cinematic presets via WASM FFmpeg.",
+  id: "video-color-grading",
+  name: "Video Color Grading",
+  description: "Color grade video with presets or brightness, contrast, saturation and gamma sliders, right in your browser.",
   category: "video",
-  seoTitle: "Video Filters & Color Effects Online Free - Botock",
-  seoDescription: "Adjust video brightness, contrast, saturation, and cinematic presets directly in your browser.",
-  endpoint: "/tools/video-filters",
+  seoTitle: "Video Color Grading Online Free - Botock",
+  seoDescription: "Color grade and filter videos online: brightness, contrast, saturation, gamma and cinematic presets with live preview.",
+  endpoint: "/tools/video-color-grading",
   isClientSideOnly: true,
   parameters: [
     { name: "file", type: "file", description: "Video file", required: true }
@@ -1467,7 +1466,7 @@ ToolRegistry.registerTool({
   category: "video",
   seoTitle: "Adjust Video Volume Online Free - Botock",
   seoDescription: "Boost quiet video audio or decrease volume directly in your browser with zero server uploads.",
-  endpoint: "/tools/video-volume",
+  endpoint: "/tools/audio-volume",
   isClientSideOnly: true,
   parameters: [
     { name: "file", type: "file", description: "Video file", required: true },

@@ -14,9 +14,9 @@ const AudioVolumeClient = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "Amplify MP3 Online Free – Boost Audio Volume up to 500% | Botock",
+  title: "Amplify MP3 Online – Increase Volume Free | Botock",
   description:
-    "Increase audio volume and amplify quiet MP3 or WAV files up to 500% online for free. Boost sound levels with clear speech normalization and zero server uploads.",
+    "Increase MP3 volume online free. Make quiet MP3, WAV and M4A files up to 5x louder in your browser. No signup, no upload, no watermark.",
   keywords: [
     "amplify mp3",
     "increase mp3 volume",

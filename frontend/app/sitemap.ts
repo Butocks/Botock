@@ -2,7 +2,21 @@ import type { MetadataRoute } from "next";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://botock.app";
-  const now = new Date();
+  // Use a real "last meaningful change" date, NOT the build time.
+  // Setting every page to "now" on each deploy teaches Google to ignore lastmod.
+  // Bump SITE_LAST_UPDATED when you actually change content; add a page to
+  // PAGE_LAST_UPDATED only when that page itself changes.
+  const SITE_LAST_UPDATED = new Date("2026-11-02");
+  const PAGE_LAST_UPDATED: Record<string, Date> = {
+    "/tools/video-color-grading": new Date("2026-11-02"),
+    "/tools/video-mute": new Date("2026-11-02"),
+    "/tools/audio-volume": new Date("2026-11-02"),
+    "/tools/pdf-ocr": new Date("2026-11-02"),
+    "/tools/audio-trim": new Date("2026-11-02"),
+    "/tools/crop-pdf": new Date("2026-11-02"),
+    "/tools/image-upscale": new Date("2026-11-02"),
+  };
+  const now = SITE_LAST_UPDATED;
 
   // All valid, implemented public indexable routes
   const routes = [
@@ -18,6 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/tools/video-generator",
     "/tools/image-generator",
     "/tools/video-editor",
+    "/tools/video-color-grading",
 
     // PDF Suite Tools
     "/tools/crop-pdf",
@@ -141,8 +156,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             dynamicBlogEntries.push({
               url: blogUrl,
               lastModified: post.updated_at ? new Date(post.updated_at) : (post.published_at ? new Date(post.published_at) : now),
-              changeFrequency: "weekly",
-              priority: 0.7,
             });
           }
         }
@@ -152,42 +165,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Graceful fallback during offline build
   }
 
-  const staticSitemap = routes.map((route) => {
-    let priority = 0.7;
-    let changeFrequency: "daily" | "weekly" | "monthly" = "weekly";
-
-    if (route === "") {
-      priority = 1.0;
-      changeFrequency = "daily";
-    } else if (
-      route === "/tools" ||
-      route === "/tools/video-generator" ||
-      route === "/tools/image-generator" ||
-      route === "/tools/video-editor"
-    ) {
-      priority = 0.9;
-      changeFrequency = "daily";
-    } else if (route.startsWith("/tools/")) {
-      priority = 0.8;
-      changeFrequency = "weekly";
-    } else if (route.startsWith("/features/")) {
-      priority = 0.8;
-      changeFrequency = "weekly";
-    } else if (route.startsWith("/blog")) {
-      priority = 0.7;
-      changeFrequency = "weekly";
-    } else {
-      priority = 0.5;
-      changeFrequency = "monthly";
-    }
-
-    return {
-      url: `${baseUrl}${route}`,
-      lastModified: now,
-      changeFrequency,
-      priority,
-    };
-  });
+  // Google ignores <priority> and <changefreq>, so only url + lastmod are emitted.
+  const staticSitemap: MetadataRoute.Sitemap = routes.map((route) => ({
+    url: `${baseUrl}${route}`,
+    lastModified: PAGE_LAST_UPDATED[route] ?? SITE_LAST_UPDATED,
+  }));
 
   // Deduplicate entries by URL
   const seenUrls = new Set<string>();

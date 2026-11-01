@@ -14,7 +14,7 @@ const AudioTrimClient = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "Trim MP3 Online Free – Audio Cutter & Ringtone Maker | Botock",
+  title: "Trim Audio Online Free – MP3 Cutter | Botock",
   description:
     "Cut and trim MP3, WAV, and audio files online for free. Extract audio clips, make custom phone ringtones, and trim songs with millisecond precision and zero server uploads.",
   keywords: [

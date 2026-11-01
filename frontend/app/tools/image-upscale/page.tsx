@@ -16,9 +16,9 @@ const Client = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "AI Image Upscaler 4K & 8K Online Free | Enhance Image & Video Resolution",
+  title: "Upscale Image to 4K Online Free | Botock",
   description:
-    "Enlarge and enhance your images and video frames up to 4x & 8x Ultra HD directly in your browser. Powered by multi-pass interpolation, noise reduction, and AI edge sharpness recovery. 100% private, free, and instant.",
+    "Upscale images to 4K online for free. Enlarge photos up to 4x with sharper edges and less noise, right in your browser. No signup, no upload.",
   alternates: {
     canonical: "/tools/image-upscale",
   },

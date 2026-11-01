@@ -14,7 +14,7 @@ const PdfOcrClient = dynamic(() => import("./Client"), {
 });
 
 export const metadata: Metadata = {
-  title: "PDF OCR Online Free (No Signup) – Extract Text from Scanned PDF | Botock",
+  title: "PDF OCR Online Free – Scanned PDF to Text | Botock",
   description:
     "Extract editable text from scanned PDFs and book pages online for free. In-browser neural OCR recognizes text with high accuracy and zero server uploads.",
   keywords: [

@@ -5,7 +5,7 @@ import ClientWrapper from "./ClientWrapper";
 import { ToolErrorBoundary } from "@/app/components/ToolErrorBoundary";
 
 export const metadata: Metadata = {
-  title: "Crop PDF Online Free (No Signup) – Trim Margins Instantly | Botock",
+  title: "Crop PDF Online Free – Trim Margins | Botock",
   description:
     "Crop PDF margins and trim pages visually in your browser. 100% Free, no signup, no file limits, and complete client-side privacy with zero server uploads.",
   keywords: [

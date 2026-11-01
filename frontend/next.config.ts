@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/tools/video-filters",
-        destination: "/tools/video-editor",
+        destination: "/tools/video-color-grading",
         permanent: true,
       },
       {
