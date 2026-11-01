@@ -68,6 +68,31 @@ const nextConfig: NextConfig = {
         destination: "/tools/audio-volume",
         permanent: true,
       },
+      {
+        source: "/tools/library",
+        destination: "/botock-library",
+        permanent: true,
+      },
+      {
+        source: "/refund",
+        destination: "/terms",
+        permanent: true,
+      },
+      {
+        source: "/services",
+        destination: "/features",
+        permanent: true,
+      },
+      {
+        source: "/tools/unlock-pdf",
+        destination: "/tools/pdf-protect",
+        permanent: true,
+      },
+      {
+        source: "/tools/video",
+        destination: "/tools/video-trim",
+        permanent: true,
+      },
     ];
   },
   async rewrites() {
